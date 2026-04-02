@@ -6,14 +6,25 @@
  * Integration tests for table session state machine operations.
  * Tests state transitions, constraints, and RLS policies.
  *
+ * State machine: OPEN → ACTIVE → RUNDOWN → CLOSED
+ *   - rpc_open_table_session → creates in OPEN state
+ *   - rpc_activate_table_session → transitions OPEN → ACTIVE
+ *   - rpc_start_table_rundown → transitions ACTIVE → RUNDOWN
+ *   - rpc_close_table_session → transitions ACTIVE|RUNDOWN → CLOSED
+ *   - OPEN sessions can be cancelled with close_reason='cancelled'
+ *
+ * Auth model: ADR-024 Mode C — authenticated anon clients carry JWT with staff_id
+ * in app_metadata; set_rls_context_from_staff() derives context server-side.
+ *
  * PREREQUISITES:
  * - Migrations must be applied including table_session and RPCs
  * - Local Supabase running: `npx supabase start`
  * - NEXT_PUBLIC_SUPABASE_URL environment variable set
  * - SUPABASE_SERVICE_ROLE_KEY environment variable set
+ * - NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable set
  *
  * @see PRD-TABLE-SESSION-LIFECYCLE-MVP
- * @see ADR-024 (RLS context injection)
+ * @see ADR-024 (authoritative context derivation)
  */
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
@@ -22,22 +33,29 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../../../types/database.types';
 
 // Test environment setup
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Skip integration tests if environment not configured
 const isIntegrationEnvironment =
   supabaseUrl &&
-  supabaseServiceKey &&
+  SERVICE_ROLE_KEY &&
+  ANON_KEY &&
   (process.env.RUN_INTEGRATION_TESTS === 'true' ||
     process.env.RUN_INTEGRATION_TESTS === '1');
 
 const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
 
 describeIntegration('Table Session Lifecycle Integration Tests', () => {
-  let serviceClient: SupabaseClient<Database>;
+  // setupClient: service-role, used only for fixture management (bypasses RLS)
+  let setupClient: SupabaseClient<Database>;
+  // Mode C authenticated anon clients for business operations
+  let pitBossClient: SupabaseClient<Database>;
+  let adminClient: SupabaseClient<Database>;
 
   // Test data IDs
+  let companyId: string;
   let casinoId: string;
   let pitBossId: string;
   let pitBossUserId: string;
@@ -49,52 +67,105 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
   let dropEventId: string;
   let inventorySnapshotId: string;
 
-  beforeAll(async () => {
-    // Create service client (bypasses RLS)
-    serviceClient = createClient<Database>(supabaseUrl!, supabaseServiceKey!);
+  const pitBossEmail = `test-root-t3-ts-pitboss-${Date.now()}@example.com`;
+  const adminEmail = `test-root-t3-ts-admin-${Date.now() + 1}@example.com`;
+  const dealerEmail = `test-root-t3-ts-dealer-${Date.now() + 2}@example.com`;
+  const testPassword = 'test-password';
 
-    // Create test users
-    const { data: pitBossUser } = await serviceClient.auth.admin.createUser({
-      email: `test-pitboss-session-${Date.now()}@example.com`,
-      password: 'test-password',
-      email_confirm: true,
-    });
-    if (!pitBossUser?.user) throw new Error('Failed to create pit boss user');
+  /**
+   * Helper: open a session and activate it (OPEN → ACTIVE).
+   * Returns the session ID after activation.
+   */
+  async function openAndActivateSession(
+    client: SupabaseClient<Database>,
+    tableId: string,
+  ): Promise<string> {
+    const { data: opened, error: openError } = await client.rpc(
+      'rpc_open_table_session',
+      { p_gaming_table_id: tableId },
+    );
+    if (openError) throw new Error(`Open failed: ${openError.message}`);
+
+    const { error: activateError } = await client.rpc(
+      'rpc_activate_table_session',
+      {
+        p_table_session_id: opened.id,
+        p_opening_total_cents: 0,
+        p_dealer_confirmed: true,
+        p_opening_note: 'Test activation — par bootstrap',
+      },
+    );
+    if (activateError)
+      throw new Error(`Activate failed: ${activateError.message}`);
+
+    return opened.id;
+  }
+
+  beforeAll(async () => {
+    // === FIXTURE SETUP (service-role) ===
+    setupClient = createClient<Database>(supabaseUrl, SERVICE_ROLE_KEY);
+
+    // 1. Create auth users WITHOUT staff_id (two-phase ADR-024 setup)
+    const { data: pitBossUser, error: pitBossUserError } =
+      await setupClient.auth.admin.createUser({
+        email: pitBossEmail,
+        password: testPassword,
+        email_confirm: true,
+        app_metadata: { staff_role: 'pit_boss' },
+      });
+    if (pitBossUserError) throw pitBossUserError;
     pitBossUserId = pitBossUser.user.id;
 
-    const { data: adminUser } = await serviceClient.auth.admin.createUser({
-      email: `test-admin-session-${Date.now()}@example.com`,
-      password: 'test-password',
-      email_confirm: true,
-    });
-    if (!adminUser?.user) throw new Error('Failed to create admin user');
+    const { data: adminUser, error: adminUserError } =
+      await setupClient.auth.admin.createUser({
+        email: adminEmail,
+        password: testPassword,
+        email_confirm: true,
+        app_metadata: { staff_role: 'admin' },
+      });
+    if (adminUserError) throw adminUserError;
     adminUserId = adminUser.user.id;
 
-    const { data: dealerUser } = await serviceClient.auth.admin.createUser({
-      email: `test-dealer-session-${Date.now()}@example.com`,
-      password: 'test-password',
-      email_confirm: true,
-    });
-    if (!dealerUser?.user) throw new Error('Failed to create dealer user');
+    const { data: dealerUser, error: dealerUserError } =
+      await setupClient.auth.admin.createUser({
+        email: dealerEmail,
+        password: testPassword,
+        email_confirm: true,
+        app_metadata: { staff_role: 'dealer' },
+      });
+    if (dealerUserError) throw dealerUserError;
     dealerUserId = dealerUser.user.id;
 
-    // Create test casino with settings
-    const { data: casino } = await serviceClient
-      .from('casino')
-      .insert({ name: 'Session Test Casino' })
+    // 2. Create test company (ADR-043: company before casino)
+    const { data: company, error: companyError } = await setupClient
+      .from('company')
+      .insert({ name: 'Session Test Company' })
       .select('id')
       .single();
-    casinoId = casino!.id;
+    if (companyError) throw companyError;
+    companyId = company.id;
+
+    // 3. Create test casino with company_id
+    const { data: casino, error: casinoError } = await setupClient
+      .from('casino')
+      .insert({ name: 'Session Test Casino', company_id: companyId })
+      .select('id')
+      .single();
+    if (casinoError) throw casinoError;
+    casinoId = casino.id;
 
     // Create casino_settings (required for compute_gaming_day)
-    await serviceClient.from('casino_settings').insert({
-      casino_id: casinoId,
-      gaming_day_start_time: '06:00',
-      timezone: 'America/Los_Angeles',
-    });
+    const { error: settingsError } = await setupClient
+      .from('casino_settings')
+      .insert({
+        casino_id: casinoId,
+        gaming_day_start_time: '06:00',
+        timezone: 'America/Los_Angeles',
+      });
+    if (settingsError) throw settingsError;
 
-    // Create test staff - pit_boss
-    const { data: pitBoss } = await serviceClient
+    // 4. Create test staff records
+    const { data: pitBoss, error: pitBossError } = await setupClient
       .from('staff')
       .insert({
         user_id: pitBossUserId,
@@ -106,10 +177,10 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
       })
       .select('id')
       .single();
-    pitBossId = pitBoss!.id;
+    if (pitBossError) throw pitBossError;
+    pitBossId = pitBoss.id;
 
-    // Create test staff - admin
-    const { data: admin } = await serviceClient
+    const { data: admin, error: adminError } = await setupClient
       .from('staff')
       .insert({
         user_id: adminUserId,
@@ -121,11 +192,11 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
       })
       .select('id')
       .single();
-    adminId = admin!.id;
+    if (adminError) throw adminError;
+    adminId = admin.id;
 
     // Create test staff - dealer (should NOT be able to perform session operations)
-    // Note: Dealer is created but not used in tests - kept for potential future RLS tests
-    await serviceClient
+    const { error: dealerError } = await setupClient
       .from('staff')
       .insert({
         user_id: dealerUserId,
@@ -137,9 +208,67 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
       })
       .select('id')
       .single();
+    if (dealerError) throw dealerError;
 
-    // Create test tables
-    const { data: table1 } = await serviceClient
+    // 5. Stamp staff_id into app_metadata (ADR-024 two-phase)
+    await setupClient.auth.admin.updateUserById(pitBossUserId, {
+      app_metadata: {
+        staff_id: pitBossId,
+        casino_id: casinoId,
+        staff_role: 'pit_boss',
+      },
+    });
+    await setupClient.auth.admin.updateUserById(adminUserId, {
+      app_metadata: {
+        staff_id: adminId,
+        casino_id: casinoId,
+        staff_role: 'admin',
+      },
+    });
+
+    // 6. Sign in via throwaway clients to get JWTs
+    const throwaway1 = createClient<Database>(supabaseUrl, ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: session1, error: signIn1Error } =
+      await throwaway1.auth.signInWithPassword({
+        email: pitBossEmail,
+        password: testPassword,
+      });
+    if (signIn1Error || !session1.session)
+      throw signIn1Error ?? new Error('Pit boss sign-in returned no session');
+
+    const throwaway2 = createClient<Database>(supabaseUrl, ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: session2, error: signIn2Error } =
+      await throwaway2.auth.signInWithPassword({
+        email: adminEmail,
+        password: testPassword,
+      });
+    if (signIn2Error || !session2.session)
+      throw signIn2Error ?? new Error('Admin sign-in returned no session');
+
+    // 7. Create Mode C authenticated anon clients (ADR-024)
+    pitBossClient = createClient<Database>(supabaseUrl, ANON_KEY, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${session1.session.access_token}`,
+        },
+      },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    adminClient = createClient<Database>(supabaseUrl, ANON_KEY, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${session2.session.access_token}`,
+        },
+      },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    // 8. Create test tables (service-role for fixture setup)
+    const { data: table1, error: table1Error } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: casinoId,
@@ -150,9 +279,10 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
       })
       .select('id')
       .single();
-    tableId1 = table1!.id;
+    if (table1Error) throw table1Error;
+    tableId1 = table1.id;
 
-    const { data: table2 } = await serviceClient
+    const { data: table2, error: table2Error } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: casinoId,
@@ -163,23 +293,25 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
       })
       .select('id')
       .single();
-    tableId2 = table2!.id;
+    if (table2Error) throw table2Error;
+    tableId2 = table2.id;
 
-    // Create test drop event (for close operation)
-    const { data: drop } = await serviceClient
+    // 9. Create test drop event (for close operation)
+    const { data: drop, error: dropError } = await setupClient
       .from('table_drop_event')
       .insert({
         casino_id: casinoId,
         table_id: tableId1,
-        staff_id: pitBossId,
-        cash_drop_cents: 100000,
+        drop_box_id: `TEST-BOX-${Date.now()}`,
+        removed_by: pitBossId,
       })
       .select('id')
       .single();
-    dropEventId = drop!.id;
+    if (dropError) throw dropError;
+    dropEventId = drop.id;
 
-    // Create test inventory snapshot (for close operation)
-    const { data: snapshot } = await serviceClient
+    // 10. Create test inventory snapshot (for close operation)
+    const { data: snapshot, error: snapshotError } = await setupClient
       .from('table_inventory_snapshot')
       .insert({
         casino_id: casinoId,
@@ -190,33 +322,32 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
       })
       .select('id')
       .single();
-    inventorySnapshotId = snapshot!.id;
+    if (snapshotError) throw snapshotError;
+    inventorySnapshotId = snapshot.id;
   });
 
   afterAll(async () => {
     // Cleanup test data in reverse order of dependencies
-    await serviceClient
-      .from('table_session')
-      .delete()
-      .eq('casino_id', casinoId);
-    await serviceClient
+    await setupClient.from('table_session').delete().eq('casino_id', casinoId);
+    await setupClient
       .from('table_inventory_snapshot')
       .delete()
       .eq('casino_id', casinoId);
-    await serviceClient
+    await setupClient
       .from('table_drop_event')
       .delete()
       .eq('casino_id', casinoId);
-    await serviceClient.from('gaming_table').delete().eq('casino_id', casinoId);
-    await serviceClient.from('staff').delete().eq('casino_id', casinoId);
-    await serviceClient
+    await setupClient.from('gaming_table').delete().eq('casino_id', casinoId);
+    await setupClient.from('staff').delete().eq('casino_id', casinoId);
+    await setupClient
       .from('casino_settings')
       .delete()
       .eq('casino_id', casinoId);
-    await serviceClient.from('casino').delete().eq('id', casinoId);
-    await serviceClient.auth.admin.deleteUser(pitBossUserId);
-    await serviceClient.auth.admin.deleteUser(adminUserId);
-    await serviceClient.auth.admin.deleteUser(dealerUserId);
+    await setupClient.from('casino').delete().eq('id', casinoId);
+    await setupClient.from('company').delete().eq('id', companyId);
+    await setupClient.auth.admin.deleteUser(pitBossUserId);
+    await setupClient.auth.admin.deleteUser(adminUserId);
+    await setupClient.auth.admin.deleteUser(dealerUserId);
   });
 
   describe('rpc_open_table_session', () => {
@@ -225,22 +356,15 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     afterAll(async () => {
       // Cleanup any sessions created in this describe block
       if (createdSessionId) {
-        await serviceClient
+        await setupClient
           .from('table_session')
           .delete()
           .eq('id', createdSessionId);
       }
     });
 
-    it('opens a new session in ACTIVE state', async () => {
-      // Set RLS context first (service client bypasses RLS for setup)
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { data, error } = await serviceClient.rpc(
+    it('opens a new session in OPEN state', async () => {
+      const { data, error } = await pitBossClient.rpc(
         'rpc_open_table_session',
         {
           p_gaming_table_id: tableId2, // Use table2 to avoid conflicts
@@ -250,7 +374,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
       expect(error).toBeNull();
       expect(data).toBeDefined();
       expect(data.id).toBeDefined();
-      expect(data.status).toBe('ACTIVE');
+      expect(data.status).toBe('OPEN');
       expect(data.casino_id).toBe(casinoId);
       expect(data.gaming_table_id).toBe(tableId2);
       expect(data.opened_by_staff_id).toBe(pitBossId);
@@ -262,19 +386,13 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
 
     it('auto-computes gaming_day based on casino settings', async () => {
       // Clean up any existing session on table1
-      await serviceClient
+      await setupClient
         .from('table_session')
         .delete()
         .eq('gaming_table_id', tableId1)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { data, error } = await serviceClient.rpc(
+      const { data, error } = await pitBossClient.rpc(
         'rpc_open_table_session',
         {
           p_gaming_table_id: tableId1,
@@ -287,36 +405,27 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
       expect(data.gaming_day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
       // Cleanup
-      await serviceClient.from('table_session').delete().eq('id', data.id);
+      await setupClient.from('table_session').delete().eq('id', data.id);
     });
 
     it('allows admin to open session', async () => {
       // Clean up any existing session on table2
-      await serviceClient
+      await setupClient
         .from('table_session')
         .delete()
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: adminId,
-        p_casino_id: casinoId,
-        p_staff_role: 'admin',
+      const { data, error } = await adminClient.rpc('rpc_open_table_session', {
+        p_gaming_table_id: tableId2,
       });
-
-      const { data, error } = await serviceClient.rpc(
-        'rpc_open_table_session',
-        {
-          p_gaming_table_id: tableId2,
-        },
-      );
 
       expect(error).toBeNull();
       expect(data).toBeDefined();
       expect(data.opened_by_staff_id).toBe(adminId);
 
       // Cleanup
-      await serviceClient.from('table_session').delete().eq('id', data.id);
+      await setupClient.from('table_session').delete().eq('id', data.id);
     });
   });
 
@@ -325,40 +434,28 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
 
     beforeAll(async () => {
       // Ensure no existing session on table1
-      await serviceClient
+      await setupClient
         .from('table_session')
         .delete()
         .eq('gaming_table_id', tableId1)
         .neq('status', 'CLOSED');
 
-      // Create an active session
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { data } = await serviceClient.rpc('rpc_open_table_session', {
+      // Create an OPEN session (constraint prevents second open even without activation)
+      const { data } = await pitBossClient.rpc('rpc_open_table_session', {
         p_gaming_table_id: tableId1,
       });
       existingSessionId = data!.id;
     });
 
     afterAll(async () => {
-      await serviceClient
+      await setupClient
         .from('table_session')
         .delete()
         .eq('id', existingSessionId);
     });
 
     it('prevents opening second session for same table', async () => {
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { error } = await serviceClient.rpc('rpc_open_table_session', {
+      const { error } = await pitBossClient.rpc('rpc_open_table_session', {
         p_gaming_table_id: tableId1,
       });
 
@@ -368,19 +465,13 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
 
     it('allows opening session for different table', async () => {
       // Clean up any existing session on table2
-      await serviceClient
+      await setupClient
         .from('table_session')
         .delete()
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { data, error } = await serviceClient.rpc(
+      const { data, error } = await pitBossClient.rpc(
         'rpc_open_table_session',
         {
           p_gaming_table_id: tableId2,
@@ -392,7 +483,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
       expect(data.gaming_table_id).toBe(tableId2);
 
       // Cleanup
-      await serviceClient.from('table_session').delete().eq('id', data.id);
+      await setupClient.from('table_session').delete().eq('id', data.id);
     });
   });
 
@@ -401,37 +492,22 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
 
     beforeAll(async () => {
       // Ensure no existing session on table1
-      await serviceClient
+      await setupClient
         .from('table_session')
         .delete()
         .eq('gaming_table_id', tableId1)
         .neq('status', 'CLOSED');
 
-      // Create a fresh session
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { data } = await serviceClient.rpc('rpc_open_table_session', {
-        p_gaming_table_id: tableId1,
-      });
-      sessionId = data!.id;
+      // Create and activate a session (OPEN → ACTIVE)
+      sessionId = await openAndActivateSession(pitBossClient, tableId1);
     });
 
     afterAll(async () => {
-      await serviceClient.from('table_session').delete().eq('id', sessionId);
+      await setupClient.from('table_session').delete().eq('id', sessionId);
     });
 
     it('transitions ACTIVE → RUNDOWN', async () => {
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { data, error } = await serviceClient.rpc(
+      const { data, error } = await pitBossClient.rpc(
         'rpc_start_table_rundown',
         {
           p_table_session_id: sessionId,
@@ -446,13 +522,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('prevents RUNDOWN → RUNDOWN (already in rundown)', async () => {
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { error } = await serviceClient.rpc('rpc_start_table_rundown', {
+      const { error } = await pitBossClient.rpc('rpc_start_table_rundown', {
         p_table_session_id: sessionId,
       });
 
@@ -461,13 +531,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('transitions RUNDOWN → CLOSED with drop_event_id', async () => {
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { data, error } = await serviceClient.rpc(
+      const { data, error } = await pitBossClient.rpc(
         'rpc_close_table_session',
         {
           p_table_session_id: sessionId,
@@ -490,45 +554,26 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     let sessionId: string;
 
     beforeAll(async () => {
-      // Create a fresh session in RUNDOWN state
-      await serviceClient
+      // Create a fresh session in RUNDOWN state: OPEN → ACTIVE → RUNDOWN
+      await setupClient
         .from('table_session')
         .delete()
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
+      sessionId = await openAndActivateSession(pitBossClient, tableId2);
+
+      await pitBossClient.rpc('rpc_start_table_rundown', {
+        p_table_session_id: sessionId,
       });
-
-      const { data: opened } = await serviceClient.rpc(
-        'rpc_open_table_session',
-        {
-          p_gaming_table_id: tableId2,
-        },
-      );
-
-      await serviceClient.rpc('rpc_start_table_rundown', {
-        p_table_session_id: opened!.id,
-      });
-
-      sessionId = opened!.id;
     });
 
     afterAll(async () => {
-      await serviceClient.from('table_session').delete().eq('id', sessionId);
+      await setupClient.from('table_session').delete().eq('id', sessionId);
     });
 
     it('rejects close without any artifact', async () => {
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { error } = await serviceClient.rpc('rpc_close_table_session', {
+      const { error } = await pitBossClient.rpc('rpc_close_table_session', {
         p_table_session_id: sessionId,
         // No drop_event_id or closing_inventory_snapshot_id
       });
@@ -538,13 +583,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('accepts close with closing_inventory_snapshot_id', async () => {
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { data, error } = await serviceClient.rpc(
+      const { data, error } = await pitBossClient.rpc(
         'rpc_close_table_session',
         {
           p_table_session_id: sessionId,
@@ -563,40 +602,25 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     let activeSessionId: string;
 
     beforeAll(async () => {
-      // Create active session on table1
-      await serviceClient
+      // Create and activate session on table1 (OPEN → ACTIVE)
+      await setupClient
         .from('table_session')
         .delete()
         .eq('gaming_table_id', tableId1)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { data } = await serviceClient.rpc('rpc_open_table_session', {
-        p_gaming_table_id: tableId1,
-      });
-      activeSessionId = data!.id;
+      activeSessionId = await openAndActivateSession(pitBossClient, tableId1);
     });
 
     afterAll(async () => {
-      await serviceClient
+      await setupClient
         .from('table_session')
         .delete()
         .eq('id', activeSessionId);
     });
 
     it('returns current session for table with active session', async () => {
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { data, error } = await serviceClient.rpc(
+      const { data, error } = await pitBossClient.rpc(
         'rpc_get_current_table_session',
         {
           p_gaming_table_id: tableId1,
@@ -609,21 +633,15 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
       expect(data.status).not.toBe('CLOSED');
     });
 
-    it('returns null for table without active session', async () => {
+    it('returns null/empty for table without active session', async () => {
       // Ensure table2 has no active session
-      await serviceClient
+      await setupClient
         .from('table_session')
         .delete()
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { data, error } = await serviceClient.rpc(
+      const { data, error } = await pitBossClient.rpc(
         'rpc_get_current_table_session',
         {
           p_gaming_table_id: tableId2,
@@ -631,7 +649,12 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
       );
 
       expect(error).toBeNull();
-      expect(data).toBeNull();
+      // RPC returns a row with all null fields when no session found
+      if (data === null) {
+        expect(data).toBeNull();
+      } else {
+        expect(data.id).toBeNull();
+      }
     });
   });
 
@@ -639,37 +662,22 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     let sessionId: string;
 
     beforeAll(async () => {
-      // Create fresh ACTIVE session (not in RUNDOWN)
-      await serviceClient
+      // Create and activate a fresh session (OPEN → ACTIVE, not in RUNDOWN)
+      await setupClient
         .from('table_session')
         .delete()
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { data } = await serviceClient.rpc('rpc_open_table_session', {
-        p_gaming_table_id: tableId2,
-      });
-      sessionId = data!.id;
+      sessionId = await openAndActivateSession(pitBossClient, tableId2);
     });
 
     afterAll(async () => {
-      await serviceClient.from('table_session').delete().eq('id', sessionId);
+      await setupClient.from('table_session').delete().eq('id', sessionId);
     });
 
     it('allows closing directly from ACTIVE state (shortcut)', async () => {
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { data, error } = await serviceClient.rpc(
+      const { data, error } = await pitBossClient.rpc(
         'rpc_close_table_session',
         {
           p_table_session_id: sessionId,
@@ -691,52 +699,36 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     let closedSessionId: string;
 
     beforeAll(async () => {
-      // Create and immediately close a session
-      await serviceClient
+      // Create, activate, and immediately close a session
+      await setupClient
         .from('table_session')
         .delete()
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
+      const sid = await openAndActivateSession(pitBossClient, tableId2);
 
-      const { data: opened } = await serviceClient.rpc(
-        'rpc_open_table_session',
-        {
-          p_gaming_table_id: tableId2,
-        },
-      );
-
-      const { data: closed } = await serviceClient.rpc(
+      const { data: closed, error: closeError } = await pitBossClient.rpc(
         'rpc_close_table_session',
         {
-          p_table_session_id: opened!.id,
+          p_table_session_id: sid,
           p_drop_event_id: dropEventId,
         },
       );
+      if (closeError) throw new Error(`Close failed: ${closeError.message}`);
 
       closedSessionId = closed!.id;
     });
 
     afterAll(async () => {
-      await serviceClient
+      await setupClient
         .from('table_session')
         .delete()
         .eq('id', closedSessionId);
     });
 
     it('prevents rundown on CLOSED session', async () => {
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { error } = await serviceClient.rpc('rpc_start_table_rundown', {
+      const { error } = await pitBossClient.rpc('rpc_start_table_rundown', {
         p_table_session_id: closedSessionId,
       });
 
@@ -745,13 +737,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('prevents close on already CLOSED session', async () => {
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      const { error } = await serviceClient.rpc('rpc_close_table_session', {
+      const { error } = await pitBossClient.rpc('rpc_close_table_session', {
         p_table_session_id: closedSessionId,
         p_drop_event_id: dropEventId,
       });
@@ -761,15 +747,9 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('rejects non-existent session ID', async () => {
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
       const fakeId = '00000000-0000-0000-0000-000000000000';
 
-      const { error } = await serviceClient.rpc('rpc_start_table_rundown', {
+      const { error } = await pitBossClient.rpc('rpc_start_table_rundown', {
         p_table_session_id: fakeId,
       });
 
@@ -781,34 +761,27 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
   describe('Reopen After Close', () => {
     it('allows opening new session after previous is closed', async () => {
       // Clean up any existing sessions
-      await serviceClient
+      await setupClient
         .from('table_session')
         .delete()
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-
-      // Open first session
-      const { data: session1 } = await serviceClient.rpc(
-        'rpc_open_table_session',
-        {
-          p_gaming_table_id: tableId2,
-        },
-      );
+      // Open and activate first session
+      const session1Id = await openAndActivateSession(pitBossClient, tableId2);
 
       // Close it
-      await serviceClient.rpc('rpc_close_table_session', {
-        p_table_session_id: session1!.id,
-        p_drop_event_id: dropEventId,
-      });
+      const { error: closeError } = await pitBossClient.rpc(
+        'rpc_close_table_session',
+        {
+          p_table_session_id: session1Id,
+          p_drop_event_id: dropEventId,
+        },
+      );
+      expect(closeError).toBeNull();
 
       // Open second session - should succeed
-      const { data: session2, error } = await serviceClient.rpc(
+      const { data: session2, error } = await pitBossClient.rpc(
         'rpc_open_table_session',
         {
           p_gaming_table_id: tableId2,
@@ -817,11 +790,11 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
 
       expect(error).toBeNull();
       expect(session2).toBeDefined();
-      expect(session2.id).not.toBe(session1!.id);
-      expect(session2.status).toBe('ACTIVE');
+      expect(session2.id).not.toBe(session1Id);
+      expect(session2.status).toBe('OPEN');
 
       // Cleanup
-      await serviceClient.from('table_session').delete().eq('id', session2.id);
+      await setupClient.from('table_session').delete().eq('id', session2.id);
     });
   });
 });

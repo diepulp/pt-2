@@ -13,6 +13,12 @@
  * NOTE: We avoid using NextRequest directly as it requires Web API polyfills.
  * Instead, we test the patterns and contracts.
  */
+/**
+ * NOTE: Despite the .int.test.ts naming, this file is a pure contract/shape
+ * assertion suite. It does not hit the database. The RUN_INTEGRATION_TESTS gate
+ * is retained for consistency but all operations use mock objects.
+ * Reclassified as Unit (Contract) per LIB-SERVER-ACTIONS-POSTURE.md.
+ */
 
 import { setupTestData, cleanupTestData } from './helpers';
 

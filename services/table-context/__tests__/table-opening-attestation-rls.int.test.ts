@@ -138,11 +138,10 @@ describeIntegration('PRD-059: table_opening_attestation RLS Policies', () => {
 
     // Sign in Casino A pit boss
     casinoAClient = createClient<Database>(supabaseUrl!, supabaseAnonKey!);
-    const { error: signInAErr } =
-      await casinoAClient.auth.signInWithPassword({
-        email: PB_A_EMAIL,
-        password: TEST_PASSWORD,
-      });
+    const { error: signInAErr } = await casinoAClient.auth.signInWithPassword({
+      email: PB_A_EMAIL,
+      password: TEST_PASSWORD,
+    });
     if (signInAErr)
       throw new Error(`Casino A sign-in failed: ${signInAErr.message}`);
 
@@ -223,11 +222,10 @@ describeIntegration('PRD-059: table_opening_attestation RLS Policies', () => {
 
     // Sign in Casino B pit boss
     casinoBClient = createClient<Database>(supabaseUrl!, supabaseAnonKey!);
-    const { error: signInBErr } =
-      await casinoBClient.auth.signInWithPassword({
-        email: PB_B_EMAIL,
-        password: TEST_PASSWORD,
-      });
+    const { error: signInBErr } = await casinoBClient.auth.signInWithPassword({
+      email: PB_B_EMAIL,
+      password: TEST_PASSWORD,
+    });
     if (signInBErr)
       throw new Error(`Casino B sign-in failed: ${signInBErr.message}`);
   });
@@ -243,10 +241,7 @@ describeIntegration('PRD-059: table_opening_attestation RLS Policies', () => {
       .from('table_rundown_report')
       .delete()
       .eq('casino_id', casinoAId);
-    await setupClient
-      .from('table_session')
-      .delete()
-      .eq('casino_id', casinoAId);
+    await setupClient.from('table_session').delete().eq('casino_id', casinoAId);
     await setupClient
       .from('table_inventory_snapshot')
       .delete()
@@ -255,10 +250,7 @@ describeIntegration('PRD-059: table_opening_attestation RLS Policies', () => {
       .from('table_drop_event')
       .delete()
       .eq('casino_id', casinoAId);
-    await setupClient
-      .from('gaming_table')
-      .delete()
-      .eq('casino_id', casinoAId);
+    await setupClient.from('gaming_table').delete().eq('casino_id', casinoAId);
     await setupClient.from('staff').delete().eq('casino_id', casinoAId);
     await setupClient
       .from('casino_settings')
@@ -278,14 +270,8 @@ describeIntegration('PRD-059: table_opening_attestation RLS Policies', () => {
       .from('table_rundown_report')
       .delete()
       .eq('casino_id', casinoBId);
-    await setupClient
-      .from('table_session')
-      .delete()
-      .eq('casino_id', casinoBId);
-    await setupClient
-      .from('gaming_table')
-      .delete()
-      .eq('casino_id', casinoBId);
+    await setupClient.from('table_session').delete().eq('casino_id', casinoBId);
+    await setupClient.from('gaming_table').delete().eq('casino_id', casinoBId);
     await setupClient.from('staff').delete().eq('casino_id', casinoBId);
     await setupClient
       .from('casino_settings')

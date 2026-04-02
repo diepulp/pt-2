@@ -13,7 +13,7 @@
 | 1 | `constraints/player-identity.test.ts` | Integration | ✅ (pre-existing) | ✅ (normalized) | Live DB required |
 | 2 | `integration/player-identity.test.ts` | Integration | ✅ (pre-existing) | ✅ (normalized) | Live DB required |
 | 3 | `rls/player-identity.test.ts` | Integration | ✅ (pre-existing) | ✅ (normalized) | Live DB required |
-| 4 | `player-360-navigation.int.test.ts` | Integration | ✅ (added) | ✅ (added) | Navigation logic — no DB |
+| 4 | `player-360-navigation.int.test.ts` | Integration | ✅ (added) | ✅ (added) | Reclassified as Unit (Navigation) |
 | 5 | `services/loyalty/promo-instruments.int.test.ts` | Integration | ✅ (added) | ✅ (normalized) | Live DB + RLS context |
 | 6 | `services/table-context/finance-telemetry-bridge.int.test.ts` | Integration | ✅ (added) | ✅ (normalized) | Live DB + trigger |
 | 7 | `services/table-context/shift-metrics.int.test.ts` | Integration | ✅ (added) | ✅ (normalized) | Live DB + telemetry RPCs |
@@ -83,7 +83,7 @@ __tests__/
 | `constraints/player-identity.test.ts` | Supabase local required, no code changes | Low |
 | `integration/player-identity.test.ts` | Supabase local required, no code changes | Low |
 | `rls/player-identity.test.ts` | Supabase local + service role key, no code changes | Low |
-| `player-360-navigation.int.test.ts` | Pure navigation logic — **no DB required**. Gate may be removable; tests pass in CI. | Low — consider promoting to unit |
+| `player-360-navigation.int.test.ts` | **Reclassified as Unit (Navigation)** — pure URL construction, no DB. Reclassification header added. Gate retained for consistency. CI safe. | Done |
 | `services/loyalty/promo-instruments.int.test.ts` | Supabase local + promo_program/promo_coupon tables + RLS context injection | Medium |
 | `services/table-context/finance-telemetry-bridge.int.test.ts` | Requires custom migration triggers; not in standard schema | High |
 | `services/table-context/shift-metrics.int.test.ts` | Requires table_buyin_telemetry + metrics RPCs | Medium |
@@ -93,7 +93,7 @@ __tests__/
 
 ## Known Issues
 
-1. **`player-360-navigation.int.test.ts` — mislabeled as integration**: The file is named `.int.test.ts` but contains no database calls. All tests operate on pure URL manipulation logic. Phase B should evaluate removing the integration gate and running these in CI.
+1. ~~**`player-360-navigation.int.test.ts` — mislabeled as integration**~~ **RESOLVED (Phase B)**: Reclassification header added. File documented as Unit (Navigation) in posture doc. Gate retained for consistency with other integration files. Tests confirmed CI-safe with no DB access.
 
 2. **Gate form heterogeneity (pre-Phase A)**: Files 1-3 used truthy check (`process.env.RUN_INTEGRATION_TESTS ? describe : describe.skip`) while files 5-8 used strict equality (`=== 'true'`). Both normalized to canonical `=== 'true' || === '1'` form in Phase A.
 

@@ -7,16 +7,22 @@
  * Verifies that SET LOCAL variables don't leak between transactions and that
  * the transaction-wrapped RPC approach is connection-pooling safe.
  *
+ * Auth model: ADR-024 Mode C — authenticated anon clients carry JWT with staff_id
+ * in app_metadata; set_rls_context_from_staff() derives context server-side.
+ * Service-role clients are used ONLY for fixture setup/teardown.
+ *
  * PREREQUISITES:
  * - Migration 20251209183033_adr015_rls_context_rpc.sql must be applied
  * - Migration 20251209183401_adr015_hybrid_rls_policies.sql must be applied
  * - NEXT_PUBLIC_SUPABASE_URL environment variable set
  * - SUPABASE_SERVICE_ROLE_KEY environment variable set
+ * - NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable set
  *
  * CRITICAL: These tests simulate connection pooling behavior and verify
  * that context doesn't persist after transactions end.
  *
  * @see docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md
+ * @see docs/80-adrs/ADR-024-authoritative-context-derivation.md
  */
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
@@ -26,22 +32,32 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../../../types/database.types';
 
 /**
- * Service-role helper: injects RLS context via set_rls_context_internal RPC.
+ * Mode C helper: injects RLS context via set_rls_context_from_staff RPC.
+ * The RPC derives actor_id, casino_id, and staff_role from the JWT's
+ * staff_id claim — no spoofable parameters. (ADR-024)
  */
-async function setTestRLSContext(
+async function setModeC_RLSContext(
   client: SupabaseClient<Database>,
-  actorId: string,
-  casinoId: string,
-  staffRole: string,
   correlationId?: string,
 ): Promise<void> {
-  const { error } = await client.rpc('set_rls_context_internal', {
-    p_actor_id: actorId,
-    p_casino_id: casinoId,
-    p_staff_role: staffRole,
-    p_correlation_id: correlationId,
+  const { error } = await client.rpc('set_rls_context_from_staff', {
+    p_correlation_id: correlationId ?? null,
   });
-  if (error) throw new Error(`setTestRLSContext failed: ${error.message}`);
+  if (error) throw new Error(`setModeC_RLSContext failed: ${error.message}`);
+}
+
+/**
+ * Creates a Mode C authenticated anon client from an existing access token.
+ * Used in concurrent tests where many clients need independent connections
+ * but share the same JWT identity.
+ */
+function createAuthedClient(accessToken: string): SupabaseClient<Database> {
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 }
 
 // Test environment setup
@@ -56,7 +72,17 @@ const RUN_INTEGRATION =
 (RUN_INTEGRATION ? describe : describe.skip)(
   'RLS Connection Pooling Safety (ADR-015 WS6)',
   () => {
-    let supabase: SupabaseClient<Database>;
+    // setupClient uses service-role for fixture management (bypasses RLS)
+    let setupClient: SupabaseClient<Database>;
+    // Mode C authenticated anon clients for business query tests
+    let authedClient1: SupabaseClient<Database>;
+    let authedClient2: SupabaseClient<Database>;
+    let authedClient3: SupabaseClient<Database>;
+    // Access tokens for creating additional Mode C clients in concurrent tests
+    let accessToken1: string;
+    let accessToken2: string;
+    let accessToken3: string;
+
     let testCompany1Id: string;
     let testCompany2Id: string;
     let testCompany3Id: string;
@@ -70,25 +96,35 @@ const RUN_INTEGRATION =
     let testUser2Id: string;
     let testUser3Id: string;
 
-    beforeAll(async () => {
-      supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
+    const uniqueSuffix = Date.now();
+    const testEmail1 = `test-rls-t3-pool-pitboss-1-${uniqueSuffix}@example.com`;
+    const testEmail2 = `test-rls-t3-pool-pitboss-2-${uniqueSuffix}@example.com`;
+    const testEmail3 = `test-rls-t3-pool-pitboss-3-${uniqueSuffix}@example.com`;
+    const testPassword = 'test-password-12345';
 
-      // Create test users
+    beforeAll(async () => {
+      // === FIXTURE SETUP (service-role) ===
+      setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
+
+      // 1. Create auth users WITHOUT staff_id (two-phase ADR-024 setup)
       const users = await Promise.all([
-        supabase.auth.admin.createUser({
-          email: 'test-pooling-1@example.com',
-          password: 'test-password-12345',
+        setupClient.auth.admin.createUser({
+          email: testEmail1,
+          password: testPassword,
           email_confirm: true,
+          app_metadata: { staff_role: 'pit_boss' },
         }),
-        supabase.auth.admin.createUser({
-          email: 'test-pooling-2@example.com',
-          password: 'test-password-12345',
+        setupClient.auth.admin.createUser({
+          email: testEmail2,
+          password: testPassword,
           email_confirm: true,
+          app_metadata: { staff_role: 'pit_boss' },
         }),
-        supabase.auth.admin.createUser({
-          email: 'test-pooling-3@example.com',
-          password: 'test-password-12345',
+        setupClient.auth.admin.createUser({
+          email: testEmail3,
+          password: testPassword,
           email_confirm: true,
+          app_metadata: { staff_role: 'pit_boss' },
         }),
       ]);
 
@@ -96,19 +132,19 @@ const RUN_INTEGRATION =
       testUser2Id = users[1].data?.user?.id || '';
       testUser3Id = users[2].data?.user?.id || '';
 
-      // Create test companies (ADR-043: casino.company_id NOT NULL)
+      // 2. Create test companies (ADR-043: casino.company_id NOT NULL)
       const companies = await Promise.all([
-        supabase
+        setupClient
           .from('company')
           .insert({ name: 'Pooling Test Company 1' })
           .select()
           .single(),
-        supabase
+        setupClient
           .from('company')
           .insert({ name: 'Pooling Test Company 2' })
           .select()
           .single(),
-        supabase
+        setupClient
           .from('company')
           .insert({ name: 'Pooling Test Company 3' })
           .select()
@@ -125,9 +161,9 @@ const RUN_INTEGRATION =
       testCompany2Id = companies[1].data.id;
       testCompany3Id = companies[2].data.id;
 
-      // Create test casinos
+      // 3. Create test casinos
       const casinos = await Promise.all([
-        supabase
+        setupClient
           .from('casino')
           .insert({
             name: 'Pooling Test Casino 1',
@@ -136,7 +172,7 @@ const RUN_INTEGRATION =
           })
           .select()
           .single(),
-        supabase
+        setupClient
           .from('casino')
           .insert({
             name: 'Pooling Test Casino 2',
@@ -145,7 +181,7 @@ const RUN_INTEGRATION =
           })
           .select()
           .single(),
-        supabase
+        setupClient
           .from('casino')
           .insert({
             name: 'Pooling Test Casino 3',
@@ -160,8 +196,8 @@ const RUN_INTEGRATION =
       testCasino2Id = casinos[1].data!.id;
       testCasino3Id = casinos[2].data!.id;
 
-      // Create casino settings
-      await supabase.from('casino_settings').insert([
+      // 4. Create casino settings
+      await setupClient.from('casino_settings').insert([
         {
           casino_id: testCasino1Id,
           gaming_day_start_time: '06:00:00',
@@ -185,9 +221,9 @@ const RUN_INTEGRATION =
         },
       ]);
 
-      // Create test staff
+      // 5. Create test staff
       const staff = await Promise.all([
-        supabase
+        setupClient
           .from('staff')
           .insert({
             casino_id: testCasino1Id,
@@ -200,7 +236,7 @@ const RUN_INTEGRATION =
           })
           .select()
           .single(),
-        supabase
+        setupClient
           .from('staff')
           .insert({
             casino_id: testCasino2Id,
@@ -213,7 +249,7 @@ const RUN_INTEGRATION =
           })
           .select()
           .single(),
-        supabase
+        setupClient
           .from('staff')
           .insert({
             casino_id: testCasino3Id,
@@ -231,34 +267,101 @@ const RUN_INTEGRATION =
       testStaff1Id = staff[0].data!.id;
       testStaff2Id = staff[1].data!.id;
       testStaff3Id = staff[2].data!.id;
+
+      // 6. Stamp staff_id + casino_id into app_metadata (ADR-024 two-phase)
+      await Promise.all([
+        setupClient.auth.admin.updateUserById(testUser1Id, {
+          app_metadata: {
+            staff_id: testStaff1Id,
+            casino_id: testCasino1Id,
+            staff_role: 'pit_boss',
+          },
+        }),
+        setupClient.auth.admin.updateUserById(testUser2Id, {
+          app_metadata: {
+            staff_id: testStaff2Id,
+            casino_id: testCasino2Id,
+            staff_role: 'pit_boss',
+          },
+        }),
+        setupClient.auth.admin.updateUserById(testUser3Id, {
+          app_metadata: {
+            staff_id: testStaff3Id,
+            casino_id: testCasino3Id,
+            staff_role: 'pit_boss',
+          },
+        }),
+      ]);
+
+      // 7. Sign in via throwaway clients to get JWTs
+      const throwaway1 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: session1, error: signIn1Error } =
+        await throwaway1.auth.signInWithPassword({
+          email: testEmail1,
+          password: testPassword,
+        });
+      if (signIn1Error || !session1.session)
+        throw signIn1Error ?? new Error('Sign-in 1 returned no session');
+      accessToken1 = session1.session.access_token;
+
+      const throwaway2 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: session2, error: signIn2Error } =
+        await throwaway2.auth.signInWithPassword({
+          email: testEmail2,
+          password: testPassword,
+        });
+      if (signIn2Error || !session2.session)
+        throw signIn2Error ?? new Error('Sign-in 2 returned no session');
+      accessToken2 = session2.session.access_token;
+
+      const throwaway3 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: session3, error: signIn3Error } =
+        await throwaway3.auth.signInWithPassword({
+          email: testEmail3,
+          password: testPassword,
+        });
+      if (signIn3Error || !session3.session)
+        throw signIn3Error ?? new Error('Sign-in 3 returned no session');
+      accessToken3 = session3.session.access_token;
+
+      // 8. Create Mode C authenticated anon clients (ADR-024)
+      authedClient1 = createAuthedClient(accessToken1);
+      authedClient2 = createAuthedClient(accessToken2);
+      authedClient3 = createAuthedClient(accessToken3);
     });
 
     afterAll(async () => {
-      // Clean up in reverse order
-      await supabase
+      // Clean up in reverse order (service-role for fixture teardown)
+      await setupClient
         .from('staff')
         .delete()
         .in('id', [testStaff1Id, testStaff2Id, testStaff3Id]);
-      await supabase
+      await setupClient
         .from('casino_settings')
         .delete()
         .in('casino_id', [testCasino1Id, testCasino2Id, testCasino3Id]);
-      await supabase
+      await setupClient
         .from('casino')
         .delete()
         .in('id', [testCasino1Id, testCasino2Id, testCasino3Id]);
 
       // Clean up companies (ADR-043)
-      await supabase
+      await setupClient
         .from('company')
         .delete()
         .in('id', [testCompany1Id, testCompany2Id, testCompany3Id]);
 
       // Clean up users
       await Promise.all([
-        supabase.auth.admin.deleteUser(testUser1Id),
-        supabase.auth.admin.deleteUser(testUser2Id),
-        supabase.auth.admin.deleteUser(testUser3Id),
+        setupClient.auth.admin.deleteUser(testUser1Id),
+        setupClient.auth.admin.deleteUser(testUser2Id),
+        setupClient.auth.admin.deleteUser(testUser3Id),
       ]);
     });
 
@@ -268,17 +371,11 @@ const RUN_INTEGRATION =
 
     describe('Transaction-Local Context Persistence', () => {
       it('should set context variables via RPC and persist within transaction', async () => {
-        // Set context via RPC (transaction-wrapped)
-        await setTestRLSContext(
-          supabase,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-txn-persist-001',
-        );
+        // Set context via Mode C RPC (derives context from JWT staff_id)
+        await setModeC_RLSContext(authedClient1, 'test-txn-persist-001');
 
         // Immediately query - context should still be set
-        const { data, error } = await supabase
+        const { data, error } = await authedClient1
           .from('casino_settings')
           .select('casino_id')
           .eq('casino_id', testCasino1Id)
@@ -289,16 +386,10 @@ const RUN_INTEGRATION =
       });
 
       it('should handle multiple RPC calls in sequence without context leakage', async () => {
-        // Context 1
-        await setTestRLSContext(
-          supabase,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-seq-001',
-        );
+        // Context 1 (authedClient1 = Casino 1)
+        await setModeC_RLSContext(authedClient1, 'test-seq-001');
 
-        const { data: data1 } = await supabase
+        const { data: data1 } = await authedClient1
           .from('casino_settings')
           .select('casino_id')
           .eq('casino_id', testCasino1Id)
@@ -306,16 +397,10 @@ const RUN_INTEGRATION =
 
         expect(data1?.casino_id).toBe(testCasino1Id);
 
-        // Context 2 (different casino)
-        await setTestRLSContext(
-          supabase,
-          testStaff2Id,
-          testCasino2Id,
-          'pit_boss',
-          'test-seq-002',
-        );
+        // Context 2 (authedClient2 = Casino 2)
+        await setModeC_RLSContext(authedClient2, 'test-seq-002');
 
-        const { data: data2 } = await supabase
+        const { data: data2 } = await authedClient2
           .from('casino_settings')
           .select('casino_id')
           .eq('casino_id', testCasino2Id)
@@ -328,40 +413,19 @@ const RUN_INTEGRATION =
       });
 
       it('should handle rapid context switching between three casinos', async () => {
-        const contexts = [
-          {
-            actorId: testStaff1Id,
-            casinoId: testCasino1Id,
-            staffRole: 'pit_boss',
-          },
-          {
-            actorId: testStaff2Id,
-            casinoId: testCasino2Id,
-            staffRole: 'pit_boss',
-          },
-          {
-            actorId: testStaff3Id,
-            casinoId: testCasino3Id,
-            staffRole: 'pit_boss',
-          },
-        ];
+        const clients = [authedClient1, authedClient2, authedClient3];
+        const casinoIds = [testCasino1Id, testCasino2Id, testCasino3Id];
 
         const results: string[] = [];
 
-        // Rapidly switch contexts and query
-        for (let i = 0; i < contexts.length; i++) {
-          await setTestRLSContext(
-            supabase,
-            contexts[i].actorId,
-            contexts[i].casinoId,
-            contexts[i].staffRole,
-            `test-rapid-${i}`,
-          );
+        // Rapidly switch contexts across different authenticated clients
+        for (let i = 0; i < clients.length; i++) {
+          await setModeC_RLSContext(clients[i], `test-rapid-${i}`);
 
-          const { data } = await supabase
+          const { data } = await clients[i]
             .from('casino_settings')
             .select('casino_id')
-            .eq('casino_id', contexts[i].casinoId)
+            .eq('casino_id', casinoIds[i])
             .single();
 
           if (data) {
@@ -382,36 +446,31 @@ const RUN_INTEGRATION =
 
     describe('Concurrent Request Simulation', () => {
       it('should handle 10 concurrent requests without cross-contamination', async () => {
-        // Create 10 concurrent clients (simulates pooled connections)
-        const clients = Array.from({ length: 10 }, () =>
-          createClient<Database>(supabaseUrl, supabaseServiceKey),
-        );
+        const tokens = [accessToken1, accessToken2];
+        const casinoIds = [testCasino1Id, testCasino2Id];
 
-        // Each client alternates between Casino 1 and Casino 2
-        const requests = clients.map(async (client, index) => {
+        // Create 10 concurrent Mode C clients (simulates pooled connections)
+        const requests = Array.from({ length: 10 }, (_, index) => {
           const isEven = index % 2 === 0;
-          const actorId = isEven ? testStaff1Id : testStaff2Id;
-          const casinoId = isEven ? testCasino1Id : testCasino2Id;
+          const token = isEven ? tokens[0] : tokens[1];
+          const casinoId = isEven ? casinoIds[0] : casinoIds[1];
+          const client = createAuthedClient(token);
 
-          await setTestRLSContext(
-            client,
-            actorId,
-            casinoId,
-            'pit_boss',
-            `test-concurrent-${index}`,
-          );
+          return (async () => {
+            await setModeC_RLSContext(client, `test-concurrent-${index}`);
 
-          const { data } = await client
-            .from('casino_settings')
-            .select('casino_id')
-            .eq('casino_id', casinoId)
-            .single();
+            const { data } = await client
+              .from('casino_settings')
+              .select('casino_id')
+              .eq('casino_id', casinoId)
+              .single();
 
-          return {
-            index,
-            expectedCasinoId: casinoId,
-            actualCasinoId: data?.casino_id,
-          };
+            return {
+              index,
+              expectedCasinoId: casinoId,
+              actualCasinoId: data?.casino_id,
+            };
+          })();
         });
 
         const results = await Promise.all(requests);
@@ -423,42 +482,33 @@ const RUN_INTEGRATION =
       });
 
       it('should handle concurrent requests with different staff roles', async () => {
-        const requests = [
+        const tokenMap = [
           {
-            actorId: testStaff1Id,
+            token: accessToken1,
             casinoId: testCasino1Id,
             staffRole: 'pit_boss',
             correlationId: 'concurrent-role-1',
           },
           {
-            actorId: testStaff2Id,
+            token: accessToken2,
             casinoId: testCasino2Id,
-            staffRole: 'admin',
+            staffRole: 'pit_boss',
             correlationId: 'concurrent-role-2',
           },
           {
-            actorId: testStaff3Id,
+            token: accessToken3,
             casinoId: testCasino3Id,
             staffRole: 'pit_boss',
             correlationId: 'concurrent-role-3',
           },
         ];
 
-        // Execute all requests concurrently
+        // Execute all requests concurrently with Mode C clients
         const results = await Promise.all(
-          requests.map(
-            async ({ actorId, casinoId, staffRole, correlationId }) => {
-              const client = createClient<Database>(
-                supabaseUrl,
-                supabaseServiceKey,
-              );
-              await setTestRLSContext(
-                client,
-                actorId,
-                casinoId,
-                staffRole,
-                correlationId,
-              );
+          tokenMap.map(
+            async ({ token, casinoId, staffRole, correlationId }) => {
+              const client = createAuthedClient(token);
+              await setModeC_RLSContext(client, correlationId);
 
               const { data } = await client
                 .from('casino_settings')
@@ -484,43 +534,31 @@ const RUN_INTEGRATION =
       it('should handle burst of 50 concurrent context switches', async () => {
         const burstSize = 50;
         const casinos = [testCasino1Id, testCasino2Id, testCasino3Id];
-        const staff = [testStaff1Id, testStaff2Id, testStaff3Id];
+        const tokens = [accessToken1, accessToken2, accessToken3];
 
         const requests = Array.from({ length: burstSize }, (_, i) => {
           const casinoIndex = i % 3;
           return {
-            context: {
-              actorId: staff[casinoIndex],
-              casinoId: casinos[casinoIndex],
-              staffRole: 'pit_boss',
-            },
+            token: tokens[casinoIndex],
+            casinoId: casinos[casinoIndex],
             index: i,
           };
         });
 
         const results = await Promise.all(
-          requests.map(async ({ context, index }) => {
-            const client = createClient<Database>(
-              supabaseUrl,
-              supabaseServiceKey,
-            );
-            await setTestRLSContext(
-              client,
-              context.actorId,
-              context.casinoId,
-              context.staffRole,
-              `burst-${index}`,
-            );
+          requests.map(async ({ token, casinoId, index }) => {
+            const client = createAuthedClient(token);
+            await setModeC_RLSContext(client, `burst-${index}`);
 
             const { data, error } = await client
               .from('casino_settings')
               .select('casino_id')
-              .eq('casino_id', context.casinoId)
+              .eq('casino_id', casinoId)
               .single();
 
             return {
               index,
-              expectedCasinoId: context.casinoId,
+              expectedCasinoId: casinoId,
               actualCasinoId: data?.casino_id,
               error: error?.message,
             };
@@ -541,26 +579,14 @@ const RUN_INTEGRATION =
 
     describe('Context Isolation', () => {
       it('should not share context between different client instances', async () => {
-        const client1 = createClient<Database>(supabaseUrl, supabaseServiceKey);
-        const client2 = createClient<Database>(supabaseUrl, supabaseServiceKey);
+        const client1 = createAuthedClient(accessToken1);
+        const client2 = createAuthedClient(accessToken2);
 
-        // Set Casino 1 context on client1
-        await setTestRLSContext(
-          client1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'isolation-client1',
-        );
+        // Set Casino 1 context on client1 (derived from JWT)
+        await setModeC_RLSContext(client1, 'isolation-client1');
 
-        // Set Casino 2 context on client2
-        await setTestRLSContext(
-          client2,
-          testStaff2Id,
-          testCasino2Id,
-          'pit_boss',
-          'isolation-client2',
-        );
+        // Set Casino 2 context on client2 (derived from JWT)
+        await setModeC_RLSContext(client2, 'isolation-client2');
 
         // Query both clients
         const [result1, result2] = await Promise.all([
@@ -582,27 +608,18 @@ const RUN_INTEGRATION =
       });
 
       it('should handle interleaved operations from multiple clients', async () => {
-        const client1 = createClient<Database>(supabaseUrl, supabaseServiceKey);
-        const client2 = createClient<Database>(supabaseUrl, supabaseServiceKey);
+        // Mode C: client1 is always bound to Casino 1, client2 to Casino 2
+        // For the "switch to Casino 3" part, we use client3
+        const client1 = createAuthedClient(accessToken1);
+        const client2 = createAuthedClient(accessToken2);
+        const client3 = createAuthedClient(accessToken3);
 
         // Interleaved operations:
-        // 1. Set context on client1
-        await setTestRLSContext(
-          client1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'interleave-1a',
-        );
+        // 1. Set context on client1 (Casino 1)
+        await setModeC_RLSContext(client1, 'interleave-1a');
 
-        // 2. Set context on client2
-        await setTestRLSContext(
-          client2,
-          testStaff2Id,
-          testCasino2Id,
-          'pit_boss',
-          'interleave-2a',
-        );
+        // 2. Set context on client2 (Casino 2)
+        await setModeC_RLSContext(client2, 'interleave-2a');
 
         // 3. Query from client1
         const { data: data1a } = await client1
@@ -618,17 +635,11 @@ const RUN_INTEGRATION =
           .eq('casino_id', testCasino2Id)
           .single();
 
-        // 5. Switch context on client1 to Casino 3
-        await setTestRLSContext(
-          client1,
-          testStaff3Id,
-          testCasino3Id,
-          'pit_boss',
-          'interleave-1b',
-        );
+        // 5. Set context on client3 (Casino 3) — tests third concurrent context
+        await setModeC_RLSContext(client3, 'interleave-1b');
 
-        // 6. Query from client1 (should see Casino 3 now)
-        const { data: data1b } = await client1
+        // 6. Query from client3 (should see Casino 3)
+        const { data: data1b } = await client3
           .from('casino_settings')
           .select('casino_id')
           .eq('casino_id', testCasino3Id)
@@ -641,7 +652,7 @@ const RUN_INTEGRATION =
           .eq('casino_id', testCasino2Id)
           .single();
 
-        // Verify context switching worked correctly
+        // Verify context isolation works correctly
         expect(data1a?.casino_id).toBe(testCasino1Id);
         expect(data2a?.casino_id).toBe(testCasino2Id);
         expect(data1b?.casino_id).toBe(testCasino3Id);
@@ -655,20 +666,20 @@ const RUN_INTEGRATION =
 
     describe('RPC Function Atomicity', () => {
       it('should set all context variables atomically', async () => {
-        // Single RPC call should set all variables
-        const { error } = await supabase.rpc('set_rls_context_internal', {
-          p_actor_id: testStaff1Id,
-          p_casino_id: testCasino1Id,
-          p_staff_role: 'pit_boss',
-          p_correlation_id: 'atomic-test-001',
-        });
+        // Single Mode C RPC call should set all variables (derived from JWT)
+        const { error } = await authedClient1.rpc(
+          'set_rls_context_from_staff',
+          {
+            p_correlation_id: 'atomic-test-001',
+          },
+        );
 
         expect(error).toBeNull();
 
         // All variables should be available in subsequent queries
         // (We can't directly check current_setting via Supabase client,
         // but we verify by querying data that depends on the context)
-        const { data } = await supabase
+        const { data } = await authedClient1
           .from('casino_settings')
           .select('casino_id')
           .eq('casino_id', testCasino1Id)
@@ -678,8 +689,9 @@ const RUN_INTEGRATION =
       });
 
       it('should handle RPC errors gracefully without partial context', async () => {
-        // Attempt to call RPC with invalid UUID
-        const { error } = await supabase.rpc('set_rls_context_internal', {
+        // Use service-role to test set_rls_context_internal with invalid UUID
+        // (Mode C set_rls_context_from_staff derives from JWT so can't inject invalid UUID)
+        const { error } = await setupClient.rpc('set_rls_context_internal', {
           p_actor_id: 'invalid-uuid' as string,
           p_casino_id: testCasino1Id,
           p_staff_role: 'pit_boss',
@@ -691,13 +703,13 @@ const RUN_INTEGRATION =
 
         // Context should not be partially set (all-or-nothing)
         // Subsequent queries should work without the failed context
-        const { data } = await supabase
+        const { data } = await authedClient1
           .from('casino_settings')
           .select('casino_id')
           .eq('casino_id', testCasino1Id)
           .single();
 
-        // Query should still work (falls back to JWT or service role)
+        // Query should still work (falls back to JWT context)
         expect(data?.casino_id).toBe(testCasino1Id);
       });
     });
@@ -710,16 +722,10 @@ const RUN_INTEGRATION =
       it('should accept and set correlation_id in application_name', async () => {
         const correlationId = 'test-correlation-xyz-123';
 
-        await setTestRLSContext(
-          supabase,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          correlationId,
-        );
+        await setModeC_RLSContext(authedClient1, correlationId);
 
         // Subsequent query should execute successfully
-        const { data, error } = await supabase
+        const { data, error } = await authedClient1
           .from('casino_settings')
           .select('casino_id')
           .eq('casino_id', testCasino1Id)
@@ -730,15 +736,10 @@ const RUN_INTEGRATION =
       });
 
       it('should handle NULL correlation_id', async () => {
-        // Don't pass correlation_id (undefined)
-        await setTestRLSContext(
-          supabase,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-        );
+        // Don't pass correlation_id (defaults to null)
+        await setModeC_RLSContext(authedClient1);
 
-        const { data, error } = await supabase
+        const { data, error } = await authedClient1
           .from('casino_settings')
           .select('casino_id')
           .eq('casino_id', testCasino1Id)
@@ -753,23 +754,14 @@ const RUN_INTEGRATION =
           { length: 5 },
           (_, i) => `concurrent-cid-${i}`,
         );
+        const tokens = [accessToken1, accessToken2, accessToken3];
+        const casinos = [testCasino1Id, testCasino2Id, testCasino3Id];
 
         const requests = correlationIds.map(async (cid, index) => {
-          const client = createClient<Database>(
-            supabaseUrl,
-            supabaseServiceKey,
-          );
           const casinoIndex = index % 3;
-          const casinos = [testCasino1Id, testCasino2Id, testCasino3Id];
-          const staff = [testStaff1Id, testStaff2Id, testStaff3Id];
+          const client = createAuthedClient(tokens[casinoIndex]);
 
-          await setTestRLSContext(
-            client,
-            staff[casinoIndex],
-            casinos[casinoIndex],
-            'pit_boss',
-            cid,
-          );
+          await setModeC_RLSContext(client, cid);
 
           const { data } = await client
             .from('casino_settings')
@@ -804,7 +796,7 @@ const RUN_INTEGRATION =
 
       beforeAll(async () => {
         // Create test player (player table doesn't have casino_id directly)
-        const { data: player, error: playerError } = await supabase
+        const { data: player, error: playerError } = await setupClient
           .from('player')
           .insert({
             first_name: 'RPC',
@@ -817,7 +809,7 @@ const RUN_INTEGRATION =
         testPlayerId = player.id;
 
         // Enroll player at casino via player_casino junction table
-        const { error: enrollError } = await supabase
+        const { error: enrollError } = await setupClient
           .from('player_casino')
           .insert({
             player_id: testPlayerId,
@@ -828,7 +820,7 @@ const RUN_INTEGRATION =
         if (enrollError) throw enrollError;
 
         // Create test table (uses label + type, not table_number + status)
-        const { data: table, error: tableError } = await supabase
+        const { data: table, error: tableError } = await setupClient
           .from('gaming_table')
           .insert({
             casino_id: testCasino1Id,
@@ -843,7 +835,7 @@ const RUN_INTEGRATION =
         testTableId = table.id;
 
         // Create test visit
-        const { data: visit, error: visitError } = await supabase
+        const { data: visit, error: visitError } = await setupClient
           .from('visit')
           .insert({
             casino_id: testCasino1Id,
@@ -857,32 +849,34 @@ const RUN_INTEGRATION =
       });
 
       afterAll(async () => {
-        // Clean up in reverse dependency order
-        await supabase.from('rating_slip').delete().eq('visit_id', testVisitId);
-        await supabase.from('visit').delete().eq('id', testVisitId);
-        await supabase.from('gaming_table').delete().eq('id', testTableId);
-        await supabase
+        // Clean up in reverse dependency order (service-role for fixture teardown)
+        await setupClient
+          .from('rating_slip')
+          .delete()
+          .eq('visit_id', testVisitId);
+        await setupClient.from('visit').delete().eq('id', testVisitId);
+        await setupClient.from('gaming_table').delete().eq('id', testTableId);
+        await setupClient
           .from('player_casino')
           .delete()
           .eq('player_id', testPlayerId);
-        await supabase.from('player').delete().eq('id', testPlayerId);
+        await setupClient.from('player').delete().eq('id', testPlayerId);
       });
 
       it('should maintain context when calling rpc_start then rpc_close (move workflow)', async () => {
         // This test verifies the fix for ISSUE-B3C8BA48:
         // When the move endpoint calls close() then start(), each RPC must
         // self-inject context to work correctly with connection pooling.
+        // Mode C: authedClient1 carries JWT with staff_id for Casino 1
 
-        // Step 1: Call rpc_start_rating_slip
-        const { data: startResult, error: startError } = await supabase.rpc(
-          'rpc_start_rating_slip',
-          {
+        // Step 1: Call rpc_start_rating_slip via Mode C client
+        const { data: startResult, error: startError } =
+          await authedClient1.rpc('rpc_start_rating_slip', {
             p_visit_id: testVisitId,
             p_table_id: testTableId,
             p_seat_number: '1',
             p_game_settings: { game_type: 'blackjack' },
-          },
-        );
+          });
 
         expect(startError).toBeNull();
         expect(startResult).toBeTruthy();
@@ -891,13 +885,11 @@ const RUN_INTEGRATION =
 
         // Step 2: Call rpc_close_rating_slip (simulates move workflow)
         // In production, this may execute on a DIFFERENT pooled connection
-        const { data: closeResult, error: closeError } = await supabase.rpc(
-          'rpc_close_rating_slip',
-          {
+        const { data: closeResult, error: closeError } =
+          await authedClient1.rpc('rpc_close_rating_slip', {
             p_rating_slip_id: startResult!.id,
             p_average_bet: 50.0,
-          },
-        );
+          });
 
         expect(closeError).toBeNull();
         expect(closeResult).toBeTruthy();
@@ -906,8 +898,8 @@ const RUN_INTEGRATION =
       });
 
       it('should handle pause/resume RPCs in sequence', async () => {
-        // Create a new slip for this test
-        const { data: slip, error: startError } = await supabase.rpc(
+        // Create a new slip for this test via Mode C client
+        const { data: slip, error: startError } = await authedClient1.rpc(
           'rpc_start_rating_slip',
           {
             p_visit_id: testVisitId,
@@ -921,36 +913,30 @@ const RUN_INTEGRATION =
         expect(slip).toBeTruthy();
 
         // Pause the slip
-        const { data: pauseResult, error: pauseError } = await supabase.rpc(
-          'rpc_pause_rating_slip',
-          {
+        const { data: pauseResult, error: pauseError } =
+          await authedClient1.rpc('rpc_pause_rating_slip', {
             p_rating_slip_id: slip!.id,
-          },
-        );
+          });
 
         expect(pauseError).toBeNull();
         expect(pauseResult).toBeTruthy();
         expect(pauseResult?.status).toBe('paused');
 
         // Resume the slip (third RPC call - tests context persists)
-        const { data: resumeResult, error: resumeError } = await supabase.rpc(
-          'rpc_resume_rating_slip',
-          {
+        const { data: resumeResult, error: resumeError } =
+          await authedClient1.rpc('rpc_resume_rating_slip', {
             p_rating_slip_id: slip!.id,
-          },
-        );
+          });
 
         expect(resumeError).toBeNull();
         expect(resumeResult).toBeTruthy();
         expect(resumeResult?.status).toBe('open');
 
         // Close the slip (fourth RPC call)
-        const { data: closeResult, error: closeError } = await supabase.rpc(
-          'rpc_close_rating_slip',
-          {
+        const { data: closeResult, error: closeError } =
+          await authedClient1.rpc('rpc_close_rating_slip', {
             p_rating_slip_id: slip!.id,
-          },
-        );
+          });
 
         expect(closeError).toBeNull();
         expect(closeResult).toBeTruthy();
@@ -958,8 +944,8 @@ const RUN_INTEGRATION =
       });
 
       it('should enforce casino isolation between RPC calls', async () => {
-        // Start a slip in casino 1
-        const { data: slip1, error: start1Error } = await supabase.rpc(
+        // Start a slip in casino 1 via Mode C client
+        const { data: slip1, error: start1Error } = await authedClient1.rpc(
           'rpc_start_rating_slip',
           {
             p_visit_id: testVisitId,
@@ -976,15 +962,15 @@ const RUN_INTEGRATION =
         // The RPC will use the caller's context casino_id automatically.
         // Casino isolation is enforced by the WHERE clause matching v_casino_id.
 
-        // Clean up - close the slip (context derives casino from staff)
-        await supabase.rpc('rpc_close_rating_slip', {
+        // Clean up - close the slip (context derives casino from staff JWT)
+        await authedClient1.rpc('rpc_close_rating_slip', {
           p_rating_slip_id: slip1!.id,
         });
       });
 
       it('should handle concurrent RPC calls from different casinos', async () => {
-        // Create test data for casino 2
-        const { data: player2 } = await supabase
+        // Create test data for casino 2 (service-role for fixture setup)
+        const { data: player2 } = await setupClient
           .from('player')
           .insert({
             first_name: 'Concurrent',
@@ -994,13 +980,13 @@ const RUN_INTEGRATION =
           .single();
 
         // Enroll player2 at casino 2
-        await supabase.from('player_casino').insert({
+        await setupClient.from('player_casino').insert({
           player_id: player2!.id,
           casino_id: testCasino2Id,
           status: 'active',
         });
 
-        const { data: table2 } = await supabase
+        const { data: table2 } = await setupClient
           .from('gaming_table')
           .insert({
             casino_id: testCasino2Id,
@@ -1011,7 +997,7 @@ const RUN_INTEGRATION =
           .select()
           .single();
 
-        const { data: visit2 } = await supabase
+        const { data: visit2 } = await setupClient
           .from('visit')
           .insert({
             casino_id: testCasino2Id,
@@ -1021,15 +1007,15 @@ const RUN_INTEGRATION =
           .single();
 
         try {
-          // Start slips concurrently in both casinos
+          // Start slips concurrently in both casinos via Mode C clients
           const [result1, result2] = await Promise.all([
-            supabase.rpc('rpc_start_rating_slip', {
+            authedClient1.rpc('rpc_start_rating_slip', {
               p_visit_id: testVisitId,
               p_table_id: testTableId,
               p_seat_number: '4',
               p_game_settings: { game_type: 'blackjack' },
             }),
-            supabase.rpc('rpc_start_rating_slip', {
+            authedClient2.rpc('rpc_start_rating_slip', {
               p_visit_id: visit2!.id,
               p_table_id: table2!.id,
               p_seat_number: '1',
@@ -1046,12 +1032,12 @@ const RUN_INTEGRATION =
           expect(result1.data?.casino_id).toBe(testCasino1Id);
           expect(result2.data?.casino_id).toBe(testCasino2Id);
 
-          // Close both concurrently
+          // Close both concurrently via respective Mode C clients
           const [close1, close2] = await Promise.all([
-            supabase.rpc('rpc_close_rating_slip', {
+            authedClient1.rpc('rpc_close_rating_slip', {
               p_rating_slip_id: result1.data!.id,
             }),
-            supabase.rpc('rpc_close_rating_slip', {
+            authedClient2.rpc('rpc_close_rating_slip', {
               p_rating_slip_id: result2.data!.id,
             }),
           ]);
@@ -1059,18 +1045,18 @@ const RUN_INTEGRATION =
           expect(close1.error).toBeNull();
           expect(close2.error).toBeNull();
         } finally {
-          // Cleanup casino 2 test data
-          await supabase
+          // Cleanup casino 2 test data (service-role)
+          await setupClient
             .from('rating_slip')
             .delete()
             .eq('visit_id', visit2!.id);
-          await supabase.from('visit').delete().eq('id', visit2!.id);
-          await supabase.from('gaming_table').delete().eq('id', table2!.id);
-          await supabase
+          await setupClient.from('visit').delete().eq('id', visit2!.id);
+          await setupClient.from('gaming_table').delete().eq('id', table2!.id);
+          await setupClient
             .from('player_casino')
             .delete()
             .eq('player_id', player2!.id);
-          await supabase.from('player').delete().eq('id', player2!.id);
+          await setupClient.from('player').delete().eq('id', player2!.id);
         }
       });
     });
@@ -1086,9 +1072,9 @@ const RUN_INTEGRATION =
       let testPlayer2Id: string;
 
       beforeAll(async () => {
-        // Create players for cross-casino tests
+        // Create players for cross-casino tests (service-role for fixture setup)
         const players = await Promise.all([
-          supabase
+          setupClient
             .from('player')
             .insert({
               first_name: 'Casino1',
@@ -1096,7 +1082,7 @@ const RUN_INTEGRATION =
             })
             .select()
             .single(),
-          supabase
+          setupClient
             .from('player')
             .insert({
               first_name: 'Casino2',
@@ -1111,12 +1097,12 @@ const RUN_INTEGRATION =
 
         // Enroll players at respective casinos
         await Promise.all([
-          supabase.from('player_casino').insert({
+          setupClient.from('player_casino').insert({
             player_id: testPlayer1Id,
             casino_id: testCasino1Id,
             status: 'active',
           }),
-          supabase.from('player_casino').insert({
+          setupClient.from('player_casino').insert({
             player_id: testPlayer2Id,
             casino_id: testCasino2Id,
             status: 'active',
@@ -1125,7 +1111,7 @@ const RUN_INTEGRATION =
 
         // Create visits for each casino
         const visits = await Promise.all([
-          supabase
+          setupClient
             .from('visit')
             .insert({
               casino_id: testCasino1Id,
@@ -1133,7 +1119,7 @@ const RUN_INTEGRATION =
             })
             .select()
             .single(),
-          supabase
+          setupClient
             .from('visit')
             .insert({
               casino_id: testCasino2Id,
@@ -1148,46 +1134,27 @@ const RUN_INTEGRATION =
       });
 
       afterAll(async () => {
-        // Clean up in reverse dependency order
-        await supabase
+        // Clean up in reverse dependency order (service-role for fixture teardown)
+        await setupClient
           .from('visit')
           .delete()
           .in('id', [testVisit1Id, testVisit2Id]);
-        await supabase
+        await setupClient
           .from('player_casino')
           .delete()
           .in('player_id', [testPlayer1Id, testPlayer2Id]);
-        await supabase
+        await setupClient
           .from('player')
           .delete()
           .in('id', [testPlayer1Id, testPlayer2Id]);
       });
 
       it('should deny read access to other casino visit records', async () => {
-        // Setup: Staff A authenticated for Casino 1
-        // Use anon key with authentication for proper RLS enforcement
-        const anonClient = createClient<Database>(
-          supabaseUrl,
-          supabaseAnonKey,
-          {
-            auth: { autoRefreshToken: false, persistSession: false },
-          },
-        );
-        await anonClient.auth.signInWithPassword({
-          email: 'test-pooling-1@example.com',
-          password: 'test-password-12345',
-        });
-
-        await setTestRLSContext(
-          anonClient,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'cross-casino-visit-read',
-        );
+        // Mode C: authedClient1 carries JWT with Casino 1 staff identity
+        await setModeC_RLSContext(authedClient1, 'cross-casino-visit-read');
 
         // Act: Query all visits (RLS should filter to Casino 1 only)
-        const { data, error } = await anonClient
+        const { data, error } = await authedClient1
           .from('visit')
           .select('id, casino_id');
 
@@ -1200,43 +1167,22 @@ const RUN_INTEGRATION =
         expect(casinoIds).not.toContain(testCasino2Id);
 
         // Verify Casino 2 visit is completely invisible
-        const { data: casino2Visit } = await anonClient
+        const { data: casino2Visit } = await authedClient1
           .from('visit')
           .select('id')
           .eq('id', testVisit2Id)
           .maybeSingle();
 
         expect(casino2Visit).toBeNull();
-
-        await anonClient.auth.signOut();
       });
 
       it('should deny read access to other casino player records', async () => {
-        // Setup: Staff A authenticated for Casino 1
-        // Use anon key with authentication for proper RLS enforcement
-        const anonClient = createClient<Database>(
-          supabaseUrl,
-          supabaseAnonKey,
-          {
-            auth: { autoRefreshToken: false, persistSession: false },
-          },
-        );
-        await anonClient.auth.signInWithPassword({
-          email: 'test-pooling-1@example.com',
-          password: 'test-password-12345',
-        });
-
-        await setTestRLSContext(
-          anonClient,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'cross-casino-player-read',
-        );
+        // Mode C: authedClient1 carries JWT with Casino 1 staff identity
+        await setModeC_RLSContext(authedClient1, 'cross-casino-player-read');
 
         // Act: Query all players via player_casino junction
         // (player table has no casino_id, so we test via relationship)
-        const { data, error } = await anonClient
+        const { data, error } = await authedClient1
           .from('player_casino')
           .select(
             'player_id, casino_id, player:player(id, first_name, last_name)',
@@ -1251,7 +1197,7 @@ const RUN_INTEGRATION =
         expect(casinoIds).not.toContain(testCasino2Id);
 
         // Verify Casino 2 player association is invisible
-        const { data: casino2PlayerCasino } = await anonClient
+        const { data: casino2PlayerCasino } = await authedClient1
           .from('player_casino')
           .select('player_id')
           .eq('player_id', testPlayer2Id)
@@ -1259,35 +1205,14 @@ const RUN_INTEGRATION =
           .maybeSingle();
 
         expect(casino2PlayerCasino).toBeNull();
-
-        await anonClient.auth.signOut();
       });
 
       it('should deny read access to other casino record (casino table RLS)', async () => {
-        // Setup: Staff A authenticated for Casino 1
-        // Use anon key with authentication for proper RLS enforcement
-        const anonClient = createClient<Database>(
-          supabaseUrl,
-          supabaseAnonKey,
-          {
-            auth: { autoRefreshToken: false, persistSession: false },
-          },
-        );
-        await anonClient.auth.signInWithPassword({
-          email: 'test-pooling-1@example.com',
-          password: 'test-password-12345',
-        });
-
-        await setTestRLSContext(
-          anonClient,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'cross-casino-table-read',
-        );
+        // Mode C: authedClient1 carries JWT with Casino 1 staff identity
+        await setModeC_RLSContext(authedClient1, 'cross-casino-table-read');
 
         // Act: Query all casinos (should only see own casino)
-        const { data, error } = await anonClient
+        const { data, error } = await authedClient1
           .from('casino')
           .select('id, name');
 
@@ -1302,42 +1227,21 @@ const RUN_INTEGRATION =
         expect(casinoIds).not.toContain(testCasino3Id);
 
         // Direct query for Casino 2 should return empty (RLS filters it out)
-        const { data: casino2 } = await anonClient
+        const { data: casino2 } = await authedClient1
           .from('casino')
           .select('id')
           .eq('id', testCasino2Id)
           .maybeSingle();
 
         expect(casino2).toBeNull();
-
-        await anonClient.auth.signOut();
       });
 
       it('should deny insert into other casino tables (visit INSERT denial)', async () => {
-        // Setup: Staff A authenticated for Casino 1
-        // Use anon key with authentication for proper RLS enforcement
-        const anonClient = createClient<Database>(
-          supabaseUrl,
-          supabaseAnonKey,
-          {
-            auth: { autoRefreshToken: false, persistSession: false },
-          },
-        );
-        await anonClient.auth.signInWithPassword({
-          email: 'test-pooling-1@example.com',
-          password: 'test-password-12345',
-        });
-
-        await setTestRLSContext(
-          anonClient,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'cross-casino-insert-deny',
-        );
+        // Mode C: authedClient1 carries JWT with Casino 1 staff identity
+        await setModeC_RLSContext(authedClient1, 'cross-casino-insert-deny');
 
         // Act: Attempt to insert visit for Casino 2 (should fail)
-        const { data, error } = await anonClient
+        const { data, error } = await authedClient1
           .from('visit')
           .insert({
             casino_id: testCasino2Id, // Wrong casino!
@@ -1354,43 +1258,17 @@ const RUN_INTEGRATION =
         expect(error!.message).toMatch(
           /new row violates row-level security policy|violates foreign key constraint|permission denied/i,
         );
-
-        await anonClient.auth.signOut();
       });
 
       it('should deny cross-casino access via SET LOCAL (authenticated anon client)', async () => {
-        // This test verifies SET LOCAL context is enforced with authenticated client
-        // Use anon key client with user authentication for RLS enforcement
-        const anonClient = createClient<Database>(
-          supabaseUrl,
-          supabaseAnonKey,
-          {
-            auth: { autoRefreshToken: false, persistSession: false },
-          },
-        );
-
-        // Sign in as test user 1 (linked to staff 1, casino 1)
-        const { error: signInError } = await anonClient.auth.signInWithPassword(
-          {
-            email: 'test-pooling-1@example.com',
-            password: 'test-password-12345',
-          },
-        );
-
-        expect(signInError).toBeNull();
+        // This test verifies SET LOCAL context is enforced with Mode C client
+        // Mode C: authedClient1 carries JWT with Casino 1 staff identity
 
         // Set context for Casino 1 via ADR-024 authoritative context injection
-        const { error: rpcError } = await anonClient.rpc(
-          'set_rls_context_from_staff',
-          {
-            p_correlation_id: 'cross-casino-set-local',
-          },
-        );
-
-        expect(rpcError).toBeNull();
+        await setModeC_RLSContext(authedClient1, 'cross-casino-set-local');
 
         // Query casino table - should only see Casino 1
-        const { data, error } = await anonClient
+        const { data, error } = await authedClient1
           .from('casino')
           .select('id, name');
 
@@ -1402,40 +1280,30 @@ const RUN_INTEGRATION =
         expect(casinoIds).not.toContain(testCasino2Id);
 
         // Try to query Casino 2 visit - should be invisible
-        const { data: visit2 } = await anonClient
+        const { data: visit2 } = await authedClient1
           .from('visit')
           .select('id')
           .eq('id', testVisit2Id)
           .maybeSingle();
 
         expect(visit2).toBeNull();
-
-        await anonClient.auth.signOut();
       });
 
       it('should handle cross-casino denial in concurrent requests', async () => {
         // This test simulates multiple staff from different casinos
         // querying concurrently - no cross-contamination should occur
-        // Uses authenticated anon clients for proper RLS enforcement
+        // Uses Mode C authenticated anon clients for proper RLS enforcement
 
         const requests = [
           {
-            email: 'test-pooling-1@example.com',
-            context: {
-              actorId: testStaff1Id,
-              casinoId: testCasino1Id,
-              staffRole: 'pit_boss',
-            },
+            client: createAuthedClient(accessToken1),
+            casinoId: testCasino1Id,
             expectedVisitId: testVisit1Id,
             forbiddenVisitId: testVisit2Id,
           },
           {
-            email: 'test-pooling-2@example.com',
-            context: {
-              actorId: testStaff2Id,
-              casinoId: testCasino2Id,
-              staffRole: 'pit_boss',
-            },
+            client: createAuthedClient(accessToken2),
+            casinoId: testCasino2Id,
             expectedVisitId: testVisit2Id,
             forbiddenVisitId: testVisit1Id,
           },
@@ -1443,27 +1311,10 @@ const RUN_INTEGRATION =
 
         const results = await Promise.all(
           requests.map(
-            async ({ email, context, expectedVisitId, forbiddenVisitId }) => {
-              // Use anon client with authentication for RLS enforcement
-              const client = createClient<Database>(
-                supabaseUrl,
-                supabaseAnonKey,
-                {
-                  auth: { autoRefreshToken: false, persistSession: false },
-                },
-              );
-
-              await client.auth.signInWithPassword({
-                email,
-                password: 'test-password-12345',
-              });
-
-              await setTestRLSContext(
+            async ({ client, casinoId, expectedVisitId, forbiddenVisitId }) => {
+              await setModeC_RLSContext(
                 client,
-                context.actorId,
-                context.casinoId,
-                context.staffRole,
-                `concurrent-denial-${context.casinoId}`,
+                `concurrent-denial-${casinoId}`,
               );
 
               const { data: ownVisit } = await client
@@ -1478,10 +1329,8 @@ const RUN_INTEGRATION =
                 .eq('id', forbiddenVisitId)
                 .maybeSingle();
 
-              await client.auth.signOut();
-
               return {
-                casinoId: context.casinoId,
+                casinoId,
                 canSeeOwnVisit: ownVisit !== null,
                 canSeeOtherVisit: otherVisit !== null,
               };
@@ -1498,26 +1347,12 @@ const RUN_INTEGRATION =
 
       it('should enforce casino isolation on casino_settings queries', async () => {
         // Verify casino_settings (a critical config table) respects RLS
-        // Uses authenticated anon clients for proper RLS enforcement
+        // Uses Mode C authenticated anon clients for proper RLS enforcement
 
-        // Staff A client (Casino 1)
-        const client1 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-          auth: { autoRefreshToken: false, persistSession: false },
-        });
-        await client1.auth.signInWithPassword({
-          email: 'test-pooling-1@example.com',
-          password: 'test-password-12345',
-        });
+        // Staff A client (Casino 1) — Mode C
+        await setModeC_RLSContext(authedClient1, 'settings-isolation-1');
 
-        await setTestRLSContext(
-          client1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'settings-isolation-1',
-        );
-
-        const { data: settings1 } = await client1
+        const { data: settings1 } = await authedClient1
           .from('casino_settings')
           .select('casino_id, timezone');
 
@@ -1526,26 +1361,10 @@ const RUN_INTEGRATION =
         expect(casino1Ids).toContain(testCasino1Id);
         expect(casino1Ids).not.toContain(testCasino2Id);
 
-        await client1.auth.signOut();
+        // Staff B client (Casino 2) — Mode C
+        await setModeC_RLSContext(authedClient2, 'settings-isolation-2');
 
-        // Staff B client (Casino 2)
-        const client2 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-          auth: { autoRefreshToken: false, persistSession: false },
-        });
-        await client2.auth.signInWithPassword({
-          email: 'test-pooling-2@example.com',
-          password: 'test-password-12345',
-        });
-
-        await setTestRLSContext(
-          client2,
-          testStaff2Id,
-          testCasino2Id,
-          'pit_boss',
-          'settings-isolation-2',
-        );
-
-        const { data: settings2 } = await client2
+        const { data: settings2 } = await authedClient2
           .from('casino_settings')
           .select('casino_id, timezone');
 
@@ -1553,8 +1372,6 @@ const RUN_INTEGRATION =
         const casino2Ids = settings2!.map((s) => s.casino_id);
         expect(casino2Ids).toContain(testCasino2Id);
         expect(casino2Ids).not.toContain(testCasino1Id);
-
-        await client2.auth.signOut();
       });
     });
 
@@ -1566,48 +1383,36 @@ const RUN_INTEGRATION =
       it('should handle high-concurrency scenario (100 requests)', async () => {
         const requestCount = 100;
         const casinos = [testCasino1Id, testCasino2Id, testCasino3Id];
-        const staff = [testStaff1Id, testStaff2Id, testStaff3Id];
+        const tokens = [accessToken1, accessToken2, accessToken3];
 
         const requests = Array.from({ length: requestCount }, (_, i) => {
           const casinoIndex = i % 3;
           return {
-            context: {
-              actorId: staff[casinoIndex],
-              casinoId: casinos[casinoIndex],
-              staffRole: 'pit_boss',
-            },
+            token: tokens[casinoIndex],
+            casinoId: casinos[casinoIndex],
             index: i,
           };
         });
 
         // Execute all requests concurrently (simulates pool exhaustion)
         const results = await Promise.all(
-          requests.map(async ({ context, index }) => {
-            const client = createClient<Database>(
-              supabaseUrl,
-              supabaseServiceKey,
-            );
+          requests.map(async ({ token, casinoId, index }) => {
+            const client = createAuthedClient(token);
 
             try {
-              await setTestRLSContext(
-                client,
-                context.actorId,
-                context.casinoId,
-                context.staffRole,
-                `pool-exhaust-${index}`,
-              );
+              await setModeC_RLSContext(client, `pool-exhaust-${index}`);
 
               const { data, error } = await client
                 .from('casino_settings')
                 .select('casino_id')
-                .eq('casino_id', context.casinoId)
+                .eq('casino_id', casinoId)
                 .single();
 
               return {
                 index,
                 success: !error,
                 casinoId: data?.casino_id,
-                expectedCasinoId: context.casinoId,
+                expectedCasinoId: casinoId,
               };
             } catch (err) {
               return {
@@ -1642,7 +1447,7 @@ const RUN_INTEGRATION =
         const totalRequests = requestsPerSecond * durationSeconds;
 
         const casinos = [testCasino1Id, testCasino2Id, testCasino3Id];
-        const staff = [testStaff1Id, testStaff2Id, testStaff3Id];
+        const tokens = [accessToken1, accessToken2, accessToken3];
 
         const startTime = Date.now();
         const results: {
@@ -1658,11 +1463,8 @@ const RUN_INTEGRATION =
         const requests = Array.from({ length: totalRequests }, (_, i) => {
           const casinoIndex = i % 3;
           return {
-            context: {
-              actorId: staff[casinoIndex],
-              casinoId: casinos[casinoIndex],
-              staffRole: 'pit_boss' as const,
-            },
+            token: tokens[casinoIndex],
+            casinoId: casinos[casinoIndex],
             requestId: i,
             expectedCasinoId: casinos[casinoIndex],
           };
@@ -1679,26 +1481,20 @@ const RUN_INTEGRATION =
 
           const batchResults = await Promise.all(
             batchRequests.map(
-              async ({ context, requestId, expectedCasinoId }) => {
+              async ({ token, casinoId, requestId, expectedCasinoId }) => {
                 const reqStartTime = Date.now();
-                const client = createClient<Database>(
-                  supabaseUrl,
-                  supabaseServiceKey,
-                );
+                const client = createAuthedClient(token);
 
                 try {
-                  await setTestRLSContext(
+                  await setModeC_RLSContext(
                     client,
-                    context.actorId,
-                    context.casinoId,
-                    context.staffRole,
                     `load-test-${batch}-${requestId}`,
                   );
 
                   const { data, error } = await client
                     .from('casino_settings')
                     .select('casino_id')
-                    .eq('casino_id', context.casinoId)
+                    .eq('casino_id', casinoId)
                     .single();
 
                   return {
@@ -1756,24 +1552,29 @@ const RUN_INTEGRATION =
       }, 120000); // 2 minute timeout
 
       it('should maintain multi-tenant isolation with 10 concurrent casinos', async () => {
-        // Create 10 test casinos with dedicated staff
+        // Create 10 test casinos with dedicated staff and Mode C tokens
+        const isoSuffix = Date.now();
         const testCasinos: {
           casinoId: string;
           companyId: string;
           staffId: string;
           userId: string;
+          accessToken: string;
         }[] = [];
 
         for (let i = 0; i < 10; i++) {
+          const email = `test-rls-t3-pool-iso-${i}-${isoSuffix}@example.com`;
+
           // Create user
-          const { data: user } = await supabase.auth.admin.createUser({
-            email: `isolation-test-${i}@example.com`,
-            password: 'test-password-12345',
+          const { data: user } = await setupClient.auth.admin.createUser({
+            email,
+            password: testPassword,
             email_confirm: true,
+            app_metadata: { staff_role: 'pit_boss' },
           });
 
           // Create company (ADR-043: casino.company_id NOT NULL)
-          const { data: company } = await supabase
+          const { data: company } = await setupClient
             .from('company')
             .insert({ name: `Isolation Test Company ${i}` })
             .select()
@@ -1782,7 +1583,7 @@ const RUN_INTEGRATION =
             throw new Error(`Failed to create isolation test company ${i}`);
 
           // Create casino
-          const { data: casino } = await supabase
+          const { data: casino } = await setupClient
             .from('casino')
             .insert({
               name: `Isolation Test Casino ${i}`,
@@ -1793,7 +1594,7 @@ const RUN_INTEGRATION =
             .single();
 
           // Create casino settings
-          await supabase.from('casino_settings').insert({
+          await setupClient.from('casino_settings').insert({
             casino_id: casino!.id,
             gaming_day_start_time: '06:00:00',
             timezone: 'America/Los_Angeles',
@@ -1802,7 +1603,7 @@ const RUN_INTEGRATION =
           });
 
           // Create staff
-          const { data: staff } = await supabase
+          const { data: staff } = await setupClient
             .from('staff')
             .insert({
               casino_id: casino!.id,
@@ -1816,11 +1617,38 @@ const RUN_INTEGRATION =
             .select()
             .single();
 
+          // Stamp staff_id into app_metadata (ADR-024 two-phase)
+          await setupClient.auth.admin.updateUserById(user!.user!.id, {
+            app_metadata: {
+              staff_id: staff!.id,
+              casino_id: casino!.id,
+              staff_role: 'pit_boss',
+            },
+          });
+
+          // Sign in to get JWT
+          const throwaway = createClient<Database>(
+            supabaseUrl,
+            supabaseAnonKey,
+            { auth: { autoRefreshToken: false, persistSession: false } },
+          );
+          const { data: session, error: signInError } =
+            await throwaway.auth.signInWithPassword({
+              email,
+              password: testPassword,
+            });
+          if (signInError || !session.session)
+            throw (
+              signInError ??
+              new Error(`Sign-in for isolation user ${i} returned no session`)
+            );
+
           testCasinos.push({
             casinoId: casino!.id,
             companyId: company.id,
             staffId: staff!.id,
             userId: user!.user!.id,
+            accessToken: session.session.access_token,
           });
         }
 
@@ -1831,11 +1659,8 @@ const RUN_INTEGRATION =
             Array.from({ length: requestsPerCasino }, (_, requestIndex) => ({
               casinoIndex,
               requestIndex,
-              context: {
-                actorId: casino.staffId,
-                casinoId: casino.casinoId,
-                staffRole: 'pit_boss' as const,
-              },
+              token: casino.accessToken,
+              casinoId: casino.casinoId,
               expectedCasinoId: casino.casinoId,
             })),
           );
@@ -1845,27 +1670,22 @@ const RUN_INTEGRATION =
               async ({
                 casinoIndex,
                 requestIndex,
-                context,
+                token,
+                casinoId,
                 expectedCasinoId,
               }) => {
-                const client = createClient<Database>(
-                  supabaseUrl,
-                  supabaseServiceKey,
-                );
+                const client = createAuthedClient(token);
 
                 try {
-                  await setTestRLSContext(
+                  await setModeC_RLSContext(
                     client,
-                    context.actorId,
-                    context.casinoId,
-                    context.staffRole,
                     `isolation-${casinoIndex}-${requestIndex}`,
                   );
 
                   const { data, error } = await client
                     .from('casino_settings')
                     .select('casino_id')
-                    .eq('casino_id', context.casinoId)
+                    .eq('casino_id', casinoId)
                     .single();
 
                   return {
@@ -1931,16 +1751,16 @@ const RUN_INTEGRATION =
           console.log(`Cross-Tenant Leaks: ${totalLeaks}`);
           console.log(`Isolation: 100%`);
         } finally {
-          // Cleanup: Delete in reverse dependency order
+          // Cleanup: Delete in reverse dependency order (service-role)
           await Promise.all([
-            supabase
+            setupClient
               .from('staff')
               .delete()
               .in(
                 'id',
                 testCasinos.map((c) => c.staffId),
               ),
-            supabase
+            setupClient
               .from('casino_settings')
               .delete()
               .in(
@@ -1949,7 +1769,7 @@ const RUN_INTEGRATION =
               ),
           ]);
 
-          await supabase
+          await setupClient
             .from('casino')
             .delete()
             .in(
@@ -1958,7 +1778,7 @@ const RUN_INTEGRATION =
             );
 
           // Clean up companies (ADR-043)
-          await supabase
+          await setupClient
             .from('company')
             .delete()
             .in(
@@ -1967,7 +1787,7 @@ const RUN_INTEGRATION =
             );
 
           await Promise.all(
-            testCasinos.map((c) => supabase.auth.admin.deleteUser(c.userId)),
+            testCasinos.map((c) => setupClient.auth.admin.deleteUser(c.userId)),
           );
         }
       }, 60000); // 60 second timeout
@@ -1984,8 +1804,8 @@ const RUN_INTEGRATION =
       let testRatingSlipId: string;
 
       beforeAll(async () => {
-        // Create test player
-        const { data: player, error: playerError } = await supabase
+        // Create test player (service-role for fixture setup)
+        const { data: player, error: playerError } = await setupClient
           .from('player')
           .insert({
             first_name: 'Observation',
@@ -1998,14 +1818,14 @@ const RUN_INTEGRATION =
         testPlayerId = player.id;
 
         // Enroll player at casino
-        await supabase.from('player_casino').insert({
+        await setupClient.from('player_casino').insert({
           player_id: testPlayerId,
           casino_id: testCasino1Id,
           status: 'active',
         });
 
         // Create test table
-        const { data: table, error: tableError } = await supabase
+        const { data: table, error: tableError } = await setupClient
           .from('gaming_table')
           .insert({
             casino_id: testCasino1Id,
@@ -2021,7 +1841,7 @@ const RUN_INTEGRATION =
 
         // Create test visit (visit_group_id required by schema, but trigger defaults it)
         const visitGroupId = crypto.randomUUID();
-        const { data: visit, error: visitError } = await supabase
+        const { data: visit, error: visitError } = await setupClient
           .from('visit')
           .insert({
             casino_id: testCasino1Id,
@@ -2035,7 +1855,7 @@ const RUN_INTEGRATION =
         testVisitId = visit.id;
 
         // Create test rating slip
-        const { data: slip, error: slipError } = await supabase
+        const { data: slip, error: slipError } = await setupClient
           .from('rating_slip')
           .insert({
             casino_id: testCasino1Id,
@@ -2052,24 +1872,28 @@ const RUN_INTEGRATION =
       });
 
       afterAll(async () => {
-        // Clean up in reverse dependency order
-        await supabase
+        // Clean up in reverse dependency order (service-role for fixture teardown)
+        await setupClient
           .from('pit_cash_observation')
           .delete()
           .eq('visit_id', testVisitId);
-        await supabase.from('rating_slip').delete().eq('visit_id', testVisitId);
-        await supabase.from('visit').delete().eq('id', testVisitId);
-        await supabase.from('gaming_table').delete().eq('id', testTableId);
-        await supabase
+        await setupClient
+          .from('rating_slip')
+          .delete()
+          .eq('visit_id', testVisitId);
+        await setupClient.from('visit').delete().eq('id', testVisitId);
+        await setupClient.from('gaming_table').delete().eq('id', testTableId);
+        await setupClient
           .from('player_casino')
           .delete()
           .eq('player_id', testPlayerId);
-        await supabase.from('player').delete().eq('id', testPlayerId);
+        await setupClient.from('player').delete().eq('id', testPlayerId);
       });
 
       it('should create observation via RPC with proper staff context', async () => {
-        // Call RPC to create observation (RPC auto-injects context from staff record)
-        const { data, error } = await supabase.rpc(
+        // Call RPC to create observation via Mode C client
+        // (RPC auto-injects context from JWT staff_id)
+        const { data, error } = await authedClient1.rpc(
           'rpc_create_pit_cash_observation',
           {
             p_visit_id: testVisitId,
@@ -2090,29 +1914,14 @@ const RUN_INTEGRATION =
       });
 
       it('should read own casino observations with proper context', async () => {
-        // Setup: Staff A authenticated for Casino 1
-        const anonClient = createClient<Database>(
-          supabaseUrl,
-          supabaseAnonKey,
-          {
-            auth: { autoRefreshToken: false, persistSession: false },
-          },
-        );
-        await anonClient.auth.signInWithPassword({
-          email: 'test-pooling-1@example.com',
-          password: 'test-password-12345',
-        });
-
-        await setTestRLSContext(
-          anonClient,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
+        // Mode C: authedClient1 carries JWT with Casino 1 staff identity
+        await setModeC_RLSContext(
+          authedClient1,
           'pit-cash-obs-read-own-casino',
         );
 
         // Act: Query observations
-        const { data, error } = await anonClient
+        const { data, error } = await authedClient1
           .from('pit_cash_observation')
           .select('*')
           .eq('visit_id', testVisitId);
@@ -2121,34 +1930,17 @@ const RUN_INTEGRATION =
         expect(data).toBeTruthy();
         expect(data!.length).toBeGreaterThan(0);
         expect(data![0].casino_id).toBe(testCasino1Id);
-
-        await anonClient.auth.signOut();
       });
 
       it('should deny cross-casino observation reads', async () => {
-        // Setup: Staff B authenticated for Casino 2
-        const anonClient = createClient<Database>(
-          supabaseUrl,
-          supabaseAnonKey,
-          {
-            auth: { autoRefreshToken: false, persistSession: false },
-          },
-        );
-        await anonClient.auth.signInWithPassword({
-          email: 'test-pooling-2@example.com',
-          password: 'test-password-12345',
-        });
-
-        await setTestRLSContext(
-          anonClient,
-          testStaff2Id,
-          testCasino2Id,
-          'pit_boss',
+        // Mode C: authedClient2 carries JWT with Casino 2 staff identity
+        await setModeC_RLSContext(
+          authedClient2,
           'pit-cash-obs-cross-casino-deny',
         );
 
         // Act: Try to query Casino 1's observation (should return empty)
-        const { data, error } = await anonClient
+        const { data, error } = await authedClient2
           .from('pit_cash_observation')
           .select('*')
           .eq('visit_id', testVisitId);
@@ -2156,34 +1948,14 @@ const RUN_INTEGRATION =
         expect(error).toBeNull();
         // RLS should filter out all Casino 1 observations
         expect(data).toEqual([]);
-
-        await anonClient.auth.signOut();
       });
 
       it('should deny direct INSERT (must use RPC)', async () => {
-        // Setup: Staff A authenticated for Casino 1
-        const anonClient = createClient<Database>(
-          supabaseUrl,
-          supabaseAnonKey,
-          {
-            auth: { autoRefreshToken: false, persistSession: false },
-          },
-        );
-        await anonClient.auth.signInWithPassword({
-          email: 'test-pooling-1@example.com',
-          password: 'test-password-12345',
-        });
-
-        await setTestRLSContext(
-          anonClient,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'pit-cash-obs-direct-insert',
-        );
+        // Mode C: authedClient1 carries JWT with Casino 1 staff identity
+        await setModeC_RLSContext(authedClient1, 'pit-cash-obs-direct-insert');
 
         // Act: Try to insert directly (should fail - INSERT is REVOKED)
-        const { data, error } = await anonClient
+        const { data, error } = await authedClient1
           .from('pit_cash_observation')
           .insert({
             casino_id: testCasino1Id,
@@ -2205,34 +1977,14 @@ const RUN_INTEGRATION =
         expect(error).not.toBeNull();
         expect(data).toBeNull();
         expect(error!.message).toMatch(/permission denied|INSERT/i);
-
-        await anonClient.auth.signOut();
       });
 
       it('should deny UPDATE on observations (append-only)', async () => {
-        // Setup: Staff A authenticated for Casino 1
-        const anonClient = createClient<Database>(
-          supabaseUrl,
-          supabaseAnonKey,
-          {
-            auth: { autoRefreshToken: false, persistSession: false },
-          },
-        );
-        await anonClient.auth.signInWithPassword({
-          email: 'test-pooling-1@example.com',
-          password: 'test-password-12345',
-        });
-
-        await setTestRLSContext(
-          anonClient,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'pit-cash-obs-update-deny',
-        );
+        // Mode C: authedClient1 carries JWT with Casino 1 staff identity
+        await setModeC_RLSContext(authedClient1, 'pit-cash-obs-update-deny');
 
         // First, get an existing observation
-        const { data: existing } = await anonClient
+        const { data: existing } = await authedClient1
           .from('pit_cash_observation')
           .select('id')
           .eq('visit_id', testVisitId)
@@ -2241,12 +1993,11 @@ const RUN_INTEGRATION =
 
         if (!existing) {
           console.log('No observation found to test UPDATE - skipping');
-          await anonClient.auth.signOut();
           return;
         }
 
         // Act: Try to update (should fail - UPDATE is REVOKED)
-        const { data, error } = await anonClient
+        const { data, error } = await authedClient1
           .from('pit_cash_observation')
           .update({ amount: 999 })
           .eq('id', existing.id)
@@ -2257,34 +2008,14 @@ const RUN_INTEGRATION =
         expect(error).not.toBeNull();
         expect(data).toBeNull();
         expect(error!.message).toMatch(/permission denied|UPDATE/i);
-
-        await anonClient.auth.signOut();
       });
 
       it('should deny DELETE on observations (append-only)', async () => {
-        // Setup: Staff A authenticated for Casino 1
-        const anonClient = createClient<Database>(
-          supabaseUrl,
-          supabaseAnonKey,
-          {
-            auth: { autoRefreshToken: false, persistSession: false },
-          },
-        );
-        await anonClient.auth.signInWithPassword({
-          email: 'test-pooling-1@example.com',
-          password: 'test-password-12345',
-        });
-
-        await setTestRLSContext(
-          anonClient,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'pit-cash-obs-delete-deny',
-        );
+        // Mode C: authedClient1 carries JWT with Casino 1 staff identity
+        await setModeC_RLSContext(authedClient1, 'pit-cash-obs-delete-deny');
 
         // First, get an existing observation
-        const { data: existing } = await anonClient
+        const { data: existing } = await authedClient1
           .from('pit_cash_observation')
           .select('id')
           .eq('visit_id', testVisitId)
@@ -2293,12 +2024,11 @@ const RUN_INTEGRATION =
 
         if (!existing) {
           console.log('No observation found to test DELETE - skipping');
-          await anonClient.auth.signOut();
           return;
         }
 
         // Act: Try to delete (should fail - DELETE is REVOKED)
-        const { error } = await anonClient
+        const { error } = await authedClient1
           .from('pit_cash_observation')
           .delete()
           .eq('id', existing.id);
@@ -2306,15 +2036,13 @@ const RUN_INTEGRATION =
         // Should fail due to REVOKE DELETE
         expect(error).not.toBeNull();
         expect(error!.message).toMatch(/permission denied|DELETE/i);
-
-        await anonClient.auth.signOut();
       });
 
       it('should handle idempotency key for deduplication', async () => {
         const idempotencyKey = `test-idempotency-${Date.now()}`;
 
-        // First call - should succeed
-        const { data: first, error: firstError } = await supabase.rpc(
+        // First call - should succeed (Mode C client with Casino 1 JWT)
+        const { data: first, error: firstError } = await authedClient1.rpc(
           'rpc_create_pit_cash_observation',
           {
             p_visit_id: testVisitId,
@@ -2331,7 +2059,7 @@ const RUN_INTEGRATION =
         const firstId = first.id;
 
         // Second call with same idempotency key - should return existing
-        const { data: second, error: secondError } = await supabase.rpc(
+        const { data: second, error: secondError } = await authedClient1.rpc(
           'rpc_create_pit_cash_observation',
           {
             p_visit_id: testVisitId,
@@ -2350,8 +2078,8 @@ const RUN_INTEGRATION =
       });
 
       it('should reject observation for cross-casino visit via RPC', async () => {
-        // Create a visit in Casino 2 for this test
-        const { data: player2 } = await supabase
+        // Create a visit in Casino 2 for this test (service-role for fixture setup)
+        const { data: player2 } = await setupClient
           .from('player')
           .insert({
             first_name: 'CrossObs',
@@ -2360,13 +2088,13 @@ const RUN_INTEGRATION =
           .select()
           .single();
 
-        await supabase.from('player_casino').insert({
+        await setupClient.from('player_casino').insert({
           player_id: player2!.id,
           casino_id: testCasino2Id,
           status: 'active',
         });
 
-        const { data: visit2 } = await supabase
+        const { data: visit2 } = await setupClient
           .from('visit')
           .insert({
             casino_id: testCasino2Id,
@@ -2378,7 +2106,8 @@ const RUN_INTEGRATION =
 
         try {
           // Staff 1 (Casino 1) tries to create observation for Casino 2 visit
-          const { data, error } = await supabase.rpc(
+          // via Mode C client — JWT carries Casino 1 identity
+          const { data, error } = await authedClient1.rpc(
             'rpc_create_pit_cash_observation',
             {
               p_visit_id: visit2!.id, // Casino 2 visit
@@ -2394,13 +2123,13 @@ const RUN_INTEGRATION =
           // RPC throws FORBIDDEN when visit belongs to different casino
           expect(error!.message).toMatch(/FORBIDDEN|does not belong|casino/i);
         } finally {
-          // Cleanup
-          await supabase.from('visit').delete().eq('id', visit2!.id);
-          await supabase
+          // Cleanup (service-role)
+          await setupClient.from('visit').delete().eq('id', visit2!.id);
+          await setupClient
             .from('player_casino')
             .delete()
             .eq('player_id', player2!.id);
-          await supabase.from('player').delete().eq('id', player2!.id);
+          await setupClient.from('player').delete().eq('id', player2!.id);
         }
       });
     });

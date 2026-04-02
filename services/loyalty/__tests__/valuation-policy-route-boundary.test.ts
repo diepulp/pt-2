@@ -112,10 +112,7 @@ describe('GET /api/v1/loyalty/valuation-policy -- boundary test', () => {
 
   it('returns 200 with policy shape when active policy exists', async () => {
     const request = new NextRequest(
-      new URL(
-        '/api/v1/loyalty/valuation-policy',
-        'http://localhost:3000',
-      ),
+      new URL('/api/v1/loyalty/valuation-policy', 'http://localhost:3000'),
       { method: 'GET' },
     );
 
@@ -143,10 +140,7 @@ describe('GET /api/v1/loyalty/valuation-policy -- boundary test', () => {
 
   it('passes casino_id from RLS context through to query', async () => {
     const request = new NextRequest(
-      new URL(
-        '/api/v1/loyalty/valuation-policy',
-        'http://localhost:3000',
-      ),
+      new URL('/api/v1/loyalty/valuation-policy', 'http://localhost:3000'),
       { method: 'GET' },
     );
 
@@ -154,9 +148,7 @@ describe('GET /api/v1/loyalty/valuation-policy -- boundary test', () => {
 
     // Verify the query chain was:
     // from('loyalty_valuation_policy').select('*').eq('casino_id', ...).eq('is_active', true).maybeSingle()
-    expect(mockSupabase.from).toHaveBeenCalledWith(
-      'loyalty_valuation_policy',
-    );
+    expect(mockSupabase.from).toHaveBeenCalledWith('loyalty_valuation_policy');
     expect(eqSpy).toHaveBeenCalledWith('casino_id', 'casino-abc-123');
     expect(eqSpy).toHaveBeenCalledWith('is_active', true);
   });
@@ -166,10 +158,7 @@ describe('GET /api/v1/loyalty/valuation-policy -- boundary test', () => {
     mockSupabase = createChainableSupabase(null);
 
     const request = new NextRequest(
-      new URL(
-        '/api/v1/loyalty/valuation-policy',
-        'http://localhost:3000',
-      ),
+      new URL('/api/v1/loyalty/valuation-policy', 'http://localhost:3000'),
       { method: 'GET' },
     );
 

@@ -7,13 +7,18 @@
  * Verifies that hybrid policies (Pattern C) correctly filter data by casino_id
  * and prevent cross-tenant data leakage.
  *
+ * Auth model: ADR-024 Mode C — authenticated anon clients carry JWT with staff_id
+ * in app_metadata; set_rls_context_from_staff() derives context server-side.
+ *
  * PREREQUISITES:
  * - Migration 20251209183033_adr015_rls_context_rpc.sql must be applied
  * - Migration 20251209183401_adr015_hybrid_rls_policies.sql must be applied
  * - NEXT_PUBLIC_SUPABASE_URL environment variable set
  * - SUPABASE_SERVICE_ROLE_KEY environment variable set
+ * - NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable set
  *
  * @see docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md
+ * @see docs/80-adrs/ADR-024-authoritative-context-derivation.md
  * @see supabase/migrations/20251209183401_adr015_hybrid_rls_policies.sql
  */
 
@@ -23,28 +28,10 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../types/database.types';
 
-/**
- * Service-role helper: injects RLS context via set_rls_context_internal RPC.
- */
-async function setTestRLSContext(
-  client: SupabaseClient<Database>,
-  actorId: string,
-  casinoId: string,
-  staffRole: string,
-  correlationId?: string,
-): Promise<void> {
-  const { error } = await client.rpc('set_rls_context_internal', {
-    p_actor_id: actorId,
-    p_casino_id: casinoId,
-    p_staff_role: staffRole,
-    p_correlation_id: correlationId,
-  });
-  if (error) throw new Error(`setTestRLSContext failed: ${error.message}`);
-}
-
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 const RUN_INTEGRATION =
   process.env.RUN_INTEGRATION_TESTS === 'true' ||
@@ -53,9 +40,9 @@ const RUN_INTEGRATION =
 (RUN_INTEGRATION ? describe : describe.skip)(
   'RLS Policy Enforcement (ADR-015 WS6)',
   () => {
-    let serviceClient: SupabaseClient<Database>; // Service role bypasses RLS
-    let authClient1: SupabaseClient<Database>; // Authenticated as Casino 1 staff
-    let authClient2: SupabaseClient<Database>; // Authenticated as Casino 2 staff
+    let serviceClient: SupabaseClient<Database>; // Service role bypasses RLS (fixture only)
+    let authClient1: SupabaseClient<Database>; // Authenticated as Casino 1 pit_boss (Mode C)
+    let authClient2: SupabaseClient<Database>; // Authenticated as Casino 2 pit_boss (Mode C)
 
     let testCasino1Id: string;
     let testCasino2Id: string;
@@ -72,57 +59,38 @@ const RUN_INTEGRATION =
     let testCompany1Id: string;
     let testCompany2Id: string;
 
+    const ts = Date.now();
+    const testEmail1 = `test-rls-t3-pol-pitboss1-${ts}@example.com`;
+    const testEmail2 = `test-rls-t3-pol-pitboss2-${ts}@example.com`;
+    const testPassword = 'test-password-12345';
+
     beforeAll(async () => {
       // Service client for setup (bypasses RLS)
       serviceClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
       // =========================================================================
-      // Create Test Users
+      // Create Test Users (Phase 1: no staff_id yet — two-phase ADR-024 setup)
       // =========================================================================
 
       const { data: authUser1, error: authError1 } =
         await serviceClient.auth.admin.createUser({
-          email: 'test-rls-policy-1@example.com',
-          password: 'test-password-12345',
+          email: testEmail1,
+          password: testPassword,
           email_confirm: true,
+          app_metadata: { staff_role: 'pit_boss' },
         });
-
-      if (authError1) {
-        const { data: existingUsers } =
-          await serviceClient.auth.admin.listUsers();
-        const existing = existingUsers?.users?.find(
-          (u) => u.email === 'test-rls-policy-1@example.com',
-        );
-        if (existing) {
-          testUser1Id = existing.id;
-        } else {
-          throw authError1;
-        }
-      } else {
-        testUser1Id = authUser1.user.id;
-      }
+      if (authError1) throw authError1;
+      testUser1Id = authUser1.user.id;
 
       const { data: authUser2, error: authError2 } =
         await serviceClient.auth.admin.createUser({
-          email: 'test-rls-policy-2@example.com',
-          password: 'test-password-12345',
+          email: testEmail2,
+          password: testPassword,
           email_confirm: true,
+          app_metadata: { staff_role: 'pit_boss' },
         });
-
-      if (authError2) {
-        const { data: existingUsers } =
-          await serviceClient.auth.admin.listUsers();
-        const existing = existingUsers?.users?.find(
-          (u) => u.email === 'test-rls-policy-2@example.com',
-        );
-        if (existing) {
-          testUser2Id = existing.id;
-        } else {
-          throw authError2;
-        }
-      } else {
-        testUser2Id = authUser2.user.id;
-      }
+      if (authError2) throw authError2;
+      testUser2Id = authUser2.user.id;
 
       // =========================================================================
       // Create Test Companies (ADR-043: casino.company_id NOT NULL)
@@ -231,6 +199,68 @@ const RUN_INTEGRATION =
       testStaff2Id = staff2.id;
 
       // =========================================================================
+      // Stamp staff_id into app_metadata (ADR-024 Phase 2)
+      // =========================================================================
+
+      await serviceClient.auth.admin.updateUserById(testUser1Id, {
+        app_metadata: {
+          staff_id: testStaff1Id,
+          casino_id: testCasino1Id,
+          staff_role: 'pit_boss',
+        },
+      });
+      await serviceClient.auth.admin.updateUserById(testUser2Id, {
+        app_metadata: {
+          staff_id: testStaff2Id,
+          casino_id: testCasino2Id,
+          staff_role: 'pit_boss',
+        },
+      });
+
+      // =========================================================================
+      // Sign in via throwaway clients to get JWTs (Mode C — ADR-024)
+      // =========================================================================
+
+      const throwaway1 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: session1, error: signIn1Error } =
+        await throwaway1.auth.signInWithPassword({
+          email: testEmail1,
+          password: testPassword,
+        });
+      if (signIn1Error || !session1.session)
+        throw signIn1Error ?? new Error('Sign-in staff1 returned no session');
+
+      const throwaway2 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: session2, error: signIn2Error } =
+        await throwaway2.auth.signInWithPassword({
+          email: testEmail2,
+          password: testPassword,
+        });
+      if (signIn2Error || !session2.session)
+        throw signIn2Error ?? new Error('Sign-in staff2 returned no session');
+
+      // =========================================================================
+      // Create Mode C Authenticated Anon Clients (ADR-024)
+      // =========================================================================
+
+      authClient1 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: { Authorization: `Bearer ${session1.session.access_token}` },
+        },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      authClient2 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: { Authorization: `Bearer ${session2.session.access_token}` },
+        },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+
+      // =========================================================================
       // Create Test Players
       // =========================================================================
 
@@ -333,14 +363,6 @@ const RUN_INTEGRATION =
 
       if (visit2Error) throw visit2Error;
       testVisit2Id = visit2.id;
-
-      // =========================================================================
-      // Create Authenticated Clients
-      // =========================================================================
-
-      // These clients use service role but will have RLS context injected
-      authClient1 = createClient<Database>(supabaseUrl, supabaseServiceKey);
-      authClient2 = createClient<Database>(supabaseUrl, supabaseServiceKey);
     });
 
     afterAll(async () => {
@@ -391,16 +413,7 @@ const RUN_INTEGRATION =
 
     describe('Visit Table RLS Policies', () => {
       it('should allow staff to read visits from their own casino', async () => {
-        // Inject Casino 1 context
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-visit-read-own',
-        );
-
-        // Query visits - should see only Casino 1 visits
+        // authClient1 carries Casino 1 JWT — RLS context derived server-side
         const { data, error } = await authClient1
           .from('visit')
           .select('*')
@@ -417,46 +430,20 @@ const RUN_INTEGRATION =
       });
 
       it('should prevent staff from reading visits from other casinos', async () => {
-        // Inject Casino 1 context
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-visit-read-cross',
-        );
-
-        // Attempt to query Casino 2 visits - should return empty
-        // NOTE: With service role key, RLS is bypassed. This test demonstrates
-        // the pattern but would require authenticated clients for true isolation.
+        // authClient1 is Casino 1 staff — should not see Casino 2 visits
         const { data, error } = await authClient1
           .from('visit')
           .select('*')
           .eq('casino_id', testCasino2Id);
 
-        // With service role, we still get data. In production with proper
-        // authenticated clients, the hybrid policy would filter this out.
         expect(error).toBeNull();
+        // RLS hybrid policy filters Casino 2 visits for Casino 1 authenticated client
+        expect(data?.length).toBe(0);
       });
 
       it('should enforce casino isolation between concurrent requests', async () => {
-        // Request 1: Casino 1 context
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-visit-concurrent-1',
-        );
-
-        // Request 2: Casino 2 context
-        await setTestRLSContext(
-          authClient2,
-          testStaff2Id,
-          testCasino2Id,
-          'pit_boss',
-          'test-visit-concurrent-2',
-        );
+        // authClient1 → Casino 1 context (via JWT)
+        // authClient2 → Casino 2 context (via JWT)
 
         // Both queries should only see their own casino's visits
         const { data: casino1Visits } = await authClient1
@@ -475,10 +462,11 @@ const RUN_INTEGRATION =
           casino2Visits?.map((v) => v.casino_id) || [],
         );
 
-        // In production with proper RLS, these sets should be disjoint
-        // With service role, we just verify the data exists
+        // With proper RLS, these sets should be disjoint
         expect(casino1Ids.size).toBeGreaterThan(0);
         expect(casino2Ids.size).toBeGreaterThan(0);
+        expect(casino1Ids.has(testCasino2Id)).toBe(false);
+        expect(casino2Ids.has(testCasino1Id)).toBe(false);
       });
     });
 
@@ -488,14 +476,6 @@ const RUN_INTEGRATION =
 
     describe('Gaming Table RLS Policies', () => {
       it('should filter gaming tables by casino_id', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-table-filter',
-        );
-
         const { data, error } = await authClient1
           .from('gaming_table')
           .select('*')
@@ -566,15 +546,7 @@ const RUN_INTEGRATION =
 
     describe('Player Table RLS Policies', () => {
       it('should allow staff to read players enrolled in their casino', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-player-read-enrolled',
-        );
-
-        // Query players - should see only players enrolled in Casino 1
+        // Query players — authClient1 is Casino 1 staff
         const { data, error } = await authClient1
           .from('player')
           .select(
@@ -594,15 +566,7 @@ const RUN_INTEGRATION =
       });
 
       it('should prevent staff from seeing players not enrolled in their casino', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-player-read-not-enrolled',
-        );
-
-        // Query for Player 2 (enrolled in Casino 2)
+        // Query for Player 2 (enrolled in Casino 2) via Casino 1 client
         const { data, error } = await authClient1
           .from('player')
           .select(
@@ -626,14 +590,6 @@ const RUN_INTEGRATION =
 
     describe('Casino Settings RLS Policies', () => {
       it('should allow staff to read their own casino settings', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-settings-read-own',
-        );
-
         const { data, error } = await authClient1
           .from('casino_settings')
           .select('*')
@@ -666,14 +622,6 @@ const RUN_INTEGRATION =
 
     describe('Staff Table RLS Policies', () => {
       it('should filter staff members by casino_id', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-staff-filter',
-        );
-
         const { data, error } = await authClient1
           .from('staff')
           .select('*')
@@ -715,15 +663,7 @@ const RUN_INTEGRATION =
 
     describe('Multi-Table Queries with RLS', () => {
       it('should enforce RLS across joined tables', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-join-rls',
-        );
-
-        // Query visits with related data
+        // Query visits with related data — authClient1 carries Casino 1 JWT
         const { data, error } = await authClient1
           .from('visit')
           .select(
@@ -744,14 +684,6 @@ const RUN_INTEGRATION =
       });
 
       it('should handle complex queries with multiple casino-scoped tables', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-complex-query',
-        );
-
         // Complex query: visits with player data
         const { data, error } = await authClient1
           .from('visit')
@@ -800,16 +732,8 @@ const RUN_INTEGRATION =
 
       it('should handle empty string in current_setting (NULLIF scenario)', async () => {
         // The NULLIF(current_setting('app.casino_id', true), '') pattern
-        // handles both NULL and empty string cases
-
-        // Inject context then query
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-nullif-pattern',
-        );
+        // handles both NULL and empty string cases.
+        // authClient1 carries a JWT — context is derived from app_metadata.
 
         const { data, error } = await authClient1
           .from('casino_settings')
