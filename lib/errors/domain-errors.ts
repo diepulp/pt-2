@@ -419,6 +419,22 @@ export const IMPORT_ERROR_MESSAGES: Record<ImportErrorCode, string> = {
 };
 
 // ============================================================================
+// COMPANY DOMAIN ERRORS (PRD-060)
+// ============================================================================
+
+export type CompanyErrorCode =
+  | 'REGISTRATION_CONFLICT'
+  | 'REGISTRATION_NOT_FOUND'
+  | 'BOOTSTRAP_NO_REGISTRATION';
+
+export const COMPANY_ERROR_MESSAGES: Record<CompanyErrorCode, string> = {
+  REGISTRATION_CONFLICT: 'You already have a pending registration.',
+  REGISTRATION_NOT_FOUND: 'No pending registration found.',
+  BOOTSTRAP_NO_REGISTRATION:
+    'Cannot bootstrap: complete company registration first.',
+};
+
+// ============================================================================
 // COMBINED DOMAIN ERROR TYPE
 // ============================================================================
 
@@ -432,6 +448,7 @@ export type DomainErrorCode =
   | TableContextErrorCode
   | PlayerErrorCode
   | CasinoErrorCode
+  | CompanyErrorCode
   | FloorLayoutErrorCode
   | ImportErrorCode;
 
@@ -473,6 +490,7 @@ export class DomainError extends Error {
       TABLE_CONTEXT_ERROR_MESSAGES,
       PLAYER_ERROR_MESSAGES,
       CASINO_ERROR_MESSAGES,
+      COMPANY_ERROR_MESSAGES,
       FLOOR_LAYOUT_ERROR_MESSAGES,
       IMPORT_ERROR_MESSAGES,
     ];
