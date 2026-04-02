@@ -1,0 +1,33 @@
+{
+  "prd": "PRD-060",
+  "prd_title": "Company Registration and First Property Bootstrap",
+  "current_phase": 0,
+  "status": "initialized",
+  "completed_workstreams": [],
+  "in_progress_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "artifacts": {},
+  "gates_passed": [],
+  "gates_pending": ["schema-validation", "type-check", "lint", "test-pass"],
+  "timestamp": "2026-04-02T00:26:00Z",
+  "gov010_check": "passed",
+  "write_path_classification": "detected",
+  "adversarial_review": {
+    "magnitude_score": 14,
+    "magnitude_tier": null,
+    "magnitude_signals": [
+      {"signal": "cross_context_bounded_contexts", "points": 3, "evidence": "CompanyService (new) + CasinoService (amended)"},
+      {"signal": "migration_with_rls", "points": 2, "evidence": "WS1 creates onboarding_registration with RLS"},
+      {"signal": "security_definer_present", "points": 2, "evidence": "WS2 rpc_register_company, WS3 rpc_bootstrap_casino amendment"},
+      {"signal": "adr_refs_gte_2", "points": 2, "evidence": "ADR-024, ADR-018, ADR-030, ADR-043 (4 ADRs)"},
+      {"signal": "workstream_count_gt_4", "points": 2, "evidence": "7 workstreams"},
+      {"signal": "execution_phases_gt_2", "points": 1, "evidence": "5 phases"},
+      {"signal": "dependency_depth_gt_3", "points": 1, "evidence": "WS1->WS2->WS4->WS5->WS7 depth 4"},
+      {"signal": "executor_diversity_gt_3", "points": 1, "evidence": "4 distinct skills"}
+    ],
+    "verdict": null,
+    "p0_count": 0,
+    "p1_count": 0,
+    "attempt": 0
+  }
+}
