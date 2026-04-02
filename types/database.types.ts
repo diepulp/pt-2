@@ -234,6 +234,48 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_registration: {
+        Row: {
+          company_id: string
+          consumed_at: string | null
+          created_at: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_registration_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_registration_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dealer_rotation: {
         Row: {
           casino_id: string
@@ -4368,6 +4410,16 @@ export type Database = {
           casino_id: string
           staff_id: string
           staff_role: string
+        }[]
+      }
+      rpc_register_company: {
+        Args: {
+          p_company_name: string
+          p_legal_name?: string
+        }
+        Returns: {
+          company_id: string
+          registration_id: string
         }[]
       }
       rpc_check_table_seat_availability: {
