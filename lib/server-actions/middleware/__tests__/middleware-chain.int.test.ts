@@ -12,9 +12,11 @@ import { withServerAction } from '../compositor';
 
 import {
   getTestSupabaseServiceClient,
+  getTestAuthenticatedClient,
   setupTestData,
   cleanupTestData,
 } from './helpers';
+import type { TestAuthenticatedClientResult } from './helpers';
 
 const RUN_INTEGRATION =
   process.env.RUN_INTEGRATION_TESTS === 'true' ||
@@ -126,6 +128,102 @@ const RUN_INTEGRATION =
 
         expect(result.ok).toBe(true);
         expect(result.requestId).toBe(testCorrelationId);
+      });
+    });
+
+    /**
+     * Authenticated Chain Execution (ADR-024 Mode C)
+     *
+     * These tests exercise the full middleware chain WITHOUT skipAuth.
+     * The authenticated anon client carries a real JWT so:
+     *   withAuth  → getAuthContext() succeeds (auth.uid() is non-null)
+     *   withRLS   → set_rls_context_from_staff() is called and populates ctx.rlsContext
+     *
+     * NOTE: withServerAction relies on auth.getUser() from the Supabase client, not
+     * on Next.js cookies() / headers(), so these tests run cleanly in a Node
+     * integration environment without any Next.js server-side context mocking.
+     */
+    describe('Authenticated Chain Execution', () => {
+      let auth: TestAuthenticatedClientResult;
+
+      beforeAll(async () => {
+        auth = await getTestAuthenticatedClient({
+          role: 'pit_boss',
+          emailPrefix: 'test-mw-chain',
+        });
+      });
+
+      afterAll(async () => {
+        await auth.cleanup();
+      });
+
+      it('should populate ctx.rlsContext via set_rls_context_from_staff (ADR-024)', async () => {
+        const result = await withServerAction(
+          auth.client,
+          async (ctx) => {
+            // rlsContext must be populated by withAuth + withRLS before handler runs
+            expect(ctx.rlsContext).toBeDefined();
+            expect(ctx.rlsContext!.actorId).toBe(auth.staffId);
+            expect(ctx.rlsContext!.casinoId).toBe(auth.casinoId);
+            expect(ctx.rlsContext!.companyId).toBe(auth.companyId);
+            expect(typeof ctx.rlsContext!.staffRole).toBe('string');
+
+            return {
+              ok: true,
+              code: 'OK',
+              data: {
+                actorId: ctx.rlsContext!.actorId,
+                casinoId: ctx.rlsContext!.casinoId,
+              },
+            } as ServiceResult<{ actorId: string; casinoId: string }>;
+          },
+          {
+            domain: 'test',
+            action: 'integration.auth-chain',
+            // no skipAuth — full auth + RLS chain runs
+          },
+        );
+
+        expect(result.ok).toBe(true);
+        expect(result.code).toBe('OK');
+        expect(result.data).toEqual({
+          actorId: auth.staffId,
+          casinoId: auth.casinoId,
+        });
+        expect(result.requestId).toBeDefined();
+        expect(result.durationMs).toBeGreaterThanOrEqual(0);
+      });
+
+      it('should reject unauthenticated client without skipAuth', async () => {
+        // eslint-disable-next-line no-restricted-imports -- Integration test: anon client intentionally has no session
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabaseUrl =
+          process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
+        const anonKey =
+          process.env.SUPABASE_ANON_KEY ??
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+
+        const unauthClient = createClient(supabaseUrl, anonKey, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        });
+
+        const result = await withServerAction(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          unauthClient as any,
+          async () => ({
+            ok: true,
+            code: 'OK',
+            data: null,
+          }),
+          {
+            domain: 'test',
+            action: 'integration.unauth-rejection',
+            // no skipAuth — auth chain should reject unauthenticated client
+          },
+        );
+
+        expect(result.ok).toBe(false);
+        expect(['UNAUTHORIZED', 'INTERNAL_ERROR']).toContain(result.code);
       });
     });
 
