@@ -19,6 +19,17 @@ export default async function BootstrapPage() {
     redirect('/start');
   }
 
+  // PRD-060: Require pending registration before bootstrap
+  const { data: registration } = await supabase
+    .from('onboarding_registration')
+    .select('id')
+    .eq('status', 'pending')
+    .maybeSingle();
+
+  if (!registration) {
+    redirect('/register');
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center">
