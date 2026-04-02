@@ -6,6 +6,9 @@
  * Tests RLS policy enforcement for mtl_entry and mtl_audit_note tables.
  * Verifies authorization matrix per ADR-025 and append-only enforcement.
  *
+ * Auth model: ADR-024 Mode C — authenticated anon clients carry JWT with staff_id
+ * in app_metadata; set_rls_context_from_staff() derives context server-side.
+ *
  * Authorization Matrix (ADR-025 v1.1.0):
  * - mtl_entry SELECT: pit_boss, cashier, admin
  * - mtl_entry INSERT: pit_boss, cashier, admin
@@ -21,9 +24,11 @@
  * - Migration 20260103004320_prd005_mtl_occurred_at_and_guards.sql must be applied
  * - NEXT_PUBLIC_SUPABASE_URL environment variable set
  * - SUPABASE_SERVICE_ROLE_KEY environment variable set
+ * - NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable set
  *
  * @see docs/10-prd/PRD-005-mtl-service.md
  * @see docs/80-adrs/ADR-025-mtl-authorization-model.md
+ * @see docs/80-adrs/ADR-024-authoritative-context-derivation.md
  * @see services/mtl/index.ts
  */
 
@@ -33,28 +38,10 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../types/database.types';
 
-/**
- * Service-role helper: injects RLS context via set_rls_context_internal RPC.
- */
-async function setTestRLSContext(
-  client: SupabaseClient<Database>,
-  actorId: string,
-  casinoId: string,
-  staffRole: string,
-  correlationId?: string,
-): Promise<void> {
-  const { error } = await client.rpc('set_rls_context_internal', {
-    p_actor_id: actorId,
-    p_casino_id: casinoId,
-    p_staff_role: staffRole,
-    p_correlation_id: correlationId,
-  });
-  if (error) throw new Error(`setTestRLSContext failed: ${error.message}`);
-}
-
 // Test environment setup
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 const RUN_INTEGRATION =
   process.env.RUN_INTEGRATION_TESTS === 'true' ||
@@ -63,12 +50,12 @@ const RUN_INTEGRATION =
 (RUN_INTEGRATION ? describe : describe.skip)(
   'RLS MTL Policies (PRD-005 WS7)',
   () => {
-    let serviceClient: SupabaseClient<Database>; // Service role bypasses RLS
-    let pitBossClient: SupabaseClient<Database>; // Authenticated as pit_boss
-    let cashierClient: SupabaseClient<Database>; // Authenticated as cashier
-    let adminClient: SupabaseClient<Database>; // Authenticated as admin
-    let dealerClient: SupabaseClient<Database>; // Authenticated as dealer (no access)
-    let crossCasinoClient: SupabaseClient<Database>; // Different casino context
+    let setupClient: SupabaseClient<Database>; // Service role bypasses RLS (fixture only)
+    let pitBossClient: SupabaseClient<Database>; // Authenticated as pit_boss (Mode C)
+    let cashierClient: SupabaseClient<Database>; // Authenticated as cashier (Mode C)
+    let adminClient: SupabaseClient<Database>; // Authenticated as admin (Mode C)
+    let dealerClient: SupabaseClient<Database>; // Authenticated as dealer (Mode C, no access)
+    let crossCasinoClient: SupabaseClient<Database>; // Different casino context (Mode C)
 
     // Test data IDs
     let testCompany1Id: string;
@@ -91,45 +78,77 @@ const RUN_INTEGRATION =
     let testEntry2Id: string;
     let testAuditNote1Id: string;
 
+    const ts = Date.now();
+    const testEmail1 = `test-rls-t3-mtl-pitboss-${ts}@example.com`;
+    const testEmail2 = `test-rls-t3-mtl-cashier-${ts}@example.com`;
+    const testEmail3 = `test-rls-t3-mtl-admin-${ts}@example.com`;
+    const testEmail4 = `test-rls-t3-mtl-dealer-${ts}@example.com`;
+    const testEmail5 = `test-rls-t3-mtl-crosscasino-${ts}@example.com`;
+    const testPassword = 'test-password-12345';
+
     beforeAll(async () => {
       // Service client for setup (bypasses RLS)
-      serviceClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
+      setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
       // =========================================================================
-      // Create Test Users
+      // Create Test Users (Phase 1: no staff_id yet — two-phase ADR-024 setup)
       // =========================================================================
 
-      const createOrGetUser = async (email: string): Promise<string> => {
-        const { data: authUser, error: authError } =
-          await serviceClient.auth.admin.createUser({
-            email,
-            password: 'test-password-12345',
-            email_confirm: true,
-          });
+      const { data: authUser1, error: authError1 } =
+        await setupClient.auth.admin.createUser({
+          email: testEmail1,
+          password: testPassword,
+          email_confirm: true,
+          app_metadata: { staff_role: 'pit_boss' },
+        });
+      if (authError1) throw authError1;
+      testUser1Id = authUser1.user.id;
 
-        if (authError) {
-          const { data: existingUsers } =
-            await serviceClient.auth.admin.listUsers();
-          const existing = existingUsers?.users?.find((u) => u.email === email);
-          if (existing) return existing.id;
-          throw authError;
-        }
-        return authUser.user.id;
-      };
+      const { data: authUser2, error: authError2 } =
+        await setupClient.auth.admin.createUser({
+          email: testEmail2,
+          password: testPassword,
+          email_confirm: true,
+          app_metadata: { staff_role: 'cashier' },
+        });
+      if (authError2) throw authError2;
+      testUser2Id = authUser2.user.id;
 
-      testUser1Id = await createOrGetUser('test-rls-mtl-pitboss@example.com');
-      testUser2Id = await createOrGetUser('test-rls-mtl-cashier@example.com');
-      testUser3Id = await createOrGetUser('test-rls-mtl-admin@example.com');
-      testUser4Id = await createOrGetUser('test-rls-mtl-dealer@example.com');
-      testUser5Id = await createOrGetUser(
-        'test-rls-mtl-crosscasino@example.com',
-      );
+      const { data: authUser3, error: authError3 } =
+        await setupClient.auth.admin.createUser({
+          email: testEmail3,
+          password: testPassword,
+          email_confirm: true,
+          app_metadata: { staff_role: 'admin' },
+        });
+      if (authError3) throw authError3;
+      testUser3Id = authUser3.user.id;
+
+      const { data: authUser4, error: authError4 } =
+        await setupClient.auth.admin.createUser({
+          email: testEmail4,
+          password: testPassword,
+          email_confirm: true,
+          app_metadata: { staff_role: 'dealer' },
+        });
+      if (authError4) throw authError4;
+      testUser4Id = authUser4.user.id;
+
+      const { data: authUser5, error: authError5 } =
+        await setupClient.auth.admin.createUser({
+          email: testEmail5,
+          password: testPassword,
+          email_confirm: true,
+          app_metadata: { staff_role: 'pit_boss' },
+        });
+      if (authError5) throw authError5;
+      testUser5Id = authUser5.user.id;
 
       // =========================================================================
       // Create Test Companies (ADR-043: casino.company_id NOT NULL)
       // =========================================================================
 
-      const { data: company1 } = await serviceClient
+      const { data: company1 } = await setupClient
         .from('company')
         .insert({ name: 'RLS MTL Test Company 1' })
         .select()
@@ -137,7 +156,7 @@ const RUN_INTEGRATION =
       if (!company1) throw new Error('Failed to create test company 1');
       testCompany1Id = company1.id;
 
-      const { data: company2 } = await serviceClient
+      const { data: company2 } = await setupClient
         .from('company')
         .insert({ name: 'RLS MTL Test Company 2' })
         .select()
@@ -149,7 +168,7 @@ const RUN_INTEGRATION =
       // Create Test Casinos
       // =========================================================================
 
-      const { data: casino1, error: casino1Error } = await serviceClient
+      const { data: casino1, error: casino1Error } = await setupClient
         .from('casino')
         .insert({
           name: 'RLS MTL Test Casino 1',
@@ -162,7 +181,7 @@ const RUN_INTEGRATION =
       if (casino1Error) throw casino1Error;
       testCasino1Id = casino1.id;
 
-      const { data: casino2, error: casino2Error } = await serviceClient
+      const { data: casino2, error: casino2Error } = await setupClient
         .from('casino')
         .insert({
           name: 'RLS MTL Test Casino 2',
@@ -176,7 +195,7 @@ const RUN_INTEGRATION =
       testCasino2Id = casino2.id;
 
       // Create casino settings (required for gaming_day trigger)
-      await serviceClient.from('casino_settings').insert([
+      await setupClient.from('casino_settings').insert([
         {
           casino_id: testCasino1Id,
           gaming_day_start_time: '06:00:00',
@@ -197,7 +216,7 @@ const RUN_INTEGRATION =
       // Create Test Staff (Different Roles)
       // =========================================================================
 
-      const { data: pitBoss, error: pitBossError } = await serviceClient
+      const { data: pitBoss, error: pitBossError } = await setupClient
         .from('staff')
         .insert({
           casino_id: testCasino1Id,
@@ -214,7 +233,7 @@ const RUN_INTEGRATION =
       if (pitBossError) throw pitBossError;
       testPitBossId = pitBoss.id;
 
-      const { data: cashier, error: cashierError } = await serviceClient
+      const { data: cashier, error: cashierError } = await setupClient
         .from('staff')
         .insert({
           casino_id: testCasino1Id,
@@ -231,7 +250,7 @@ const RUN_INTEGRATION =
       if (cashierError) throw cashierError;
       testCashierId = cashier.id;
 
-      const { data: admin, error: adminError } = await serviceClient
+      const { data: admin, error: adminError } = await setupClient
         .from('staff')
         .insert({
           casino_id: testCasino1Id,
@@ -248,7 +267,7 @@ const RUN_INTEGRATION =
       if (adminError) throw adminError;
       testAdminId = admin.id;
 
-      const { data: dealer, error: dealerError } = await serviceClient
+      const { data: dealer, error: dealerError } = await setupClient
         .from('staff')
         .insert({
           casino_id: testCasino1Id,
@@ -266,7 +285,7 @@ const RUN_INTEGRATION =
       testDealerId = dealer.id;
 
       // Staff in Casino 2 (for cross-casino tests)
-      const { data: crossCasinoStaff, error: crossError } = await serviceClient
+      const { data: crossCasinoStaff, error: crossError } = await setupClient
         .from('staff')
         .insert({
           casino_id: testCasino2Id,
@@ -284,10 +303,146 @@ const RUN_INTEGRATION =
       testCrossCasinoStaffId = crossCasinoStaff.id;
 
       // =========================================================================
+      // Stamp staff_id into app_metadata (ADR-024 Phase 2)
+      // =========================================================================
+
+      await setupClient.auth.admin.updateUserById(testUser1Id, {
+        app_metadata: {
+          staff_id: testPitBossId,
+          casino_id: testCasino1Id,
+          staff_role: 'pit_boss',
+        },
+      });
+      await setupClient.auth.admin.updateUserById(testUser2Id, {
+        app_metadata: {
+          staff_id: testCashierId,
+          casino_id: testCasino1Id,
+          staff_role: 'cashier',
+        },
+      });
+      await setupClient.auth.admin.updateUserById(testUser3Id, {
+        app_metadata: {
+          staff_id: testAdminId,
+          casino_id: testCasino1Id,
+          staff_role: 'admin',
+        },
+      });
+      await setupClient.auth.admin.updateUserById(testUser4Id, {
+        app_metadata: {
+          staff_id: testDealerId,
+          casino_id: testCasino1Id,
+          staff_role: 'dealer',
+        },
+      });
+      await setupClient.auth.admin.updateUserById(testUser5Id, {
+        app_metadata: {
+          staff_id: testCrossCasinoStaffId,
+          casino_id: testCasino2Id,
+          staff_role: 'pit_boss',
+        },
+      });
+
+      // =========================================================================
+      // Sign in via throwaway clients to get JWTs (Mode C — ADR-024)
+      // =========================================================================
+
+      const throwaway1 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: session1, error: signIn1Error } =
+        await throwaway1.auth.signInWithPassword({
+          email: testEmail1,
+          password: testPassword,
+        });
+      if (signIn1Error || !session1.session)
+        throw signIn1Error ?? new Error('Sign-in pitboss returned no session');
+
+      const throwaway2 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: session2, error: signIn2Error } =
+        await throwaway2.auth.signInWithPassword({
+          email: testEmail2,
+          password: testPassword,
+        });
+      if (signIn2Error || !session2.session)
+        throw signIn2Error ?? new Error('Sign-in cashier returned no session');
+
+      const throwaway3 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: session3, error: signIn3Error } =
+        await throwaway3.auth.signInWithPassword({
+          email: testEmail3,
+          password: testPassword,
+        });
+      if (signIn3Error || !session3.session)
+        throw signIn3Error ?? new Error('Sign-in admin returned no session');
+
+      const throwaway4 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: session4, error: signIn4Error } =
+        await throwaway4.auth.signInWithPassword({
+          email: testEmail4,
+          password: testPassword,
+        });
+      if (signIn4Error || !session4.session)
+        throw signIn4Error ?? new Error('Sign-in dealer returned no session');
+
+      const throwaway5 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: session5, error: signIn5Error } =
+        await throwaway5.auth.signInWithPassword({
+          email: testEmail5,
+          password: testPassword,
+        });
+      if (signIn5Error || !session5.session)
+        throw (
+          signIn5Error ?? new Error('Sign-in crosscasino returned no session')
+        );
+
+      // =========================================================================
+      // Create Mode C Authenticated Anon Clients (ADR-024)
+      // =========================================================================
+
+      pitBossClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: { Authorization: `Bearer ${session1.session.access_token}` },
+        },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      cashierClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: { Authorization: `Bearer ${session2.session.access_token}` },
+        },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      adminClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: { Authorization: `Bearer ${session3.session.access_token}` },
+        },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      dealerClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: { Authorization: `Bearer ${session4.session.access_token}` },
+        },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      crossCasinoClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: { Authorization: `Bearer ${session5.session.access_token}` },
+        },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+
+      // =========================================================================
       // Create Test Players
       // =========================================================================
 
-      const { data: player1, error: player1Error } = await serviceClient
+      const { data: player1, error: player1Error } = await setupClient
         .from('player')
         .insert({
           first_name: 'MTLTest',
@@ -299,7 +454,7 @@ const RUN_INTEGRATION =
       if (player1Error) throw player1Error;
       testPlayer1Id = player1.id;
 
-      const { data: player2, error: player2Error } = await serviceClient
+      const { data: player2, error: player2Error } = await setupClient
         .from('player')
         .insert({
           first_name: 'MTLTest',
@@ -312,7 +467,7 @@ const RUN_INTEGRATION =
       testPlayer2Id = player2.id;
 
       // Enroll players in casinos
-      await serviceClient.from('player_casino').insert([
+      await setupClient.from('player_casino').insert([
         { player_id: testPlayer1Id, casino_id: testCasino1Id },
         { player_id: testPlayer2Id, casino_id: testCasino2Id },
       ]);
@@ -321,7 +476,7 @@ const RUN_INTEGRATION =
       // Create Test MTL Entries (via service role to bypass RLS for setup)
       // =========================================================================
 
-      const { data: entry1, error: entry1Error } = await serviceClient
+      const { data: entry1, error: entry1Error } = await setupClient
         .from('mtl_entry')
         .insert({
           casino_id: testCasino1Id,
@@ -339,7 +494,7 @@ const RUN_INTEGRATION =
       if (entry1Error) throw entry1Error;
       testEntry1Id = entry1.id;
 
-      const { data: entry2, error: entry2Error } = await serviceClient
+      const { data: entry2, error: entry2Error } = await setupClient
         .from('mtl_entry')
         .insert({
           casino_id: testCasino2Id,
@@ -361,7 +516,7 @@ const RUN_INTEGRATION =
       // Create Test Audit Note
       // =========================================================================
 
-      const { data: auditNote1, error: auditNote1Error } = await serviceClient
+      const { data: auditNote1, error: auditNote1Error } = await setupClient
         .from('mtl_audit_note')
         .insert({
           mtl_entry_id: testEntry1Id,
@@ -373,19 +528,6 @@ const RUN_INTEGRATION =
 
       if (auditNote1Error) throw auditNote1Error;
       testAuditNote1Id = auditNote1.id;
-
-      // =========================================================================
-      // Create Authenticated Clients
-      // =========================================================================
-
-      pitBossClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
-      cashierClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
-      adminClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
-      dealerClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
-      crossCasinoClient = createClient<Database>(
-        supabaseUrl,
-        supabaseServiceKey,
-      );
     });
 
     afterAll(async () => {
@@ -395,14 +537,14 @@ const RUN_INTEGRATION =
 
       // Disable triggers for cleanup (ignore errors if RPC doesn't exist)
       try {
-        await serviceClient.rpc('exec_sql', {
+        await setupClient.rpc('exec_sql', {
           sql: 'ALTER TABLE mtl_audit_note DISABLE TRIGGER trg_mtl_audit_note_no_delete',
         });
       } catch {
         /* ignore */
       }
       try {
-        await serviceClient.rpc('exec_sql', {
+        await setupClient.rpc('exec_sql', {
           sql: 'ALTER TABLE mtl_entry DISABLE TRIGGER trg_mtl_entry_no_delete',
         });
       } catch {
@@ -410,7 +552,7 @@ const RUN_INTEGRATION =
       }
 
       try {
-        await serviceClient
+        await setupClient
           .from('mtl_audit_note')
           .delete()
           .eq('id', testAuditNote1Id);
@@ -418,26 +560,26 @@ const RUN_INTEGRATION =
         /* ignore */
       }
       try {
-        await serviceClient.from('mtl_entry').delete().eq('id', testEntry1Id);
+        await setupClient.from('mtl_entry').delete().eq('id', testEntry1Id);
       } catch {
         /* ignore */
       }
       try {
-        await serviceClient.from('mtl_entry').delete().eq('id', testEntry2Id);
+        await setupClient.from('mtl_entry').delete().eq('id', testEntry2Id);
       } catch {
         /* ignore */
       }
 
       // Re-enable triggers
       try {
-        await serviceClient.rpc('exec_sql', {
+        await setupClient.rpc('exec_sql', {
           sql: 'ALTER TABLE mtl_audit_note ENABLE TRIGGER trg_mtl_audit_note_no_delete',
         });
       } catch {
         /* ignore */
       }
       try {
-        await serviceClient.rpc('exec_sql', {
+        await setupClient.rpc('exec_sql', {
           sql: 'ALTER TABLE mtl_entry ENABLE TRIGGER trg_mtl_entry_no_delete',
         });
       } catch {
@@ -445,38 +587,35 @@ const RUN_INTEGRATION =
       }
 
       // Clean up other test data
-      await serviceClient
+      await setupClient
         .from('player_casino')
         .delete()
         .eq('player_id', testPlayer1Id);
-      await serviceClient
+      await setupClient
         .from('player_casino')
         .delete()
         .eq('player_id', testPlayer2Id);
-      await serviceClient.from('player').delete().eq('id', testPlayer1Id);
-      await serviceClient.from('player').delete().eq('id', testPlayer2Id);
-      await serviceClient.from('staff').delete().eq('id', testPitBossId);
-      await serviceClient.from('staff').delete().eq('id', testCashierId);
-      await serviceClient.from('staff').delete().eq('id', testAdminId);
-      await serviceClient.from('staff').delete().eq('id', testDealerId);
-      await serviceClient
-        .from('staff')
-        .delete()
-        .eq('id', testCrossCasinoStaffId);
-      await serviceClient
+      await setupClient.from('player').delete().eq('id', testPlayer1Id);
+      await setupClient.from('player').delete().eq('id', testPlayer2Id);
+      await setupClient.from('staff').delete().eq('id', testPitBossId);
+      await setupClient.from('staff').delete().eq('id', testCashierId);
+      await setupClient.from('staff').delete().eq('id', testAdminId);
+      await setupClient.from('staff').delete().eq('id', testDealerId);
+      await setupClient.from('staff').delete().eq('id', testCrossCasinoStaffId);
+      await setupClient
         .from('casino_settings')
         .delete()
         .eq('casino_id', testCasino1Id);
-      await serviceClient
+      await setupClient
         .from('casino_settings')
         .delete()
         .eq('casino_id', testCasino2Id);
-      await serviceClient.from('casino').delete().eq('id', testCasino1Id);
-      await serviceClient.from('casino').delete().eq('id', testCasino2Id);
+      await setupClient.from('casino').delete().eq('id', testCasino1Id);
+      await setupClient.from('casino').delete().eq('id', testCasino2Id);
 
       // Clean up companies (ADR-043)
-      await serviceClient.from('company').delete().eq('id', testCompany1Id);
-      await serviceClient.from('company').delete().eq('id', testCompany2Id);
+      await setupClient.from('company').delete().eq('id', testCompany1Id);
+      await setupClient.from('company').delete().eq('id', testCompany2Id);
 
       // Clean up test users
       for (const userId of [
@@ -488,7 +627,7 @@ const RUN_INTEGRATION =
       ]) {
         if (userId) {
           try {
-            await serviceClient.auth.admin.deleteUser(userId);
+            await setupClient.auth.admin.deleteUser(userId);
           } catch {
             /* ignore */
           }
@@ -502,14 +641,6 @@ const RUN_INTEGRATION =
 
     describe('mtl_entry SELECT Policies', () => {
       it('pit_boss can SELECT mtl_entry', async () => {
-        await setTestRLSContext(
-          pitBossClient,
-          testPitBossId,
-          testCasino1Id,
-          'pit_boss',
-          'mtl-pitboss-select',
-        );
-
         const { data, error } = await pitBossClient
           .from('mtl_entry')
           .select('*')
@@ -522,14 +653,6 @@ const RUN_INTEGRATION =
       });
 
       it('cashier can SELECT mtl_entry (form UX per ADR-025 v1.1.0)', async () => {
-        await setTestRLSContext(
-          cashierClient,
-          testCashierId,
-          testCasino1Id,
-          'cashier',
-          'mtl-cashier-select',
-        );
-
         const { data, error } = await cashierClient
           .from('mtl_entry')
           .select('*')
@@ -541,14 +664,6 @@ const RUN_INTEGRATION =
       });
 
       it('admin can SELECT mtl_entry', async () => {
-        await setTestRLSContext(
-          adminClient,
-          testAdminId,
-          testCasino1Id,
-          'admin',
-          'mtl-admin-select',
-        );
-
         const { data, error } = await adminClient
           .from('mtl_entry')
           .select('*')
@@ -560,14 +675,6 @@ const RUN_INTEGRATION =
       });
 
       it('dealer CANNOT SELECT mtl_entry', async () => {
-        await setTestRLSContext(
-          dealerClient,
-          testDealerId,
-          testCasino1Id,
-          'dealer',
-          'mtl-dealer-select',
-        );
-
         const { data, error } = await dealerClient
           .from('mtl_entry')
           .select('*')
@@ -585,14 +692,6 @@ const RUN_INTEGRATION =
 
     describe('mtl_entry INSERT Policies', () => {
       it('pit_boss can INSERT mtl_entry', async () => {
-        await setTestRLSContext(
-          pitBossClient,
-          testPitBossId,
-          testCasino1Id,
-          'pit_boss',
-          'mtl-pitboss-insert',
-        );
-
         const { data, error } = await pitBossClient
           .from('mtl_entry')
           .insert({
@@ -614,14 +713,6 @@ const RUN_INTEGRATION =
       });
 
       it('cashier can INSERT mtl_entry', async () => {
-        await setTestRLSContext(
-          cashierClient,
-          testCashierId,
-          testCasino1Id,
-          'cashier',
-          'mtl-cashier-insert',
-        );
-
         const { data, error } = await cashierClient
           .from('mtl_entry')
           .insert({
@@ -643,14 +734,6 @@ const RUN_INTEGRATION =
       });
 
       it('admin can INSERT mtl_entry', async () => {
-        await setTestRLSContext(
-          adminClient,
-          testAdminId,
-          testCasino1Id,
-          'admin',
-          'mtl-admin-insert',
-        );
-
         const { data, error } = await adminClient
           .from('mtl_entry')
           .insert({
@@ -672,14 +755,6 @@ const RUN_INTEGRATION =
       });
 
       it('dealer CANNOT INSERT mtl_entry', async () => {
-        await setTestRLSContext(
-          dealerClient,
-          testDealerId,
-          testCasino1Id,
-          'dealer',
-          'mtl-dealer-insert',
-        );
-
         const { error } = await dealerClient.from('mtl_entry').insert({
           casino_id: testCasino1Id,
           patron_uuid: testPlayer1Id,
@@ -702,14 +777,6 @@ const RUN_INTEGRATION =
 
     describe('mtl_entry Append-Only Enforcement', () => {
       it('pit_boss CANNOT UPDATE mtl_entry', async () => {
-        await setTestRLSContext(
-          pitBossClient,
-          testPitBossId,
-          testCasino1Id,
-          'pit_boss',
-          'mtl-pitboss-update',
-        );
-
         const { error } = await pitBossClient
           .from('mtl_entry')
           .update({ amount: 9999 })
@@ -720,14 +787,6 @@ const RUN_INTEGRATION =
       });
 
       it('admin CANNOT UPDATE mtl_entry', async () => {
-        await setTestRLSContext(
-          adminClient,
-          testAdminId,
-          testCasino1Id,
-          'admin',
-          'mtl-admin-update',
-        );
-
         const { error } = await adminClient
           .from('mtl_entry')
           .update({ amount: 9999 })
@@ -738,14 +797,6 @@ const RUN_INTEGRATION =
       });
 
       it('pit_boss CANNOT DELETE mtl_entry', async () => {
-        await setTestRLSContext(
-          pitBossClient,
-          testPitBossId,
-          testCasino1Id,
-          'pit_boss',
-          'mtl-pitboss-delete',
-        );
-
         const { error } = await pitBossClient
           .from('mtl_entry')
           .delete()
@@ -756,14 +807,6 @@ const RUN_INTEGRATION =
       });
 
       it('admin CANNOT DELETE mtl_entry', async () => {
-        await setTestRLSContext(
-          adminClient,
-          testAdminId,
-          testCasino1Id,
-          'admin',
-          'mtl-admin-delete',
-        );
-
         const { error } = await adminClient
           .from('mtl_entry')
           .delete()
@@ -775,7 +818,7 @@ const RUN_INTEGRATION =
 
       it('BEFORE triggers block UPDATE via service_role', async () => {
         // This tests the belt+suspenders layer - triggers as final defense
-        const { error } = await serviceClient
+        const { error } = await setupClient
           .from('mtl_entry')
           .update({ amount: 9999 })
           .eq('id', testEntry1Id);
@@ -787,7 +830,7 @@ const RUN_INTEGRATION =
 
       it('BEFORE triggers block DELETE via service_role', async () => {
         // This tests the belt+suspenders layer - triggers as final defense
-        const { error } = await serviceClient
+        const { error } = await setupClient
           .from('mtl_entry')
           .delete()
           .eq('id', testEntry1Id);
@@ -804,14 +847,6 @@ const RUN_INTEGRATION =
 
     describe('mtl_audit_note SELECT Policies', () => {
       it('pit_boss can SELECT mtl_audit_note', async () => {
-        await setTestRLSContext(
-          pitBossClient,
-          testPitBossId,
-          testCasino1Id,
-          'pit_boss',
-          'mtl-note-pitboss-select',
-        );
-
         const { data, error } = await pitBossClient
           .from('mtl_audit_note')
           .select('*')
@@ -823,14 +858,6 @@ const RUN_INTEGRATION =
       });
 
       it('admin can SELECT mtl_audit_note', async () => {
-        await setTestRLSContext(
-          adminClient,
-          testAdminId,
-          testCasino1Id,
-          'admin',
-          'mtl-note-admin-select',
-        );
-
         const { data, error } = await adminClient
           .from('mtl_audit_note')
           .select('*')
@@ -842,14 +869,6 @@ const RUN_INTEGRATION =
       });
 
       it('cashier CANNOT SELECT mtl_audit_note', async () => {
-        await setTestRLSContext(
-          cashierClient,
-          testCashierId,
-          testCasino1Id,
-          'cashier',
-          'mtl-note-cashier-select',
-        );
-
         const { data, error } = await cashierClient
           .from('mtl_audit_note')
           .select('*')
@@ -867,14 +886,6 @@ const RUN_INTEGRATION =
 
     describe('mtl_audit_note INSERT Policies', () => {
       it('pit_boss can INSERT mtl_audit_note', async () => {
-        await setTestRLSContext(
-          pitBossClient,
-          testPitBossId,
-          testCasino1Id,
-          'pit_boss',
-          'mtl-note-pitboss-insert',
-        );
-
         const { data, error } = await pitBossClient
           .from('mtl_audit_note')
           .insert({
@@ -891,14 +902,6 @@ const RUN_INTEGRATION =
       });
 
       it('admin can INSERT mtl_audit_note', async () => {
-        await setTestRLSContext(
-          adminClient,
-          testAdminId,
-          testCasino1Id,
-          'admin',
-          'mtl-note-admin-insert',
-        );
-
         const { data, error } = await adminClient
           .from('mtl_audit_note')
           .insert({
@@ -915,14 +918,6 @@ const RUN_INTEGRATION =
       });
 
       it('cashier CANNOT INSERT mtl_audit_note', async () => {
-        await setTestRLSContext(
-          cashierClient,
-          testCashierId,
-          testCasino1Id,
-          'cashier',
-          'mtl-note-cashier-insert',
-        );
-
         const { error } = await cashierClient.from('mtl_audit_note').insert({
           mtl_entry_id: testEntry1Id,
           staff_id: testCashierId,
@@ -940,14 +935,6 @@ const RUN_INTEGRATION =
 
     describe('mtl_audit_note Append-Only Enforcement', () => {
       it('pit_boss CANNOT UPDATE mtl_audit_note', async () => {
-        await setTestRLSContext(
-          pitBossClient,
-          testPitBossId,
-          testCasino1Id,
-          'pit_boss',
-          'mtl-note-pitboss-update',
-        );
-
         const { error } = await pitBossClient
           .from('mtl_audit_note')
           .update({ note: 'Modified note' })
@@ -958,14 +945,6 @@ const RUN_INTEGRATION =
       });
 
       it('admin CANNOT UPDATE mtl_audit_note', async () => {
-        await setTestRLSContext(
-          adminClient,
-          testAdminId,
-          testCasino1Id,
-          'admin',
-          'mtl-note-admin-update',
-        );
-
         const { error } = await adminClient
           .from('mtl_audit_note')
           .update({ note: 'Modified note' })
@@ -976,14 +955,6 @@ const RUN_INTEGRATION =
       });
 
       it('pit_boss CANNOT DELETE mtl_audit_note', async () => {
-        await setTestRLSContext(
-          pitBossClient,
-          testPitBossId,
-          testCasino1Id,
-          'pit_boss',
-          'mtl-note-pitboss-delete',
-        );
-
         const { error } = await pitBossClient
           .from('mtl_audit_note')
           .delete()
@@ -994,14 +965,6 @@ const RUN_INTEGRATION =
       });
 
       it('admin CANNOT DELETE mtl_audit_note', async () => {
-        await setTestRLSContext(
-          adminClient,
-          testAdminId,
-          testCasino1Id,
-          'admin',
-          'mtl-note-admin-delete',
-        );
-
         const { error } = await adminClient
           .from('mtl_audit_note')
           .delete()
@@ -1012,7 +975,7 @@ const RUN_INTEGRATION =
       });
 
       it('BEFORE triggers block UPDATE on mtl_audit_note via service_role', async () => {
-        const { error } = await serviceClient
+        const { error } = await setupClient
           .from('mtl_audit_note')
           .update({ note: 'Modified note' })
           .eq('id', testAuditNote1Id);
@@ -1023,7 +986,7 @@ const RUN_INTEGRATION =
       });
 
       it('BEFORE triggers block DELETE on mtl_audit_note via service_role', async () => {
-        const { error } = await serviceClient
+        const { error } = await setupClient
           .from('mtl_audit_note')
           .delete()
           .eq('id', testAuditNote1Id);
@@ -1040,14 +1003,6 @@ const RUN_INTEGRATION =
 
     describe('Cross-Casino Isolation', () => {
       it('pit_boss CANNOT SELECT mtl_entry from another casino', async () => {
-        await setTestRLSContext(
-          pitBossClient,
-          testPitBossId,
-          testCasino1Id,
-          'pit_boss',
-          'mtl-cross-select',
-        );
-
         const { data, error } = await pitBossClient
           .from('mtl_entry')
           .select('*')
@@ -1059,14 +1014,6 @@ const RUN_INTEGRATION =
       });
 
       it('pit_boss CANNOT INSERT mtl_entry to another casino', async () => {
-        await setTestRLSContext(
-          pitBossClient,
-          testPitBossId,
-          testCasino1Id,
-          'pit_boss',
-          'mtl-cross-insert',
-        );
-
         const { error } = await pitBossClient.from('mtl_entry').insert({
           casino_id: testCasino2Id, // Different casino!
           patron_uuid: testPlayer2Id,
@@ -1083,14 +1030,6 @@ const RUN_INTEGRATION =
       });
 
       it('pit_boss CANNOT add audit_note to entry from another casino', async () => {
-        await setTestRLSContext(
-          pitBossClient,
-          testPitBossId,
-          testCasino1Id,
-          'pit_boss',
-          'mtl-cross-note-insert',
-        );
-
         const { error } = await pitBossClient.from('mtl_audit_note').insert({
           mtl_entry_id: testEntry2Id, // Entry from Casino 2!
           staff_id: testPitBossId,
@@ -1102,14 +1041,6 @@ const RUN_INTEGRATION =
       });
 
       it('admin CANNOT access data from another casino', async () => {
-        await setTestRLSContext(
-          adminClient,
-          testAdminId,
-          testCasino1Id,
-          'admin',
-          'mtl-admin-cross',
-        );
-
         const { data, error } = await adminClient
           .from('mtl_entry')
           .select('*')
@@ -1127,14 +1058,6 @@ const RUN_INTEGRATION =
 
     describe('mtl_gaming_day_summary View Access', () => {
       it('pit_boss can SELECT from mtl_gaming_day_summary', async () => {
-        await setTestRLSContext(
-          pitBossClient,
-          testPitBossId,
-          testCasino1Id,
-          'pit_boss',
-          'mtl-summary-pitboss',
-        );
-
         const { data, error } = await pitBossClient
           .from('mtl_gaming_day_summary')
           .select('*')
@@ -1147,14 +1070,6 @@ const RUN_INTEGRATION =
       });
 
       it('admin can SELECT from mtl_gaming_day_summary', async () => {
-        await setTestRLSContext(
-          adminClient,
-          testAdminId,
-          testCasino1Id,
-          'admin',
-          'mtl-summary-admin',
-        );
-
         const { data, error } = await adminClient
           .from('mtl_gaming_day_summary')
           .select('*')
@@ -1166,14 +1081,6 @@ const RUN_INTEGRATION =
       });
 
       it('cashier can SELECT from mtl_gaming_day_summary (inherits mtl_entry access)', async () => {
-        await setTestRLSContext(
-          cashierClient,
-          testCashierId,
-          testCasino1Id,
-          'cashier',
-          'mtl-summary-cashier',
-        );
-
         const { data, error } = await cashierClient
           .from('mtl_gaming_day_summary')
           .select('*')
