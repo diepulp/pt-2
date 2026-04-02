@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * useThresholdNotifications Hook Unit Tests
  *

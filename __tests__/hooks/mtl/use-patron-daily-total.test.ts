@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * usePatronDailyTotal Hook Unit Tests
  *

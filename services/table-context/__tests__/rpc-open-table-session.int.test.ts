@@ -204,13 +204,11 @@ describeIntegration('PRD-059: rpc_open_table_session — Custody Gate', () => {
 
     // 8. Sign in and create authenticated anon client
     pitBossClient = createClient<Database>(supabaseUrl!, supabaseAnonKey!);
-    const { error: signInError } =
-      await pitBossClient.auth.signInWithPassword({
-        email: TEST_EMAIL,
-        password: TEST_PASSWORD,
-      });
-    if (signInError)
-      throw new Error(`Sign-in failed: ${signInError.message}`);
+    const { error: signInError } = await pitBossClient.auth.signInWithPassword({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+    });
+    if (signInError) throw new Error(`Sign-in failed: ${signInError.message}`);
   });
 
   afterAll(async () => {
@@ -225,10 +223,7 @@ describeIntegration('PRD-059: rpc_open_table_session — Custody Gate', () => {
       .from('table_rundown_report')
       .delete()
       .eq('casino_id', casinoId);
-    await setupClient
-      .from('table_session')
-      .delete()
-      .eq('casino_id', casinoId);
+    await setupClient.from('table_session').delete().eq('casino_id', casinoId);
     await setupClient
       .from('table_inventory_snapshot')
       .delete()
@@ -238,19 +233,10 @@ describeIntegration('PRD-059: rpc_open_table_session — Custody Gate', () => {
       .delete()
       .eq('casino_id', casinoId);
     await setupClient.from('visit').delete().eq('casino_id', casinoId);
-    await setupClient
-      .from('player_loyalty')
-      .delete()
-      .eq('casino_id', casinoId);
-    await setupClient
-      .from('player_casino')
-      .delete()
-      .eq('casino_id', casinoId);
+    await setupClient.from('player_loyalty').delete().eq('casino_id', casinoId);
+    await setupClient.from('player_casino').delete().eq('casino_id', casinoId);
     await setupClient.from('player').delete().eq('id', playerId);
-    await setupClient
-      .from('gaming_table')
-      .delete()
-      .eq('casino_id', casinoId);
+    await setupClient.from('gaming_table').delete().eq('casino_id', casinoId);
     await setupClient.from('staff').delete().eq('casino_id', casinoId);
     await setupClient
       .from('casino_settings')

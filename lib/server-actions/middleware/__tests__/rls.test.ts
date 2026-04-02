@@ -1,3 +1,4 @@
+/** @jest-environment node */
 jest.mock('@/lib/supabase/rls-context', () => ({
   injectRLSContext: jest.fn(),
 }));

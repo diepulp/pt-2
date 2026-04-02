@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Auth Chain Entrypoints Regression Test — AUTH-HARDENING v0.1 WS3
  *

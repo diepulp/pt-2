@@ -412,7 +412,7 @@ Commit with §12 disclosure format.
 | agent-rating-slip-modal | RatingSlipModal | 5 unit | Already directive-compliant, exemplar + script only |
 | agent-recognition | Recognition | 2 unit | Already directive-compliant, exemplar + script only |
 
-**Tier 3 team** (3 agents in parallel worktrees):
+**Tier 3 team** (3 agents in parallel ):
 
 | Agent | Surface | Key Files | Notes |
 |-------|---------|-----------|-------|
