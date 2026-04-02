@@ -1,11 +1,11 @@
 {
   "prd": "PRD-060",
   "prd_title": "Company Registration and First Property Bootstrap",
-  "current_phase": 0,
-  "status": "initialized",
+  "current_phase": 1,
+  "status": "executing",
   "completed_workstreams": [],
-  "in_progress_workstreams": [],
-  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "in_progress_workstreams": ["WS1"],
+  "pending_workstreams": ["WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
   "artifacts": {},
   "gates_passed": [],
   "gates_pending": ["schema-validation", "type-check", "lint", "test-pass"],
@@ -14,7 +14,7 @@
   "write_path_classification": "detected",
   "adversarial_review": {
     "magnitude_score": 14,
-    "magnitude_tier": null,
+    "magnitude_tier": "skipped",
     "magnitude_signals": [
       {"signal": "cross_context_bounded_contexts", "points": 3, "evidence": "CompanyService (new) + CasinoService (amended)"},
       {"signal": "migration_with_rls", "points": 2, "evidence": "WS1 creates onboarding_registration with RLS"},
@@ -25,7 +25,8 @@
       {"signal": "dependency_depth_gt_3", "points": 1, "evidence": "WS1->WS2->WS4->WS5->WS7 depth 4"},
       {"signal": "executor_diversity_gt_3", "points": 1, "evidence": "4 distinct skills"}
     ],
-    "verdict": null,
+    "verdict": "skipped",
+    "tier_override": "user_approved_direct_execution",
     "p0_count": 0,
     "p1_count": 0,
     "attempt": 0
