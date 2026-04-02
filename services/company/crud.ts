@@ -32,7 +32,7 @@ export async function registerCompany(
 ): Promise<RegisterCompanyResult> {
   const { data, error } = await supabase.rpc('rpc_register_company', {
     p_company_name: input.company_name,
-    p_legal_name: input.legal_name ?? null,
+    p_legal_name: input.legal_name,
   });
 
   if (error) {
