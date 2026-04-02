@@ -303,6 +303,28 @@ The original 7-phase plan (Phase 0-6) remains valid for integration tests. This 
 
 ---
 
+## Tier 3 Infrastructure Surfaces — Remediation Complete (2026-04-01)
+
+Tier 3 Phase A (rollout template: directives + gates + posture doc) and Phase B (Mode C auth rewrite) are complete for all three infrastructure surfaces. `workers/csv-ingestion` was already 100% compliant and required no remediation.
+
+| Surface | Files | Directives | Gates | Mode C | Posture Doc |
+|---------|-------|------------|-------|--------|-------------|
+| `lib/supabase` | 10 | 10/10 | 6/6 | DONE | [LIB-SUPABASE-POSTURE.md](LIB-SUPABASE-POSTURE.md) |
+| `lib/server-actions` | 10 | 10/10 | 3/3 | DONE | [LIB-SERVER-ACTIONS-POSTURE.md](LIB-SERVER-ACTIONS-POSTURE.md) |
+| Root `__tests__/` | 15 | 15/15 | 8/8 | DONE | [ROOT-TESTS-POSTURE.md](ROOT-TESTS-POSTURE.md) |
+| `workers/csv-ingestion` | — | — | — | N/A (already compliant) | — |
+
+**Totals:** 35 files remediated, 35/35 directives applied, 17/17 gates passing.
+
+Infra slice scripts added to `package.json`:
+- `npm run test:infra:lib-supabase`
+- `npm run test:infra:server-actions`
+- `npm run test:infra:root-tests`
+
+Phase B precis: [2026-04-01-tier3-phase-b-mode-c-rewrite-PRECIS.md](2026-04-01-tier3-phase-b-mode-c-rewrite-PRECIS.md)
+
+---
+
 ## Cross-References
 
 | Document | Relevance |

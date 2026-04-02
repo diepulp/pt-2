@@ -66,27 +66,36 @@ export type Database = {
           action: string
           actor_id: string | null
           casino_id: string | null
+          correlation_id: string | null
           created_at: string
           details: Json | null
           domain: string
+          dto_after: Json | null
+          dto_before: Json | null
           id: string
         }
         Insert: {
           action: string
           actor_id?: string | null
           casino_id?: string | null
+          correlation_id?: string | null
           created_at?: string
           details?: Json | null
           domain: string
+          dto_after?: Json | null
+          dto_before?: Json | null
           id?: string
         }
         Update: {
           action?: string
           actor_id?: string | null
           casino_id?: string | null
+          correlation_id?: string | null
           created_at?: string
           details?: Json | null
           domain?: string
+          dto_after?: Json | null
+          dto_before?: Json | null
           id?: string
         }
         Relationships: [
@@ -3503,6 +3512,79 @@ export type Database = {
             columns: ["verified_by"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      table_metric_baseline: {
+        Row: {
+          casino_id: string
+          computed_at: string
+          computed_by: string | null
+          gaming_day: string
+          id: string
+          last_error: string | null
+          mad_value: number
+          max_value: number | null
+          median_value: number
+          metric_type: string
+          min_value: number | null
+          sample_count: number
+          table_id: string
+          window_days: number
+        }
+        Insert: {
+          casino_id: string
+          computed_at?: string
+          computed_by?: string | null
+          gaming_day: string
+          id?: string
+          last_error?: string | null
+          mad_value: number
+          max_value?: number | null
+          median_value: number
+          metric_type: string
+          min_value?: number | null
+          sample_count: number
+          table_id: string
+          window_days: number
+        }
+        Update: {
+          casino_id?: string
+          computed_at?: string
+          computed_by?: string | null
+          gaming_day?: string
+          id?: string
+          last_error?: string | null
+          mad_value?: number
+          max_value?: number | null
+          median_value?: number
+          metric_type?: string
+          min_value?: number | null
+          sample_count?: number
+          table_id?: string
+          window_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_metric_baseline_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_metric_baseline_computed_by_fkey"
+            columns: ["computed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_metric_baseline_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
             referencedColumns: ["id"]
           },
         ]

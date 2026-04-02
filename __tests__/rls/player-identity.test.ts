@@ -28,10 +28,12 @@ import type { Database } from '../../types/database.types';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-// Integration gate: skip when RUN_INTEGRATION_TESTS is unset
-const describeIntegration = process.env.RUN_INTEGRATION_TESTS
-  ? describe
-  : describe.skip;
+// Integration gate: skip when RUN_INTEGRATION_TESTS is not 'true' or '1'
+const describeIntegration =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1'
+    ? describe
+    : describe.skip;
 
 describeIntegration('player-identity RLS Policies (ADR-022)', () => {
   let serviceClient: SupabaseClient<Database>;
@@ -41,6 +43,8 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
   let dealerClient1: SupabaseClient<Database>;
   let pitBossClient2: SupabaseClient<Database>;
 
+  let company1Id: string;
+  let company2Id: string;
   let casino1Id: string;
   let casino2Id: string;
   let pitBoss1Id: string;
@@ -96,17 +100,32 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
     });
     user5Id = user5!.user.id;
 
+    // Create test companies (ADR-043: company before casino)
+    const { data: co1 } = await serviceClient
+      .from('company')
+      .insert({ name: 'Test Company 1' })
+      .select('id')
+      .single();
+    company1Id = co1!.id;
+
+    const { data: co2 } = await serviceClient
+      .from('company')
+      .insert({ name: 'Test Company 2' })
+      .select('id')
+      .single();
+    company2Id = co2!.id;
+
     // Create test casinos
     const { data: c1 } = await serviceClient
       .from('casino')
-      .insert({ name: 'Test Casino 1' })
+      .insert({ name: 'Test Casino 1', company_id: company1Id })
       .select('id')
       .single();
     casino1Id = c1!.id;
 
     const { data: c2 } = await serviceClient
       .from('casino')
-      .insert({ name: 'Test Casino 2' })
+      .insert({ name: 'Test Casino 2', company_id: company2Id })
       .select('id')
       .single();
     casino2Id = c2!.id;
@@ -118,7 +137,8 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
         user_id: user1Id,
         casino_id: casino1Id,
         role: 'pit_boss',
-        name: 'Pit Boss 1',
+        first_name: 'Pit',
+        last_name: 'Boss1',
         status: 'active',
       })
       .select('id')
@@ -131,7 +151,8 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
         user_id: user2Id,
         casino_id: casino1Id,
         role: 'admin',
-        name: 'Admin 1',
+        first_name: 'Admin',
+        last_name: 'One',
         status: 'active',
       })
       .select('id')
@@ -144,7 +165,8 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
         user_id: user3Id,
         casino_id: casino1Id,
         role: 'cashier',
-        name: 'Cashier 1',
+        first_name: 'Cashier',
+        last_name: 'One',
         status: 'active',
       })
       .select('id')
@@ -157,7 +179,8 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
         user_id: user4Id,
         casino_id: casino1Id,
         role: 'dealer',
-        name: 'Dealer 1',
+        first_name: 'Dealer',
+        last_name: 'One',
         status: 'active',
       })
       .select('id')
@@ -170,7 +193,8 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
         user_id: user5Id,
         casino_id: casino2Id,
         role: 'pit_boss',
-        name: 'Pit Boss 2',
+        first_name: 'Pit',
+        last_name: 'Boss2',
         status: 'active',
       })
       .select('id')
@@ -279,6 +303,8 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
     await serviceClient.from('staff').delete().eq('casino_id', casino2Id);
     await serviceClient.from('casino').delete().eq('id', casino1Id);
     await serviceClient.from('casino').delete().eq('id', casino2Id);
+    await serviceClient.from('company').delete().eq('id', company1Id);
+    await serviceClient.from('company').delete().eq('id', company2Id);
     await serviceClient.auth.admin.deleteUser(user1Id);
     await serviceClient.auth.admin.deleteUser(user2Id);
     await serviceClient.auth.admin.deleteUser(user3Id);

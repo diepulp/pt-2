@@ -78,6 +78,17 @@ These are evidence documents. They inform the remediation but are not the remedi
 
 ---
 
+### Step 6 — Tier 3 Infrastructure Surfaces
+
+| # | Document | Purpose |
+|---|----------|---------|
+| 6a | [LIB-SUPABASE-POSTURE.md](LIB-SUPABASE-POSTURE.md) | lib/supabase infrastructure surface posture. 10 files, 10/10 directives, 6/6 gates. Phase A + Phase B (Mode C) complete. |
+| 6b | [LIB-SERVER-ACTIONS-POSTURE.md](LIB-SERVER-ACTIONS-POSTURE.md) | lib/server-actions middleware surface posture. 10 files, 10/10 directives, 3/3 gates. Phase A + Phase B (Mode C) complete. |
+| 6c | [ROOT-TESTS-POSTURE.md](ROOT-TESTS-POSTURE.md) | Root `__tests__/` surface posture. 15 files, 15/15 directives, 8/8 gates. Phase A + Phase B (Mode C) complete. |
+| 6d | [2026-04-01-tier3-phase-b-mode-c-rewrite-PRECIS.md](2026-04-01-tier3-phase-b-mode-c-rewrite-PRECIS.md) | Tier 3 Phase B implementation precis. Mode C auth rewrite across all three infrastructure surfaces. 16 implementation tasks. |
+
+---
+
 ### Superseded
 
 | # | Document | Status |
@@ -141,6 +152,10 @@ docs/issues/gaps/testing-arch-remediation/
   ├── CONTEXT-ROLLOUT-TEMPLATE.md                  ← Step 4: Reusable context rollout checklist
   ├── migration-stabilization-parallel-artifact.md ← Parallel track
   ├── INTEGRATION-TEST-REMEDIATION-PLAN.md         ← Superseded (historical)
+  ├── LIB-SUPABASE-POSTURE.md                      ← Step 6: lib/supabase infra surface posture
+  ├── LIB-SERVER-ACTIONS-POSTURE.md                ← Step 6: lib/server-actions infra surface posture
+  ├── ROOT-TESTS-POSTURE.md                        ← Step 6: Root __tests__/ infra surface posture
+  ├── 2026-04-01-tier3-phase-b-mode-c-rewrite-PRECIS.md ← Step 6: Phase B precis
   └── slice-1/                                     ← Casino exemplar (Slice One)
       ├── CASINO-EXEMPLAR-POSTURE.md               ← Layer health + verification tier
       ├── CASINO-EXEMPLAR-COMPLETION-SUMMARY.md     ← Delivery record
