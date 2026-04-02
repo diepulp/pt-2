@@ -476,6 +476,9 @@ const RUN_INTEGRATION =
       // Create Test MTL Entries (via service role to bypass RLS for setup)
       // =========================================================================
 
+      // NOTE: buy_in/cash_out txn_type entries MUST have idempotency_key
+      // prefixed with 'fin:' to satisfy mtl_financial_types_must_be_derived
+      // constraint (enforces derivation from the finance-to-MTL bridge).
       const { data: entry1, error: entry1Error } = await setupClient
         .from('mtl_entry')
         .insert({
@@ -486,7 +489,7 @@ const RUN_INTEGRATION =
           direction: 'in',
           txn_type: 'buy_in',
           source: 'table',
-          idempotency_key: 'rls-mtl-test-entry-1',
+          idempotency_key: `fin:rls-mtl-test-entry-1-${ts}`,
         })
         .select()
         .single();
@@ -504,7 +507,7 @@ const RUN_INTEGRATION =
           direction: 'in',
           txn_type: 'buy_in',
           source: 'cage',
-          idempotency_key: 'rls-mtl-test-entry-2',
+          idempotency_key: `fin:rls-mtl-test-entry-2-${ts}`,
         })
         .select()
         .single();
@@ -702,7 +705,7 @@ const RUN_INTEGRATION =
             direction: 'in',
             txn_type: 'buy_in',
             source: 'table',
-            idempotency_key: `rls-mtl-pitboss-insert-${Date.now()}`,
+            idempotency_key: `fin:rls-mtl-pitboss-insert-${Date.now()}`,
           })
           .select()
           .single();
@@ -723,7 +726,7 @@ const RUN_INTEGRATION =
             direction: 'out',
             txn_type: 'cash_out',
             source: 'cage',
-            idempotency_key: `rls-mtl-cashier-insert-${Date.now()}`,
+            idempotency_key: `fin:rls-mtl-cashier-insert-${Date.now()}`,
           })
           .select()
           .single();
@@ -763,7 +766,7 @@ const RUN_INTEGRATION =
           direction: 'in',
           txn_type: 'buy_in',
           source: 'table',
-          idempotency_key: `rls-mtl-dealer-insert-${Date.now()}`,
+          idempotency_key: `fin:rls-mtl-dealer-insert-${Date.now()}`,
         });
 
         // Should fail with RLS violation
@@ -1022,7 +1025,7 @@ const RUN_INTEGRATION =
           direction: 'in',
           txn_type: 'buy_in',
           source: 'table',
-          idempotency_key: `rls-mtl-cross-insert-${Date.now()}`,
+          idempotency_key: `fin:rls-mtl-cross-insert-${Date.now()}`,
         });
 
         // Should fail with RLS violation

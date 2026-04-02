@@ -834,12 +834,16 @@ const RUN_INTEGRATION =
         if (tableError) throw tableError;
         testTableId = table.id;
 
-        // Create test visit
+        // Create test visit (ADR-026: gaming_day and visit_group_id required)
+        const visitGroupId = crypto.randomUUID();
         const { data: visit, error: visitError } = await setupClient
           .from('visit')
           .insert({
             casino_id: testCasino1Id,
             player_id: testPlayerId,
+            gaming_day: new Date().toISOString().split('T')[0],
+            visit_group_id: visitGroupId,
+            visit_kind: 'gaming_identified_rated',
           })
           .select()
           .single();
@@ -1002,6 +1006,9 @@ const RUN_INTEGRATION =
           .insert({
             casino_id: testCasino2Id,
             player_id: player2!.id,
+            gaming_day: new Date().toISOString().split('T')[0],
+            visit_group_id: crypto.randomUUID(),
+            visit_kind: 'gaming_identified_rated',
           })
           .select()
           .single();
@@ -1109,13 +1116,17 @@ const RUN_INTEGRATION =
           }),
         ]);
 
-        // Create visits for each casino
+        // Create visits for each casino (ADR-026: gaming_day and visit_group_id required)
+        const gamingDay = new Date().toISOString().split('T')[0];
         const visits = await Promise.all([
           setupClient
             .from('visit')
             .insert({
               casino_id: testCasino1Id,
               player_id: testPlayer1Id,
+              gaming_day: gamingDay,
+              visit_group_id: crypto.randomUUID(),
+              visit_kind: 'gaming_identified_rated',
             })
             .select()
             .single(),
@@ -1124,6 +1135,9 @@ const RUN_INTEGRATION =
             .insert({
               casino_id: testCasino2Id,
               player_id: testPlayer2Id,
+              gaming_day: gamingDay,
+              visit_group_id: crypto.randomUUID(),
+              visit_kind: 'gaming_identified_rated',
             })
             .select()
             .single(),
@@ -1240,12 +1254,15 @@ const RUN_INTEGRATION =
         // Mode C: authedClient1 carries JWT with Casino 1 staff identity
         await setModeC_RLSContext(authedClient1, 'cross-casino-insert-deny');
 
-        // Act: Attempt to insert visit for Casino 2 (should fail)
+        // Act: Attempt to insert visit for Casino 2 (should fail on RLS)
         const { data, error } = await authedClient1
           .from('visit')
           .insert({
             casino_id: testCasino2Id, // Wrong casino!
             player_id: testPlayer2Id,
+            gaming_day: new Date().toISOString().split('T')[0],
+            visit_group_id: crypto.randomUUID(),
+            visit_kind: 'gaming_identified_rated',
           })
           .select()
           .single();
@@ -1839,14 +1856,16 @@ const RUN_INTEGRATION =
         if (tableError) throw tableError;
         testTableId = table.id;
 
-        // Create test visit (visit_group_id required by schema, but trigger defaults it)
-        const visitGroupId = crypto.randomUUID();
+        // Create test visit (ADR-026: gaming_day and visit_group_id required)
+        const visitGroupId2 = crypto.randomUUID();
         const { data: visit, error: visitError } = await setupClient
           .from('visit')
           .insert({
             casino_id: testCasino1Id,
             player_id: testPlayerId,
-            visit_group_id: visitGroupId,
+            gaming_day: new Date().toISOString().split('T')[0],
+            visit_group_id: visitGroupId2,
+            visit_kind: 'gaming_identified_rated',
           })
           .select()
           .single();
@@ -1855,6 +1874,8 @@ const RUN_INTEGRATION =
         testVisitId = visit.id;
 
         // Create test rating slip
+        // accrual_kind='compliance_only' bypasses chk_policy_snapshot_if_loyalty
+        // constraint (which requires policy_snapshot.loyalty for accrual_kind='loyalty')
         const { data: slip, error: slipError } = await setupClient
           .from('rating_slip')
           .insert({
@@ -1863,6 +1884,7 @@ const RUN_INTEGRATION =
             table_id: testTableId,
             seat_number: '1',
             status: 'open',
+            accrual_kind: 'compliance_only',
           })
           .select()
           .single();
@@ -2099,7 +2121,9 @@ const RUN_INTEGRATION =
           .insert({
             casino_id: testCasino2Id,
             player_id: player2!.id,
+            gaming_day: new Date().toISOString().split('T')[0],
             visit_group_id: crypto.randomUUID(),
+            visit_kind: 'gaming_identified_rated',
           })
           .select()
           .single();

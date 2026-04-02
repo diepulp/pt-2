@@ -373,7 +373,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       expect(error!.message).toContain('GRIND_BUYIN must not have');
     });
 
-    it.skip('BLOCKED: rpc error message changed — expected "greater than 0" but received "non-zero" (pre-existing RPC message drift)', async () => {
+    it('rejects zero amount_cents', async () => {
       const { error } = await authedClient.rpc(
         'rpc_log_table_buyin_telemetry',
         {
@@ -384,7 +384,9 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       );
 
       expect(error).not.toBeNull();
-      expect(error!.message).toContain('amount_cents must be greater than 0');
+      // SEC-007 remediation (20260219) changed validation from >0 to !=0
+      // to support negative amounts for RATED_ADJUSTMENT telemetry kind.
+      expect(error!.message).toContain('amount_cents must be non-zero');
     });
   });
 

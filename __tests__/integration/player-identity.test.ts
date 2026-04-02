@@ -50,6 +50,7 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
   let pitBossClient: SupabaseClient<Database>;
   let adminClient: SupabaseClient<Database>;
 
+  let companyId: string;
   let casinoId: string;
   let pitBossId: string;
   let adminId: string;
@@ -75,10 +76,18 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
     });
     userId2 = user2!.user.id;
 
+    // Create test company (ADR-043: company before casino)
+    const { data: company } = await serviceClient
+      .from('company')
+      .insert({ name: 'Test Company' })
+      .select('id')
+      .single();
+    companyId = company!.id;
+
     // Create test casino
     const { data: casino } = await serviceClient
       .from('casino')
-      .insert({ name: 'Test Casino' })
+      .insert({ name: 'Test Casino', company_id: companyId })
       .select('id')
       .single();
     casinoId = casino!.id;
@@ -90,7 +99,8 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
         user_id: userId1,
         casino_id: casinoId,
         role: 'pit_boss',
-        name: 'Pit Boss',
+        first_name: 'Pit',
+        last_name: 'Boss',
         status: 'active',
       })
       .select('id')
@@ -103,7 +113,8 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
         user_id: userId2,
         casino_id: casinoId,
         role: 'admin',
-        name: 'Admin',
+        first_name: 'Admin',
+        last_name: 'User',
         status: 'active',
       })
       .select('id')
@@ -160,6 +171,7 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
     await serviceClient.from('player').delete().eq('id', playerId);
     await serviceClient.from('staff').delete().eq('casino_id', casinoId);
     await serviceClient.from('casino').delete().eq('id', casinoId);
+    await serviceClient.from('company').delete().eq('id', companyId);
     await serviceClient.auth.admin.deleteUser(userId1);
     await serviceClient.auth.admin.deleteUser(userId2);
   });
@@ -449,10 +461,16 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
     });
 
     it('prevents casino_id modification', async () => {
-      // Create second casino
+      // Create second company and casino (ADR-043)
+      const { data: company2 } = await serviceClient
+        .from('company')
+        .insert({ name: 'Second Company' })
+        .select('id')
+        .single();
+
       const { data: casino2 } = await serviceClient
         .from('casino')
-        .insert({ name: 'Second Casino' })
+        .insert({ name: 'Second Casino', company_id: company2!.id })
         .select('id')
         .single();
 
@@ -467,6 +485,7 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
 
       // Cleanup
       await serviceClient.from('casino').delete().eq('id', casino2!.id);
+      await serviceClient.from('company').delete().eq('id', company2!.id);
     });
 
     it('prevents player_id modification', async () => {
