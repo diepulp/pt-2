@@ -13,7 +13,8 @@ DECLARE
   -- Auth-flow functions that intentionally accept anon/PUBLIC
   v_allowlist text[] := ARRAY[
     'rpc_bootstrap_casino',
-    'rpc_accept_staff_invite'
+    'rpc_accept_staff_invite',
+    'rpc_register_company'
   ];
 
   -- SEC-007 WS9: These 10 functions were REVOKE'd from PUBLIC in migration
