@@ -318,13 +318,11 @@ describeIntegration('PRD-057: Session Close Lifecycle Hardening', () => {
 
     // 9. Sign in and create authenticated anon client
     pitBossClient = createClient<Database>(supabaseUrl!, supabaseAnonKey!);
-    const { error: signInError } =
-      await pitBossClient.auth.signInWithPassword({
-        email: TEST_EMAIL,
-        password: TEST_PASSWORD,
-      });
-    if (signInError)
-      throw new Error(`Sign-in failed: ${signInError.message}`);
+    const { error: signInError } = await pitBossClient.auth.signInWithPassword({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+    });
+    if (signInError) throw new Error(`Sign-in failed: ${signInError.message}`);
   });
 
   afterAll(async () => {
@@ -335,10 +333,7 @@ describeIntegration('PRD-057: Session Close Lifecycle Hardening', () => {
       .from('table_rundown_report')
       .delete()
       .eq('casino_id', casinoId);
-    await setupClient
-      .from('table_session')
-      .delete()
-      .eq('casino_id', casinoId);
+    await setupClient.from('table_session').delete().eq('casino_id', casinoId);
     await setupClient
       .from('table_inventory_snapshot')
       .delete()
@@ -348,20 +343,11 @@ describeIntegration('PRD-057: Session Close Lifecycle Hardening', () => {
       .delete()
       .eq('casino_id', casinoId);
     await setupClient.from('visit').delete().eq('casino_id', casinoId);
-    await setupClient
-      .from('player_loyalty')
-      .delete()
-      .eq('casino_id', casinoId);
-    await setupClient
-      .from('player_casino')
-      .delete()
-      .eq('casino_id', casinoId);
+    await setupClient.from('player_loyalty').delete().eq('casino_id', casinoId);
+    await setupClient.from('player_casino').delete().eq('casino_id', casinoId);
     await setupClient.from('player').delete().eq('id', playerId);
     await setupClient.from('player').delete().eq('id', player2Id);
-    await setupClient
-      .from('gaming_table')
-      .delete()
-      .eq('casino_id', casinoId);
+    await setupClient.from('gaming_table').delete().eq('casino_id', casinoId);
     await setupClient.from('staff').delete().eq('casino_id', casinoId);
     await setupClient
       .from('casino_settings')
@@ -585,15 +571,12 @@ describeIntegration('PRD-057: Session Close Lifecycle Hardening', () => {
     it('succeeds when active session exists', async () => {
       const sessionId = await openSession();
 
-      const { data, error } = await pitBossClient.rpc(
-        'rpc_start_rating_slip',
-        {
-          p_visit_id: visitId,
-          p_table_id: tableId,
-          p_seat_number: '1',
-          p_game_settings: { game: 'blackjack' },
-        },
-      );
+      const { data, error } = await pitBossClient.rpc('rpc_start_rating_slip', {
+        p_visit_id: visitId,
+        p_table_id: tableId,
+        p_seat_number: '1',
+        p_game_settings: { game: 'blackjack' },
+      });
 
       expect(error).toBeNull();
       expect(data).toBeDefined();

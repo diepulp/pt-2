@@ -300,10 +300,7 @@ describeIntegration(
         .from('table_drop_event')
         .delete()
         .eq('casino_id', casinoId);
-      await setupClient
-        .from('gaming_table')
-        .delete()
-        .eq('casino_id', casinoId);
+      await setupClient.from('gaming_table').delete().eq('casino_id', casinoId);
       await setupClient.from('staff').delete().eq('casino_id', casinoId);
       await setupClient
         .from('casino_settings')
@@ -833,15 +830,12 @@ describeIntegration(
       });
 
       it('raises P0001 (forbidden) for dealer role', async () => {
-        const { error } = await dealerClient.rpc(
-          'rpc_activate_table_session',
-          {
-            p_table_session_id: sessionId,
-            p_opening_total_cents: 50000,
-            p_dealer_confirmed: true,
-            p_opening_note: 'Should fail',
-          },
-        );
+        const { error } = await dealerClient.rpc('rpc_activate_table_session', {
+          p_table_session_id: sessionId,
+          p_opening_total_cents: 50000,
+          p_dealer_confirmed: true,
+          p_opening_note: 'Should fail',
+        });
 
         expect(error).not.toBeNull();
         expect(error!.message).toContain('forbidden');

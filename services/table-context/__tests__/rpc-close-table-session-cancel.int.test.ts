@@ -194,10 +194,7 @@ describeIntegration(
         .from('table_drop_event')
         .delete()
         .eq('casino_id', casinoId);
-      await setupClient
-        .from('gaming_table')
-        .delete()
-        .eq('casino_id', casinoId);
+      await setupClient.from('gaming_table').delete().eq('casino_id', casinoId);
       await setupClient.from('staff').delete().eq('casino_id', casinoId);
       await setupClient
         .from('casino_settings')
