@@ -6,20 +6,24 @@
  * Integration tests for promo program and coupon operations against a live database.
  * Tests RLS multi-tenant isolation, idempotency, and full operation workflows.
  *
+ * Auth model: ADR-024 Mode C — authenticated anon clients carry JWT with staff_id
+ * in app_metadata; set_rls_context_from_staff() derives context server-side.
+ *
  * PREREQUISITES:
  * - Migrations must be applied including promo_program, promo_coupon tables
  * - Local Supabase running: `npx supabase start`
  * - NEXT_PUBLIC_SUPABASE_URL environment variable set
  * - SUPABASE_SERVICE_ROLE_KEY environment variable set
+ * - NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable set
  *
  * @see PRD-LOYALTY-PROMO
  * @see EXECUTION-SPEC-LOYALTY-PROMO.md WS5
+ * @see ADR-024 (authoritative context derivation)
  */
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import { injectRLSContext } from '@/lib/supabase/rls-context';
 import {
   createProgram,
   getProgram,
@@ -41,21 +45,25 @@ import { getPromoExposureRollup } from '@/services/loyalty/rollups';
 import type { Database } from '@/types/database.types';
 
 // Test environment setup
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Skip integration tests if environment not configured or if running in CI without database
 // Integration tests require: local Supabase running + promo tables migrated
 const isIntegrationEnvironment =
   supabaseUrl &&
-  supabaseServiceKey &&
+  SERVICE_ROLE_KEY &&
+  ANON_KEY &&
   (process.env.RUN_INTEGRATION_TESTS === 'true' ||
     process.env.RUN_INTEGRATION_TESTS === '1');
 
 const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
 
 describeIntegration('Promo Instruments Integration Tests', () => {
-  let serviceClient: SupabaseClient<Database>;
+  // setupClient: service-role, used only for fixture management (bypasses RLS)
+  let setupClient: SupabaseClient<Database>;
+  // Mode C authenticated anon clients for business operations
   let pitBossClient: SupabaseClient<Database>;
   let otherCasinoClient: SupabaseClient<Database>;
 
@@ -69,69 +77,170 @@ describeIntegration('Promo Instruments Integration Tests', () => {
   let playerId: string;
   let visitId: string;
 
+  const pitBossEmail = `test-root-t3-promo-pitboss-${Date.now()}@example.com`;
+  const otherPitBossEmail = `test-root-t3-promo-other-${Date.now() + 1}@example.com`;
+  const testPassword = 'test-password';
+
   beforeAll(async () => {
-    // Create service client (bypasses RLS)
-    serviceClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
+    // === FIXTURE SETUP (service-role) ===
+    setupClient = createClient<Database>(supabaseUrl, SERVICE_ROLE_KEY);
 
-    // Create test users
-    const { data: user1 } = await serviceClient.auth.admin.createUser({
-      email: `test-pit-boss-promo-${Date.now()}@example.com`,
-      password: 'test-password',
-      email_confirm: true,
-    });
-    userId1 = user1!.user.id;
+    // 1. Create auth users WITHOUT staff_id (two-phase ADR-024 setup)
+    const { data: user1Data, error: user1Error } =
+      await setupClient.auth.admin.createUser({
+        email: pitBossEmail,
+        password: testPassword,
+        email_confirm: true,
+        app_metadata: { staff_role: 'pit_boss' },
+      });
+    if (user1Error) throw user1Error;
+    userId1 = user1Data.user.id;
 
-    const { data: user2 } = await serviceClient.auth.admin.createUser({
-      email: `test-pit-boss-other-${Date.now()}@example.com`,
-      password: 'test-password',
-      email_confirm: true,
-    });
-    userId2 = user2!.user.id;
+    const { data: user2Data, error: user2Error } =
+      await setupClient.auth.admin.createUser({
+        email: otherPitBossEmail,
+        password: testPassword,
+        email_confirm: true,
+        app_metadata: { staff_role: 'pit_boss' },
+      });
+    if (user2Error) throw user2Error;
+    userId2 = user2Data.user.id;
 
-    // Create test casinos
-    const { data: casino } = await serviceClient
-      .from('casino')
-      .insert({ name: 'Promo Test Casino' })
+    // 2. Create test companies (ADR-043: company before casino)
+    const { data: company1, error: company1Error } = await setupClient
+      .from('company')
+      .insert({ name: 'Promo Test Company 1' })
       .select('id')
       .single();
-    casinoId = casino!.id;
+    if (company1Error) throw company1Error;
+    const companyId1 = company1.id;
 
-    const { data: otherCasino } = await serviceClient
-      .from('casino')
-      .insert({ name: 'Other Promo Test Casino' })
+    const { data: company2, error: company2Error } = await setupClient
+      .from('company')
+      .insert({ name: 'Promo Test Company 2' })
       .select('id')
       .single();
-    otherCasinoId = otherCasino!.id;
+    if (company2Error) throw company2Error;
+    const companyId2 = company2.id;
 
-    // Create test staff
-    const { data: pitBoss } = await serviceClient
+    // 3. Create test casinos
+    const { data: casino, error: casinoError } = await setupClient
+      .from('casino')
+      .insert({ name: 'Promo Test Casino', company_id: companyId1 })
+      .select('id')
+      .single();
+    if (casinoError) throw casinoError;
+    casinoId = casino.id;
+
+    const { data: otherCasino, error: otherCasinoError } = await setupClient
+      .from('casino')
+      .insert({ name: 'Other Promo Test Casino', company_id: companyId2 })
+      .select('id')
+      .single();
+    if (otherCasinoError) throw otherCasinoError;
+    otherCasinoId = otherCasino.id;
+
+    // 3b. Create casino_settings (required for gaming_day trigger on visit insert)
+    const { error: settings1Error } = await setupClient
+      .from('casino_settings')
+      .insert({ casino_id: casinoId });
+    if (settings1Error) throw settings1Error;
+
+    const { error: settings2Error } = await setupClient
+      .from('casino_settings')
+      .insert({ casino_id: otherCasinoId });
+    if (settings2Error) throw settings2Error;
+
+    // 4. Create test staff
+    const { data: pitBoss, error: pitBossError } = await setupClient
       .from('staff')
       .insert({
         user_id: userId1,
         casino_id: casinoId,
         role: 'pit_boss',
-        name: 'Promo Test Pit Boss',
+        first_name: 'Promo',
+        last_name: 'PitBoss',
         status: 'active',
       })
       .select('id')
       .single();
-    pitBossId = pitBoss!.id;
+    if (pitBossError) throw pitBossError;
+    pitBossId = pitBoss.id;
 
-    const { data: otherPitBoss } = await serviceClient
+    const { data: otherPitBoss, error: otherPitBossError } = await setupClient
       .from('staff')
       .insert({
         user_id: userId2,
         casino_id: otherCasinoId,
         role: 'pit_boss',
-        name: 'Other Casino Pit Boss',
+        first_name: 'Other',
+        last_name: 'PitBoss',
         status: 'active',
       })
       .select('id')
       .single();
-    otherPitBossId = otherPitBoss!.id;
+    if (otherPitBossError) throw otherPitBossError;
+    otherPitBossId = otherPitBoss.id;
 
-    // Create test player and enroll
-    const { data: player } = await serviceClient
+    // 5. Stamp staff_id into app_metadata (ADR-024 two-phase)
+    await setupClient.auth.admin.updateUserById(userId1, {
+      app_metadata: {
+        staff_id: pitBossId,
+        casino_id: casinoId,
+        staff_role: 'pit_boss',
+      },
+    });
+    await setupClient.auth.admin.updateUserById(userId2, {
+      app_metadata: {
+        staff_id: otherPitBossId,
+        casino_id: otherCasinoId,
+        staff_role: 'pit_boss',
+      },
+    });
+
+    // 6. Sign in via throwaway clients to get JWTs
+    const throwaway1 = createClient<Database>(supabaseUrl, ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: session1, error: signIn1Error } =
+      await throwaway1.auth.signInWithPassword({
+        email: pitBossEmail,
+        password: testPassword,
+      });
+    if (signIn1Error || !session1.session)
+      throw signIn1Error ?? new Error('Sign-in 1 returned no session');
+
+    const throwaway2 = createClient<Database>(supabaseUrl, ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: session2, error: signIn2Error } =
+      await throwaway2.auth.signInWithPassword({
+        email: otherPitBossEmail,
+        password: testPassword,
+      });
+    if (signIn2Error || !session2.session)
+      throw signIn2Error ?? new Error('Sign-in 2 returned no session');
+
+    // 7. Create Mode C authenticated anon clients (ADR-024)
+    pitBossClient = createClient<Database>(supabaseUrl, ANON_KEY, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${session1.session.access_token}`,
+        },
+      },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    otherCasinoClient = createClient<Database>(supabaseUrl, ANON_KEY, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${session2.session.access_token}`,
+        },
+      },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    // 8. Create test player and enroll
+    const { data: player, error: playerError } = await setupClient
       .from('player')
       .insert({
         first_name: 'Promo',
@@ -140,70 +249,56 @@ describeIntegration('Promo Instruments Integration Tests', () => {
       })
       .select('id')
       .single();
-    playerId = player!.id;
+    if (playerError) throw playerError;
+    playerId = player.id;
 
-    await serviceClient.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: playerId,
       casino_id: casinoId,
       status: 'active',
       enrolled_by: pitBossId,
     });
 
-    // Create test visit
-    const { data: visit } = await serviceClient
+    // 9. Create test visit (triggers set gaming_day + visit_group_id)
+    const { data: visit, error: visitError } = await setupClient
       .from('visit')
       .insert({
         player_id: playerId,
         casino_id: casinoId,
-        started_by: pitBossId,
       })
       .select('id')
       .single();
-    visitId = visit!.id;
-
-    // Create authenticated clients with RLS context
-    pitBossClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    otherCasinoClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
-
-    await injectRLSContext(pitBossClient, {
-      actorId: pitBossId,
-      casinoId,
-      staffRole: 'pit_boss',
-    });
-
-    await injectRLSContext(otherCasinoClient, {
-      actorId: otherPitBossId,
-      casinoId: otherCasinoId,
-      staffRole: 'pit_boss',
-    });
+    if (visitError) throw visitError;
+    visitId = visit.id;
   });
 
   afterAll(async () => {
     // Cleanup test data in reverse order of dependencies
-    await serviceClient
+    await setupClient
       .from('promo_coupon')
       .delete()
       .or(`casino_id.eq.${casinoId},casino_id.eq.${otherCasinoId}`);
-    await serviceClient
+    await setupClient
       .from('promo_program')
       .delete()
       .or(`casino_id.eq.${casinoId},casino_id.eq.${otherCasinoId}`);
-    await serviceClient.from('visit').delete().eq('id', visitId);
-    await serviceClient
-      .from('player_casino')
-      .delete()
-      .eq('casino_id', casinoId);
-    await serviceClient.from('player').delete().eq('id', playerId);
-    await serviceClient
+    await setupClient.from('visit').delete().eq('id', visitId);
+    await setupClient.from('player_casino').delete().eq('casino_id', casinoId);
+    await setupClient.from('player').delete().eq('id', playerId);
+    await setupClient
       .from('staff')
       .delete()
       .or(`casino_id.eq.${casinoId},casino_id.eq.${otherCasinoId}`);
-    await serviceClient
+    await setupClient
       .from('casino')
       .delete()
       .or(`id.eq.${casinoId},id.eq.${otherCasinoId}`);
-    await serviceClient.auth.admin.deleteUser(userId1);
-    await serviceClient.auth.admin.deleteUser(userId2);
+    await setupClient
+      .from('company')
+      .delete()
+      .or(`name.eq.Promo Test Company 1,name.eq.Promo Test Company 2`);
+    await setupClient.auth.admin.deleteUser(userId1);
+    await setupClient.auth.admin.deleteUser(userId2);
   });
 
   describe('Promo Program CRUD', () => {
@@ -211,6 +306,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
 
     it('creates a promo program with RLS context', async () => {
       const input: CreatePromoProgramInput = {
+        casinoId,
         name: 'Weekend Match Play $25',
         faceValueAmount: 25.0,
         requiredMatchWagerAmount: 25.0,
@@ -233,7 +329,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
 
     it('lists programs filtered to current casino (RLS isolation)', async () => {
       // Create program in other casino
-      const { data: otherProgram } = await serviceClient
+      const { data: otherProgram } = await setupClient
         .from('promo_program')
         .insert({
           casino_id: otherCasinoId,
@@ -254,7 +350,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
       expect(programs.some((p) => p.casinoId === otherCasinoId)).toBe(false);
 
       // Cleanup
-      await serviceClient
+      await setupClient
         .from('promo_program')
         .delete()
         .eq('id', otherProgram!.id);
@@ -279,7 +375,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
 
     it('cannot access program from other casino (RLS isolation)', async () => {
       // Create program in other casino
-      const { data: otherProgram } = await serviceClient
+      const { data: otherProgram } = await setupClient
         .from('promo_program')
         .insert({
           casino_id: otherCasinoId,
@@ -298,7 +394,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
       expect(program).toBeNull();
 
       // Cleanup
-      await serviceClient
+      await setupClient
         .from('promo_program')
         .delete()
         .eq('id', otherProgram!.id);
@@ -322,6 +418,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
     it('filters programs by activeOnly', async () => {
       // Create inactive program
       const inactive = await createProgram(pitBossClient, {
+        casinoId,
         name: 'Inactive Program',
         faceValueAmount: 10,
         requiredMatchWagerAmount: 10,
@@ -348,6 +445,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
     beforeAll(async () => {
       // Create program for coupon tests
       const program = await createProgram(pitBossClient, {
+        casinoId,
         name: 'Coupon Test Program',
         faceValueAmount: 25,
         requiredMatchWagerAmount: 25,
@@ -442,6 +540,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
 
     beforeAll(async () => {
       const program = await createProgram(pitBossClient, {
+        casinoId,
         name: 'Void Test Program',
         faceValueAmount: 20,
         requiredMatchWagerAmount: 20,
@@ -496,6 +595,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
 
     beforeAll(async () => {
       const program = await createProgram(pitBossClient, {
+        casinoId,
         name: 'Replace Test Program',
         faceValueAmount: 30,
         requiredMatchWagerAmount: 30,
@@ -553,6 +653,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
 
     beforeAll(async () => {
       const program = await createProgram(pitBossClient, {
+        casinoId,
         name: 'Inventory Test Program',
         faceValueAmount: 15,
         requiredMatchWagerAmount: 15,
@@ -619,6 +720,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
     beforeAll(async () => {
       // Create program in casino 1
       const program = await createProgram(pitBossClient, {
+        casinoId,
         name: 'Casino 1 Isolated Program',
         faceValueAmount: 100,
         requiredMatchWagerAmount: 100,
@@ -678,6 +780,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
     beforeAll(async () => {
       // Create program with coupons for rollup testing
       const program = await createProgram(pitBossClient, {
+        casinoId,
         name: 'Rollup Test Program',
         faceValueAmount: 50,
         requiredMatchWagerAmount: 50,
