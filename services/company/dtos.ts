@@ -12,6 +12,8 @@ import type { Database } from '@/types/database.types';
 // === Base Row Types (for Pick/Omit derivation) ===
 
 type CompanyRow = Database['public']['Tables']['company']['Row'];
+type OnboardingRegistrationRow =
+  Database['public']['Tables']['onboarding_registration']['Row'];
 
 // === Company DTOs ===
 
@@ -36,10 +38,7 @@ export interface RegisterCompanyResult {
 }
 
 /** Onboarding registration status (from RLS-filtered query) */
-export interface OnboardingRegistrationDTO {
-  id: string;
-  user_id: string;
-  company_id: string;
-  status: string;
-  created_at: string;
-}
+export type OnboardingRegistrationDTO = Pick<
+  OnboardingRegistrationRow,
+  'id' | 'user_id' | 'company_id' | 'status' | 'created_at'
+>;

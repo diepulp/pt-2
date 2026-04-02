@@ -47,7 +47,7 @@ describe('registerCompany', () => {
     expect(result).toEqual({ company_id: 'c1', registration_id: 'r1' });
   });
 
-  test('passes null for legal_name when omitted', async () => {
+  test('passes undefined for legal_name when omitted', async () => {
     mockRpc.mockResolvedValueOnce({
       data: [{ company_id: 'c2', registration_id: 'r2' }],
       error: null,
@@ -57,7 +57,7 @@ describe('registerCompany', () => {
 
     expect(mockRpc).toHaveBeenCalledWith('rpc_register_company', {
       p_company_name: 'Minimal Co',
-      p_legal_name: null,
+      p_legal_name: undefined,
     });
   });
 
