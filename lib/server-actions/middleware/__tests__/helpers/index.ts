@@ -16,7 +16,10 @@ export {
 export {
   getTestSupabaseClient,
   getTestSupabaseServiceClient,
+  getTestAuthenticatedClient,
   setupTestData,
   cleanupTestData,
   testData,
 } from './supabase-test-client';
+
+export type { TestAuthenticatedClientResult } from './supabase-test-client';
