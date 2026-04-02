@@ -41,13 +41,14 @@ type _AssertBootstrapHasCasinoName = BootstrapArgs extends {
 const _bootstrapCasinoNameCheck: _AssertBootstrapHasCasinoName = true;
 
 // Verify bootstrap returns casino_id, staff_id, staff_role
-type _AssertBootstrapReturnsShape = BootstrapReturns extends Array<{
-  casino_id: string;
-  staff_id: string;
-  staff_role: string;
-}>
-  ? true
-  : never;
+type _AssertBootstrapReturnsShape =
+  BootstrapReturns extends Array<{
+    casino_id: string;
+    staff_id: string;
+    staff_role: string;
+  }>
+    ? true
+    : never;
 const _bootstrapReturnsCheck: _AssertBootstrapReturnsShape = true;
 
 // TODO: Add rpc_register_company type assertions after npm run db:types-local

@@ -41,9 +41,7 @@ export function RegisterForm() {
       <Card className="border-2 border-border/50">
         <CardHeader>
           <CardTitle>Company Registered</CardTitle>
-          <CardDescription>
-            Redirecting to casino setup...
-          </CardDescription>
+          <CardDescription>Redirecting to casino setup...</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -88,7 +86,7 @@ export function RegisterForm() {
             <p className="text-sm text-destructive">
               {state.code === 'REGISTRATION_CONFLICT'
                 ? 'You already have a pending registration.'
-                : state.error ?? 'Something went wrong. Please try again.'}
+                : (state.error ?? 'Something went wrong. Please try again.')}
             </p>
           )}
 

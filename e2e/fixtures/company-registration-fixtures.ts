@@ -9,8 +9,9 @@
  * This is the starting point for the registration flow.
  */
 
-import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+
+import { createClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/types/database.types';
 
@@ -96,10 +97,7 @@ export async function createRegistrationScenario(): Promise<RegistrationScenario
 
       if (regRows?.length) {
         for (const reg of regRows) {
-          await svc
-            .from('onboarding_registration')
-            .delete()
-            .eq('id', reg.id);
+          await svc.from('onboarding_registration').delete().eq('id', reg.id);
           // Delete company created by registration (may already be deleted by cascade)
           if (reg.company_id) {
             await svc.from('company').delete().eq('id', reg.company_id);
