@@ -58,6 +58,7 @@ GATES=(
   "sql|07_dashboard_rpc_context_acceptance.sql|SEC-007 Dashboard RPC acceptance"
   "sql|08_deprecated_function_body_check.sql|SEC-008 Deprecated function body check"
   "sql|adr040_identity_provenance.test.sql|ADR-040 Identity provenance enforcement"
+  "sql|09_search_path_body_check.sql|SEC-009 Search path / body consistency"
 )
 
 PASS_COUNT=0

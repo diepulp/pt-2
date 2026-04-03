@@ -19,5 +19,8 @@
 # ADR-034: RLS write-path enforcement (Category A tables = RPC-only writes)
 .husky/pre-commit-rls-write-path.sh || exit 1
 
+# SEC-S3: Search path / function body consistency (prevents unqualified reference breakage)
+.husky/pre-commit-search-path-safety.sh || exit 1
+
 # Run lint-staged for all staged files
 npx lint-staged
