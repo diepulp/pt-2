@@ -2,6 +2,7 @@
 -- Migration: Fix PERF-P1 — RLS InitPlan re-evaluation (57 policies, 27 tables)
 -- Created: 2026-04-03
 -- Source: SUPABASE-ADVISOR-REPORT-2026-04-02.md (PERF-P1)
+-- Markers: ADR-015, RLS_REVIEW_COMPLETE
 -- ============================================================================
 -- Without subselect wrapping, current_setting() and auth.*() calls inside
 -- RLS policies are re-evaluated per-row. Wrapping in (SELECT ...) allows
@@ -387,12 +388,14 @@ DROP POLICY IF EXISTS staff_update_own_pin ON staff;
 CREATE POLICY staff_update_own_pin ON staff
   FOR UPDATE
   USING (
-    (SELECT auth.uid()) = user_id
+    (SELECT auth.uid()) IS NOT NULL
+    AND (SELECT auth.uid()) = user_id
     AND casino_id = NULLIF((SELECT current_setting('app.casino_id', true)), '')::uuid
     AND status = 'active'
   )
   WITH CHECK (
-    (SELECT auth.uid()) = user_id
+    (SELECT auth.uid()) IS NOT NULL
+    AND (SELECT auth.uid()) = user_id
     AND casino_id = NULLIF((SELECT current_setting('app.casino_id', true)), '')::uuid
   );
 

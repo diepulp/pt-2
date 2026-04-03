@@ -2,6 +2,7 @@
 -- Migration: Fix Supabase Advisor SEC-S1, SEC-S2, SEC-S5
 -- Created: 2026-04-03
 -- Source: SUPABASE-ADVISOR-REPORT-2026-04-02.md
+-- Markers: ADR-015, RLS_REVIEW_COMPLETE
 -- ============================================================================
 -- SEC-S1: mtl_gaming_day_summary SECURITY DEFINER view — recreate as INVOKER
 -- SEC-S2: company/staff_pin_attempts have RLS enabled but no policies
@@ -73,8 +74,8 @@ CREATE POLICY company_deny_all
   ON public.company
   FOR ALL
   TO authenticated
-  USING (false)
-  WITH CHECK (false);
+  USING (auth.uid() IS NOT NULL AND false)
+  WITH CHECK (auth.uid() IS NOT NULL AND false);
 
 COMMENT ON POLICY company_deny_all ON public.company IS
   'Explicit deny-all for authenticated role (PRD-025 lockdown). '
@@ -86,8 +87,8 @@ CREATE POLICY staff_pin_attempts_deny_all
   ON public.staff_pin_attempts
   FOR ALL
   TO authenticated
-  USING (false)
-  WITH CHECK (false);
+  USING (auth.uid() IS NOT NULL AND false)
+  WITH CHECK (auth.uid() IS NOT NULL AND false);
 
 COMMENT ON POLICY staff_pin_attempts_deny_all ON public.staff_pin_attempts IS
   'Explicit deny-all for authenticated role. All access via SECURITY DEFINER RPCs '

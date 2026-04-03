@@ -2,6 +2,7 @@
 -- Migration: Fix PERF-P3 — Multiple permissive UPDATE policies on staff
 -- Created: 2026-04-03
 -- Source: SUPABASE-ADVISOR-REPORT-2026-04-02.md (PERF-P3)
+-- Markers: ADR-015, ADR-030, RLS_REVIEW_COMPLETE
 -- ============================================================================
 -- The staff table has two permissive UPDATE policies:
 --   1. staff_update (admin-only, session-var-only, from ADR-030 hardening)
