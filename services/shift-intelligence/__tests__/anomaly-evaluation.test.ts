@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Anomaly Evaluation Unit Tests (PRD-055)
  *

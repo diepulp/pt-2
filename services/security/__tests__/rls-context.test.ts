@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * RLS Context Security Unit Tests
  *

@@ -1,39 +1,58 @@
-# Enhanced CI Pipeline Reference
+# CI Pipeline Reference
 
-Comprehensive guide for implementing and customizing the PT-2 CI/CD pipeline.
+Architecture and customization guide for the PT-2 CI/CD pipeline.
 
-## Pipeline Architecture
+## Current Pipeline State
 
-### Job Dependencies
+PT-2 runs **4 GitHub Actions workflows**. The primary `ci.yml` is the merge gate; the others are specialized checks.
+
+### ci.yml — Primary Merge Gate
 
 ```
-                    ┌───────────────┐
-                    │    quality    │
-                    │ (lint, types) │
-                    └───────┬───────┘
-                            │
-              ┌─────────────┼─────────────┐
-              ▼             ▼             ▼
-        ┌─────────┐   ┌─────────┐   ┌─────────┐
-        │  test   │   │  build  │   │security │
-        │ (jest)  │   │ (next)  │   │ (audit) │
-        └────┬────┘   └────┬────┘   └─────────┘
-             │             │
-             └──────┬──────┘
-                    ▼
-              ┌─────────┐
-              │   e2e   │
-              │(playwright)│
-              └─────────┘
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│     checks       │     │      test        │     │       e2e        │
+│ (lint, types,    │     │ (jest, advisory) │     │ (playwright,     │
+│  build, env      │     │                  │     │  advisory)       │
+│  drift guard)    │     │                  │     │                  │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+     REQUIRED                ADVISORY                 ADVISORY
 ```
 
-### Parallel Execution Strategy
+**Trigger:** `pull_request` to `main` + `workflow_dispatch`  
+**Concurrency:** `ci-${{ github.ref }}`, cancel-in-progress  
 
-The pipeline maximizes parallelism while respecting dependencies:
+**Jobs:**
+- **checks** (required) — lint, type-check, build, env drift guard
+- **test** (advisory, `continue-on-error: true`) — `npx jest --ci --config jest.node.config.js --maxWorkers=2`
+- **e2e** (advisory, `continue-on-error: true`) — starts local Supabase, runs Playwright against chromium
 
-1. **Quality checks** run first (fast feedback)
-2. **Test, Build, Security** run in parallel after quality
-3. **E2E** runs after build (needs artifacts)
+Key details that differ from generic templates:
+- Uses `.nvmrc` for Node version (currently 24), not a hardcoded version
+- Uses `npm install`, not `npm ci`
+- Unit tests use `jest.node.config.js`, not the default jest config
+- E2E starts a local Supabase with minimal services: `supabase start -x storage,imgproxy,inbucket,...`
+- E2E captures Supabase env dynamically from `supabase status -o env`
+- Build uses placeholder env vars: `NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321`
+
+### security-gates.yml — SEC-007 SQL Assertion Gates
+
+**Trigger:** PR touching `supabase/migrations/**` or `supabase/tests/security/**`  
+**Purpose:** Runs 8 pure-SQL assertion scripts against an ephemeral Postgres instance  
+**Key:** Uses `supabase db start` (DB only, no PostgREST/Studio/Realtime), then `supabase db push --local`
+
+### migration-lint.yml — RPC Self-Injection Compliance
+
+**Trigger:** PR touching `supabase/migrations/**/*.sql`  
+**Purpose:** Validates that any new `rpc_*` functions include `set_rls_context` calls (ADR-015 Phase 1A)  
+**Key:** Diffs against `origin/${{ github.base_ref }}` to check only changed files
+
+### check-srm-links.yml — SRM Documentation Integrity
+
+**Trigger:** PR/push touching `docs/**/*.md`  
+**Purpose:** Verifies all cross-references in SRM documentation resolve correctly  
+**Key:** Uses `npm run check:srm-links`
+
+---
 
 ## Required Secrets
 
@@ -42,8 +61,8 @@ Configure these in GitHub Repository Settings > Secrets:
 | Secret | Description | Where to Get |
 |--------|-------------|--------------|
 | `VERCEL_TOKEN` | Vercel API token | Vercel Dashboard > Settings > Tokens |
-| `VERCEL_ORG_ID` | Vercel organization ID | Project settings or `.vercel/project.json` |
-| `VERCEL_PROJECT_ID` | Vercel project ID | Project settings or `.vercel/project.json` |
+| `VERCEL_ORG_ID` | Vercel organization ID | `.vercel/project.json` |
+| `VERCEL_PROJECT_ID` | Vercel project ID | `.vercel/project.json` |
 | `SUPABASE_ACCESS_TOKEN` | Supabase CLI token | Supabase Dashboard > Access Tokens |
 | `SUPABASE_STAGING_PROJECT_REF` | Staging project reference | Supabase Dashboard > Project Settings |
 | `SUPABASE_PROD_PROJECT_REF` | Production project reference | Supabase Dashboard > Project Settings |
@@ -72,6 +91,37 @@ Create these environments in Repository Settings > Environments:
 - **Protection rules**: Required reviewers (DBA or lead)
 - **Purpose**: Extra protection for database migrations
 
+---
+
+## Testing Governance (ADR-044)
+
+CI/CD and branch protection are governed by `docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`.
+
+### Key Rules
+
+- **§7 Branch Protection**: `main` must be protected — all changes via PR, required status checks, 1+ review, up-to-date branch, force push/deletion blocked
+- **§8 Minimum Merge Gate**: Static checks (lint + type-check + build) AND at least one functional test layer
+- **§6 Green CI Semantics**: "Green CI" = all required checks passed. "Compile green" = static only. Never conflate them.
+- **§5 Enforcement Tiers**: Required = listed in branch protection. Advisory = useful but non-governing.
+- **§7 Ordering Rule**: Enable branch protection FIRST, then add CI jobs, then mark as required
+
+### Change-Control Disclosure (§12)
+
+Any PR modifying CI workflows, test scripts, or branch protection **must** include this 6-point disclosure:
+
+```markdown
+## CI Change Disclosure (ADR-044 §12)
+
+1. **What changed**: [describe the CI/test modification]
+2. **Why**: [motivation — bug fix, governance gap, new feature]
+3. **Layers affected**: [which CI jobs/checks are impacted]
+4. **Confidence impact**: [does this strengthen or weaken the merge gate?]
+5. **Compensating control**: [if weakening, what mitigates the risk?]
+6. **Exit criteria**: [when can advisory jobs become required?]
+```
+
+---
+
 ## Caching Strategy
 
 ### npm Cache
@@ -79,8 +129,8 @@ Create these environments in Repository Settings > Environments:
 ```yaml
 - uses: actions/setup-node@v4
   with:
-    node-version: '20'
-    cache: 'npm'  # Automatic npm caching
+    node-version-file: '.nvmrc'
+    cache: 'npm'
 ```
 
 ### Next.js Build Cache
@@ -107,67 +157,14 @@ Create these environments in Repository Settings > Environments:
     key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
 ```
 
-## Test Configuration
-
-### Jest (Unit/Integration)
-
-```yaml
-- name: Run tests
-  run: npm run test:ci
-  env:
-    CI: true
-```
-
-The `test:ci` script includes:
-- `--ci` flag for CI-specific behavior
-- `--coverage` for code coverage
-- `--maxWorkers=2` for parallel execution
-
-### Playwright (E2E)
-
-```yaml
-- name: Install Playwright browsers
-  run: npx playwright install --with-deps chromium
-
-- name: Run E2E tests
-  run: npm run e2e:playwright
-```
-
-Note: Only install chromium to save time (vs all browsers).
-
-## Artifact Management
-
-### Build Artifacts
-
-```yaml
-- name: Upload build artifact
-  uses: actions/upload-artifact@v4
-  with:
-    name: next-build
-    path: .next
-    retention-days: 1  # Short retention for CI artifacts
-```
-
-### Test Reports
-
-```yaml
-- name: Upload Playwright report
-  uses: actions/upload-artifact@v4
-  if: always()
-  with:
-    name: playwright-report
-    path: playwright-report/
-    retention-days: 7  # Keep reports for debugging
-```
-
 ## Concurrency Control
 
 ### Prevent Redundant Runs
 
 ```yaml
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true  # Cancel old runs on new push
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 ```
 
 ### Production Deploy Protection
@@ -178,33 +175,25 @@ concurrency:
   cancel-in-progress: false  # Never cancel production deploys
 ```
 
-## Custom npm Scripts
+## Artifact Management
 
-Ensure `package.json` has these scripts:
+### Test Reports
 
-```json
-{
-  "scripts": {
-    "lint:check": "eslint . --max-warnings=0",
-    "type-check": "tsc --noEmit --strict",
-    "test:ci": "jest --ci --coverage --maxWorkers=2",
-    "e2e:playwright": "playwright test"
-  }
-}
+```yaml
+- name: Upload Playwright report
+  uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: playwright-report
+    path: |
+      playwright-report/
+      test-results/
+    retention-days: 14
 ```
 
 ## Workflow Triggers
 
-### Standard Triggers
-
-```yaml
-on:
-  push:
-    branches: [main, develop]
-  pull_request:
-```
-
-### Tag-Based Triggers
+### Tag-Based (for future production deploys)
 
 ```yaml
 on:
@@ -212,7 +201,7 @@ on:
     tags: ['v*']
 ```
 
-### Manual Triggers
+### Manual
 
 ```yaml
 on:
@@ -228,39 +217,6 @@ on:
           - production
 ```
 
-## Error Handling
-
-### Continue on Non-Critical Failures
-
-```yaml
-- name: Security audit
-  run: npm audit --audit-level=high
-  continue-on-error: true  # Report but don't block
-```
-
-### Conditional Steps
-
-```yaml
-- name: Upload coverage
-  uses: codecov/codecov-action@v4
-  if: always()  # Run even if tests fail (for partial coverage)
-```
-
-## Notifications
-
-### Slack Notification (Optional)
-
-```yaml
-- name: Notify Slack
-  if: failure()
-  uses: 8398a7/action-slack@v3
-  with:
-    status: ${{ job.status }}
-    channel: '#pt2-deploys'
-  env:
-    SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-```
-
 ## Debugging Tips
 
 ### Enable Debug Logging
@@ -269,19 +225,11 @@ Add to repository secrets:
 - `ACTIONS_STEP_DEBUG`: `true`
 - `ACTIONS_RUNNER_DEBUG`: `true`
 
-### SSH Debug Session
-
-```yaml
-- name: Debug with tmate
-  if: failure()
-  uses: mxschmitt/action-tmate@v3
-  timeout-minutes: 15
-```
-
 ## Cost Optimization
 
-1. **Use `ubuntu-latest`** - Cheapest runner
-2. **Cache aggressively** - Reduce install time
-3. **Cancel redundant runs** - Don't waste resources
-4. **Optimize artifact retention** - Default is 90 days, reduce to 1-7
-5. **Skip unnecessary jobs** - Use `if` conditions
+1. **Use `ubuntu-latest`** — cheapest runner
+2. **Cache aggressively** — reduce install time
+3. **Cancel redundant runs** — `cancel-in-progress: true`
+4. **Reduce artifact retention** — 1-14 days, not 90
+5. **Skip unnecessary jobs** — use `if` conditions and path filters
+6. **Minimal Supabase services** — exclude storage, imgproxy, inbucket, etc. in E2E

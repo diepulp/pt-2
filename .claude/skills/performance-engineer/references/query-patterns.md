@@ -211,7 +211,7 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_summary;
 ```sql
 -- RLS policy
 CREATE POLICY casino_isolation ON visits
-USING (casino_id = current_setting('app.current_casino_id')::uuid);
+USING (casino_id = current_setting('app.casino_id', true)::uuid);
 
 -- MUST have index
 CREATE INDEX idx_visits_casino ON visits(casino_id);
@@ -224,12 +224,14 @@ For high-frequency queries, consider SECURITY DEFINER functions:
 ```sql
 CREATE FUNCTION get_player_visits(p_player_id uuid)
 RETURNS SETOF visits
+LANGUAGE sql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
-  SELECT * FROM visits
+  SELECT * FROM public.visits
   WHERE player_id = p_player_id
-    AND casino_id = current_setting('app.current_casino_id')::uuid;
-$$ LANGUAGE sql;
+    AND casino_id = (SELECT current_setting('app.casino_id', true)::uuid);
+$$;
 ```
 
 ### Test With and Without RLS
@@ -250,16 +252,17 @@ EXPLAIN ANALYZE SELECT * FROM visits WHERE player_id = $1;
 With transaction pooling, session variables don't persist:
 
 ```typescript
-// BAD: SET persists in session mode only
+// BAD: Manual SET doesn't persist with transaction pooling
 await supabase.rpc('set_config', {
-  setting: 'app.current_casino_id',
+  setting: 'app.casino_id',
   value: casinoId
 });
 
-// GOOD: Pass context per-query or use RPC
-await supabase.rpc('get_player_with_context', {
-  p_player_id: playerId,
-  p_casino_id: casinoId
+// GOOD: Use set_rls_context_from_staff() which derives context
+// from JWT staff_id claim (ADR-024) and uses SET LOCAL (pooler-safe)
+await supabase.rpc('rpc_your_function', {
+  p_casino_id: casinoId,
+  // Context is injected inside the RPC via set_rls_context_from_staff()
 });
 ```
 

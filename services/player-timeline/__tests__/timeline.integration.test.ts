@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * PlayerTimeline Integration Tests
  *
@@ -33,7 +34,13 @@ const supabaseServiceKey =
 
 // === Integration Tests ===
 
-describe('PlayerTimeline RPC Integration Tests', () => {
+const isIntegrationEnvironment =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
+
+describeIntegration('PlayerTimeline RPC Integration Tests', () => {
   let supabase: SupabaseClient<Database>;
 
   beforeAll(() => {

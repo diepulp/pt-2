@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * RLS Context Security Integration Tests
  *
@@ -53,7 +54,13 @@ interface TestScenario {
 // Security Grant Verification Tests (DoD Audit Checks)
 // ===========================================================================
 
-describe('ADR-024 Security Grant Verification', () => {
+const isIntegrationEnvironment =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
+
+describeIntegration('ADR-024 Security Grant Verification', () => {
   let supabase: SupabaseClient<Database>;
 
   beforeAll(() => {
@@ -174,7 +181,7 @@ describe('ADR-024 Security Grant Verification', () => {
 // Integration Tests with Real Database
 // ===========================================================================
 
-describe('ADR-024 RLS Context Integration Tests', () => {
+describeIntegration('ADR-024 RLS Context Integration Tests', () => {
   let supabase: SupabaseClient<Database>;
   let scenario: TestScenario;
 
@@ -457,7 +464,7 @@ describe('ADR-024 RLS Context Integration Tests', () => {
 // No Spoofable RPC Parameters Audit
 // ===========================================================================
 
-describe('No Spoofable RPC Parameters Audit', () => {
+describeIntegration('No Spoofable RPC Parameters Audit', () => {
   it('confirms no client-callable RPC accepts casino_id/actor_id from user', async () => {
     // This is a documentation/audit test
     // The actual verification is done via grep in the DoD audit

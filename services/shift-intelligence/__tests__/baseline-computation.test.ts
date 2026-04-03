@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Baseline Computation Unit Tests (PRD-055)
  *

@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Column Auto-Detection Tests
  *

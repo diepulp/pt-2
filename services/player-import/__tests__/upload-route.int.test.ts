@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Upload Route Integration Tests
  *
@@ -83,7 +84,13 @@ const _hasInitialStatusCheck: _AssertHasInitialStatusCheck = true;
 // Type Contract Tests
 // ============================================================================
 
-describe('upload route: type contract', () => {
+const isIntegrationEnvironment =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
+
+describeIntegration('upload route: type contract', () => {
   it('import_batch_status enum has created, uploaded, and parsing values', () => {
     expect(_hasCreatedCheck).toBe(true);
     expect(_hasUploadedCheck).toBe(true);
@@ -108,7 +115,7 @@ describe('upload route: type contract', () => {
 // Upload Route Behavior Scenarios (documented, require live instance)
 // ============================================================================
 
-describe('upload route: behavior scenarios', () => {
+describeIntegration('upload route: behavior scenarios', () => {
   it('upload to created batch → 200 + transitions to uploaded', () => {
     // GIVEN: Batch with status = 'created'
     // WHEN: POST /api/v1/player-import/batches/{id}/upload
@@ -193,7 +200,7 @@ describe('upload route: behavior scenarios', () => {
 // ADR-024: Casino ID Security (INV-8)
 // ============================================================================
 
-describe('upload route: ADR-024 casino_id security', () => {
+describeIntegration('upload route: ADR-024 casino_id security', () => {
   it('casino_id derived from auth context, never from request body (INV-8)', () => {
     // GIVEN: Authenticated user with casino_id = 'casino-A' in JWT
     // WHEN: POST with a body that includes casino_id = 'casino-B'

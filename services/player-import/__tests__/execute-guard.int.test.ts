@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Execute Guard Integration Tests
  *
@@ -67,7 +68,13 @@ const _hasCreated: _AssertCreated = true;
 // Type Contract Tests
 // ============================================================================
 
-describe('execute guard: RPC type contract', () => {
+const isIntegrationEnvironment =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
+
+describeIntegration('execute guard: RPC type contract', () => {
   it('rpc_import_execute requires p_batch_id', () => {
     expect(_execHasBatchId).toBe(true);
   });
@@ -92,7 +99,7 @@ describe('execute guard: RPC type contract', () => {
 // DA P0-2: Execute on Failed Batch → Rejection
 // ============================================================================
 
-describe('execute guard: DA P0-2 — failed batch rejection', () => {
+describeIntegration('execute guard: DA P0-2 — failed batch rejection', () => {
   it('execute on failed batch raises IMPORT_BATCH_NOT_STAGING exception', () => {
     // GIVEN: Batch with status = 'failed' (set by worker after row cap exceeded)
     //   - import_batch.status = 'failed'
@@ -130,7 +137,7 @@ describe('execute guard: DA P0-2 — failed batch rejection', () => {
 // Idempotent Execute on Completed Batch
 // ============================================================================
 
-describe('execute guard: idempotent completed batch', () => {
+describeIntegration('execute guard: idempotent completed batch', () => {
   it('execute on completed batch returns silently (no error, no duplicate writes)', () => {
     // GIVEN: Batch with status = 'completed' and report_summary populated
     //
@@ -150,7 +157,7 @@ describe('execute guard: idempotent completed batch', () => {
 // Normal Flow: Execute on Staging Batch
 // ============================================================================
 
-describe('execute guard: normal staging flow', () => {
+describeIntegration('execute guard: normal staging flow', () => {
   it('execute on staging batch succeeds (staging → executing → completed)', () => {
     // GIVEN: Batch with status = 'staging' (worker has finished ingesting)
     //
@@ -169,7 +176,7 @@ describe('execute guard: normal staging flow', () => {
 // DA P0-1: Create Batch with initial_status='created'
 // ============================================================================
 
-describe('execute guard: DA P0-1 — initial_status parameter', () => {
+describeIntegration('execute guard: DA P0-1 — initial_status parameter', () => {
   it('create batch with initial_status=created → status is created', () => {
     // GIVEN: Client calls rpc_import_create_batch with 5 parameters:
     //   p_idempotency_key, p_file_name, p_vendor_label, p_column_mapping,
@@ -217,7 +224,7 @@ describe('execute guard: DA P0-1 — initial_status parameter', () => {
 // Status Machine Invariants
 // ============================================================================
 
-describe('execute guard: status machine invariants', () => {
+describeIntegration('execute guard: status machine invariants', () => {
   it('execute rejects batches in non-staging status (except completed)', () => {
     // The execute RPC should reject batches in these statuses:
     //   - 'created' → not yet uploaded/ingested → IMPORT_BATCH_NOT_STAGING

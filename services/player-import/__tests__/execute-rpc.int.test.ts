@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Execute RPC Integration Tests — rpc_import_execute
  *
@@ -158,20 +159,26 @@ const _rowReasonDetailCheck: _AssertRowHasReasonDetail = true;
 // 5. RPC Type Contract Tests
 // ============================================================================
 
-describe('rpc_import_create_batch type contract', () => {
+const isIntegrationEnvironment =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
+
+describeIntegration('rpc_import_create_batch type contract', () => {
   it('requires file_name and idempotency_key', () => {
     expect(_createBatchFileNameCheck).toBe(true);
     expect(_createBatchIdempotencyKeyCheck).toBe(true);
   });
 });
 
-describe('rpc_import_stage_rows type contract', () => {
+describeIntegration('rpc_import_stage_rows type contract', () => {
   it('requires batch_id', () => {
     expect(_stageRowsBatchIdCheck).toBe(true);
   });
 });
 
-describe('rpc_import_execute type contract', () => {
+describeIntegration('rpc_import_execute type contract', () => {
   it('requires batch_id', () => {
     expect(_executeBatchIdCheck).toBe(true);
   });
@@ -191,7 +198,7 @@ describe('rpc_import_execute type contract', () => {
 // 6. Batch Status Lifecycle Tests
 // ============================================================================
 
-describe('import_batch status lifecycle', () => {
+describeIntegration('import_batch status lifecycle', () => {
   it('has required status values', () => {
     expect(_hasStagingCheck).toBe(true);
     expect(_hasExecutingCheck).toBe(true);
@@ -204,7 +211,7 @@ describe('import_batch status lifecycle', () => {
 // 7. Row Status and Outcome Tests
 // ============================================================================
 
-describe('import_row status outcomes', () => {
+describeIntegration('import_row status outcomes', () => {
   it('has all required status values', () => {
     expect(_rowHasStagedCheck).toBe(true);
     expect(_rowHasCreatedCheck).toBe(true);
@@ -228,7 +235,7 @@ describe('import_row status outcomes', () => {
 // 8. Execute Outcome Scenario Documentation
 // ============================================================================
 
-describe('rpc_import_execute outcome scenarios', () => {
+describeIntegration('rpc_import_execute outcome scenarios', () => {
   /**
    * These tests document the expected behavior enforced by the RPC.
    * Runtime validation requires a live Supabase instance with test data.

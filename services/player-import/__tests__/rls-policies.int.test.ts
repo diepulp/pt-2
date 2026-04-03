@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * RLS Policy Integration Tests — import_batch, import_row
  *
@@ -69,7 +70,13 @@ const _rowBatchIdCheck: _AssertRowBatchId = true;
 // 2. RLS Policy Scenario Tests
 // ============================================================================
 
-describe('import_batch RLS policies', () => {
+const isIntegrationEnvironment =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
+
+describeIntegration('import_batch RLS policies', () => {
   describe('type contracts', () => {
     it('import_batch has casino_id for RLS scoping', () => {
       expect(_batchCasinoIdCheck).toBe(true);
@@ -218,7 +225,7 @@ describe('import_batch RLS policies', () => {
   });
 });
 
-describe('import_row RLS policies', () => {
+describeIntegration('import_row RLS policies', () => {
   describe('type contracts', () => {
     it('import_row has casino_id for RLS scoping', () => {
       expect(_rowCasinoIdCheck).toBe(true);

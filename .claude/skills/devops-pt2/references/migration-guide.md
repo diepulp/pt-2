@@ -26,16 +26,43 @@ Detailed reference for creating, testing, and deploying database migrations in P
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+## Migration Naming Standard
+
+Follow `docs/60-release/MIGRATION_NAMING_STANDARD.md` strictly:
+
+```
+YYYYMMDDHHMMSS_descriptive_name.sql
+```
+
+### Rules
+
+1. **Generate the timestamp** — always use `date +"%Y%m%d%H%M%S"`, never fabricate
+2. **Temporal integrity** — must sort after all existing migrations. No backdating, no future-dating
+3. **Descriptive name** — snake_case, under 50 chars, **verb prefix required**:
+   - `add_` — new column, index, constraint
+   - `create_` — new table, function, trigger
+   - `drop_` — remove objects
+   - `alter_` — modify existing objects
+   - `fix_` — correct a previous migration
+
+**Example:** `20260402143000_add_player_verification.sql`
+
 ## Migration Commands
 
 ```bash
+# Generate timestamp
+date +"%Y%m%d%H%M%S"
+
 # Create new migration
 supabase migration new add_player_verification
 
 # Apply locally
 supabase db reset
 
-# Generate types after migration
+# Generate types after LOCAL migration
+npm run db:types-local
+
+# Generate types from REMOTE (validation only — do NOT use for local work)
 npm run db:types
 
 # Push to remote (staging first!)
@@ -44,6 +71,15 @@ supabase db push --linked
 # Check migration status
 supabase migration list
 ```
+
+### Type Generation — Critical Distinction
+
+| Command | When to use | Source |
+|---------|-------------|--------|
+| `npm run db:types-local` | After any local migration or `supabase db reset` | Local Supabase instance |
+| `npm run db:types` | Remote validation only, or when local is unavailable | Remote Supabase project |
+
+Using the wrong command will produce stale or incorrect types. After local migrations, **always** use `db:types-local`.
 
 ## Safety Rules
 
@@ -59,7 +95,8 @@ supabase migration list
    CREATE INDEX idx_player_verification ON player(verified_at);
    ```
 4. **USE** transactions for multi-statement migrations
-5. **REGENERATE** types after every migration: `npm run db:types`
+5. **REGENERATE** types after every migration (local: `db:types-local`, remote: `db:types`)
+6. **NO function overloading** with overlapping DEFAULT signatures — PostgREST cannot disambiguate. Prefer a single function with DEFAULT params over multiple overloads.
 
 ## Safe Migration Script
 
@@ -79,15 +116,17 @@ PT-2 uses Row-Level Security extensively. Verify for every migration:
 
 - [ ] New tables have RLS enabled
 - [ ] RLS policies include `casino_id` scoping
-- [ ] JWT claims integration per ADR-015
+- [ ] Policies use `(SELECT current_setting('app.casino_id', true)::uuid)` — note the subselect wrapper for InitPlan caching
+- [ ] JWT claims integration per ADR-015/ADR-024
+- [ ] Functions include `SET search_path = ''` to prevent search-path hijacking
 - [ ] Test with both `anon` and `authenticated` roles
+- [ ] Run Supabase MCP `get_advisors` (security + performance) after applying migration
 
-## Migration Naming Standard
+## CI Integration
 
-Follow `docs/60-release/MIGRATION_NAMING_STANDARD.md`:
+Migrations trigger two additional CI workflows on PR:
 
-```
-YYYYMMDDHHMMSS_description.sql
-```
+1. **security-gates.yml** — runs SQL assertion gates against ephemeral Postgres
+2. **migration-lint.yml** — validates RPC self-injection pattern compliance (ADR-015)
 
-Example: `20260211020000_add_player_verification.sql`
+Both are path-filtered to `supabase/migrations/**` and run automatically.

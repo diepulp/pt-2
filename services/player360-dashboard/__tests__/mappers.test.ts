@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Player360DashboardService Mappers Unit Tests
  *
