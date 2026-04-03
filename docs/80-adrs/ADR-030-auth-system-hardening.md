@@ -274,6 +274,37 @@ During onboarding/bootstrap, steady-state invariants (D1 staff requirement, D2 c
 
 D6 applies only to onboarding routes (`/bootstrap`, `/setup`, `/invite/accept`). All other routes continue to enforce steady-state invariants (D1-D5). See [Appendix A](./ADR-030_APPENDIX-A_onboarding-bootstrap-mode.md) for the full execution policy, implementation checklist, and end-to-end flow.
 
+### D7: Dashboard Auth Settings Baseline + Sign-Out Lifecycle
+
+**Status:** Accepted
+**Date:** 2026-04-03
+**Trigger:** Supabase Database Advisor findings SEC-S6 (leaked password protection disabled), SEC-S7 (insufficient MFA options). Sign-out gap identified during auth surface audit.
+
+#### Dashboard Settings Baseline
+
+The Supabase Auth dashboard MUST maintain these minimum settings:
+
+| Setting | Required Value | Advisor Finding |
+|---------|---------------|-----------------|
+| Leaked password protection (HIBP) | Enabled | SEC-S6 |
+| TOTP MFA | Enabled | SEC-S7 |
+| WebAuthn MFA | Enabled | SEC-S7 |
+
+**Ownership:** DevOps / Platform — verified quarterly via `RUN-006-supabase-postgres-patch-management.md` audit cycle.
+
+These settings are not configurable via migrations — they require manual dashboard action. They are tracked as Definition of Done items for environment provisioning.
+
+#### Sign-Out Lifecycle
+
+User-initiated sign-out is a claims-clearing trigger. The authoritative sequence:
+
+1. **Server action** calls `supabase.auth.signOut()` — invalidates refresh token server-side
+2. **Claims cleared** — `app_metadata` claims (`staff_id`, `casino_id`, `staff_role`) become stale in any cached JWT
+3. **Session terminated** — Supabase Auth removes the session from `auth.sessions`
+4. **Client cleanup** — redirect to `/login`, clear any client-side state (Zustand stores, TanStack Query cache)
+
+Sign-out MUST be a server action (not client-only) to ensure the refresh token is invalidated server-side. A client-only sign-out leaves the refresh token valid, allowing session resumption.
+
 ---
 
 ## Security Invariants
@@ -295,6 +326,8 @@ All invariants from ADR-024 remain in force. ADR-030 adds:
 **INV-030-7:** Writes against Template 2b policies (session-var-only, no JWT COALESCE) MUST use self-contained SECURITY DEFINER RPCs that call `set_rls_context_from_staff()` internally. Direct PostgREST DML (`.from(table).insert/update/delete`) is PROHIBITED because session vars are transaction-local and do not survive across separate HTTP requests. (D5)
 
 **INV-030-8:** In dev bypass mode (INV-030-3), `withRLS()` MUST NOT call `set_rls_context_from_staff()` because the service-role client lacks `auth.uid()`. The `ctx.rlsContext` set by `withAuth()` from `DEV_RLS_CONTEXT` is authoritative in dev bypass mode. (D6)
+
+**INV-030-9:** Sign-out MUST be a server action that calls `supabase.auth.signOut()` server-side. Client-only sign-out is prohibited because it leaves the refresh token valid. (D7)
 
 ---
 
@@ -428,4 +461,5 @@ Full metrics pipeline deferred to v0.2.
 - 2026-02-16: **D6 amendment** — Onboarding bootstrap mode (INV-030-8). Triggered by ISSUE-RLS-CONTEXT-INJECTION-ONBOARDING-CHICKEN-EGG: `withRLS()` unconditionally called the context RPC with a service-role client (dev bypass) or stale JWT (production), blocking setup wizard actions. Codifies: dev bypass skips RPC injection; mandatory `refreshSession()` barrier after claims writes; context merge precedence. Added INV-030-1 dev bypass exception and INV-030-4 onboarding exemption. See [Appendix A](./ADR-030_APPENDIX-A_onboarding-bootstrap-mode.md).
 - 2026-02-10: **D5 amendment** — Template 2b transport constraint (INV-030-7). Triggered by ISSUE-SET-PIN-SILENT-RLS-FAILURE: `setPinAction` silently failed because PostgREST DML runs in a separate transaction from the middleware's RPC context injection. Codifies: Template 2b writes MUST use self-contained SECURITY DEFINER RPCs.
 - 2026-01-30: Status updated to Accepted — implementation landed in commit 32890bf
+- 2026-04-03: **D7 amendment** — Dashboard auth settings baseline (HIBP, MFA) and sign-out lifecycle. Triggered by Supabase Advisor SEC-S6/S7 findings. Added INV-030-9 (server-side sign-out).
 - 2026-01-29: Initial ADR proposed based on auth hardening audit and execution patch
