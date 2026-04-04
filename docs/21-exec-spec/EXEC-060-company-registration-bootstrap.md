@@ -146,7 +146,7 @@ risks:
   - risk: "Abandoned registrations accumulate (pending rows with no bootstrap follow-through)"
     mitigation: "Acceptable — one pending row per user is tolerated (partial unique index enforces the cap). Pending rows are visible to the owning user and affect routing, but cause no operational harm. Future slice can add TTL/cleanup if abandoned registrations become noisy."
   - risk: "Bootstrap retry after consumed registration creates duplicate company"
-    mitigation: "RESOLVED. WS3 makes bootstrap idempotent — if user already has an active staff binding, returns existing (casino_id, staff_id, staff_role) with no side effects. WS2 adds a containment guardrail blocking re-registration for bootstrapped users. Primary fix is WS3 idempotency; WS2 guard is defensive perimeter."
+    mitigation: "RESOLVED via migration 20260403231430. PRIMARY (WS3): rpc_bootstrap_casino is now idempotent — if user already has an active staff binding, returns existing (casino_id, staff_id, staff_role) with no side effects and no exception. The invariant: retrying the same bootstrap intent returns the same result. SECONDARY (WS2): rpc_register_company now rejects registration with ALREADY_BOOTSTRAPPED (P0003) if user already has an active staff binding — defensive perimeter that prevents orphaned company rows, but is NOT the primary cure."
   - risk: "PRD Appendix C shows timezone default America/New_York but codebase uses America/Los_Angeles"
     mitigation: "Preserve existing codebase default (America/Los_Angeles). Do NOT change rpc_bootstrap_casino default."
 ---
