@@ -144,20 +144,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // ADR-043: auto-create company if not provided (company_id is NOT NULL)
-        let companyId = input.company_id;
-        if (!companyId) {
-          const { data: company, error: companyError } = await mwCtx.supabase
-            .from('company')
-            .insert({ name: input.name })
-            .select('id')
-            .single();
-          if (companyError || !company) {
-            throw companyError ?? new Error('Failed to create company');
-          }
-          companyId = company.id;
-        }
-
+        // PRD-060: company_id is required (created via rpc_register_company)
         // Insert new casino
         const { data, error } = await mwCtx.supabase
           .from('casino')
@@ -165,7 +152,7 @@ export async function POST(request: NextRequest) {
             name: input.name,
             location: input.location ?? null,
             address: (input.address as Json) ?? null,
-            company_id: companyId,
+            company_id: input.company_id,
             status: 'active',
           })
           .select(CASINO_SELECT)

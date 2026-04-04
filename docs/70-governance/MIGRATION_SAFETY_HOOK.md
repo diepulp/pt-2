@@ -1,9 +1,10 @@
 # Migration Safety Pre-commit Hook
 
 **Status**: Active
-**Version**: 1.0.0
+**Version**: 2.0.0
 **Created**: 2025-12-09
-**References**: ISSUE-002, ADR-015
+**Updated**: 2026-04-03
+**References**: ISSUE-002, ADR-015, ADR-018, SEC-S3
 
 ## Overview
 
@@ -76,13 +77,32 @@ CREATE POLICY policy_name ON table_name
   );
 ```
 
+### 5. Search Path / Function Body Consistency (BLOCKING + WARNING)
+
+**Hook:** `.husky/pre-commit-search-path-safety.sh` (v1.0.0, added 2026-04-03)
+**Reference:** ADR-018 (canonical `search_path` standard), SEC-S3 post-mortem
+
+**Check 1 — BLOCKING:** `ALTER FUNCTION ... SET search_path` without `CREATE OR REPLACE` in the same file.
+
+**Why:** Setting `search_path = ''` on a function whose body has unqualified table references (e.g., `FROM casino_settings`) breaks the function at runtime. The SEC-S3 remediation (2026-04-03) hit this exact regression on 17 functions.
+
+**Resolution:** Either:
+- Use `CREATE OR REPLACE` with fully `public.`-qualified body + `SET search_path = ''`
+- Or add `-- SEARCH_PATH_SAFE: no unqualified references` marker above the `ALTER FUNCTION` (for functions with no table access)
+
+**Check 2 — WARNING:** `CREATE OR REPLACE` with `search_path = ''` containing `FROM` clauses without `public.` prefix. Heuristic — may produce false positives on SQL keywords like `EXTRACT(HOUR FROM ...)`.
+
+**CI Companion Gate:** `supabase/tests/security/09_search_path_body_check.sql` — runs post-migration against a live DB in the `security-gates.yml` pipeline. Queries `pg_proc` catalog for functions with empty `search_path` + unqualified table references.
+
+---
+
 ## How to Use
 
 ### Normal Workflow
 
 The hook runs automatically on `git commit`. If it detects issues:
 
-1. **Blocking violations** (like `sync_remote_changes.sql`): Commit is prevented
+1. **Blocking violations** (like `sync_remote_changes.sql` or bare `ALTER FUNCTION SET search_path`): Commit is prevented
 2. **Warnings**: Commit proceeds but issues should be fixed before merge
 
 ### Creating Safe Migrations
@@ -166,10 +186,15 @@ git reset
 
 ```
 .husky/
-├── pre-commit                          # Main hook orchestrator
-├── pre-commit-migration-safety.sh     # Migration safety checks (this hook)
-├── pre-commit-api-sanity.sh           # API route validation
-└── pre-commit-service-check.sh        # Service layer anti-patterns
+├── pre-commit                              # Main hook orchestrator
+├── pre-commit-migration-naming.sh         # Timestamp format + naming convention
+├── pre-commit-migration-safety.sh         # RLS policy regression checks
+├── pre-commit-rpc-lint.sh                 # RPC self-injection pattern (ADR-015)
+├── pre-commit-search-path-safety.sh       # search_path / body consistency (ADR-018)
+├── pre-commit-api-sanity.sh               # API route validation
+├── pre-commit-service-check.sh            # Service layer anti-patterns
+├── pre-commit-zustand-check.sh            # Zustand state management
+└── pre-commit-rls-write-path.sh           # RLS write-path (ADR-034)
 ```
 
 ### Integration

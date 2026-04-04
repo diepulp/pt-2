@@ -4,10 +4,10 @@
 **Date:** 2025-12-12
 **Implementation Date:** 2025-12-12
 **Owner:** Security/Platform
-**Applies to:** All PostgreSQL RPC functions using SECURITY DEFINER
+**Applies to:** All owner-privileged database surfaces — SECURITY DEFINER RPCs, SECURITY DEFINER triggers, views (without `security_invoker = true`), and materialized views with permissive GRANTs
 **Decision type:** Security
 **Supersedes:** None
-**Related:** ADR-015, SEC-001, SEC-006
+**Related:** ADR-015, SEC-001, SEC-006, SEC-S1, SEC-S3, SEC-S5
 
 ---
 
@@ -228,14 +228,82 @@ SEC-001 Template 5 is updated to include:
 
 ---
 
+## Canonical `search_path` Standard
+
+**Added:** 2026-04-03 — Triggered by SEC-S3 remediation regression where `ALTER FUNCTION ... SET search_path = ''` broke 17 functions at runtime because their bodies used unqualified table references.
+
+### The Rule
+
+All governed surfaces (SECURITY DEFINER RPCs, triggers, views, MVs) MUST pin `search_path` in the function definition:
+
+```sql
+CREATE OR REPLACE FUNCTION public.rpc_example(...)
+RETURNS ...
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''       -- ← Canonical value: empty string
+AS $$
+BEGIN
+  -- ALL references must be schema-qualified:
+  SELECT ... FROM public.table_name ...;
+  PERFORM public.other_function(...);
+  -- Custom types must be qualified:
+  v_status public.rating_slip_status;
+END;
+$$;
+```
+
+### Canonical Value: `search_path = ''`
+
+The project standardizes on **empty string** (`''`). This is the most restrictive setting and forces all references to be explicit.
+
+| Value | Use | Status |
+|-------|-----|--------|
+| `SET search_path = ''` | New and rewritten functions | **Canonical** |
+| `SET search_path = public` | Legacy functions (ADR-018 v1) | **Deprecated** — migrate to `''` on next touch |
+| `SET search_path = pg_catalog, public` | Never used | **Prohibited** — overly permissive |
+| No `search_path` set | Functions without table access | **Acceptable** for pure-computation triggers |
+
+### Anti-Pattern: Metadata-Only search_path Changes
+
+```sql
+-- ❌ NEVER: ALTER FUNCTION without body rewrite
+ALTER FUNCTION public.my_func() SET search_path = '';
+-- Function body still has: FROM casino_settings (WILL BREAK AT RUNTIME)
+
+-- ✅ ALWAYS: CREATE OR REPLACE with qualified body
+CREATE OR REPLACE FUNCTION public.my_func()
+...
+SET search_path = ''
+AS $$ ... FROM public.casino_settings ... $$;
+```
+
+**Enforcement:**
+- Pre-commit: `.husky/pre-commit-search-path-safety.sh` — blocks `ALTER FUNCTION SET search_path` without `CREATE OR REPLACE` or `SEARCH_PATH_SAFE` marker
+- CI: `supabase/tests/security/09_search_path_body_check.sql` — post-migration catalog check for unqualified references in functions with empty `search_path`
+
+### Non-RPC Governed Surfaces
+
+| Surface | Governance Rule | Example |
+|---------|----------------|---------|
+| Views | Must use `security_invoker = true` (SEC-S1) | `CREATE VIEW ... WITH (security_invoker = true)` |
+| Materialized views | Must `REVOKE SELECT FROM anon, authenticated` unless explicitly public (SEC-S5) | `GRANT SELECT TO service_role` only |
+| SECURITY DEFINER triggers | Must pin `search_path = ''` with qualified bodies | Same as RPCs |
+| Extensions | Must install in `extensions` schema, not `public` (SEC-S4) | `CREATE EXTENSION pg_trgm SCHEMA extensions` |
+
+---
+
 ## Compliance Matrix
 
 | Requirement | Implementation |
 |-------------|----------------|
 | All SECURITY DEFINER RPCs validate context | SEC-006 migration applied to 7 functions |
 | New RPCs follow pattern | Pre-commit hook + code review |
+| All governed surfaces pin `search_path` | SEC-S3 migration (36 functions), pre-commit + CI gates |
+| Views use `security_invoker = true` | SEC-S1 migration |
+| MVs have explicit GRANT posture | SEC-S5 migration |
 | Documentation updated | SEC-001 Template 5 + this ADR |
-| Audit coverage | SEC-006 audit document tracks all RPCs |
+| Audit coverage | SEC-006 audit + Supabase Database Advisor |
 
 ---
 
@@ -243,8 +311,11 @@ SEC-001 Template 5 is updated to include:
 
 - `docs/30-security/SEC-001-rls-policy-matrix.md` - Template 5 pattern
 - `docs/30-security/SEC-006-rls-strategy-audit-2025-12-11.md` - Audit findings
+- `docs/30-security/postgrest_surface_inventory.md` - PostgREST surface inventory
 - `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` - Pattern C (hybrid) context
-- `supabase/migrations/20251212080915_sec006_rls_hardening.sql` - Implementation
+- `supabase/migrations/20251212080915_sec006_rls_hardening.sql` - SEC-006 implementation
+- `supabase/migrations/20260403202628_fix_function_search_path_sec_s3.sql` - SEC-S3 implementation
+- `docs/issues/gaps/supabase-advisors/GAMING-DAY-FUNCTION-DRIFT.md` - SEC-S3 post-mortem
 
 ---
 
@@ -254,3 +325,4 @@ SEC-001 Template 5 is updated to include:
 |------|--------|
 | 2025-12-12 | ADR created based on SEC-006 audit findings |
 | 2025-12-12 | Implementation via migration `20251212080915_sec006_rls_hardening.sql` |
+| 2026-04-03 | **Scope expansion:** Extended governance to all owner-privileged surfaces (views, MVs, triggers). Added canonical `search_path = ''` standard. Added non-RPC governance rules (SEC-S1/S3/S4/S5). Added pre-commit + CI enforcement for search_path/body consistency. |
