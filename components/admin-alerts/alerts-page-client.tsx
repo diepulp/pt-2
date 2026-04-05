@@ -127,7 +127,7 @@ export function AlertsPageClient() {
       </div>
       <Separator className="my-4 flex-none" />
 
-      <div className="w-full space-y-4 overflow-y-auto pe-4 pb-4">
+      <div className="w-full max-w-4xl space-y-4 overflow-y-auto pe-4 pb-4">
         {/* Fallback banner */}
         <FallbackBanner source={timeWindow.source} />
 

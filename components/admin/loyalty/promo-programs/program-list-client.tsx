@@ -108,7 +108,7 @@ export function ProgramListClient({ initialData }: ProgramListClientProps) {
       </div>
       <Separator className="my-4 flex-none" />
 
-      <div className="w-full space-y-6 overflow-y-auto pe-4 pb-4">
+      <div className="w-full max-w-4xl space-y-6 overflow-y-auto pe-4 pb-4">
         {/* Filters */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">

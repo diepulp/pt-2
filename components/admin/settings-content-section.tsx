@@ -32,7 +32,9 @@ export function SettingsContentSection({
         </p>
       </div>
       <Separator className="my-4 flex-none" />
-      <div className="w-full overflow-y-auto pe-4 pb-4">{children}</div>
+      <div className="w-full max-w-4xl overflow-y-auto pe-4 pb-4">
+        {children}
+      </div>
     </div>
   );
 }
