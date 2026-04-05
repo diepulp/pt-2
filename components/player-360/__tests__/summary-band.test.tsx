@@ -43,6 +43,7 @@ const createMockSummary = (
     nextEligibleAt: null,
     reasonCodes: ['AVAILABLE'],
     guidance: null,
+    pointsAvailable: 500,
   },
   gamingDay: '2026-01-26',
   ...overrides,
@@ -194,6 +195,7 @@ describe('SummaryBand', () => {
           nextEligibleAt: null,
           reasonCodes: ['AVAILABLE'],
           guidance: null,
+          pointsAvailable: 500,
         },
       });
 

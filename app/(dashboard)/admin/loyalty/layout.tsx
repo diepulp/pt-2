@@ -32,7 +32,7 @@ export default function LoyaltyLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-6 overflow-hidden">
+    <div className="space-y-6 overflow-hidden bg-gradient-to-b from-transparent via-accent/5 to-transparent">
       {/* Page header */}
       <div className="space-y-1">
         <h1

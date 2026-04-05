@@ -24,6 +24,7 @@ const createEligibilityData = (
   nextEligibleAt: null,
   reasonCodes: ['AVAILABLE'],
   guidance: null,
+  pointsAvailable: 500,
   ...overrides,
 });
 

@@ -82,6 +82,8 @@ export interface RewardsEligibilityDTO {
   reasonCodes: ReasonCode[];
   /** User-facing guidance text (null if available) */
   guidance: string | null;
+  /** Current loyalty points balance (null if no loyalty record) */
+  pointsAvailable: number | null;
 }
 
 /**

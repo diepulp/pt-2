@@ -28,6 +28,8 @@ export interface RewardsHistoryListProps {
   onItemClick?: (item: RewardHistoryItemDTO) => void;
   /** Max items to show (default: 3) */
   maxItems?: number;
+  /** Current loyalty points balance (null if unavailable) */
+  pointsAvailable?: number | null;
   /** Additional class names */
   className?: string;
 }
@@ -65,6 +67,7 @@ export function RewardsHistoryList({
   items,
   onItemClick,
   maxItems = 3,
+  pointsAvailable,
   className,
 }: RewardsHistoryListProps) {
   const [filter, setFilter] = useState<FilterType>('all');
@@ -80,6 +83,18 @@ export function RewardsHistoryList({
 
   return (
     <div className={cn('', className)} data-testid="rewards-history-list">
+      {/* Points Balance */}
+      {pointsAvailable != null && (
+        <div className="flex items-center justify-between mb-2 rounded-md bg-accent/5 border border-accent/20 px-2.5 py-1.5">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+            Points Available
+          </span>
+          <span className="text-sm font-mono font-bold tabular-nums text-foreground">
+            {pointsAvailable.toLocaleString()}
+          </span>
+        </div>
+      )}
+
       {/* Filter Chips */}
       <div className="flex items-center gap-1 mb-2">
         {filterOptions.map((option) => (

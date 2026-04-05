@@ -1,6 +1,6 @@
 'use client';
 
-import { Clock } from 'lucide-react';
+import { FileText, Shield } from 'lucide-react';
 
 import {
   SettingsSidebarNav,
@@ -10,13 +10,18 @@ import { Separator } from '@/components/ui/separator';
 
 const sidebarNavItems: SettingsNavItem[] = [
   {
-    title: 'Casino Operations',
-    href: '/admin/settings/operations',
-    icon: Clock,
+    title: 'MTL Tracking',
+    href: '/compliance',
+    icon: Shield,
+  },
+  {
+    title: 'Reports',
+    href: '/compliance/reports',
+    icon: FileText,
   },
 ];
 
-export default function SettingsLayout({
+export default function ComplianceLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -29,10 +34,10 @@ export default function SettingsLayout({
           className="text-base font-bold uppercase tracking-widest"
           style={{ fontFamily: 'monospace' }}
         >
-          Settings
+          Compliance
         </h1>
         <p className="text-xs text-muted-foreground">
-          Configure casino operations and shift parameters.
+          AML/CTR transaction monitoring and regulatory reporting.
         </p>
       </div>
 

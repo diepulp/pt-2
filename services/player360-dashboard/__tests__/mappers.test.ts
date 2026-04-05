@@ -126,6 +126,7 @@ describe('mapToRewardsEligibility', () => {
     expect(result.status).toBe('available');
     expect(result.nextEligibleAt).toBeNull();
     expect(result.reasonCodes).toEqual(['AVAILABLE']);
+    expect(result.pointsAvailable).toBe(500);
   });
 
   it('returns "not_available" with cooldown when reward is recent (<30 min)', () => {
@@ -154,6 +155,7 @@ describe('mapToRewardsEligibility', () => {
     expect(result.status).toBe('unknown');
     expect(result.reasonCodes).toEqual(['RULES_NOT_CONFIGURED']);
     expect(result.guidance).toContain('not configured');
+    expect(result.pointsAvailable).toBeNull();
   });
 
   it('returns "unknown" when no loyalty balance even with recent reward', () => {

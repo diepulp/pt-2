@@ -290,8 +290,11 @@ export function mapToRewardsEligibility(
       nextEligibleAt: null,
       reasonCodes: ['RULES_NOT_CONFIGURED'],
       guidance: 'Loyalty rules not configured for this casino',
+      pointsAvailable: null,
     };
   }
+
+  const points = loyaltyBalance.balance;
 
   // Check cooldown
   if (recentRewardAt) {
@@ -304,6 +307,7 @@ export function mapToRewardsEligibility(
         nextEligibleAt: cooldownExpires.toISOString(),
         reasonCodes: ['COOLDOWN_ACTIVE'],
         guidance: `Cooldown active until ${cooldownExpires.toLocaleTimeString()}`,
+        pointsAvailable: points,
       };
     }
   }
@@ -314,6 +318,7 @@ export function mapToRewardsEligibility(
     nextEligibleAt: null,
     reasonCodes: ['AVAILABLE'],
     guidance: null,
+    pointsAvailable: points,
   };
 }
 

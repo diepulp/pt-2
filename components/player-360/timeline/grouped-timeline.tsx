@@ -253,7 +253,7 @@ export const GroupedTimeline = React.memo(function GroupedTimeline({
   }
 
   return (
-    <div className={cn('flex flex-col h-full', className)}>
+    <div className={cn('flex flex-col w-full min-w-0', className)}>
       {/* Sticky Category Indicator Bar */}
       <CategoryIndicatorBar
         cards={cards}
@@ -263,11 +263,7 @@ export const GroupedTimeline = React.memo(function GroupedTimeline({
       />
 
       {/* Timeline Content */}
-      <div
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto"
-      >
+      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1">
         {hasNoMatches ? (
           <TimelineEmptyState type="no-matches" />
         ) : (

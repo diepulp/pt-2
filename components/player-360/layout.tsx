@@ -208,7 +208,7 @@ export function Player360Center({ children, className }: Player360CenterProps) {
       aria-label="Player timeline"
       className={cn(
         'flex flex-col flex-1 min-w-0',
-        'overflow-hidden',
+        'overflow-x-hidden overflow-y-auto',
         className,
       )}
     >
