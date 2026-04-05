@@ -6,7 +6,7 @@ import {
   LayoutDashboard,
   Settings,
   Shield,
-  ShieldCheck,
+  ShieldAlert,
   Table2,
   Users,
 } from 'lucide-react';
@@ -90,22 +90,27 @@ const navGroups: NavGroup[] = [
     label: 'Admin',
     items: [
       {
-        title: 'Admin',
-        url: '/admin',
-        icon: ShieldCheck,
+        title: 'Anomaly Detection',
+        url: '/admin/anomaly-detection',
+        icon: ShieldAlert,
         badgeElement: <AdminAlertBadge />,
         children: [
-          { title: 'Alerts', url: '/admin/alerts' },
-          { title: 'Reports', url: '/admin/reports' },
+          { title: 'Alerts', url: '/admin/anomaly-detection/alerts' },
+          { title: 'Reports', url: '/admin/anomaly-detection/reports' },
+          {
+            title: 'Detection Settings',
+            url: '/admin/anomaly-detection/settings',
+          },
         ],
       },
       {
-        title: 'Loyalty Config',
-        url: '/admin/loyalty/rewards',
+        title: 'Loyalty',
+        url: '/admin/loyalty',
         icon: Gift,
         children: [
           { title: 'Rewards', url: '/admin/loyalty/rewards' },
           { title: 'Programs', url: '/admin/loyalty/promo-programs' },
+          { title: 'Economics', url: '/admin/loyalty/economics' },
         ],
       },
       {
@@ -114,11 +119,6 @@ const navGroups: NavGroup[] = [
         icon: Settings,
         children: [
           { title: 'Casino Operations', url: '/admin/settings/operations' },
-          {
-            title: 'Anomaly Detection',
-            url: '/admin/settings/anomaly-detection',
-          },
-          { title: 'Loyalty', url: '/admin/settings/loyalty' },
         ],
       },
     ],

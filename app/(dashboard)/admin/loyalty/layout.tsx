@@ -1,6 +1,6 @@
 'use client';
 
-import { Clock } from 'lucide-react';
+import { Coins, Gift, Megaphone } from 'lucide-react';
 
 import {
   SettingsSidebarNav,
@@ -10,13 +10,23 @@ import { Separator } from '@/components/ui/separator';
 
 const sidebarNavItems: SettingsNavItem[] = [
   {
-    title: 'Casino Operations',
-    href: '/admin/settings/operations',
-    icon: Clock,
+    title: 'Rewards',
+    href: '/admin/loyalty/rewards',
+    icon: Gift,
+  },
+  {
+    title: 'Programs',
+    href: '/admin/loyalty/promo-programs',
+    icon: Megaphone,
+  },
+  {
+    title: 'Economics',
+    href: '/admin/loyalty/economics',
+    icon: Coins,
   },
 ];
 
-export default function SettingsLayout({
+export default function LoyaltyLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -29,10 +39,10 @@ export default function SettingsLayout({
           className="text-base font-bold uppercase tracking-widest"
           style={{ fontFamily: 'monospace' }}
         >
-          Settings
+          Loyalty
         </h1>
         <p className="text-xs text-muted-foreground">
-          Configure casino operations and shift parameters.
+          Manage rewards, promotional programs, and loyalty economics.
         </p>
       </div>
 

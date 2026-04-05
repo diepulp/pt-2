@@ -24,14 +24,25 @@ export const promoCouponRouteParamsSchema = z.object({
 
 // === Promo Program Schemas ===
 
-export const createPromoProgramSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(200),
-  promoType: z.enum(['match_play', 'free_play']).optional(),
-  faceValueAmount: z.number().positive('Face value must be positive'),
-  requiredMatchWagerAmount: z.number().positive('Match wager must be positive'),
-  startAt: datetimeSchema().optional(),
-  endAt: datetimeSchema().optional(),
-});
+export const createPromoProgramSchema = z
+  .object({
+    name: z.string().min(1, 'Name is required').max(200),
+    promoType: z.enum(['match_play', 'free_play']).optional(),
+    faceValueAmount: z.number().positive('Face value must be positive'),
+    requiredMatchWagerAmount: z
+      .number()
+      .nonnegative('Match wager cannot be negative'),
+    startAt: datetimeSchema().optional(),
+    endAt: datetimeSchema().optional(),
+  })
+  .refine(
+    (data) =>
+      data.promoType === 'free_play' || data.requiredMatchWagerAmount > 0,
+    {
+      message: 'Match wager must be positive for match play',
+      path: ['requiredMatchWagerAmount'],
+    },
+  );
 
 export const updatePromoProgramSchema = z.object({
   name: z.string().min(1).max(200).optional(),

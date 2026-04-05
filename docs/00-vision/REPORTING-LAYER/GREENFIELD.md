@@ -96,5 +96,5 @@ Running this against the seven-question filter:
 | 6 | Touches more than one bounded context? | Read-only aggregation across existing views. No cross-context writes. |
 | 7 | If deferred, does pilot die? | No, but operator trust degrades. A system that can't produce a shift report feels incomplete to a pit boss. |
 
-**Verdict:** This is a legitimate **Stabilize Later** item, not a Ban. The manual workaround (screenshots) survives 4 weeks, but it erodes exactly the operator trust the pilot is trying to build. If capacity exists after core loop closure, this is the highest-value polish item because it touches the primary user's daily output artifact.
+**Verdict:** This is a legitimate **Stabilize Later** item, not a Ban. The manual workaround (screenshots) survives 4 weeks, but it erodes exactly the operator trust the pilot is trying to build. If capacity exists after core loop closure, this is the highest-value polish item because it touches the primary user's daily output artifact. **Updated** moved to pilot scope, the reporting is one of the sales points
 

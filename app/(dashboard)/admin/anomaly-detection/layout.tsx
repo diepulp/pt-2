@@ -1,6 +1,6 @@
 'use client';
 
-import { Clock } from 'lucide-react';
+import { BarChart3, Bell, SlidersHorizontal } from 'lucide-react';
 
 import {
   SettingsSidebarNav,
@@ -10,13 +10,23 @@ import { Separator } from '@/components/ui/separator';
 
 const sidebarNavItems: SettingsNavItem[] = [
   {
-    title: 'Casino Operations',
-    href: '/admin/settings/operations',
-    icon: Clock,
+    title: 'Alerts',
+    href: '/admin/anomaly-detection/alerts',
+    icon: Bell,
+  },
+  {
+    title: 'Reports',
+    href: '/admin/anomaly-detection/reports',
+    icon: BarChart3,
+  },
+  {
+    title: 'Detection Settings',
+    href: '/admin/anomaly-detection/settings',
+    icon: SlidersHorizontal,
   },
 ];
 
-export default function SettingsLayout({
+export default function AnomalyDetectionLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -29,10 +39,11 @@ export default function SettingsLayout({
           className="text-base font-bold uppercase tracking-widest"
           style={{ fontFamily: 'monospace' }}
         >
-          Settings
+          Statistical Anomaly Detection
         </h1>
         <p className="text-xs text-muted-foreground">
-          Configure casino operations and shift parameters.
+          Monitor alerts, review measurement reports, and configure detection
+          thresholds.
         </p>
       </div>
 

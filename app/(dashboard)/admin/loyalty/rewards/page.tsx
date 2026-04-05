@@ -1,4 +1,7 @@
+import { Gift } from 'lucide-react';
+
 import { RewardListClient } from '@/components/admin/loyalty/rewards/reward-list-client';
+import { SettingsContentSection } from '@/components/admin/settings-content-section';
 import { createClient } from '@/lib/supabase/server';
 import { createRewardService } from '@/services/loyalty/reward';
 
@@ -16,14 +19,12 @@ export default async function RewardsPage() {
   const rewards = await rewardService.listRewards();
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Reward Catalog</h1>
-        <p className="text-muted-foreground">
-          Manage reward definitions, pricing, and tier entitlements.
-        </p>
-      </div>
+    <SettingsContentSection
+      title="Rewards"
+      desc="Manage reward definitions, pricing, and tier entitlements."
+      icon={Gift}
+    >
       <RewardListClient initialData={rewards} />
-    </div>
+    </SettingsContentSection>
   );
 }
