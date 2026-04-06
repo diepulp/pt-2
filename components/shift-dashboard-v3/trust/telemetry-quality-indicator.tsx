@@ -50,7 +50,7 @@ export function TelemetryQualityIndicator({
 }: TelemetryQualityIndicatorProps) {
   const config = QUALITY_CONFIG[quality];
   const dotSize = size === 'sm' ? 'h-2 w-2' : 'h-2.5 w-2.5';
-  const textSize = size === 'sm' ? 'text-[9px]' : 'text-[10px]';
+  const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
 
   return (
     <span

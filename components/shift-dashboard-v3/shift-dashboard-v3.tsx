@@ -131,9 +131,18 @@ export function ShiftDashboardV3() {
       <ShiftDashboardHeader>
         <div className="flex items-center justify-between px-6 py-3">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">
-              Shift Dashboard
-            </h1>
+            <div className="flex items-center gap-2">
+              <div className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_6px_hsl(var(--accent)/0.5)]" />
+              <h1
+                className="text-xl font-bold uppercase tracking-widest"
+                style={{ fontFamily: 'monospace' }}
+              >
+                Shift Dashboard
+              </h1>
+              <span className="rounded-full bg-accent/10 border border-accent/20 px-2 py-0.5 text-xs font-medium uppercase tracking-wider text-accent">
+                Live
+              </span>
+            </div>
             <div
               className="flex items-center gap-2 text-xs text-muted-foreground"
               aria-live="polite"

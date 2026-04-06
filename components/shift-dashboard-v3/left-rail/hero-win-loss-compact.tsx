@@ -54,7 +54,10 @@ export function HeroWinLossCompact({
         <div className="absolute left-0 top-0 h-1 w-full bg-muted" />
         <div className="p-4">
           <div className="flex items-center gap-1.5">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
               Win/Loss
             </p>
             {metricGrade && <MetricGradeBadge grade={metricGrade} size="sm" />}
@@ -80,7 +83,7 @@ export function HeroWinLossCompact({
       <div className={`absolute left-0 top-0 h-1 w-full ${colorConfig.bg}`} />
       <div className="p-4">
         <div className="flex items-center gap-1.5">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
             Win/Loss
           </p>
           {metricGrade && <MetricGradeBadge grade={metricGrade} size="sm" />}
