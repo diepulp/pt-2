@@ -17,7 +17,8 @@ export type ReasonCode =
   | 'AVAILABLE'
   | 'COOLDOWN_ACTIVE'
   | 'MIN_PLAY_NOT_MET'
-  | 'DAILY_LIMIT_REACHED'
+  | 'LIMIT_REACHED'
+  | 'VISIT_REQUIRED'
   | 'RULES_NOT_CONFIGURED';
 
 // === Snapshot Band DTOs ===
@@ -82,6 +83,8 @@ export interface RewardsEligibilityDTO {
   reasonCodes: ReasonCode[];
   /** User-facing guidance text (null if available) */
   guidance: string | null;
+  /** Current loyalty points balance (null if no loyalty record) */
+  pointsAvailable: number | null;
 }
 
 /**

@@ -6,7 +6,7 @@ import {
   LayoutDashboard,
   Settings,
   Shield,
-  ShieldCheck,
+  ShieldAlert,
   Table2,
   Users,
 } from 'lucide-react';
@@ -29,9 +29,8 @@ import { cn } from '@/lib/utils';
 
 /**
  * Navigation structure organized by semantic groups:
- * - OPERATIONAL: Day-to-day pit operations (Pit, Players, Loyalty, Compliance)
- * - ADMINISTRATIVE: Management dashboards and reports (Shift Dashboard, Alerts, Reports)
- * - OTHER: Configuration and settings
+ * - OPERATIONAL: Day-to-day pit operations (Pit, Cashier, Players, Shift Dashboard, Compliance)
+ * - ADMIN: Management & configuration (Alerts, Reports, Loyalty Config, Settings)
  */
 const navGroups: NavGroup[] = [
   {
@@ -67,12 +66,13 @@ const navGroups: NavGroup[] = [
         ],
       },
       {
-        title: 'Loyalty',
-        url: '/admin/loyalty/rewards',
-        icon: Gift,
+        title: 'Shift Dashboard',
+        url: '/shift-dashboard',
+        icon: LayoutDashboard,
         children: [
-          { title: 'Rewards Catalog', url: '/admin/loyalty/rewards' },
-          { title: 'Promo Programs', url: '/admin/loyalty/promo-programs' },
+          { title: 'Overview', url: '/shift-dashboard' },
+          { title: 'Cash Observations', url: '/shift-dashboard?view=cash' },
+          { title: 'Staff Performance', url: '/shift-dashboard?view=staff' },
         ],
       },
       {
@@ -87,42 +87,38 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Administrative',
+    label: 'Admin',
     items: [
       {
-        title: 'Shift Dashboard',
-        url: '/shift-dashboard',
-        icon: LayoutDashboard,
-        children: [
-          { title: 'Overview', url: '/shift-dashboard' },
-          { title: 'Cash Observations', url: '/shift-dashboard?view=cash' },
-          { title: 'Staff Performance', url: '/shift-dashboard?view=staff' },
-        ],
-      },
-      {
-        title: 'Admin',
-        url: '/admin',
-        icon: ShieldCheck,
+        title: 'Anomaly Detection',
+        url: '/admin/anomaly-detection',
+        icon: ShieldAlert,
         badgeElement: <AdminAlertBadge />,
         children: [
-          { title: 'Alerts', url: '/admin/alerts' },
-          { title: 'Reports', url: '/admin/reports' },
-          { title: 'Settings', url: '/admin/settings' },
+          { title: 'Alerts', url: '/admin/anomaly-detection/alerts' },
+          { title: 'Reports', url: '/admin/anomaly-detection/reports' },
+          {
+            title: 'Detection Settings',
+            url: '/admin/anomaly-detection/settings',
+          },
         ],
       },
-    ],
-  },
-  {
-    label: 'Other',
-    items: [
+      {
+        title: 'Loyalty',
+        url: '/admin/loyalty',
+        icon: Gift,
+        children: [
+          { title: 'Rewards', url: '/admin/loyalty/rewards' },
+          { title: 'Programs', url: '/admin/loyalty/promo-programs' },
+          { title: 'Economics', url: '/admin/loyalty/economics' },
+        ],
+      },
       {
         title: 'Settings',
-        url: '/settings',
+        url: '/admin/settings',
         icon: Settings,
         children: [
-          { title: 'General', url: '/settings' },
-          { title: 'Casino', url: '/settings/casino' },
-          { title: 'Staff', url: '/settings/staff' },
+          { title: 'Casino Operations', url: '/admin/settings/operations' },
         ],
       },
     ],

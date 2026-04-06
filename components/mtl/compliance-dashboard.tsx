@@ -21,7 +21,7 @@
 'use client';
 
 import { format, subDays, addDays } from 'date-fns';
-import { Calendar, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Shield } from 'lucide-react';
 import { useState, useMemo } from 'react';
 
 import { AdjustmentModal } from '@/components/modals/rating-slip/adjustment-modal';
@@ -33,6 +33,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { useGamingDaySummary } from '@/hooks/mtl/use-gaming-day-summary';
 import { useCreateFinancialAdjustment } from '@/hooks/player-financial/use-financial-mutations';
 import { cn } from '@/lib/utils';
@@ -205,129 +206,151 @@ export function ComplianceDashboard({
   const isToday = gamingDay === format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <div className={cn('space-y-4', className)}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-mono font-bold flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6" />
-            Compliance Dashboard
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            AML/CTR Transaction Monitoring (31 CFR § 1021.311)
-          </p>
-        </div>
+    <div className={cn('flex flex-1 flex-col', className)}>
+      {/* Header — matches SettingsContentSection exemplar */}
+      <div className="flex-none">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Shield className="h-6 w-6 text-accent" />
+            <h3
+              className="text-xl font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              MTL Tracking
+            </h3>
+          </div>
 
-        {/* Date Navigation */}
-        <div className="flex items-center gap-4">
+          {/* Date Navigation */}
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={goToPreviousDay}>
-              <ChevronLeft className="h-4 w-4" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={goToPreviousDay}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
-            <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-background">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="font-mono text-sm">{gamingDay}</span>
+            <div className="flex items-center gap-1.5 rounded-md border-2 border-border/50 bg-background px-2.5 py-1">
+              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+              <span
+                className="text-xs font-bold tabular-nums"
+                style={{ fontFamily: 'monospace' }}
+              >
+                {gamingDay}
+              </span>
             </div>
             <Button
               variant="outline"
-              size="icon"
+              size="sm"
+              className="h-7 w-7 p-0"
               onClick={goToNextDay}
               disabled={isToday}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3.5 w-3.5" />
             </Button>
             {!isToday && (
-              <Button variant="outline" size="sm" onClick={goToToday}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs font-semibold uppercase tracking-wider"
+                onClick={goToToday}
+              >
                 Today
               </Button>
             )}
           </div>
         </div>
+        <p className="mt-1 pl-[34px] text-base text-muted-foreground">
+          AML/CTR Transaction Monitoring (31 CFR § 1021.311)
+        </p>
       </div>
+      <Separator className="my-4 flex-none" />
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard
-          title="MTL Thresholds Met"
-          value={stats.mtlThresholdMetCount}
-          description={
-            stats.totalCtr > 0
-              ? `${stats.totalCtr} CTR trigger${stats.totalCtr !== 1 ? 's' : ''}`
-              : 'No CTR triggers'
-          }
-          variant={stats.totalCtr > 0 ? 'danger' : 'default'}
-        />
-        <StatCard
-          title="Patrons Tracked"
-          value={stats.totalPatrons}
-          description="With transactions today"
-        />
-        <StatCard
-          title="Total Volume"
-          value={`$${(stats.totalVolume / 100 / 1000).toFixed(0)}K`}
-          description="Combined in/out (dollars)"
-        />
-        <StatCard
-          title="Gaming Day"
-          value={format(new Date(gamingDay), 'EEE')}
-          description={format(new Date(gamingDay), 'MMM d, yyyy')}
-        />
-      </div>
+      <div className="w-full max-w-4xl space-y-4 overflow-y-auto pe-4 pb-4">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-4 gap-4">
+          <StatCard
+            title="MTL Thresholds Met"
+            value={stats.mtlThresholdMetCount}
+            description={
+              stats.totalCtr > 0
+                ? `${stats.totalCtr} CTR trigger${stats.totalCtr !== 1 ? 's' : ''}`
+                : 'No CTR triggers'
+            }
+            variant={stats.totalCtr > 0 ? 'danger' : 'default'}
+          />
+          <StatCard
+            title="Patrons Tracked"
+            value={stats.totalPatrons}
+            description="With transactions today"
+          />
+          <StatCard
+            title="Total Volume"
+            value={`$${(stats.totalVolume / 100 / 1000).toFixed(0)}K`}
+            description="Combined in/out (dollars)"
+          />
+          <StatCard
+            title="Gaming Day"
+            value={format(new Date(gamingDay), 'EEE')}
+            description={format(new Date(gamingDay), 'MMM d, yyyy')}
+          />
+        </div>
 
-      {/* Main Content - Gaming Day Summary */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Gaming Day Summary</CardTitle>
-          <CardDescription>
-            COMPLIANCE AUTHORITY - Per-patron daily aggregates (click row to
-            view transactions)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <GamingDaySummary
+        {/* Main Content - Gaming Day Summary */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Gaming Day Summary</CardTitle>
+            <CardDescription>
+              COMPLIANCE AUTHORITY - Per-patron daily aggregates (click row to
+              view transactions)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <GamingDaySummary
+              casinoId={casinoId}
+              gamingDay={gamingDay}
+              onPatronClick={
+                staffId && canAddNotes ? handlePatronClick : undefined
+              }
+            />
+          </CardContent>
+        </Card>
+
+        {/* MTL Entry View Modal (read-only) */}
+        {selectedPatron && (
+          <MtlEntryViewModal
+            isOpen={viewModalOpen}
+            onClose={() => {
+              setViewModalOpen(false);
+              setSelectedPatron(null);
+            }}
+            patron={{
+              id: selectedPatron.uuid,
+              firstName: selectedPatron.firstName,
+              lastName: selectedPatron.lastName,
+              dateOfBirth: selectedPatron.dateOfBirth,
+            }}
             casinoId={casinoId}
             gamingDay={gamingDay}
-            onPatronClick={
-              staffId && canAddNotes ? handlePatronClick : undefined
-            }
+            onAdjust={canAddNotes ? handleAdjust : undefined}
           />
-        </CardContent>
-      </Card>
+        )}
 
-      {/* MTL Entry View Modal (read-only) */}
-      {selectedPatron && (
-        <MtlEntryViewModal
-          isOpen={viewModalOpen}
+        {/* Adjustment Modal */}
+        <AdjustmentModal
+          isOpen={adjustmentTarget !== null}
           onClose={() => {
-            setViewModalOpen(false);
-            setSelectedPatron(null);
+            setAdjustmentTarget(null);
+            setAdjustmentError(null);
           }}
-          patron={{
-            id: selectedPatron.uuid,
-            firstName: selectedPatron.firstName,
-            lastName: selectedPatron.lastName,
-            dateOfBirth: selectedPatron.dateOfBirth,
-          }}
-          casinoId={casinoId}
-          gamingDay={gamingDay}
-          onAdjust={canAddNotes ? handleAdjust : undefined}
+          onSubmit={handleAdjustmentSubmit}
+          currentTotal={
+            adjustmentTarget?.amount ? adjustmentTarget.amount / 100 : 0
+          }
+          isPending={createAdjustment.isPending}
+          error={adjustmentError}
         />
-      )}
-
-      {/* Adjustment Modal */}
-      <AdjustmentModal
-        isOpen={adjustmentTarget !== null}
-        onClose={() => {
-          setAdjustmentTarget(null);
-          setAdjustmentError(null);
-        }}
-        onSubmit={handleAdjustmentSubmit}
-        currentTotal={
-          adjustmentTarget?.amount ? adjustmentTarget.amount / 100 : 0
-        }
-        isPending={createAdjustment.isPending}
-        error={adjustmentError}
-      />
+      </div>
     </div>
   );
 }

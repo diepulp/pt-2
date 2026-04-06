@@ -82,7 +82,10 @@ export function FloorActivityRadar({
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+        <p
+          className="text-sm font-bold uppercase tracking-widest text-muted-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
           Floor Activity
         </p>
         <span className="text-sm font-mono tabular-nums text-muted-foreground">

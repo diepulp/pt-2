@@ -188,6 +188,8 @@ export const issueRewardSchema = z.object({
   idempotency_key: uuidSchema('idempotency key'),
   face_value_cents: z.number().int().positive().max(10_000_000).optional(),
   allow_overdraw: z.boolean().optional(),
+  /** PRD-061: Operator note (required when reward has requires_note limit rule) */
+  note: z.string().min(1).max(500).optional(),
 });
 
 export type IssueRewardInput = z.infer<typeof issueRewardSchema>;

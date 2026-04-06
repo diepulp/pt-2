@@ -60,6 +60,13 @@ function mapIssuanceError(error: DomainError): {
     case 'IDEMPOTENCY_CONFLICT':
       // Idempotent replay — return 200 with is_existing: true
       return { code: 'LOYALTY_IDEMPOTENCY_HIT', status: 200 };
+    // PRD-061: Cadence enforcement errors
+    case 'REWARD_LIMIT_REACHED':
+      return { code: 'LOYALTY_LIMIT_REACHED', status: 429 };
+    case 'REWARD_COOLDOWN_ACTIVE':
+      return { code: 'LOYALTY_COOLDOWN_ACTIVE', status: 429 };
+    case 'REWARD_VISIT_REQUIRED':
+      return { code: 'LOYALTY_VISIT_REQUIRED', status: 422 };
     default:
       return { code: 'LOYALTY_FULFILLMENT_ASSEMBLY_FAILED', status: 500 };
   }
@@ -130,6 +137,7 @@ export async function POST(request: NextRequest) {
               idempotencyKey: input.idempotency_key,
               faceValueCents: input.face_value_cents,
               allowOverdraw: input.allow_overdraw,
+              note: input.note,
             },
             casinoId,
           );
@@ -139,6 +147,7 @@ export async function POST(request: NextRequest) {
             rewardId: input.reward_id,
             visitId: input.visit_id,
             idempotencyKey: input.idempotency_key,
+            note: input.note,
           });
         } else {
           throw new DomainError(
@@ -179,6 +188,32 @@ export async function POST(request: NextRequest) {
     // Map DomainError codes to LOYALTY_-prefixed response codes
     if (error instanceof DomainError) {
       const mapped = mapIssuanceError(error);
+
+      // PRD-061: Include Retry-After header for 429 cadence responses
+      if (
+        mapped.status === 429 &&
+        typeof error.details === 'object' &&
+        error.details !== null
+      ) {
+        const details = error.details as Record<string, unknown>;
+        const retryAfter = details.retryAfterSeconds;
+        if (typeof retryAfter === 'number' && retryAfter > 0) {
+          const resp = errorResponse(
+            ctx,
+            new DomainError(error.code, error.message, {
+              httpStatus: 429,
+              retryable: true,
+              details: {
+                responseCode: mapped.code,
+                ...details,
+              },
+            }),
+          );
+          resp.headers.set('Retry-After', String(Math.ceil(retryAfter)));
+          return resp;
+        }
+      }
+
       return errorResponse(
         ctx,
         new DomainError(error.code, error.message, {

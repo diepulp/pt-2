@@ -114,8 +114,13 @@ export function AdjustmentModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Adjust Cash In Total</DialogTitle>
-          <DialogDescription>
+          <DialogTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Adjust Cash In Total
+          </DialogTitle>
+          <DialogDescription className="text-sm">
             Create an adjustment to correct the total. Original transactions are
             preserved for audit compliance.
           </DialogDescription>
@@ -149,10 +154,13 @@ export function AdjustmentModal({
           </div>
 
           {/* Delta Amount */}
-          <div className="space-y-2">
-            <Label htmlFor="deltaAmount">
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="deltaAmount"
+              className="text-sm text-muted-foreground"
+            >
               Adjustment Amount{' '}
-              <span className="text-muted-foreground">
+              <span className="text-xs text-muted-foreground/50">
                 (use - for decrease)
               </span>
             </Label>
@@ -174,13 +182,18 @@ export function AdjustmentModal({
           </div>
 
           {/* Reason Code */}
-          <div className="space-y-2">
-            <Label htmlFor="reasonCode">Reason for Adjustment</Label>
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="reasonCode"
+              className="text-sm text-muted-foreground"
+            >
+              Reason for Adjustment
+            </Label>
             <Select
               value={reasonCode}
               onValueChange={(v) => setReasonCode(v as AdjustmentReasonCode)}
             >
-              <SelectTrigger id="reasonCode">
+              <SelectTrigger id="reasonCode" className="font-mono">
                 <SelectValue placeholder="Select a reason..." />
               </SelectTrigger>
               <SelectContent>
@@ -194,10 +207,12 @@ export function AdjustmentModal({
           </div>
 
           {/* Note */}
-          <div className="space-y-2">
-            <Label htmlFor="note">
+          <div className="space-y-1.5">
+            <Label htmlFor="note" className="text-sm text-muted-foreground">
               Explanation{' '}
-              <span className="text-muted-foreground">(min 10 characters)</span>
+              <span className="text-xs text-muted-foreground/50">
+                (min 10 characters)
+              </span>
             </Label>
             <Textarea
               id="note"
@@ -205,6 +220,7 @@ export function AdjustmentModal({
               onChange={(e) => setNote(e.target.value)}
               placeholder="Explain why this adjustment is needed..."
               rows={3}
+              className="font-mono"
             />
             <div className="flex justify-between text-xs">
               <span
@@ -240,12 +256,19 @@ export function AdjustmentModal({
             <Button
               type="button"
               variant="outline"
+              size="sm"
+              className="h-8 text-xs font-semibold uppercase tracking-wider"
               onClick={onClose}
               disabled={isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={!canSubmit}>
+            <Button
+              type="submit"
+              size="sm"
+              className="h-8 gap-1.5 text-xs font-semibold uppercase tracking-wider"
+              disabled={!canSubmit}
+            >
               {isPending ? 'Creating...' : 'Create Adjustment'}
             </Button>
           </DialogFooter>

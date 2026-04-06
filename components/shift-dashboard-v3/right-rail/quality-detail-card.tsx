@@ -58,8 +58,11 @@ export function QualityDetailCard({
   return (
     <div className="space-y-2 p-3">
       <div className="flex items-center gap-1.5">
-        <ShieldCheckIcon className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        <ShieldCheckIcon className="h-3.5 w-3.5 text-accent" />
+        <span
+          className="text-base font-bold uppercase tracking-widest text-muted-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
           Quality Detail
         </span>
       </div>
@@ -71,9 +74,11 @@ export function QualityDetailCard({
           <TelemetryQualityIndicator
             quality={tier.quality}
             showLabel
-            size="sm"
+            size="md"
           />
-          <span className={`text-xs font-mono tabular-nums ${tier.textColor}`}>
+          <span
+            className={`text-base font-mono tabular-nums ${tier.textColor}`}
+          >
             {tier.count}
           </span>
         </div>

@@ -10,8 +10,10 @@
 
 'use client';
 
+import { BarChart3 } from 'lucide-react';
 import { useState } from 'react';
 
+import { Separator } from '@/components/ui/separator';
 import { useMeasurementSummary } from '@/hooks/measurement';
 import type { MeasurementFilters } from '@/services/measurement';
 
@@ -35,59 +37,68 @@ export function MeasurementReportsDashboard() {
   const currentFilter = { pitId, tableId };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Measurement Reports
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            ADR-039 measurement metrics — theo discrepancy, audit correlation,
-            rating coverage, and loyalty liability
-          </p>
+    <div className="flex flex-1 flex-col">
+      {/* Header — matches SettingsContentSection exemplar */}
+      <div className="flex-none">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <BarChart3 className="h-6 w-6 text-accent" />
+            <h3
+              className="text-xl font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Reports
+            </h3>
+          </div>
+          <MeasurementFilterBar
+            pitId={pitId}
+            tableId={tableId}
+            onPitChange={setPitId}
+            onTableChange={setTableId}
+          />
         </div>
-        <MeasurementFilterBar
-          pitId={pitId}
-          tableId={tableId}
-          onPitChange={setPitId}
-          onTableChange={setTableId}
-        />
+        <p className="mt-1 pl-[34px] text-base text-muted-foreground">
+          Measurement metrics — theo discrepancy, audit correlation, rating
+          coverage, and loyalty liability.
+        </p>
       </div>
+      <Separator className="my-4 flex-none" />
 
       {/* 2×2 metric widget grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* MEAS-001: Theo Discrepancy */}
-        <TheoDiscrepancyWidget
-          data={data?.theoDiscrepancy ?? null}
-          error={data?.errors.theo_discrepancy}
-          currentFilter={currentFilter}
-          isLoading={isLoading}
-        />
+      <div className="w-full overflow-y-auto pe-4 pb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* MEAS-001: Theo Discrepancy */}
+          <TheoDiscrepancyWidget
+            data={data?.theoDiscrepancy ?? null}
+            error={data?.errors.theo_discrepancy}
+            currentFilter={currentFilter}
+            isLoading={isLoading}
+          />
 
-        {/* MEAS-002: Audit Correlation (casino-level only) */}
-        <AuditCorrelationWidget
-          data={data?.auditCorrelation ?? null}
-          error={data?.errors.audit_correlation}
-          currentFilter={currentFilter}
-          isLoading={isLoading}
-        />
+          {/* MEAS-002: Audit Correlation (casino-level only) */}
+          <AuditCorrelationWidget
+            data={data?.auditCorrelation ?? null}
+            error={data?.errors.audit_correlation}
+            currentFilter={currentFilter}
+            isLoading={isLoading}
+          />
 
-        {/* MEAS-003: Rating Coverage */}
-        <RatingCoverageWidget
-          data={data?.ratingCoverage ?? null}
-          error={data?.errors.rating_coverage}
-          currentFilter={currentFilter}
-          isLoading={isLoading}
-        />
+          {/* MEAS-003: Rating Coverage */}
+          <RatingCoverageWidget
+            data={data?.ratingCoverage ?? null}
+            error={data?.errors.rating_coverage}
+            currentFilter={currentFilter}
+            isLoading={isLoading}
+          />
 
-        {/* MEAS-004: Loyalty Liability (casino-level only) */}
-        <LoyaltyLiabilityWidget
-          data={data?.loyaltyLiability ?? null}
-          error={data?.errors.loyalty_liability}
-          currentFilter={currentFilter}
-          isLoading={isLoading}
-        />
+          {/* MEAS-004: Loyalty Liability (casino-level only) */}
+          <LoyaltyLiabilityWidget
+            data={data?.loyaltyLiability ?? null}
+            error={data?.errors.loyalty_liability}
+            currentFilter={currentFilter}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
     </div>
   );

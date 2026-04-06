@@ -1,5 +1,5 @@
-import { AlertsPageClient } from '@/components/admin-alerts/alerts-page-client';
+import { redirect } from 'next/navigation';
 
 export default function AdminAlertsPage() {
-  return <AlertsPageClient />;
+  redirect('/admin/anomaly-detection/alerts');
 }

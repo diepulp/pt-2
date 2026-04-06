@@ -156,7 +156,10 @@ export function CoverageWidget({ casinoId, gamingDay }: CoverageWidgetProps) {
     <Card className="min-h-[120px] border-border/50 bg-card p-4">
       {/* Section header */}
       <div className="mb-3 flex items-center justify-between">
-        <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+        <span
+          className="font-mono text-xs font-bold uppercase tracking-widest text-muted-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
           Rating Coverage
         </span>
         {!isLoading && rows.length > 0 && (
@@ -192,7 +195,10 @@ export function CoverageWidget({ casinoId, gamingDay }: CoverageWidgetProps) {
           {/* Worst tables ranking */}
           {worstTables.length > 0 && (
             <div className="space-y-1.5">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              <span
+                className="font-mono text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                style={{ fontFamily: 'monospace' }}
+              >
                 Untracked — Worst Tables
               </span>
               {worstTables.map((table) => (

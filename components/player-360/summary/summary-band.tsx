@@ -180,11 +180,18 @@ export const SummaryBand = memo(function SummaryBand({
       <SummaryTile
         title="Rewards"
         primaryValue={getEligibilityLabel(data.rewardsEligibility.status)}
-        secondaryValue={data.rewardsEligibility.guidance ?? undefined}
+        secondaryValue={
+          data.rewardsEligibility.pointsAvailable != null
+            ? `${data.rewardsEligibility.pointsAvailable.toLocaleString()} pts`
+            : (data.rewardsEligibility.guidance ?? undefined)
+        }
         microDetail={
-          data.rewardsEligibility.nextEligibleAt
-            ? `Next: ${formatTimeAgo(data.rewardsEligibility.nextEligibleAt)}`
-            : undefined
+          data.rewardsEligibility.pointsAvailable != null &&
+          data.rewardsEligibility.guidance
+            ? data.rewardsEligibility.guidance
+            : data.rewardsEligibility.nextEligibleAt
+              ? `Next: ${formatTimeAgo(data.rewardsEligibility.nextEligibleAt)}`
+              : undefined
         }
         category="loyalty"
         isActive={activeCategory === 'loyalty'}

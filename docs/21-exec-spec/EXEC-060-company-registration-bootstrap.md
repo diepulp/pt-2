@@ -146,7 +146,7 @@ risks:
   - risk: "Abandoned registrations accumulate (pending rows with no bootstrap follow-through)"
     mitigation: "Acceptable — one pending row per user is tolerated (partial unique index enforces the cap). Pending rows are visible to the owning user and affect routing, but cause no operational harm. Future slice can add TTL/cleanup if abandoned registrations become noisy."
   - risk: "Bootstrap retry after consumed registration creates duplicate company"
-    mitigation: "Known limitation. If bootstrap succeeds but the client loses the response, re-calling bootstrap finds a consumed row and fails. Recovery via re-registration is a fresh registration path with duplication — it creates a new company row, not a retry of the original. The prior company row is orphaned. Implementation notes must call this out as not-a-true-retry. Acceptable pre-production."
+    mitigation: "RESOLVED via migration 20260403231430. PRIMARY (WS3): rpc_bootstrap_casino is now idempotent — if user already has an active staff binding, returns existing (casino_id, staff_id, staff_role) with no side effects and no exception. The invariant: retrying the same bootstrap intent returns the same result. SECONDARY (WS2): rpc_register_company now rejects registration with ALREADY_BOOTSTRAPPED (P0003) if user already has an active staff binding — defensive perimeter that prevents orphaned company rows, but is NOT the primary cure."
   - risk: "PRD Appendix C shows timezone default America/New_York but codebase uses America/Los_Angeles"
     mitigation: "Preserve existing codebase default (America/Los_Angeles). Do NOT change rpc_bootstrap_casino default."
 ---
@@ -164,7 +164,7 @@ PRD-060 introduces an explicit company registration step before first-property b
 ## Scope
 
 - **In Scope**: `onboarding_registration` table + RLS, `rpc_register_company` RPC, `rpc_bootstrap_casino` amendment, `services/company/` module, `/register` page, `/start` routing amendment, page guards, integration tests, E2E tests
-- **Out of Scope**: Company edit/settings UI, multi-property flows, abandoned registration cleanup (TTL), bootstrap idempotency on transient failure
+- **Out of Scope**: Company edit/settings UI, multi-property flows, abandoned registration cleanup (TTL)
 
 ## Architecture Context
 
@@ -212,6 +212,7 @@ PRD-060 introduces an explicit company registration step before first-property b
    - `rpc_register_company(p_company_name text, p_legal_name text DEFAULT NULL)` RETURNS TABLE(company_id uuid, registration_id uuid)
    - SECURITY DEFINER, `SET search_path = pg_catalog, public`
    - Auth check: `auth.uid()` must not be NULL (reject anonymous)
+   - **Already-bootstrapped guard** (containment guardrail): check `staff` table for existing active binding with `user_id = auth.uid()`. If found, raise `ALREADY_BOOTSTRAPPED` with ERRCODE `23505` (same CONFLICT family as bootstrap duplicate — message prefix distinguishes). This prevents orphaned company rows from forming; a bootstrapped user has no business creating a new company. This guard is defensive perimeter fencing — the primary idempotency fix lives in WS3.
    - Conflict detection: rely on the partial unique index (`uq_onboarding_registration_pending`) to raise `23505` (unique_violation) naturally on duplicate INSERT — do NOT pre-check and raise separately. The index is the canonical enforcement; the service layer maps 23505 → REGISTRATION_CONFLICT (409).
    - Transaction: INSERT `company` row, INSERT `onboarding_registration` with status='pending'
    - REVOKE ALL from PUBLIC, anon; GRANT EXECUTE to authenticated
@@ -229,6 +230,7 @@ PRD-060 introduces an explicit company registration step before first-property b
 **Acceptance Criteria**:
 - [ ] `rpc_register_company` creates company + pending registration in one transaction
 - [ ] Returns CONFLICT (23505) if pending registration already exists
+- [ ] **Returns ALREADY_BOOTSTRAPPED (23505) if user already has an active staff binding** (containment guardrail)
 - [ ] No `set_rls_context_from_staff()` call (pre-staff RPC)
 - [ ] Security governance tests pass with `rpc_register_company` allowlisted
 - [ ] REVOKE/GRANT correctly restrict to authenticated role only
@@ -240,6 +242,7 @@ PRD-060 introduces an explicit company registration step before first-property b
 **Deliverables**:
 1. Migration file `20260402002623_prd060_amend_rpc_bootstrap_casino.sql`:
    - `CREATE OR REPLACE FUNCTION rpc_bootstrap_casino(...)` — signature UNCHANGED
+   - REPLACE existing CONFLICT exception block with **idempotent return**: if `staff` row exists for `auth.uid()` with `status = 'active'`, return existing `(casino_id, staff_id, staff_role)` and `RETURN` — no creation, no exception. This is the primary fix for bootstrap retry safety: retrying the same bootstrap intent must not explode.
    - REMOVE: synthetic company auto-create (`INSERT INTO company (name) VALUES (p_casino_name)`)
    - ADD: Registration lookup — `SELECT company_id, id INTO v_company_id, v_registration_id FROM onboarding_registration WHERE user_id = auth.uid() AND status = 'pending'`
    - ADD: Fail-closed — `IF v_company_id IS NULL THEN RAISE EXCEPTION 'BOOTSTRAP_NO_REGISTRATION: ...' USING ERRCODE = 'P0002'` (distinct from existing 23505 CONFLICT)
@@ -249,15 +252,35 @@ PRD-060 introduces an explicit company registration step before first-property b
    - COMMENT updated to reflect PRD-060 amendment
    - NOTIFY pgrst, 'reload schema'
 
+**Idempotency contract** (replaces previous CONFLICT exception):
+```sql
+-- IDEMPOTENCY — if already bootstrapped, return existing binding (true retry safety)
+SELECT s.casino_id, s.id, s.role::text
+  INTO v_casino_id, v_staff_id, v_staff_role_text
+FROM public.staff s
+WHERE s.user_id = v_user_id AND s.status = 'active';
+
+IF v_casino_id IS NOT NULL THEN
+  casino_id  := v_casino_id;
+  staff_id   := v_staff_id;
+  staff_role := v_staff_role_text;
+  RETURN NEXT;
+  RETURN;
+END IF;
+```
+The invariant: retrying the same bootstrap intent returns the same result. No new error code, no new state — if the work is done, say so.
+
 **Patterns**:
 - ADR-024: company_id derived from DB state, not parameters
 - ADR-030: Fail-closed posture — raises distinct error if no pending registration
-- Error code: `P0002` — distinct SQLSTATE for missing registration in this RPC path, separate from `23505` (unique_violation, used for STAFF_BINDING_CONFLICT)
+- Error code: `P0002` — distinct SQLSTATE for missing registration in this RPC path
+- Idempotent return on existing staff binding — no exception, no side effects
 
 **Acceptance Criteria**:
 - [ ] Synthetic company auto-create logic completely removed
+- [ ] **Bootstrap with existing active staff binding returns existing `(casino_id, staff_id, staff_role)` — no exception, no creation** (idempotent)
 - [ ] Company resolved from `onboarding_registration` by `auth.uid()`
-- [ ] Bootstrap raises `P0002` when no pending registration exists
+- [ ] Bootstrap raises `P0002` when no pending registration exists (and no existing staff binding)
 - [ ] Registration marked `consumed` with `consumed_at = now()` in same transaction
 - [ ] Existing return signature unchanged (casino_id, staff_id, staff_role)
 - [ ] No partial writes persist on transaction failure
@@ -430,4 +453,5 @@ PRD-060 introduces an explicit company registration step before first-property b
 - [ ] ADR-024 INV-8 compliance: no client-carried `company_id` at any layer
 - [ ] ADR-030 fail-closed: bootstrap raises exception without prior registration
 - [ ] SRM updated to v4.23.0 (CompanyService introduced)
-- [ ] Known limitation documented: re-registration after consumed row is a fresh registration path with duplication, not a true retry
+- [ ] Bootstrap is idempotent: re-calling with existing staff binding returns existing data, no exception (WS3)
+- [ ] Re-registration blocked for bootstrapped users: `rpc_register_company` rejects with ALREADY_BOOTSTRAPPED (WS2)

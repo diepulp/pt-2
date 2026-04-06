@@ -140,17 +140,17 @@ function TimelineEventCard({
       onClick={onClick}
       className={cn(
         'w-full flex items-start gap-3 p-3 text-left',
-        'border-l-2 ml-4',
+        'border-l-2',
         'hover:bg-accent/5 transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
         isHighlighted && 'bg-accent/10',
         style.border,
       )}
     >
-      {/* Category indicator dot */}
+      {/* Category indicator dot — sits on the border-l line */}
       <div
         className={cn(
-          'absolute -left-[5px] w-2 h-2 rounded-full mt-2',
+          'w-2 h-2 rounded-full mt-2 shrink-0 -ml-[0.95rem]',
           style.bg,
           style.border,
           'border',
@@ -320,7 +320,7 @@ export function TimeBlockGroup({
 
       {/* Events */}
       <CollapsibleContent>
-        <div className="relative">
+        <div className="relative pl-4 overflow-hidden">
           {/* Vertical timeline line */}
           <div className="absolute left-[1.125rem] top-0 bottom-0 w-px bg-border/60" />
 

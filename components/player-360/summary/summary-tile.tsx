@@ -113,7 +113,10 @@ export function SummaryTile({
       aria-pressed={isActive}
     >
       {/* Title */}
-      <span className="text-xs font-medium text-muted-foreground mb-1">
+      <span
+        className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-1"
+        style={{ fontFamily: 'monospace' }}
+      >
         {title}
       </span>
 

@@ -51,8 +51,11 @@ export function QualitySummaryCard({
     <Card className="p-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <ShieldCheckIcon className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          <ShieldCheckIcon className="h-3.5 w-3.5 text-accent" />
+          <span
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
             Quality
           </span>
         </div>
@@ -84,7 +87,7 @@ export function QualitySummaryCard({
       </div>
 
       {/* Legend */}
-      <div className="mt-2 flex gap-3 text-[10px] text-muted-foreground">
+      <div className="mt-2 flex gap-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
           {goodCoverageCount}

@@ -1,5 +1,5 @@
-import { ValuationSettingsForm } from '@/components/admin/valuation-settings-form';
+import { redirect } from 'next/navigation';
 
-export default function ValuationPage() {
-  return <ValuationSettingsForm />;
+export default function ValuationRedirect() {
+  redirect('/admin/loyalty/economics');
 }

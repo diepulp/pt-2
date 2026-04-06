@@ -1,58 +1,52 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Clock } from 'lucide-react';
 
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  SettingsSidebarNav,
+  type SettingsNavItem,
+} from '@/components/admin/settings-sidebar-nav';
+import { Separator } from '@/components/ui/separator';
 
-const SETTINGS_TABS = [
+const sidebarNavItems: SettingsNavItem[] = [
   {
-    value: 'thresholds',
-    label: 'Alert Thresholds',
-    href: '/admin/settings/thresholds',
+    title: 'Casino Operations',
+    href: '/admin/settings/operations',
+    icon: Clock,
   },
-  { value: 'shifts', label: 'Shifts', href: '/admin/settings/shifts' },
-  {
-    value: 'valuation',
-    label: 'Valuation',
-    href: '/admin/settings/valuation',
-  },
-] as const;
-
-function getActiveTab(pathname: string): string {
-  if (pathname.includes('/shifts')) return 'shifts';
-  if (pathname.includes('/valuation')) return 'valuation';
-  return 'thresholds';
-}
+];
 
 export default function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const activeTab = getActiveTab(pathname);
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Configure casino alert thresholds and shift boundaries.
+    <div className="space-y-6 overflow-hidden bg-gradient-to-b from-transparent via-accent/5 to-transparent">
+      {/* Page header */}
+      <div className="space-y-1">
+        <h1
+          className="text-base font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Settings
+        </h1>
+        <p className="text-xs text-muted-foreground">
+          Configure casino operations and shift parameters.
         </p>
       </div>
 
-      <Tabs value={activeTab}>
-        <TabsList>
-          {SETTINGS_TABS.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} asChild>
-              <Link href={tab.href}>{tab.label}</Link>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <Separator />
 
-      {children}
+      {/* Two-column: sidebar nav + content */}
+      <div className="flex flex-1 flex-col space-y-6 overflow-hidden lg:flex-row lg:space-x-12 lg:space-y-0">
+        <aside className="top-0 w-full shrink-0 lg:sticky lg:w-52">
+          <SettingsSidebarNav items={sidebarNavItems} />
+        </aside>
+        <div className="flex w-full min-w-0 flex-1 overflow-y-hidden">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }

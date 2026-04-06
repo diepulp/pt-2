@@ -132,7 +132,7 @@ export function Player360Header({ children, className }: Player360HeaderProps) {
       className={cn(
         'sticky top-0 z-30 shrink-0',
         'border-b border-border/40 bg-background/95 backdrop-blur-sm',
-        'supports-[backdrop-filter]:bg-background/60',
+        'supports-backdrop-filter:bg-background/60',
         className,
       )}
     >
@@ -208,7 +208,7 @@ export function Player360Center({ children, className }: Player360CenterProps) {
       aria-label="Player timeline"
       className={cn(
         'flex flex-col flex-1 min-w-0',
-        'overflow-hidden',
+        'overflow-x-hidden overflow-y-auto',
         className,
       )}
     >
@@ -273,7 +273,7 @@ export function Panel({ children, className }: PanelProps) {
       )}
     >
       {/* LED accent strip */}
-      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-transparent via-accent/50 to-transparent" />
       {children}
     </div>
   );
@@ -310,7 +310,12 @@ export function PanelHeader({
             {icon}
           </div>
         )}
-        <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+        <h3
+          className="text-base font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          {title}
+        </h3>
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>

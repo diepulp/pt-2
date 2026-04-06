@@ -218,6 +218,13 @@ export interface UpdateRewardInput {
     tier: TierLevel;
     benefit: EntitlementBenefit;
   }> | null;
+  /** PRD-061: Nested child update: replace-all limits (null = delete all, undefined = skip) */
+  limits?: Array<{
+    maxIssues: number;
+    scope: LimitScope;
+    cooldownMinutes?: number;
+    requiresNote?: boolean;
+  }> | null;
 }
 
 /**

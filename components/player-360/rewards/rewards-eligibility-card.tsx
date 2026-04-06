@@ -92,9 +92,19 @@ export function RewardsEligibilityCard({
       data-testid="rewards-eligibility-card"
     >
       {/* Header */}
-      <div className="flex items-center gap-2 mb-2">
-        <Gift className="h-4 w-4 text-amber-400" />
-        <span className="text-xs font-medium">Rewards Eligibility</span>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Gift className="h-4 w-4 text-amber-400" />
+          <span className="text-xs font-medium">Rewards Eligibility</span>
+        </div>
+        {data.pointsAvailable != null && (
+          <div className="text-right">
+            <span className="text-sm font-mono font-bold tabular-nums text-foreground">
+              {data.pointsAvailable.toLocaleString()}
+            </span>
+            <span className="ml-1 text-[10px] text-muted-foreground">pts</span>
+          </div>
+        )}
       </div>
 
       {/* Status */}

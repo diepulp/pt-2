@@ -91,7 +91,10 @@ export function WinLossTrendChart({
   if (!pitsData || pitsData.length < 2) {
     return (
       <Card className="p-6">
-        <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+        <p
+          className="text-sm font-bold uppercase tracking-widest text-muted-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
           Win/Loss Trend
         </p>
         <div className="mt-4 flex min-h-[250px] items-center justify-center">
@@ -119,7 +122,10 @@ export function WinLossTrendChart({
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+        <p
+          className="text-sm font-bold uppercase tracking-widest text-muted-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
           Win/Loss Trend
         </p>
 

@@ -1,10 +1,4 @@
 {
-  "enabledPlugins": {
-    "typescript-lsp@claude-plugins-official": true,
-    "pyright-lsp@claude-plugins-official": true,
-    "skill-creator@claude-plugins-official": true,
-    "superpowers@superpowers-dev": true
-  },
   "hooks": {
     "UserPromptSubmit": [],
     "PreToolUse": [
@@ -26,5 +20,12 @@
         "hooks": []
       }
     ]
+  },
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true,
+    "superpowers@superpowers-dev": true,
+    "code-review@claude-plugins-official": true
   }
 }

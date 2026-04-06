@@ -51,7 +51,12 @@ export function TelemetryRailPanel({
       {/* Header */}
       <div className="flex items-center gap-2">
         <EyeIcon className="h-3.5 w-3.5 text-amber-500" />
-        <span className="text-xs font-medium">Telemetry</span>
+        <span
+          className="text-xs font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Telemetry
+        </span>
         <Badge
           variant="outline"
           className="border-amber-500/50 text-amber-600 text-[9px] px-1.5 py-0"
@@ -69,24 +74,27 @@ export function TelemetryRailPanel({
           {/* Casino Totals (always shown) */}
           {casinoData && (
             <div className="rounded bg-muted/30 p-2 space-y-1.5">
-              <p className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+              <p
+                className="text-sm font-bold uppercase tracking-widest text-muted-foreground"
+                style={{ fontFamily: 'monospace' }}
+              >
                 Casino Totals
               </p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                  <p className="text-[9px] text-muted-foreground">Estimated</p>
+                  <p className="text-xs text-muted-foreground">Estimated</p>
                   <p className="font-mono tabular-nums text-amber-500">
                     {formatCents(casinoData.cash_out_observed_estimate_total)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-muted-foreground">Confirmed</p>
+                  <p className="text-xs text-muted-foreground">Confirmed</p>
                   <p className="font-mono tabular-nums">
                     {formatCents(casinoData.cash_out_observed_confirmed_total)}
                   </p>
                 </div>
               </div>
-              <p className="text-[9px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {casinoData.cash_out_observation_count} observations
               </p>
             </div>
@@ -98,7 +106,8 @@ export function TelemetryRailPanel({
               <button
                 type="button"
                 onClick={() => setIsPitsExpanded(!isPitsExpanded)}
-                className="flex w-full items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors"
+                className="flex w-full items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+                style={{ fontFamily: 'monospace' }}
               >
                 {isPitsExpanded ? (
                   <ChevronDownIcon className="h-3 w-3" />
@@ -152,7 +161,10 @@ function TopTablesSection({
 
   return (
     <div>
-      <p className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+      <p
+        className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+        style={{ fontFamily: 'monospace' }}
+      >
         Top Tables
       </p>
       <div className="mt-1 space-y-0.5">

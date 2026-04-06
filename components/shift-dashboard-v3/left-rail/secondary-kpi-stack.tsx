@@ -43,7 +43,10 @@ function CompactKpi({
       <div className={`absolute left-0 top-0 h-full w-1 ${accentColor}`} />
       <div className="py-2.5 pl-4 pr-3">
         <div className="flex items-center gap-1">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          <p
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
             {title}
           </p>
           {metricGrade && <MetricGradeBadge grade={metricGrade} size="sm" />}

@@ -81,6 +81,7 @@ const mockSummaryData = {
     nextEligibleAt: null,
     reasonCodes: ['AVAILABLE' as const],
     guidance: null,
+    pointsAvailable: 500,
   },
   gamingDay: '2026-01-26',
 };

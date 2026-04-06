@@ -114,7 +114,7 @@ export const FilterTileStack = memo(function FilterTileStack({
         onClear={() => onCategoryChange(null)}
       />
 
-      <FilterTile
+      {/* <FilterTile
         title="Loyalty"
         value={
           data.rewardsEligibility.status === 'available' ? 'Eligible' : '—'
@@ -123,7 +123,7 @@ export const FilterTileStack = memo(function FilterTileStack({
         isActive={activeCategory === 'loyalty'}
         onFilter={() => onCategoryChange('loyalty')}
         onClear={() => onCategoryChange(null)}
-      />
+      /> */}
     </div>
   );
 });

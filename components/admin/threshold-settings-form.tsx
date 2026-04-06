@@ -1,5 +1,13 @@
 'use client';
 
+import {
+  Activity,
+  AlertCircle,
+  DollarSign,
+  Gift,
+  Lightbulb,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { useState, useTransition } from 'react';
 
 import {
@@ -37,82 +45,144 @@ import {
   type ThresholdField,
 } from './threshold-category-card';
 
+// --- Hint callout ---
+
+function HintCallout({ text }: { text: string }) {
+  return (
+    <div className="flex gap-3 rounded-lg border-l-[3px] border-accent bg-accent/[0.04] p-4">
+      <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+      <p className="text-base leading-relaxed text-muted-foreground">{text}</p>
+    </div>
+  );
+}
+
 // --- Category configuration ---
 
 interface CategoryConfig {
   key: string;
   label: string;
   description: string;
+  hint: string;
   fields: ThresholdField[];
 }
 
-const CATEGORIES: CategoryConfig[] = [
+interface CategoryGroup {
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  categories: CategoryConfig[];
+}
+
+const BASELINE_HINT =
+  'The baseline engine computes what\'s "normal" for each table over a rolling window. Window sets the lookback period (default 7 days). Method selects the statistical algorithm — Median MAD is more robust to outliers than Mean StdDev. Min History prevents false alerts on new tables without enough data.';
+
+const CATEGORY_GROUPS: CategoryGroup[] = [
   {
-    key: 'table_idle',
-    label: 'Table Idle',
-    description: 'Alert when a table is open but has no activity.',
-    fields: [
-      { key: 'warn_minutes', label: 'Warning (minutes)', type: 'int' },
-      { key: 'critical_minutes', label: 'Critical (minutes)', type: 'int' },
+    label: 'Financial Anomalies',
+    description: 'Detect unusual financial patterns in drop and hold metrics.',
+    icon: DollarSign,
+    categories: [
+      {
+        key: 'drop_anomaly',
+        label: 'Drop Anomaly',
+        description: 'Detect unusual drop amounts using MAD analysis.',
+        hint: 'Detects unusual drop amounts (money in the box). MAD Multiplier controls sensitivity — lower values catch more anomalies but produce more noise. Fallback % is used when a table lacks enough history for statistical detection.',
+        fields: [
+          { key: 'mad_multiplier', label: 'MAD Multiplier', type: 'float' },
+          { key: 'fallback_percent', label: 'Fallback (%)', type: 'percent' },
+        ],
+      },
+      {
+        key: 'hold_deviation',
+        label: 'Hold Deviation',
+        description:
+          'Alert on hold percentage deviations. Disabled until trusted.',
+        hint: 'Monitors hold percentage (house win rate). Deviation (pp) sets how many percentage points hold can deviate before alerting. Extreme Low/High define absolute bounds that always trigger regardless of baseline.',
+        fields: [
+          { key: 'deviation_pp', label: 'Deviation (pp)', type: 'float' },
+          { key: 'extreme_low', label: 'Extreme Low', type: 'float' },
+          { key: 'extreme_high', label: 'Extreme High', type: 'float' },
+        ],
+      },
     ],
   },
   {
-    key: 'slip_duration',
-    label: 'Slip Duration',
-    description: 'Alert for long-running rating slips.',
-    fields: [
-      { key: 'warn_hours', label: 'Warning (hours)', type: 'int' },
-      { key: 'critical_hours', label: 'Critical (hours)', type: 'int' },
+    label: 'Operational Alerts',
+    description:
+      'Monitor table activity, session duration, and pause thresholds.',
+    icon: Activity,
+    categories: [
+      {
+        key: 'table_idle',
+        label: 'Table Idle',
+        description: 'Alert when a table is open but has no activity.',
+        hint: 'Alerts when an open table has no active rating slips. Warning fires first as a heads-up; Critical escalates if idle time continues. Helps catch unrated play.',
+        fields: [
+          { key: 'warn_minutes', label: 'Warning (minutes)', type: 'int' },
+          {
+            key: 'critical_minutes',
+            label: 'Critical (minutes)',
+            type: 'int',
+          },
+        ],
+      },
+      {
+        key: 'slip_duration',
+        label: 'Slip Duration',
+        description: 'Alert for long-running rating slips.',
+        hint: 'Flags rating slips open unusually long — may indicate a forgotten slip or an error. Warning and Critical set the two-tier threshold in hours.',
+        fields: [
+          { key: 'warn_hours', label: 'Warning (hours)', type: 'int' },
+          { key: 'critical_hours', label: 'Critical (hours)', type: 'int' },
+        ],
+      },
+      {
+        key: 'pause_duration',
+        label: 'Pause Duration',
+        description: 'Alert when a paused session exceeds threshold.',
+        hint: 'Alerts when a paused player session exceeds the threshold. Long pauses may indicate the player left without being properly closed out.',
+        fields: [
+          { key: 'warn_minutes', label: 'Warning (minutes)', type: 'int' },
+        ],
+      },
     ],
   },
   {
-    key: 'pause_duration',
-    label: 'Pause Duration',
-    description: 'Alert when a paused session exceeds threshold.',
-    fields: [{ key: 'warn_minutes', label: 'Warning (minutes)', type: 'int' }],
-  },
-  {
-    key: 'drop_anomaly',
-    label: 'Drop Anomaly',
-    description: 'Detect unusual drop amounts using MAD analysis.',
-    fields: [
-      { key: 'mad_multiplier', label: 'MAD Multiplier', type: 'float' },
-      { key: 'fallback_percent', label: 'Fallback (%)', type: 'percent' },
-    ],
-  },
-  {
-    key: 'hold_deviation',
-    label: 'Hold Deviation',
-    description: 'Alert on hold percentage deviations. Disabled until trusted.',
-    fields: [
-      { key: 'deviation_pp', label: 'Deviation (pp)', type: 'float' },
-      { key: 'extreme_low', label: 'Extreme Low', type: 'float' },
-      { key: 'extreme_high', label: 'Extreme High', type: 'float' },
-    ],
-  },
-  {
-    key: 'promo_issuance_spike',
-    label: 'Promo Issuance Spike',
-    description: 'Detect unusual spikes in promotional issuance.',
-    fields: [
-      { key: 'mad_multiplier', label: 'MAD Multiplier', type: 'float' },
-      { key: 'fallback_percent', label: 'Fallback (%)', type: 'percent' },
-    ],
-  },
-  {
-    key: 'promo_void_rate',
-    label: 'Promo Void Rate',
-    description: 'Alert when promo void rate exceeds threshold.',
-    fields: [{ key: 'warn_percent', label: 'Warning (%)', type: 'percent' }],
-  },
-  {
-    key: 'outstanding_aging',
-    label: 'Outstanding Aging',
-    description: 'Alert on uncleared promotional items exceeding limits.',
-    fields: [
-      { key: 'max_age_hours', label: 'Max Age (hours)', type: 'int' },
-      { key: 'max_value_dollars', label: 'Max Value ($)', type: 'float' },
-      { key: 'max_coupon_count', label: 'Max Coupon Count', type: 'int' },
+    label: 'Promotional Anomalies',
+    description:
+      'Track promotional issuance patterns, void rates, and outstanding aging.',
+    icon: Gift,
+    categories: [
+      {
+        key: 'promo_issuance_spike',
+        label: 'Promo Issuance Spike',
+        description: 'Detect unusual spikes in promotional issuance.',
+        hint: 'Detects unusual spikes in coupon issuance. Uses the same MAD statistical method as drop anomaly — catches bulk issuance that deviates from the norm.',
+        fields: [
+          { key: 'mad_multiplier', label: 'MAD Multiplier', type: 'float' },
+          { key: 'fallback_percent', label: 'Fallback (%)', type: 'percent' },
+        ],
+      },
+      {
+        key: 'promo_void_rate',
+        label: 'Promo Void Rate',
+        description: 'Alert when promo void rate exceeds threshold.',
+        hint: 'Monitors the percentage of promotional coupons being voided. A high void rate may indicate process issues or potential misuse.',
+        fields: [
+          { key: 'warn_percent', label: 'Warning (%)', type: 'percent' },
+        ],
+      },
+      {
+        key: 'outstanding_aging',
+        label: 'Outstanding Aging',
+        description: 'Alert on uncleared promotional items exceeding limits.',
+        hint: 'Tracks uncleared promotional items. Max Age limits how long a coupon can remain outstanding. Max Value and Max Count set dollar and quantity caps before alerting.',
+        fields: [
+          { key: 'max_age_hours', label: 'Max Age (hours)', type: 'int' },
+          { key: 'max_value_dollars', label: 'Max Value ($)', type: 'float' },
+          { key: 'max_coupon_count', label: 'Max Coupon Count', type: 'int' },
+        ],
+      },
     ],
   },
 ];
@@ -138,24 +208,15 @@ export function ThresholdSettingsForm() {
   const [isPending, startTransition] = useTransition();
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // Server value: the raw alert_thresholds from DB (may be null)
   const serverThresholds = settings?.alert_thresholds ?? null;
 
-  // Display value: parsed with defaults for UI rendering
   const displayDefaults = alertThresholdsSchema.parse(
     serverThresholds ?? {},
   ) as AlertThresholdsDTO;
 
-  // Local form state — initialized from display defaults
   const [formState, setFormState] = useState<AlertThresholdsDTO | null>(null);
-
-  // Active form state: use local edits if user has touched the form, otherwise display defaults
   const currentValues = formState ?? displayDefaults;
 
-  // NIT-006: isDirty compares against server value, not display defaults.
-  // If server is null and form is untouched, not dirty.
-  // If server is null and form has been touched, dirty.
-  // If server has data and form differs, dirty.
   const isDirty = formState !== null && !deepEqual(formState, serverThresholds);
 
   useUnsavedChangesPrompt(isDirty);
@@ -207,7 +268,6 @@ export function ThresholdSettingsForm() {
   function handleSave() {
     if (!formState) return;
 
-    // Merge: preserve unknown keys from server, overlay user changes
     const merged = {
       ...(typeof serverThresholds === 'object' && serverThresholds !== null
         ? serverThresholds
@@ -228,9 +288,39 @@ export function ThresholdSettingsForm() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-32 w-full rounded-lg" />
+      <div className="space-y-6">
+        <Card className="border-2 border-border/50">
+          <CardHeader className="pb-3">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="mt-2 h-3 w-72" />
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-9 w-full rounded-md" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="space-y-4">
+            <Skeleton className="h-4 w-40" />
+            <Card className="border-2 border-border/50">
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {[1, 2].map((j) => (
+                    <Skeleton key={j} className="h-9 w-full rounded-md" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         ))}
       </div>
     );
@@ -238,112 +328,202 @@ export function ThresholdSettingsForm() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-        <p className="text-sm text-destructive">
-          Failed to load settings. Please try again.
-        </p>
-      </div>
+      <Card className="border-2 border-destructive/50 bg-destructive/5">
+        <CardContent className="flex items-center gap-3 py-6">
+          <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
+          <div>
+            <div
+              className="text-base font-bold uppercase tracking-widest text-destructive"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Error Loading Settings
+            </div>
+            <p className="mt-1 text-base text-destructive/80">
+              Failed to load anomaly detection configuration. Please try again.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl space-y-8">
       {/* Last saved */}
       {settings?.updated_at && (
-        <p className="text-xs text-muted-foreground">
+        <p
+          className="text-base text-muted-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
           Last saved: {formatTimestamp(settings.updated_at)}
         </p>
       )}
 
-      {/* Category cards */}
-      <div className="grid gap-4">
-        {CATEGORIES.map((cat) => {
-          const catValues =
-            (
-              currentValues as unknown as Record<
-                string,
-                Record<string, unknown>
-              >
-            )[cat.key] ?? {};
-
-          return (
-            <ThresholdCategoryCard
-              key={cat.key}
-              categoryKey={cat.key}
-              categoryLabel={cat.label}
-              description={cat.description}
-              fields={cat.fields}
-              value={catValues}
-              enabled={catValues.enabled !== false}
-              onChange={handleFieldChange}
-              onToggle={handleToggle}
-            />
-          );
-        })}
+      {/* Baseline configuration */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="h-5 w-5 text-accent" />
+          <h4
+            className="text-lg font-bold uppercase tracking-widest text-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Baseline Engine
+          </h4>
+        </div>
+        <p className="text-base text-muted-foreground">
+          Statistical parameters for anomaly detection algorithms.
+        </p>
+      </div>
+      <div className="space-y-3">
+        <HintCallout text={BASELINE_HINT} />
+        <Card className="border-2 border-accent/30 bg-accent/[0.03]">
+          <CardHeader className="pb-3">
+            <CardTitle
+              className="text-base font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Baseline Configuration
+            </CardTitle>
+            <p className="text-base text-muted-foreground">
+              Window size, method, and minimum history for baseline computation.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="baseline-window-days"
+                  className="text-base text-muted-foreground"
+                >
+                  Window (days)
+                </Label>
+                <Input
+                  id="baseline-window-days"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={currentValues.baseline.window_days}
+                  className="font-mono tabular-nums text-base"
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val)) handleBaselineChange('window_days', val);
+                  }}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="baseline-method"
+                  className="text-base text-muted-foreground"
+                >
+                  Method
+                </Label>
+                <Select
+                  value={currentValues.baseline.method}
+                  onValueChange={(val) => handleBaselineChange('method', val)}
+                >
+                  <SelectTrigger
+                    id="baseline-method"
+                    className="font-mono text-base"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="median_mad">Median MAD</SelectItem>
+                    <SelectItem value="mean_stddev">Mean StdDev</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="baseline-min-history"
+                  className="text-base text-muted-foreground"
+                >
+                  Min History (days)
+                </Label>
+                <Input
+                  id="baseline-min-history"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={currentValues.baseline.min_history_days}
+                  className="font-mono tabular-nums text-base"
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val))
+                      handleBaselineChange('min_history_days', val);
+                  }}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Baseline configuration */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Baseline Configuration</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Statistical parameters for anomaly detection algorithms.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="baseline-window-days">Window (days)</Label>
-              <Input
-                id="baseline-window-days"
-                type="number"
-                min={1}
-                step={1}
-                value={currentValues.baseline.window_days}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  if (!isNaN(val)) handleBaselineChange('window_days', val);
-                }}
-              />
+      {/* Category cards grouped by domain taxonomy */}
+      {CATEGORY_GROUPS.map((group) => {
+        const Icon = group.icon;
+        return (
+          <div key={group.label} className="space-y-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Icon className="h-5 w-5 text-muted-foreground" />
+                <h4
+                  className="text-lg font-bold uppercase tracking-widest text-foreground"
+                  style={{ fontFamily: 'monospace' }}
+                >
+                  {group.label}
+                </h4>
+              </div>
+              <p className="text-base text-muted-foreground pl-6">
+                {group.description}
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="baseline-method">Method</Label>
-              <Select
-                value={currentValues.baseline.method}
-                onValueChange={(val) => handleBaselineChange('method', val)}
-              >
-                <SelectTrigger id="baseline-method">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="median_mad">Median MAD</SelectItem>
-                  <SelectItem value="mean_stddev">Mean StdDev</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="baseline-min-history">Min History (days)</Label>
-              <Input
-                id="baseline-min-history"
-                type="number"
-                min={1}
-                step={1}
-                value={currentValues.baseline.min_history_days}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  if (!isNaN(val))
-                    handleBaselineChange('min_history_days', val);
-                }}
-              />
+            <div className="space-y-4">
+              {group.categories.map((cat) => {
+                const catValues =
+                  (
+                    currentValues as unknown as Record<
+                      string,
+                      Record<string, unknown>
+                    >
+                  )[cat.key] ?? {};
+
+                return (
+                  <div key={cat.key} className="space-y-3">
+                    <HintCallout text={cat.hint} />
+                    <ThresholdCategoryCard
+                      categoryKey={cat.key}
+                      categoryLabel={cat.label}
+                      description={cat.description}
+                      fields={cat.fields}
+                      value={catValues}
+                      enabled={catValues.enabled !== false}
+                      onChange={handleFieldChange}
+                      onToggle={handleToggle}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        );
+      })}
 
-      {/* Save button — only visible when dirty */}
+      {/* Save action bar — only visible when dirty */}
       {isDirty && (
-        <div className="flex justify-end">
-          <Button onClick={() => setShowConfirm(true)} disabled={isPending}>
+        <div className="flex items-center justify-between rounded-lg border-2 border-accent/30 bg-accent/5 px-4 py-3">
+          <p
+            className="text-base font-bold uppercase tracking-widest text-accent"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Unsaved Changes
+          </p>
+          <Button
+            onClick={() => setShowConfirm(true)}
+            disabled={isPending}
+            size="sm"
+            className="h-8 gap-1.5 text-base font-semibold uppercase tracking-wider"
+          >
             {isPending ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>

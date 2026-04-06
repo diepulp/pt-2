@@ -93,7 +93,11 @@ export type LoyaltyErrorCode =
   | 'REWARD_FAMILY_MISMATCH'
   | 'CATALOG_CONFIG_INVALID'
   // Valuation Policy Errors (PRD-053)
-  | 'VALUATION_POLICY_MISSING';
+  | 'VALUATION_POLICY_MISSING'
+  // Cadence Enforcement Errors (PRD-061)
+  | 'REWARD_LIMIT_REACHED'
+  | 'REWARD_COOLDOWN_ACTIVE'
+  | 'REWARD_VISIT_REQUIRED';
 
 export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
   INSUFFICIENT_BALANCE: 'Insufficient loyalty points balance',
@@ -128,6 +132,13 @@ export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
   // Valuation Policy Errors (PRD-053)
   VALUATION_POLICY_MISSING:
     'No active valuation policy found for this casino. Configure a valuation rate before issuing comps.',
+  // Cadence Enforcement Errors (PRD-061)
+  REWARD_LIMIT_REACHED:
+    'Maximum issuances reached for this reward within the configured scope window',
+  REWARD_COOLDOWN_ACTIVE:
+    'Cooldown period has not elapsed since last issuance of this reward',
+  REWARD_VISIT_REQUIRED:
+    'Player must have an active visit for per-visit scoped rewards',
 };
 
 // ============================================================================

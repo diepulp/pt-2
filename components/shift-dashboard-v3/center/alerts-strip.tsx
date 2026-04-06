@@ -193,8 +193,13 @@ export function AlertsStrip({
       <Card className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BellIcon className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Alerts</span>
+            <BellIcon className="h-4 w-4 text-accent" />
+            <span
+              className="text-sm font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Alerts
+            </span>
           </div>
           <span className="text-xs text-muted-foreground">No alerts</span>
         </div>
@@ -211,9 +216,13 @@ export function AlertsStrip({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <AlertTriangleIcon className="h-4 w-4 text-amber-500" />
-          <span className="text-sm font-medium">
-            Alerts <span className="text-muted-foreground">({totalCount})</span>
+          <span
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Alerts
           </span>
+          <span className="text-xs text-muted-foreground">({totalCount})</span>
 
           {criticalCount > 0 && (
             <Badge className="bg-rose-500/10 text-rose-500 text-[10px]">

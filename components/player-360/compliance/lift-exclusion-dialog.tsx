@@ -10,6 +10,7 @@
 
 'use client';
 
+import { MessageSquare } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
@@ -24,6 +25,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { useLiftExclusion } from '@/hooks/player/use-exclusions';
 import { cn } from '@/lib/utils';
@@ -92,8 +94,13 @@ export function LiftExclusionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Lift Exclusion</DialogTitle>
-          <DialogDescription>
+          <DialogTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Lift Exclusion
+          </DialogTitle>
+          <DialogDescription className="text-sm">
             This will deactivate the exclusion. The record is preserved for
             audit.
           </DialogDescription>
@@ -102,7 +109,10 @@ export function LiftExclusionDialog({
         {/* Exclusion summary */}
         <div className="p-3 rounded-lg border border-border/40 bg-card/50 space-y-1.5">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium capitalize">
+            <span
+              className="text-xs font-bold uppercase tracking-widest capitalize"
+              style={{ fontFamily: 'monospace' }}
+            >
               {exclusion.exclusion_type.replace('_', ' ')}
             </span>
             <Badge
@@ -115,7 +125,7 @@ export function LiftExclusionDialog({
               {exclusion.enforcement.replace('_', ' ')}
             </Badge>
           </div>
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-[10px] text-muted-foreground font-mono tabular-nums">
             Since {formatDate(exclusion.effective_from)}
             {exclusion.effective_until && (
               <> &ndash; {formatDate(exclusion.effective_until)}</>
@@ -128,28 +138,52 @@ export function LiftExclusionDialog({
           )}
         </div>
 
+        <Separator />
+
         {/* Lift reason */}
-        <div className="space-y-1.5">
-          <Label htmlFor="lift_reason">Reason for lifting</Label>
-          <Textarea
-            id="lift_reason"
-            placeholder="Why is this exclusion being lifted?"
-            value={liftReason}
-            onChange={(e) => setLiftReason(e.target.value)}
-            rows={3}
-          />
-          {error && <p className="text-xs text-destructive">{error}</p>}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-3.5 w-3.5 text-accent" />
+            <h4
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Lift Reason
+            </h4>
+          </div>
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="lift_reason"
+              className="text-sm text-muted-foreground"
+            >
+              Reason for lifting
+            </Label>
+            <Textarea
+              id="lift_reason"
+              placeholder="Why is this exclusion being lifted?"
+              value={liftReason}
+              onChange={(e) => setLiftReason(e.target.value)}
+              rows={3}
+              className="font-mono"
+            />
+            {error && <p className="text-xs text-destructive">{error}</p>}
+          </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button
             type="button"
             variant="outline"
+            size="sm"
+            className="h-8 text-xs font-semibold uppercase tracking-wider"
             onClick={() => onOpenChange(false)}
+            disabled={isPending}
           >
             Cancel
           </Button>
           <Button
+            size="sm"
+            className="h-8 gap-1.5 text-xs font-semibold uppercase tracking-wider"
             onClick={handleLift}
             disabled={isPending || !liftReason.trim()}
           >

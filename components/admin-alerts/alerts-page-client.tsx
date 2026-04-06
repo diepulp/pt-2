@@ -1,11 +1,12 @@
 'use client';
 
-import { BellIcon, RefreshCw } from 'lucide-react';
+import { Bell, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDismissedAlerts } from '@/hooks/admin/dismissed-alerts-context';
 import { useAdminAlerts } from '@/hooks/admin/use-admin-alerts';
@@ -88,165 +89,180 @@ export function AlertsPageClient() {
   const baselineAlerts = shiftAlertsData?.alerts ?? [];
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <BellIcon className="h-5 w-5 text-amber-500" />
-          <div>
-            <h1 className="text-lg font-semibold">Alerts</h1>
-            <p className="text-xs text-muted-foreground">
-              Cash observation &amp; baseline anomaly alerts
-            </p>
+    <div className="flex flex-1 flex-col">
+      {/* Header — matches SettingsContentSection exemplar */}
+      <div className="flex-none">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Bell className="h-6 w-6 text-accent" />
+            <h3
+              className="text-xl font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Alerts
+            </h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider"
+              onClick={() => persistMutation.mutate(undefined)}
+              disabled={persistMutation.isPending}
+            >
+              <RefreshCw
+                className={`h-3 w-3 ${persistMutation.isPending ? 'animate-spin' : ''}`}
+              />
+              Refresh
+            </Button>
+            <SeverityFilter
+              selected={selectedSeverities}
+              onToggle={handleToggleSeverity}
+            />
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => persistMutation.mutate(undefined)}
-            disabled={persistMutation.isPending}
-          >
-            <RefreshCw
-              className={`mr-1 h-3.5 w-3.5 ${persistMutation.isPending ? 'animate-spin' : ''}`}
-            />
-            Refresh Alerts
-          </Button>
-          <SeverityFilter
-            selected={selectedSeverities}
-            onToggle={handleToggleSeverity}
-          />
-        </div>
+        <p className="mt-1 pl-[34px] text-base text-muted-foreground">
+          Cash observation &amp; baseline anomaly alerts.
+        </p>
       </div>
+      <Separator className="my-4 flex-none" />
 
-      {/* Fallback banner */}
-      <FallbackBanner source={timeWindow.source} />
+      <div className="w-full max-w-4xl space-y-4 overflow-y-auto pe-4 pb-4">
+        {/* Fallback banner */}
+        <FallbackBanner source={timeWindow.source} />
 
-      {/* Persistent Baseline Alerts Section (PRD-056) */}
-      {(isLoadingShiftAlerts || baselineAlerts.length > 0) && (
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Baseline Alerts
-          </h2>
-          {isLoadingShiftAlerts ? (
-            <div className="space-y-2">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <Skeleton key={i} className="h-24 w-full rounded-lg" />
-              ))}
-            </div>
-          ) : (
-            baselineAlerts.map((alert) => (
-              <Card
-                key={alert.id}
-                className={`gap-2 py-3 ${alert.status === 'acknowledged' ? 'opacity-50 border-muted' : 'border-2'}`}
-              >
-                <CardHeader className="gap-1 pb-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-sm">
-                        {alert.tableLabel} &mdash; {alert.metricType}
-                      </CardTitle>
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] border-teal-400 text-teal-600"
-                      >
-                        Baseline
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={
-                          alert.severity === 'high'
-                            ? 'destructive'
-                            : 'secondary'
-                        }
-                        className="text-xs uppercase"
-                      >
-                        {alert.severity}
-                      </Badge>
-                      {alert.status === 'open' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => setAckTarget(alert)}
+        {/* Persistent Baseline Alerts Section (PRD-056) */}
+        {(isLoadingShiftAlerts || baselineAlerts.length > 0) && (
+          <div className="space-y-3">
+            <h2
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Baseline Alerts
+            </h2>
+            {isLoadingShiftAlerts ? (
+              <div className="space-y-2">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <Skeleton key={i} className="h-24 w-full rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              baselineAlerts.map((alert) => (
+                <Card
+                  key={alert.id}
+                  className={`gap-2 py-3 ${alert.status === 'acknowledged' ? 'opacity-50 border-muted' : 'border-2'}`}
+                >
+                  <CardHeader className="gap-1 pb-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-sm">
+                          {alert.tableLabel} &mdash; {alert.metricType}
+                        </CardTitle>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] border-teal-400 text-teal-600"
                         >
-                          Acknowledge
-                        </Button>
-                      )}
+                          Baseline
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={
+                            alert.severity === 'high'
+                              ? 'destructive'
+                              : 'secondary'
+                          }
+                          className="text-xs uppercase"
+                        >
+                          {alert.severity}
+                        </Badge>
+                        {alert.status === 'open' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => setAckTarget(alert)}
+                          >
+                            Acknowledge
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-1">
+                    <p className="text-sm">{alert.message}</p>
+                    {alert.acknowledgment && (
+                      <p className="text-xs text-muted-foreground">
+                        Acknowledged by{' '}
+                        {alert.acknowledgment.acknowledgedByName ?? 'staff'}
+                        {alert.acknowledgment.isFalsePositive &&
+                          ' (false positive)'}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Cash Observation Alerts Section */}
+        {(isLoading || filteredAlerts.length > 0) && (
+          <div className="space-y-3">
+            <h2
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Cash Observation Alerts
+            </h2>
+            {isLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="rounded-lg border p-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-4 w-4 rounded-full" />
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                    <Skeleton className="h-4 w-full mt-3" />
+                    <div className="flex gap-4 mt-3">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-4 w-28" />
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-1">
-                  <p className="text-sm">{alert.message}</p>
-                  {alert.acknowledgment && (
-                    <p className="text-xs text-muted-foreground">
-                      Acknowledged by{' '}
-                      {alert.acknowledgment.acknowledgedByName ?? 'staff'}
-                      {alert.acknowledgment.isFalsePositive &&
-                        ' (false positive)'}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-      )}
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3" role="log" aria-label="Alert list">
+                {filteredAlerts.map((alert) => {
+                  const key = computeAlertKey(alert);
+                  return (
+                    <AlertDetailCard
+                      key={key}
+                      alert={alert}
+                      alertKey={key}
+                      onDismiss={dismissAlert}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
-      {/* Cash Observation Alerts Section */}
-      {(isLoading || filteredAlerts.length > 0) && (
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Cash Observation Alerts
-          </h2>
-          {isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="rounded-lg border p-4">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-4 w-4 rounded-full" />
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                  <Skeleton className="h-4 w-full mt-3" />
-                  <div className="flex gap-4 mt-3">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-4 w-28" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-3" role="log" aria-label="Alert list">
-              {filteredAlerts.map((alert) => {
-                const key = computeAlertKey(alert);
-                return (
-                  <AlertDetailCard
-                    key={key}
-                    alert={alert}
-                    alertKey={key}
-                    onDismiss={dismissAlert}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+        {/* Empty state when both sections are empty */}
+        {!isLoading &&
+          !isLoadingShiftAlerts &&
+          filteredAlerts.length === 0 &&
+          baselineAlerts.length === 0 && <AlertEmptyState />}
 
-      {/* Empty state when both sections are empty */}
-      {!isLoading &&
-        !isLoadingShiftAlerts &&
-        filteredAlerts.length === 0 &&
-        baselineAlerts.length === 0 && <AlertEmptyState />}
-
-      {/* Acknowledge dialog */}
-      <AcknowledgeAlertDialog
-        alert={ackTarget}
-        open={!!ackTarget}
-        onOpenChange={(open) => !open && setAckTarget(null)}
-      />
+        {/* Acknowledge dialog */}
+        <AcknowledgeAlertDialog
+          alert={ackTarget}
+          open={!!ackTarget}
+          onOpenChange={(open) => !open && setAckTarget(null)}
+        />
+      </div>
     </div>
   );
 }

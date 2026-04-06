@@ -71,7 +71,7 @@ export function TimelinePageContent({
 
       {/* Center - Summary, Chart, Timeline */}
       <Player360Center>
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col w-full">
           <SummaryPanel
             playerId={playerId}
             gamingDay={gamingDay}

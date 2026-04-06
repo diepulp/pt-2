@@ -1,5 +1,5 @@
-import { ThresholdSettingsForm } from '@/components/admin/threshold-settings-form';
+import { redirect } from 'next/navigation';
 
-export default function ThresholdsPage() {
-  return <ThresholdSettingsForm />;
+export default function ThresholdsRedirect() {
+  redirect('/admin/anomaly-detection/settings');
 }

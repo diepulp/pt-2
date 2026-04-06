@@ -1,5 +1,5 @@
-import { ShiftSettingsForm } from '@/components/admin/shift-settings-form';
+import { redirect } from 'next/navigation';
 
-export default function ShiftsPage() {
-  return <ShiftSettingsForm />;
+export default function ShiftsRedirect() {
+  redirect('/admin/settings/operations');
 }

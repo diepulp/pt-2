@@ -238,6 +238,198 @@ Skeletons match the component they replace, using `animate-pulse`:
 </span>
 ```
 
+### Form & Dialog Pattern (MANDATORY)
+
+All dialogs and forms follow a codified structure. This is the highest-regression surface in the codebase — dialogs live in per-domain directories so Mode A ("read adjacent components") does not naturally apply. Follow these patterns explicitly.
+
+**Exemplar:** `components/admin/loyalty/promo-programs/create-program-dialog.tsx`
+
+#### Dialog Title
+
+```tsx
+<DialogTitle
+  className="text-sm font-bold uppercase tracking-widest"
+  style={{ fontFamily: 'monospace' }}
+>
+  Create Promo Program
+</DialogTitle>
+<DialogDescription className="text-sm">
+  Describe the dialog's purpose in one sentence.
+</DialogDescription>
+```
+
+#### Section Headers (within forms)
+
+Group related fields under section headers separated by `<Separator />`. Use a reusable `SectionHeader` component:
+
+```tsx
+function SectionHeader({
+  icon: Icon,
+  label,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className="h-3.5 w-3.5 text-accent" />
+      <h4
+        className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+        style={{ fontFamily: 'monospace' }}
+      >
+        {label}
+      </h4>
+    </div>
+  );
+}
+
+// Usage — each logical group gets an icon + label
+<SectionHeader icon={Tag} label="Program Identity" />
+<SectionHeader icon={DollarSign} label="Financials" />
+<SectionHeader icon={CalendarDays} label="Schedule" />
+```
+
+#### Form Structure & Spacing
+
+```tsx
+// Form-level: space-y-5 between section groups
+<form onSubmit={handleSubmit} className="space-y-5">
+  {/* ── Section 1 ── */}
+  <div className="space-y-3">
+    <SectionHeader icon={Tag} label="Identity" />
+    {/* Fields within section: space-y-1.5 */}
+    <div className="space-y-1.5">
+      <Label className="text-sm text-muted-foreground">Name</Label>
+      <Input className="font-mono" />
+    </div>
+  </div>
+
+  <Separator />
+
+  {/* ── Section 2 ── */}
+  <div className="space-y-3">
+    <SectionHeader icon={DollarSign} label="Financials" />
+    <div className="grid grid-cols-2 gap-4">
+      {/* grid for side-by-side fields */}
+    </div>
+  </div>
+</form>
+```
+
+#### Labels
+
+```tsx
+// Standard label — muted text, text-sm
+<Label htmlFor="field-id" className="text-sm text-muted-foreground">
+  Field Name
+</Label>
+
+// Label with optional hint
+<Label htmlFor="field-id" className="text-sm text-muted-foreground">
+  End Date
+  <span className="ml-1 text-xs text-muted-foreground/50">optional</span>
+</Label>
+```
+
+#### Inputs, Selects, Textareas
+
+```tsx
+// Text input — font-mono
+<Input id="name" className="font-mono" />
+
+// Number/date input — font-mono tabular-nums
+<Input id="amount" type="number" className="font-mono tabular-nums" />
+<Input id="start-date" type="date" className="font-mono tabular-nums" />
+
+// Select trigger — font-mono
+<SelectTrigger id="method" className="font-mono">
+  <SelectValue />
+</SelectTrigger>
+
+// Textarea — font-mono
+<Textarea id="reason" className="font-mono" rows={3} />
+```
+
+#### Toggle Cards (radio-style selection)
+
+```tsx
+// Active toggle — accent border + dot with glow
+<button className="rounded-lg border-2 px-3 py-2.5 text-left transition-all
+  border-accent/50 bg-accent/5">
+  <div className="flex items-center gap-2">
+    <div className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_6px_rgba(0,188,212,0.5)]" />
+    <span className="text-xs font-bold uppercase tracking-widest text-accent"
+      style={{ fontFamily: 'monospace' }}>
+      Match Play
+    </span>
+  </div>
+</button>
+
+// Inactive toggle — muted border
+<button className="rounded-lg border-2 px-3 py-2.5 text-left transition-all
+  border-border/50 bg-card/30 hover:border-accent/30">
+  ...
+</button>
+```
+
+#### Error Messages
+
+```tsx
+// Field validation error
+<p className="text-xs text-destructive">{error}</p>
+
+// Submit error banner
+<div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
+  <p className="min-w-0 break-words text-xs text-destructive">{submitError}</p>
+</div>
+```
+
+#### Dialog Footer (Actions)
+
+```tsx
+<DialogFooter className="gap-2 sm:gap-0">
+  <Button
+    type="button"
+    variant="outline"
+    size="sm"
+    className="h-8 text-xs font-semibold uppercase tracking-wider"
+    onClick={onCancel}
+    disabled={isPending}
+  >
+    Cancel
+  </Button>
+  <Button
+    type="submit"
+    size="sm"
+    className="h-8 gap-1.5 text-xs font-semibold uppercase tracking-wider"
+    disabled={isPending}
+  >
+    {isPending ? 'Creating...' : 'Create Program'}
+  </Button>
+</DialogFooter>
+```
+
+### Dashboard Section Heading Pattern (MANDATORY)
+
+Section headings in dashboards and panels (e.g., "Session Summary", "Activity", "Categories") must use the monospace heading treatment with an accent dot and a contextual badge:
+
+```tsx
+// Dashboard section heading — accent dot + monospace title + badge
+<div className="flex items-center gap-2">
+  <div className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_6px_hsl(var(--accent)/0.5)]" />
+  <h2
+    className="text-lg font-bold uppercase tracking-widest"
+    style={{ fontFamily: 'monospace' }}
+  >
+    Session Summary
+  </h2>
+  <span className="rounded-full bg-accent/10 border border-accent/20 px-2 py-0.5 text-xs font-medium uppercase tracking-wider text-accent">
+    Snapshot
+  </span>
+</div>
+```
+
 ---
 
 ## Technical Requirements (Summary)
@@ -406,6 +598,12 @@ PT-2 is a **brutalist-industrial data application** for casino pit operations. T
 | `text-[10px]` for everything | Over-shrinking text | Match adjacent component sizes — typically `text-xs` for labels, `text-sm` for titles |
 | Inline date formatting | Utility not extracted | Follow adjacent component patterns for consistency |
 | Generic loading skeleton | Not matching component shape | Skeleton must mirror the component's Card/header/content structure |
+| Bare `<DialogTitle>` | No form pattern awareness | `text-sm font-bold uppercase tracking-widest` + monospace |
+| Bare `<Label>` without color class | Default Label has no muted color | `className="text-sm text-muted-foreground"` |
+| `<Input>` without `font-mono` | Default Input uses system font | Add `className="font-mono"` (text) or `"font-mono tabular-nums"` (numbers/dates) |
+| Flat form with `space-y-4` | No section grouping | Section headers + `<Separator />` + `space-y-5` between groups |
+| Unsized dialog buttons | Default Button too tall for dialogs | `size="sm" className="h-8 text-xs font-semibold uppercase tracking-wider"` |
+| Dashboard heading as `text-sm font-semibold` | Missing monospace/badge treatment | `text-lg font-bold uppercase tracking-widest` + monospace + accent dot + badge |
 
 ### Decoration Discipline
 
@@ -432,6 +630,7 @@ See `references/QUICK_START.md` for complete workflow:
 
 Before marking implementation complete, verify ALL visual patterns match PT-2 Visual DNA:
 
+**Panels & Cards:**
 - [ ] **Card component used** — Panels/tiles use `<Card>` with `CardHeader`/`CardContent`, not raw `<div>` with padding
 - [ ] **`border-2` on cards** — Thick brutalist border, not thin `border`
 - [ ] **Monospace headers** — Section titles use `font-bold uppercase tracking-widest` + `style={{ fontFamily: 'monospace' }}`
@@ -440,6 +639,22 @@ Before marking implementation complete, verify ALL visual patterns match PT-2 Vi
 - [ ] **Empty states use dashed Card** — `border-2 border-dashed border-border/50` with monospace label
 - [ ] **Buttons follow action pattern** — `text-xs font-semibold uppercase tracking-wider` for action buttons
 - [ ] **Adjacent component consistency** — New component visually matches siblings in the same surface/panel
+
+**Forms & Dialogs (if applicable):**
+- [ ] **Dialog title styled** — `text-sm font-bold uppercase tracking-widest` + monospace (not bare `<DialogTitle>`)
+- [ ] **Section headers present** — Related fields grouped with icon + monospace section header + `<Separator />`
+- [ ] **Labels styled** — `className="text-sm text-muted-foreground"` (not bare `<Label>`)
+- [ ] **Inputs use `font-mono`** — Text: `font-mono`, numbers/dates: `font-mono tabular-nums`
+- [ ] **Select triggers use `font-mono`** — `<SelectTrigger className="font-mono">`
+- [ ] **Textareas use `font-mono`** — `<Textarea className="font-mono" />`
+- [ ] **Form spacing** — `space-y-5` between sections, `space-y-3` within sections, `space-y-1.5` between label and input
+- [ ] **Dialog footer buttons** — `size="sm" className="h-8 text-xs font-semibold uppercase tracking-wider"`
+- [ ] **Optional fields marked** — `<span className="ml-1 text-xs text-muted-foreground/50">optional</span>`
+
+**Dashboard Section Headings (if applicable):**
+- [ ] **Monospace treatment** — `text-lg font-bold uppercase tracking-widest` + monospace
+- [ ] **Accent dot** — `h-1.5 w-1.5 rounded-full bg-accent` with glow shadow
+- [ ] **Contextual badge** — `rounded-full bg-accent/10 border-accent/20` pill label
 
 **If any checkbox fails, fix before committing.**
 
