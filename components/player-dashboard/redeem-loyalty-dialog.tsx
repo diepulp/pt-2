@@ -10,6 +10,7 @@
  * @see PRD-051 §6 / ADR-044 D6
  */
 
+import { Coins, MessageSquare } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
@@ -24,6 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { useRedeemLocally } from '@/hooks/recognition/use-recognition-mutations';
 import type { RecognitionResultDTO } from '@/services/recognition';
 
@@ -78,62 +80,108 @@ function RedeemLoyaltyForm({
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div className="rounded-md bg-muted/30 border border-border/30 p-3">
           <div className="flex items-baseline justify-between">
             <span className="text-sm text-muted-foreground">
               Available here
             </span>
-            <span className="text-lg font-bold tabular-nums">
+            <span
+              className="text-lg font-bold tabular-nums"
+              style={{ fontFamily: 'monospace' }}
+            >
               {redeemableHere.toLocaleString()} pts
             </span>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="redeem-amount">Amount (points)</Label>
-          <Input
-            id="redeem-amount"
-            type="number"
-            min="1"
-            max={redeemableHere}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="Enter points to redeem"
-            disabled={isPending}
-          />
-          {amount && !isValidAmount && (
-            <p className="text-xs text-destructive">
-              {parsedAmount > redeemableHere
-                ? `Maximum redeemable: ${redeemableHere.toLocaleString()} pts`
-                : 'Enter a valid positive number'}
-            </p>
-          )}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Coins className="h-3.5 w-3.5 text-accent" />
+            <h4
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Redemption
+            </h4>
+          </div>
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="redeem-amount"
+              className="text-sm text-muted-foreground"
+            >
+              Amount (points)
+            </Label>
+            <Input
+              id="redeem-amount"
+              type="number"
+              min="1"
+              max={redeemableHere}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="Enter points to redeem"
+              disabled={isPending}
+              className="font-mono tabular-nums"
+            />
+            {amount && !isValidAmount && (
+              <p className="text-xs text-destructive">
+                {parsedAmount > redeemableHere
+                  ? `Maximum redeemable: ${redeemableHere.toLocaleString()} pts`
+                  : 'Enter a valid positive number'}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="redeem-reason">Reason</Label>
-          <Input
-            id="redeem-reason"
-            type="text"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Comp dinner, promotional reward, etc."
-            maxLength={500}
-            disabled={isPending}
-          />
+        <Separator />
+
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-3.5 w-3.5 text-accent" />
+            <h4
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Details
+            </h4>
+          </div>
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="redeem-reason"
+              className="text-sm text-muted-foreground"
+            >
+              Reason
+            </Label>
+            <Input
+              id="redeem-reason"
+              type="text"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Comp dinner, promotional reward, etc."
+              maxLength={500}
+              disabled={isPending}
+              className="font-mono"
+            />
+          </div>
         </div>
       </div>
 
-      <DialogFooter>
+      <DialogFooter className="gap-2 sm:gap-0">
         <Button
           variant="outline"
+          size="sm"
+          className="h-8 text-xs font-semibold uppercase tracking-wider"
           onClick={() => onOpenChange(false)}
           disabled={isPending}
         >
           Cancel
         </Button>
-        <Button onClick={handleRedeem} disabled={!isValid || isPending}>
+        <Button
+          size="sm"
+          className="h-8 gap-1.5 text-xs font-semibold uppercase tracking-wider"
+          onClick={handleRedeem}
+          disabled={!isValid || isPending}
+        >
           {isPending
             ? 'Redeeming...'
             : `Redeem ${parsedAmount > 0 ? parsedAmount.toLocaleString() : '0'} pts`}
@@ -152,8 +200,13 @@ export function RedeemLoyaltyDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Redeem Loyalty Points</DialogTitle>
-          <DialogDescription>
+          <DialogTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Redeem Loyalty Points
+          </DialogTitle>
+          <DialogDescription className="text-sm">
             Redeem points for{' '}
             <span className="font-medium text-foreground">
               {player.fullName}

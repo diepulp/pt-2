@@ -652,13 +652,40 @@ test('user can sign in', async ({ page }) => {
 
 ---
 
-## 9) Documentation Glue
+## 9) Visual Styling Governance
+
+**Authoritative Reference:** `.claude/skills/frontend-design-pt-2/SKILL.md` → "PT-2 Visual DNA" section.
+
+This standard governs technical architecture (React 19, state, TanStack, Tailwind). Visual styling patterns — typography, spacing, Card usage, form/dialog structure — are governed by the frontend-design skill's Visual DNA section. All frontend work MUST pass both this standard's PR checklist AND the skill's Design Consistency Checklist.
+
+### Surface Pattern Families
+
+PT-2 has five codified pattern families. Each new component must identify which family it belongs to and follow the corresponding exemplars:
+
+| Family | Exemplar File | Key Tokens |
+|--------|--------------|------------|
+| **Cards & Panels** | `components/admin/threshold-category-card.tsx` | `border-2`, monospace `CardTitle`, `bg-accent/[0.03]` |
+| **Status Rows** | Slip cards in `components/dashboard/` | `border-2 p-3`, status dot with glow, hover transitions |
+| **Forms & Dialogs** | `components/admin/loyalty/promo-programs/create-program-dialog.tsx` | `SectionHeader`, `font-mono` inputs, `Separator` between groups, `h-8` buttons |
+| **Dashboard Headings** | `components/admin/settings-content-section.tsx` | `text-xl font-bold uppercase tracking-widest` monospace, icon, accent dot + badge |
+| **Badges & Tags** | `components/admin/threshold-settings-form.tsx` | 10%/30% opacity convention, `text-xs uppercase` |
+
+### Why Forms Regress Most
+
+Forms/Dialogs are scattered across per-domain component directories (`compliance/`, `loyalty/`, `player-dashboard/`, `cashier/`). Unlike panels and cards which live in shared directories where Mode A adjacency discovery works, dialogs have no "adjacent sibling" to match. This makes them the highest-regression surface.
+
+**Mitigation:** The frontend-design skill's Design Consistency Checklist includes a "Forms & Dialogs" section with 9 explicit checks. All dialog/form work must pass these checks before merge.
+
+---
+
+## 10) Documentation Glue
 
 This standard cites and defers to:
 
 - **ADR-003:** Authoritative state strategy (TanStack Query + Zustand)
 - **ADR-004:** Styling architecture (Tailwind CSS v4)
 - **SERVER_ACTIONS_ARCHITECTURE.md:** Server Actions implementation pattern (docs/patterns/)
+- **Visual DNA / Design Consistency:** `.claude/skills/frontend-design-pt-2/SKILL.md` → "PT-2 Visual DNA" section (cards, forms, dialogs, badges, typography)
 - **Next.js Docs:** App Router fetching & caching ([Next.js Docs](https://nextjs.org/docs))
 - **React 19 Docs:** Compiler, Server Actions, new hooks ([React Docs](https://react.dev))
 - **Tailwind v4 Docs:** Configuration, theming, utilities ([Tailwind CSS](https://tailwindcss.com))
@@ -707,6 +734,13 @@ This standard cites and defers to:
 - [ ] Prefetch on hover for detail views
 - [ ] Optimistic updates ONLY for idempotent operations
 - [ ] Real-time updates reconcile with TanStack Query cache (no direct state mutations)
+
+**Visual Styling Checklist (see SKILL.md Visual DNA):**
+- [ ] Monospace headers use `font-bold uppercase tracking-widest` + `fontFamily: 'monospace'`
+- [ ] Cards use `border-2` (not thin `border`)
+- [ ] Dialogs: title styled, section headers present, labels `text-sm text-muted-foreground`, inputs `font-mono`
+- [ ] Buttons follow action pattern: `text-xs font-semibold uppercase tracking-wider`
+- [ ] Badges follow 10%/30% opacity convention
 
 **Quality Checklist:**
 - [ ] Lint/Type/Tests green; no unreviewed rule disables

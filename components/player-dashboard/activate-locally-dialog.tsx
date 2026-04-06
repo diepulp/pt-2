@@ -61,8 +61,13 @@ export function ActivateLocallyDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Activate Player Locally</DialogTitle>
-          <DialogDescription>
+          <DialogTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Activate Player Locally
+          </DialogTitle>
+          <DialogDescription className="text-sm">
             <span className="font-medium text-foreground">
               {player.fullName}
             </span>{' '}
@@ -74,37 +79,46 @@ export function ActivateLocallyDialog({
 
         <div className="rounded-md bg-muted/30 border border-border/30 p-3 text-sm space-y-1">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Player</span>
-            <span className="font-medium">{player.fullName}</span>
+            <span className="text-sm text-muted-foreground">Player</span>
+            <span className="font-medium font-mono">{player.fullName}</span>
           </div>
           {player.birthDate && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">DOB</span>
-              <span className="font-medium">{player.birthDate}</span>
+              <span className="text-sm text-muted-foreground">DOB</span>
+              <span className="font-medium font-mono tabular-nums">
+                {player.birthDate}
+              </span>
             </div>
           )}
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Origin</span>
-            <span className="font-medium">{originCasino}</span>
+            <span className="text-sm text-muted-foreground">Origin</span>
+            <span className="font-medium font-mono">{originCasino}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Enrolled at</span>
-            <span className="font-medium">
+            <span className="text-sm text-muted-foreground">Enrolled at</span>
+            <span className="font-medium font-mono">
               {player.enrolledCasinos.length}{' '}
               {player.enrolledCasinos.length === 1 ? 'property' : 'properties'}
             </span>
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button
             variant="outline"
+            size="sm"
+            className="h-8 text-xs font-semibold uppercase tracking-wider"
             onClick={() => onOpenChange(false)}
             disabled={isPending}
           >
             Cancel
           </Button>
-          <Button onClick={handleActivate} disabled={isPending}>
+          <Button
+            size="sm"
+            className="h-8 gap-1.5 text-xs font-semibold uppercase tracking-wider"
+            onClick={handleActivate}
+            disabled={isPending}
+          >
             {isPending ? 'Activating...' : 'Activate at This Property'}
           </Button>
         </DialogFooter>

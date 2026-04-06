@@ -121,9 +121,18 @@ export function CategoryIndicatorBar({
         className,
       )}
     >
-      <span className="text-xs font-medium text-muted-foreground mr-2">
-        Categories:
-      </span>
+      <div className="flex items-center gap-2 mr-2">
+        <div className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_6px_hsl(var(--accent)/0.5)]" />
+        <span
+          className="text-base font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Categories
+        </span>
+        <span className="rounded-full bg-accent/10 border border-accent/20 px-2 py-0.5 text-xs font-medium uppercase tracking-wider text-accent">
+          Filter
+        </span>
+      </div>
 
       <div className="flex items-center gap-1 flex-wrap">
         {categoryData.map((indicator) => {

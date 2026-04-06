@@ -310,7 +310,12 @@ export function PanelHeader({
             {icon}
           </div>
         )}
-        <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+        <h3
+          className="text-base font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          {title}
+        </h3>
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>

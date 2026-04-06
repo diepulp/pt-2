@@ -188,7 +188,7 @@ describe('SummaryBand', () => {
       expect(screen.getByText('2h')).toBeInTheDocument();
     });
 
-    it('renders Rewards eligibility status', () => {
+    it('renders Rewards eligibility status with points', () => {
       const data = createMockSummary({
         rewardsEligibility: {
           status: 'available',
@@ -209,6 +209,30 @@ describe('SummaryBand', () => {
 
       expect(screen.getByText('Rewards')).toBeInTheDocument();
       expect(screen.getByText('Eligible')).toBeInTheDocument();
+      expect(screen.getByText('500 pts')).toBeInTheDocument();
+    });
+
+    it('renders Rewards with guidance when no points available', () => {
+      const data = createMockSummary({
+        rewardsEligibility: {
+          status: 'not_available',
+          nextEligibleAt: null,
+          reasonCodes: ['COOLDOWN_ACTIVE'],
+          guidance: 'Wait 30 minutes',
+          pointsAvailable: null,
+        },
+      });
+
+      render(
+        <SummaryBand
+          data={data}
+          activeCategory={null}
+          onCategoryChange={jest.fn()}
+        />,
+      );
+
+      expect(screen.getByText('Not Eligible')).toBeInTheDocument();
+      expect(screen.getByText('Wait 30 minutes')).toBeInTheDocument();
     });
 
     it('renders Rewards as Not Eligible when not_available', () => {

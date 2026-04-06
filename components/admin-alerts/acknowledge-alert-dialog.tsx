@@ -57,42 +57,61 @@ export function AcknowledgeAlertDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-mono text-sm">
+          <DialogTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
             Acknowledge Alert
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             {alert.tableLabel} &mdash; {alert.metricType}
           </DialogDescription>
         </DialogHeader>
 
         <form action={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes (optional)</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="notes" className="text-sm text-muted-foreground">
+              Notes
+              <span className="ml-1 text-xs text-muted-foreground/50">
+                optional
+              </span>
+            </Label>
             <Textarea
               id="notes"
               name="notes"
               placeholder="Add context or observations..."
               maxLength={1000}
               rows={3}
+              className="font-mono"
             />
           </div>
 
           <div className="flex items-center space-x-2">
             <Checkbox id="is_false_positive" name="is_false_positive" />
-            <Label htmlFor="is_false_positive" className="text-sm">
+            <Label
+              htmlFor="is_false_positive"
+              className="text-sm text-muted-foreground"
+            >
               Mark as false positive
             </Label>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               type="button"
               variant="outline"
+              size="sm"
+              className="h-8 text-xs font-semibold uppercase tracking-wider"
               onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button
+              type="submit"
+              size="sm"
+              className="h-8 gap-1.5 text-xs font-semibold uppercase tracking-wider"
+              disabled={isPending}
+            >
               {isPending ? 'Acknowledging...' : 'Acknowledge'}
             </Button>
           </DialogFooter>
