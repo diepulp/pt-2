@@ -60,6 +60,7 @@ next-env.d.ts
 
 # worktrees
 trees/
+.claude/worktrees/
 certificates
 
 # Agentic telemetry

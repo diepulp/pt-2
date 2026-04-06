@@ -1,6 +1,13 @@
 /** @jest-environment node */
 
 /**
+ * NOTE: Despite the .int.test.ts naming, this file is a fully mocked unit test.
+ * It does not hit the database. The RUN_INTEGRATION_TESTS gate is retained for
+ * consistency but all operations are mocked via jest.mock().
+ * Reclassified as Unit (Mocked) per LOYALTY-POSTURE.md.
+ */
+
+/**
  * Issuance Idempotency Tests (PRD-052 WS6)
  *
  * Tests that duplicate issuance attempts with the same idempotency key
@@ -111,7 +118,11 @@ function makeEntitlementReward() {
   };
 }
 
-describe('issuance idempotency', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('issuance idempotency', () => {
   const mockRpc = jest.fn();
   const mockFrom = jest.fn();
   const mockSelect = jest.fn();

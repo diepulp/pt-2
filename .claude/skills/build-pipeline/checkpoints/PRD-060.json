@@ -1,0 +1,68 @@
+{
+  "prd": "PRD-060",
+  "prd_title": "Company Registration and First Property Bootstrap",
+  "current_phase": 5,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": ["supabase/migrations/20260402002621_prd060_onboarding_registration.sql"],
+    "WS2": [
+      "supabase/migrations/20260402002622_prd060_rpc_register_company.sql",
+      "supabase/tests/security/04_public_execute_check.sql",
+      "supabase/tests/security/06_context_first_line_check.sql",
+      "supabase/tests/security/06_context_first_line_check.sh"
+    ],
+    "WS3": ["supabase/migrations/20260402002623_prd060_amend_rpc_bootstrap_casino.sql"],
+    "WS4": [
+      "services/company/dtos.ts",
+      "services/company/schemas.ts",
+      "services/company/crud.ts",
+      "services/company/keys.ts",
+      "services/company/http.ts",
+      "services/company/index.ts",
+      "lib/errors/domain-errors.ts"
+    ],
+    "WS5": [
+      "app/(onboarding)/register/page.tsx",
+      "app/(onboarding)/register/_actions.ts",
+      "components/onboarding/register-form.tsx",
+      "app/(public)/start/page.tsx",
+      "app/(onboarding)/bootstrap/page.tsx"
+    ],
+    "WS6": [
+      "services/company/__tests__/rpc-contract.int.test.ts",
+      "services/company/__tests__/crud.int.test.ts"
+    ],
+    "WS7": [
+      "e2e/workflows/company-registration.spec.ts",
+      "e2e/fixtures/company-registration-fixtures.ts"
+    ]
+  },
+  "gates_passed": ["schema-validation", "type-check", "lint"],
+  "gates_pending": ["test-pass"],
+  "timestamp": "2026-04-02T00:26:00Z",
+  "completed_at": "2026-04-02T01:15:00Z",
+  "gov010_check": "passed",
+  "write_path_classification": "detected",
+  "adversarial_review": {
+    "magnitude_score": 14,
+    "magnitude_tier": "skipped",
+    "magnitude_signals": [
+      {"signal": "cross_context_bounded_contexts", "points": 3, "evidence": "CompanyService (new) + CasinoService (amended)"},
+      {"signal": "migration_with_rls", "points": 2, "evidence": "WS1 creates onboarding_registration with RLS"},
+      {"signal": "security_definer_present", "points": 2, "evidence": "WS2 rpc_register_company, WS3 rpc_bootstrap_casino amendment"},
+      {"signal": "adr_refs_gte_2", "points": 2, "evidence": "ADR-024, ADR-018, ADR-030, ADR-043 (4 ADRs)"},
+      {"signal": "workstream_count_gt_4", "points": 2, "evidence": "7 workstreams"},
+      {"signal": "execution_phases_gt_2", "points": 1, "evidence": "5 phases"},
+      {"signal": "dependency_depth_gt_3", "points": 1, "evidence": "WS1->WS2->WS4->WS5->WS7 depth 4"},
+      {"signal": "executor_diversity_gt_3", "points": 1, "evidence": "4 distinct skills"}
+    ],
+    "verdict": "skipped",
+    "tier_override": "user_approved_direct_execution",
+    "p0_count": 0,
+    "p1_count": 0,
+    "attempt": 0
+  }
+}

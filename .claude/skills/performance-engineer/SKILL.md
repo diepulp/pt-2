@@ -4,72 +4,88 @@ description: >
   PT-2 performance engineering specialist for Supabase (Postgres/RLS/RPC) and API endpoints.
   This skill should be used when analyzing query performance, investigating slow queries,
   setting SLO targets, building benchmark harnesses, creating CI performance gates,
-  investigating latency regressions, or diagnosing performance issues. Also triggers on
-  "why is this slow", "optimize query", "performance regression", "p95 latency", or
-  "EXPLAIN ANALYZE". Produces EXPLAIN ANALYZE reports, index recommendations, and
-  performance dashboards. Follows OPS/SRE standards per OBSERVABILITY_SPEC.md §3.
+  investigating latency regressions, diagnosing performance issues, running Supabase
+  advisors for performance linting, fixing InitPlan re-evaluation in RLS policies,
+  auditing unused or missing indexes, or optimizing connection pooling. Also triggers on
+  "why is this slow", "optimize query", "performance regression", "p95 latency",
+  "EXPLAIN ANALYZE", "unused indexes", "unindexed foreign keys", or "RLS overhead".
+  Produces EXPLAIN ANALYZE reports, index recommendations, and performance dashboards.
 ---
 
 # Performance Engineer
 
-PT-2 performance engineering specialist owning latency budgets, regression prevention, and query optimization for Supabase (Postgres/RLS/RPC) and Next.js API endpoints.
+PT-2 performance engineering specialist owning latency budgets, regression prevention, and query optimization for Supabase (Postgres 17 / RLS / RPC) and Next.js API endpoints.
 
 ## Quick Reference
 
 | Task | Command |
 |------|---------|
 | Analyze slow query | `scripts/query_analyzer.py --sql "SELECT..." --conn $DATABASE_URL` |
-| Monitor DB queries | `scripts/query_monitor.py --database-url $DATABASE_URL --top 20`|
-| Analyze RLS overhead | `scripts/query_monitor.py --database-url $DATABASE_URL --rls-overhead`|
-| Check pool stats | `scripts/query_monitor.py --database-url $DATABASE_URL --pool-stats`|
+| Monitor DB queries | `scripts/query_monitor.py --database-url $DATABASE_URL --top 20` |
+| Analyze RLS overhead | `scripts/query_monitor.py --database-url $DATABASE_URL --rls-overhead` |
+| Check pool stats | `scripts/query_monitor.py --database-url $DATABASE_URL --pool-stats` |
 | Run benchmark suite | `scripts/benchmark.py --suite api --iterations 100 --correlation-id pr-123` |
 | Check SLO compliance | `scripts/benchmark.py --suite api --slo-file .perf/slos.json` |
 | CI regression gate | `scripts/benchmark.py --threshold 10 --baseline .perf/baseline.json --fail-on-slo` |
-| Generate report | `scripts/benchmark.py --report --output perf-report.md --dump-audit audit.json` |
 
-## When to Invoke This Skill
+## Supabase MCP — First-Line Diagnostics
 
-- Investigating slow API endpoints or database queries (OBSERVABILITY_SPEC §3.1)
-- Setting up SLO targets for new endpoints (SRM §1576)
-- Creating benchmark baselines before optimization
-- Adding CI gates to prevent performance regressions
-- Analyzing EXPLAIN plans and recommending indexes
-- Auditing RLS policy overhead
-- Reviewing connection pooling behavior
-- Verifying compliance with p95/p99 SLOs per OBSERVABILITY_SPEC
-- Associating performance tests with correlation-IDs for tracing
-- Ensuring SLO budget management per error budget policy
+When the Supabase MCP is authenticated, **start every investigation here**:
+
+```
+get_advisors(project_id, type="performance")  → InitPlan issues, unused indexes, unindexed FKs, duplicate indexes
+get_advisors(project_id, type="security")     → mutable search_path, exposed materialized views
+execute_sql(project_id, query)                → run EXPLAIN ANALYZE against remote DB
+```
+
+Run `get_advisors` after any migration or schema change. The performance advisor catches:
+- **auth_rls_initplan** (WARN) — `current_setting()` re-evaluated per-row instead of cached
+- **unindexed_foreign_keys** (INFO) — missing indexes on FK columns causing slow JOINs
+- **unused_index** (INFO) — indexes consuming write overhead with no read benefit
+- **duplicate_index** (WARN) — identical indexes wasting storage
+- **multiple_permissive_policies** (WARN) — OR'd policies widening access + adding planning cost
+
+## RLS Context in PT-2 (ADR-015 / ADR-024)
+
+PT-2 uses `app.casino_id` (not `app.current_casino_id`) for casino-scoped RLS. Context is set via:
+
+- **`set_rls_context_from_staff()`** — derives context from JWT `staff_id` claim + staff table lookup (ADR-024)
+- **`SET LOCAL`** — sets `app.actor_id`, `app.casino_id`, `app.staff_role` (pooler-safe)
+- **Pattern C hybrid** — `COALESCE(current_setting('app.casino_id'), jwt.app_metadata.casino_id)`
+
+The **InitPlan subselect pattern** is critical for performance:
+
+```sql
+-- BAD: re-evaluated per-row (57 policies have this issue as of 2026-04-02)
+USING (casino_id = current_setting('app.casino_id', true)::uuid)
+
+-- GOOD: cached as InitPlan, evaluated once per query
+USING (casino_id = (SELECT current_setting('app.casino_id', true)::uuid))
+```
+
+This is the single highest-impact performance fix across the database — it affects every query on 27+ tables.
+
+---
 
 ## Core Workflows
 
 ### 1. Query Performance Investigation
 
-To investigate a slow query or endpoint:
-
-1. **Capture baseline metrics** using the benchmark harness
-2. **Run EXPLAIN ANALYZE** on suspected slow queries
-3. **Analyze the query plan** for sequential scans, high row estimates, or nested loops
-4. **Check RLS overhead** by comparing with/without policy enforcement
-5. **Recommend fixes** (indexes, query rewrites, caching)
+1. **Run Supabase MCP `get_advisors`** to catch systemic issues first
+2. **Capture baseline metrics** using the benchmark harness
+3. **Run EXPLAIN ANALYZE** on suspected slow queries
+4. **Analyze the query plan** for sequential scans, high row estimates, or nested loops
+5. **Check RLS overhead** by comparing with/without policy enforcement
+6. **Recommend fixes** (indexes, query rewrites, InitPlan wrapping, caching)
 
 ```bash
-# Analyze a specific query
 python scripts/query_analyzer.py \
   --sql "SELECT * FROM visits WHERE player_id = $1" \
   --params '["uuid-here"]' \
   --conn "$DATABASE_URL"
 ```
 
-**Output includes:**
-- Execution time breakdown (planning vs execution)
-- Row estimates vs actual rows
-- Index usage and sequential scan detection
-- Buffer cache hit ratio
-- Recommendations based on plan analysis
-
 ### 2. Database Query Monitoring (pg_stat_statements)
-
-Continuous monitoring of query performance using pg_stat_statements (OBSERVABILITY_SPEC §3.8):
 
 ```bash
 # Top 20 queries by execution time
@@ -81,133 +97,32 @@ python scripts/query_monitor.py --database-url $DATABASE_URL --top 10 --rls-over
 # Check connection pool utilization
 python scripts/query_monitor.py --database-url $DATABASE_URL --pool-stats
 
-# Generate audit event for performance review
-python scripts/query_monitor.py --database-url $DATABASE_URL --top 5 --audit audit.json
+# Export analysis for dashboard integration
+python scripts/query_monitor.py --database-url $DATABASE_URL \
+  --top 50 --csv-output monthly-queries.csv --json-output trends.json
 ```
 
 **Key Metrics Tracked:**
 - Mean execution time and deviation
 - Cache hit ratio and buffer efficiency
 - Calls per query pattern
-- Cost per row analysis
-- RLS policy overhead assessment (OBSERVABILITY_SPEC §3.119)
-- Connection pool utilization (OBSERVABILITY_SPEC §3.105)
+- RLS policy overhead assessment
+- Connection pool utilization
 
-**Integration with SLOs:**
-- Flag queries exceeding 5ms for PK lookups
-- Alert on range scans >25ms
-- Track queries with <90% cache hit ratio
-
-### 3. SLO Compliance Checking
-
-To verify endpoints meet operational SLOs defined in OBSERVABILITY_SPEC §3:
+### 3. SLO Compliance & Benchmarking
 
 ```bash
-# Run with SLO targets from file
-python scripts/benchmark.py --suite api --slo-file .perf/slos.json
-
-# Fail build on SLO violations (recommended for CI)
-python scripts/benchmark.py --suite api --fail-on-slo --baseline .perf/baseline.json
-
-# Custom SLO file format
-```json
-{
-  "slos": [
-    {
-      "service": "RatingSlip",
-      "operation": "UpdateTelemetry",
-      "p95_target_ms": 80,
-      "metric_name": "ratingslip_update_latency_p95",
-      "alert_threshold_ms": 100
-    }
-  ]
-}
-```
-
-**SLO Status Tracking:**
-- Green: p95 within target (✅ All OK)
-- Warning: p95 exceeds target (+20-50%)
-- Critical: p95 significantly exceeds target (+50%+)
-- Automatic audit emission with correlation ID for traceability
-
-### 4. Database Monitoring Suite
-
-Comprehensive DB performance analysis with pg_stat_statements integration (OBSERVABILITY_SPEC §3)
-
-```bash
-# Analyze top queries by execution time
-python scripts/query_monitor.py --database-url $DATABASE_URL --top 20 --format json
-
-# Check RLS overhead for tenant queries
-python scripts/query_monitor.py --database-url $DATABASE_URL --rls-overhead --audit pls-audit.json
-
-# Monitor connection pool health from OBSERVABILITY_SPEC §3.105
-python scripts/query_monitor.py --database-url $DATABASE_URL --pool-stats
-
-# Export analysis to CSV for dashboard integration
-python scripts/query_monitor.py --database-url $DATABASE_URL \
-  --top 50 --csv-output monthly-queries.csv --json-output trends.json
-```
-
-**pg_stat_statements Analysis:**
-- Track query execution time trends
-- Monitor buffer cache hit ratios
-- Identify N+1 query patterns
-- Analyze connection pool saturation
-- Measure RLS policy overhead
-
-### 5. Benchmark Harness
-
-To establish performance baselines and detect regressions with SRE integration:
-
-```bash
-# Run full benchmark suite with correlation tracking
-python scripts/benchmark.py --suite api --iterations 100 --correlation-id pr-123
-
-# Run with SLO checking and audit emission
+# Run benchmark suite with SLO checking
 python scripts/benchmark.py --suite api --slo-file .perf/slos.json --dump-audit audit.json
 
-# Compare against baseline with regression detection
+# Compare against baseline
 python scripts/benchmark.py --suite api --baseline .perf/baseline.json
-
-# Generate detailed report with SLO analysis
-python scripts/benchmark.py --report --output perf-report.md --slo-file .perf/slos.json
 
 # CI mode: fail on regression OR SLO violation
 python scripts/benchmark.py --suite api --baseline .perf/baseline.json --fail-on-slo
 ```
 
-**Benchmark suites:**
-- `api`: API endpoint latency (p50/p95/p99)
-- `db`: Database query performance (SQL, RPC, PostgREST)
-- `e2e`: Critical user flows (slip lifecycle, player search)
-
-**SLO Integration:**
-- Dynamic SLO checking against OBSERVABILITY_SPEC §3 targets
-- Service-specific KPI tracking (RatingSlip, Loyalty, TableContext)
-- Connection pool utilization monitoring
-- Automatic audit event emission with correlation IDs
-
-**React Query Timing:**
-- Invalidate target: <100ms per query key set
-- Integration with invalidation patterns per ADR-004
-- State transition optimization
-
-
-**Gate behavior:**
-- Fails build if p95 latency increases >10% from baseline
-- Fails build if any endpoint exceeds SLO target
-- Generates diff report showing regressions
-
-### 6. SLO Definition
-
-To define performance targets for endpoints:
-
-1. Read `references/slo-definitions.md` for standard targets
-2. Categorize endpoint by type (read-heavy, write-heavy, aggregation)
-3. Set appropriate p50/p95/p99 targets
-4. Add endpoint to benchmark suite
-5. Configure CI gate thresholds
+**Benchmark suites:** `api` (endpoint latency), `db` (SQL/RPC/PostgREST), `e2e` (critical flows)
 
 **Standard SLO tiers:**
 
@@ -218,9 +133,27 @@ To define performance targets for endpoints:
 | Complex | <250ms | <500ms | <1000ms | Aggregations, reports |
 | Background | <1000ms | <2000ms | <5000ms | Batch operations |
 
-## KPI Dashboard
+### 4. SLO Definition
 
-Track these metrics for system health:
+1. Read `references/slo-definitions.md` for standard targets
+2. Categorize endpoint by type (read-heavy, write-heavy, aggregation)
+3. Set appropriate p50/p95/p99 targets
+4. Add endpoint to benchmark suite
+5. Configure CI gate thresholds
+
+## Temporal Performance Anti-Pattern (TEMP-003, PRD-027)
+
+### P0 Incident: JS Gaming Day Bypass
+
+A performance optimization replaced the canonical `useGamingDay()` → RPC path with pure-JS `getCurrentGamingDay()` using `new Date().toISOString().slice(0, 10)` (UTC). After UTC midnight (4 PM Pacific), JS returned tomorrow's date while the DB still considered today the current gaming day. Every Player 360 financial panel showed $0.
+
+**Lesson:** Performance optimizations that bypass shared hooks/RPCs must not replace DB-derived values with JS date math. The RPC latency is negligible (< 5ms). JS date math saves nothing and risks a P0 regression.
+
+**References:** `docs/20-architecture/temporal-patterns/INDEX.md`, `docs/issues/ISSUE-GAMING-DAY-TIMEZONE-STANDARDIZATION.md`
+
+---
+
+## KPI Dashboard
 
 ### API Endpoint KPIs
 - **Latency**: p50 / p95 / p99 response times
@@ -230,39 +163,15 @@ Track these metrics for system health:
 
 ### Supabase/Postgres KPIs
 - **Query execution time**: distribution across percentiles
-- **Selectivity**: rows scanned vs rows returned
-- **Cache hit ratio**: buffer cache effectiveness
-- **Lock waits / deadlocks**: contention indicators
-- **RLS overhead**: policy enforcement cost
-- **Connection pool saturation**: queued requests, latency spikes
+- **Cache hit ratio**: buffer cache effectiveness (target >95%)
+- **RLS overhead**: policy enforcement cost (target <20% for simple tenant filter)
+- **Connection pool saturation**: queued requests, latency spikes (target <70% utilization)
+- **InitPlan compliance**: % of RLS policies using subselect wrapper
 
 ### End-to-End Flow KPIs
 - **Slip lifecycle**: open → update → close path latency
 - **Player search**: search → open visit → view ledger flow
 - **Table operations**: table assignment, player movement
-
-## Temporal Performance Anti-Pattern (TEMP-003, PRD-027)
-
-### P0 Incident: JS Gaming Day Bypass
-
-A performance optimization (PERF-006) replaced the canonical `useGamingDay()` → RPC path with a pure-JS `getCurrentGamingDay()` that used `new Date().toISOString().slice(0, 10)` (UTC). After UTC midnight (4 PM Pacific), JS returned tomorrow's date while the DB still considered today the current gaming day. Every Player 360 financial panel showed $0.
-
-**Root Cause:** Performance optimization created a second temporal authority in JavaScript.
-
-**Lesson:** Performance optimizations that bypass shared hooks/RPCs must not replace DB-derived values with JS date math. The correct RSC optimization path:
-
-1. Create server Supabase client
-2. Set RLS context
-3. Call `rpc_current_gaming_day()` (< 5ms p95)
-4. Pass gaming day as prop to client components
-
-The RPC latency is negligible (< 5ms). JS date math saves nothing and risks a P0 regression.
-
-**References:**
-- `docs/20-architecture/temporal-patterns/INDEX.md` (Temporal patterns registry)
-- `docs/20-architecture/temporal-patterns/TEMP-003-temporal-governance-enforcement.md` (Enforcement standard)
-- `docs/issues/ISSUE-GAMING-DAY-TIMEZONE-STANDARDIZATION.md` (P0 incident case study)
-- `docs/10-prd/PRD-027-temporal-standardization-v0.1.md` (Remediation PRD)
 
 ---
 
@@ -273,11 +182,12 @@ For PR reviews involving database or API changes:
 - [ ] New queries have EXPLAIN ANALYZE output attached
 - [ ] Indexes exist for WHERE/JOIN columns
 - [ ] No N+1 query patterns introduced
-- [ ] RLS policies use indexed predicates
+- [ ] RLS policies use `(SELECT current_setting(...))` subselect wrapper
+- [ ] Functions include `SET search_path = ''`
 - [ ] Benchmark results show no p95 regression >10%
 - [ ] Connection pooling implications considered
 - [ ] Batch operations preferred over loops
-- [ ] **No JS gaming day computation** replacing DB RPCs (TEMP-003 — P0 incident pattern)
+- [ ] **No JS gaming day computation** replacing DB RPCs (TEMP-003)
 
 See `references/pr-checklist.md` for detailed checklist.
 
@@ -285,84 +195,18 @@ See `references/pr-checklist.md` for detailed checklist.
 
 ### scripts/
 
-| Script | Purpose | New Features |
-|--------|---------|-------------|
-| `benchmark.py` | Main benchmarking harness | SLO checking, audit emission, correlation tracking (OPS-PE-003) |
-| `query_monitor.py` | pg_stat_statements analysis | Top queries, RLS overhead, pool stats (OPS-PE-004) |
-| `ci_gate.py` | CI integration gate | SLO-aware regression detection (OPS-PE-005) |
-
-
-### slos/
-
-| SLO Config | Purpose |
-|------------|---------|
-| `slos-template.json` | Example SLO definitions per OBSERVABILITY_SPEC §3|
-| `slos.json` | Production SLO configuration with server specifics|
-| `baseline.json` | Performance regression detection thresholds|
+| Script | Purpose |
+|--------|---------|
+| `benchmark.py` | Benchmarking harness with SLO checking, audit emission, correlation tracking |
+| `query_monitor.py` | pg_stat_statements analysis — top queries, RLS overhead, pool stats |
+| `query_analyzer.py` | EXPLAIN ANALYZE runner with optimization recommendations |
+| `ci_gate.py` | CI integration gate with SLO-aware regression detection |
 
 ### references/
 
-| Reference | Purpose |
-|-----------|---------|
-| `slo-definitions.md` | Standard SLO targets by endpoint type |
-| `query-patterns.md` | Query optimization patterns and anti-patterns |
-| `rls-performance.md` | RLS-specific performance considerations |
-| `pr-checklist.md` | Detailed PR performance review checklist |
-
-## Memory Recording Protocol
-
-This skill tracks execution outcomes to build performance pattern knowledge.
-
-### Record Performance Analysis
-
-```python
-from lib.memori import create_memori_client, SkillContext
-
-memori = create_memori_client("skill:performance-engineer")
-memori.enable()
-context = SkillContext(memori)
-
-context.record_skill_execution(
-    skill_name="performance-engineer",
-    task="Query optimization for visits table",
-    outcome="success",
-    pattern_used="Index addition + query rewrite",
-    validation_results={
-        "p95_before_ms": 450,
-        "p95_after_ms": 85,
-        "improvement_pct": 81
-    },
-    files_created=["supabase/migrations/xxx_add_visits_index.sql"],
-    lessons_learned=["Composite index on (casino_id, player_id) critical for RLS"]
-)
-```
-
-### Query Past Optimizations
-
-```python
-past_optimizations = memori.search_learnings(
-    query="query optimization RLS",
-    tags=["performance", "rls", "indexing"],
-    category="skills",
-    limit=5
-)
-```
-
-## Top 10 Expensive Queries
-
-Maintain a living document of the most expensive queries:
-
-```sql
--- Query the pg_stat_statements extension
-SELECT
-  query,
-  calls,
-  mean_exec_time,
-  total_exec_time,
-  rows
-FROM pg_stat_statements
-ORDER BY mean_exec_time DESC
-LIMIT 10;
-```
-
-Update `docs/50-ops/TOP_10_QUERIES.md` weekly with current offenders.
+| Reference | When to Load |
+|-----------|--------------|
+| `slo-definitions.md` | Setting SLO targets, classifying endpoints |
+| `query-patterns.md` | Query optimization, anti-patterns, index strategy |
+| `rls-performance.md` | RLS overhead analysis, InitPlan pattern, SECURITY DEFINER |
+| `pr-checklist.md` | PR performance review (copy checklist into PR description) |

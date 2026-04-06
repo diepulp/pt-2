@@ -28,14 +28,17 @@ import type { Database } from '@/types/database.types';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-// Integration gate: skip when RUN_INTEGRATION_TESTS is unset
-const describeIntegration = process.env.RUN_INTEGRATION_TESTS
-  ? describe
-  : describe.skip;
+// Integration gate: skip when RUN_INTEGRATION_TESTS is not 'true' or '1'
+const describeIntegration =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1'
+    ? describe
+    : describe.skip;
 
 describeIntegration('player-identity Database Constraints (ADR-022)', () => {
   let serviceClient: SupabaseClient<Database>;
 
+  let companyId: string;
   let casinoId: string;
   let staffId: string;
   let userId: string;
@@ -52,10 +55,18 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
     });
     userId = user!.user.id;
 
+    // Create test company (ADR-043: company before casino)
+    const { data: company } = await serviceClient
+      .from('company')
+      .insert({ name: 'Constraint Test Company' })
+      .select('id')
+      .single();
+    companyId = company!.id;
+
     // Create test casino
     const { data: casino } = await serviceClient
       .from('casino')
-      .insert({ name: 'Constraint Test Casino' })
+      .insert({ name: 'Constraint Test Casino', company_id: companyId })
       .select('id')
       .single();
     casinoId = casino!.id;
@@ -67,7 +78,8 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         user_id: userId,
         casino_id: casinoId,
         role: 'pit_boss',
-        name: 'Test Staff',
+        first_name: 'Test',
+        last_name: 'Staff',
         status: 'active',
       })
       .select('id')
@@ -108,6 +120,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
     await serviceClient.from('player').delete().eq('id', playerId);
     await serviceClient.from('staff').delete().eq('casino_id', casinoId);
     await serviceClient.from('casino').delete().eq('id', casinoId);
+    await serviceClient.from('company').delete().eq('id', companyId);
     await serviceClient.auth.admin.deleteUser(userId);
   });
 
@@ -569,10 +582,16 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
 
   describe('A5. Composite Constraints', () => {
     it('Composite FK: (casino_id, player_id) validates both fields together', async () => {
-      // Create second casino and player
+      // Create second company, casino, and player (ADR-043)
+      const { data: company2 } = await serviceClient
+        .from('company')
+        .insert({ name: 'Second Company' })
+        .select('id')
+        .single();
+
       const { data: casino2 } = await serviceClient
         .from('casino')
-        .insert({ name: 'Second Casino' })
+        .insert({ name: 'Second Casino', company_id: company2!.id })
         .select('id')
         .single();
 
@@ -613,6 +632,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         .eq('player_id', player2!.id);
       await serviceClient.from('player').delete().eq('id', player2!.id);
       await serviceClient.from('casino').delete().eq('id', casino2!.id);
+      await serviceClient.from('company').delete().eq('id', company2!.id);
     });
   });
 });

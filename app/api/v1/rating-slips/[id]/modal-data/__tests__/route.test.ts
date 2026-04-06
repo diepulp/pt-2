@@ -74,6 +74,30 @@ jest.mock('@/services/table-context', () => ({
   })),
 }));
 
+jest.mock('@/services/rating-slip-modal/rpc', () => ({
+  getModalDataViaRPC: jest.fn().mockResolvedValue({
+    slip: {
+      id: 'slip-123',
+      visitId: 'visit-1',
+      casinoId: 'casino-1',
+      tableId: 'table-1',
+      tableLabel: 'T1',
+      tableType: 'blackjack',
+      seatNumber: null,
+      averageBet: 0,
+      startTime: '2025-01-01T10:00:00Z',
+      endTime: null,
+      status: 'open',
+      gamingDay: '2025-01-01',
+      durationSeconds: 3600,
+    },
+    player: null,
+    loyalty: null,
+    financial: { totalCashIn: 0, totalChipsOut: 0, netPosition: 0 },
+    tables: [],
+  }),
+}));
+
 describe('GET /api/v1/rating-slips/[id]/modal-data', () => {
   const slipId = '123e4567-e89b-12d3-a456-426614174000';
 

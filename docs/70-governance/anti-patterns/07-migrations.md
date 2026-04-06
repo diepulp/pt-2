@@ -185,6 +185,55 @@ $$;
 
 ---
 
+## Metadata-Only `search_path` Changes (ADR-018)
+
+### ❌ NEVER use `ALTER FUNCTION SET search_path` without rewriting the function body
+
+Setting `search_path = ''` via `ALTER FUNCTION` is a metadata-only change. If the function body contains unqualified table references (e.g., `FROM casino_settings` instead of `FROM public.casino_settings`), the function will **break at runtime** with `relation "X" does not exist`.
+
+```sql
+-- ❌ WRONG - Metadata-only, body still has unqualified references
+ALTER FUNCTION public.compute_gaming_day(uuid, timestamptz)
+  SET search_path = '';
+-- Body has: FROM casino_settings → WILL FAIL
+
+-- ✅ CORRECT - Rewrite body with qualified references
+CREATE OR REPLACE FUNCTION public.compute_gaming_day(
+  p_casino_id uuid,
+  p_timestamp timestamptz DEFAULT now()
+) RETURNS date
+LANGUAGE plpgsql STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  SELECT ... FROM public.casino_settings WHERE casino_id = p_casino_id;
+  -- All tables: public.table_name
+  -- All function calls: public.function_name()
+  -- All custom types: public.type_name
+END;
+$$;
+
+-- ✅ ALSO CORRECT - ALTER FUNCTION for functions with NO table access
+-- SEARCH_PATH_SAFE: pure computation, no table references
+ALTER FUNCTION public.chipset_total_cents(jsonb)
+  SET search_path = '';
+```
+
+**Why this matters:**
+- PostgreSQL resolves unqualified names via `search_path` at **call time**, not definition time
+- `search_path = ''` means Postgres cannot find `casino_settings` — it needs `public.casino_settings`
+- This class of bug passes migration application and syntax checks — it only fails when a user calls the function
+- The SEC-S3 remediation (2026-04-03) broke 17 functions this way before the regression was caught
+
+**Enforcement:**
+- Pre-commit hook: `.husky/pre-commit-search-path-safety.sh` blocks the pattern
+- CI gate: `supabase/tests/security/09_search_path_body_check.sql` catches it post-migration
+
+**Reference:** ADR-018 (canonical `search_path` standard), `docs/issues/gaps/supabase-advisors/GAMING-DAY-FUNCTION-DRIFT.md`
+
+---
+
 ## Quick Checklist
 
 - [ ] Migrations use Supabase CLI only
@@ -193,3 +242,4 @@ $$;
 - [ ] Migration includes `NOTIFY pgrst, 'reload schema'`
 - [ ] No direct psql usage in runtime
 - [ ] **SECURITY DEFINER RPCs self-inject context (ADR-015)**
+- [ ] **`search_path` changes include body rewrites with `public.` qualifiers (ADR-018)**

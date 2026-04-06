@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * PlayerTimeline Mappers Unit Tests
  *

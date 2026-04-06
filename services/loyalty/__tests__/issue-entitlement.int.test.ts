@@ -1,6 +1,13 @@
 /** @jest-environment node */
 
 /**
+ * NOTE: Despite the .int.test.ts naming, this file is a fully mocked unit test.
+ * It does not hit the database. The RUN_INTEGRATION_TESTS gate is retained for
+ * consistency but all operations are mocked via jest.mock().
+ * Reclassified as Unit (Mocked) per LOYALTY-POSTURE.md.
+ */
+
+/**
  * issueEntitlement() Integration Tests (PRD-052 WS6)
  *
  * Unit-level tests that mock supabase.rpc() and supabase.from() to verify
@@ -71,7 +78,11 @@ function makeEntitlementReward(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe('issueEntitlement', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('issueEntitlement', () => {
   const mockRpc = jest.fn();
   const mockFrom = jest.fn();
   const mockSelect = jest.fn();

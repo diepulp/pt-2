@@ -1,5 +1,10 @@
+/** @jest-environment node */
+
 /**
  * PRD-059: rpc_activate_table_session — Custody Gate Integration Tests
+ *
+ * Mode C JWT auth (ADR-024): authenticated anon clients with staff_id claims.
+ * Two clients: pitBossClient (pit_boss role), dealerClient (dealer role).
  *
  * Tests:
  * AC-5:  Creates table_opening_attestation row with all required fields
@@ -22,6 +27,7 @@
  * - Local Supabase running: `npx supabase start`
  * - NEXT_PUBLIC_SUPABASE_URL environment variable set
  * - SUPABASE_SERVICE_ROLE_KEY environment variable set
+ * - NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable set
  * - RUN_INTEGRATION_TESTS=true
  *
  * @see docs/10-prd/PRD-059-open-table-custody-gate-pilot-lite-v0.md
@@ -35,10 +41,12 @@ import type { Database } from '../../../types/database.types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const isIntegrationEnvironment =
   supabaseUrl &&
   supabaseServiceKey &&
+  supabaseAnonKey &&
   process.env.RUN_INTEGRATION_TESTS === 'true';
 
 const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
@@ -46,7 +54,12 @@ const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
 describeIntegration(
   'PRD-059: rpc_activate_table_session — Custody Gate',
   () => {
-    let svc: SupabaseClient<Database>;
+    // setupClient: service-role, for fixture creation/teardown/verification
+    let setupClient: SupabaseClient<Database>;
+    // pitBossClient: authenticated anon client with pit_boss JWT
+    let pitBossClient: SupabaseClient<Database>;
+    // dealerClient: authenticated anon client with dealer JWT
+    let dealerClient: SupabaseClient<Database>;
 
     // Shared test entities
     let companyId: string;
@@ -57,44 +70,38 @@ describeIntegration(
     let dealerUserId: string;
     let tableId: string;
 
-    /** Set RLS context as pit_boss */
-    async function asPitBoss() {
-      await svc.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-    }
+    const PB_EMAIL = `test-tc-mode-c-act-pb-${Date.now()}@test.com`;
+    const DLR_EMAIL = `test-tc-mode-c-act-dlr-${Date.now()}@test.com`;
+    const TEST_PASSWORD = 'TestPassword123!';
 
-    /** Set RLS context as dealer */
-    async function asDealer() {
-      await svc.rpc('set_rls_context_internal', {
-        p_actor_id: dealerId,
-        p_casino_id: casinoId,
-        p_staff_role: 'dealer',
-      });
-    }
-
-    /** Open an OPEN session, return session ID */
+    /** Open an OPEN session via pitBossClient, return session ID */
     async function openSession(): Promise<string> {
-      await asPitBoss();
-      const { data, error } = await svc.rpc('rpc_open_table_session', {
-        p_gaming_table_id: tableId,
-      });
+      const { data, error } = await pitBossClient.rpc(
+        'rpc_open_table_session',
+        {
+          p_gaming_table_id: tableId,
+        },
+      );
       if (error) throw new Error(`openSession failed: ${error.message}`);
       return data!.id;
     }
 
-    /** Clean up all sessions + attestations on tableId */
+    /** Clean up all sessions + attestations (via setupClient) */
     async function cleanAll() {
-      await svc
+      await setupClient
         .from('table_opening_attestation')
         .delete()
         .eq('casino_id', casinoId);
-      await svc.from('table_rundown_report').delete().eq('casino_id', casinoId);
-      await svc.from('table_session').delete().eq('gaming_table_id', tableId);
+      await setupClient
+        .from('table_rundown_report')
+        .delete()
+        .eq('casino_id', casinoId);
+      await setupClient
+        .from('table_session')
+        .delete()
+        .eq('gaming_table_id', tableId);
       // Reset consumed_by on snapshots
-      await svc
+      await setupClient
         .from('table_inventory_snapshot')
         .update({ consumed_by_session_id: null, consumed_at: null })
         .eq('casino_id', casinoId);
@@ -102,7 +109,7 @@ describeIntegration(
 
     /**
      * Create a CLOSED predecessor session with a closing inventory snapshot.
-     * Returns { sessionId, snapshotId }.
+     * Returns { sessionId, snapshotId }. Uses setupClient for fixture creation.
      */
     async function createClosedPredecessorWithSnapshot(opts?: {
       snapshotTotalCents?: number;
@@ -111,8 +118,8 @@ describeIntegration(
       const totalCents = opts?.snapshotTotalCents ?? 50000;
       const reqRecon = opts?.requiresReconciliation ?? false;
 
-      // Create closing snapshot
-      const { data: snapshot } = await svc
+      // Create closing snapshot via setupClient
+      const { data: snapshot } = await setupClient
         .from('table_inventory_snapshot')
         .insert({
           casino_id: casinoId,
@@ -125,8 +132,8 @@ describeIntegration(
         .select('id')
         .single();
 
-      // Create CLOSED session referencing the snapshot
-      const { data: session } = await svc
+      // Create CLOSED session referencing the snapshot via setupClient
+      const { data: session } = await setupClient
         .from('table_session')
         .insert({
           casino_id: casinoId,
@@ -146,33 +153,33 @@ describeIntegration(
     }
 
     beforeAll(async () => {
-      svc = createClient<Database>(supabaseUrl!, supabaseServiceKey!);
+      setupClient = createClient<Database>(supabaseUrl!, supabaseServiceKey!);
 
-      // Create test users
-      const { data: pbUser } = await svc.auth.admin.createUser({
-        email: `test-prd059-activate-pb-${Date.now()}@example.com`,
-        password: 'test-password',
+      // 1. Create auth users (pit_boss + dealer)
+      const { data: pbUser } = await setupClient.auth.admin.createUser({
+        email: PB_EMAIL,
+        password: TEST_PASSWORD,
         email_confirm: true,
       });
       pitBossUserId = pbUser!.user!.id;
 
-      const { data: dlrUser } = await svc.auth.admin.createUser({
-        email: `test-prd059-activate-dlr-${Date.now()}@example.com`,
-        password: 'test-password',
+      const { data: dlrUser } = await setupClient.auth.admin.createUser({
+        email: DLR_EMAIL,
+        password: TEST_PASSWORD,
         email_confirm: true,
       });
       dealerUserId = dlrUser!.user!.id;
 
-      // Company
-      const { data: company } = await svc
+      // 2. Company
+      const { data: company } = await setupClient
         .from('company')
         .insert({ name: 'PRD-059 Activate Test Company' })
         .select('id')
         .single();
       companyId = company!.id;
 
-      // Casino + settings
-      const { data: casino } = await svc
+      // 3. Casino + settings
+      const { data: casino } = await setupClient
         .from('casino')
         .insert({
           name: 'PRD-059 Activate Test Casino',
@@ -182,14 +189,14 @@ describeIntegration(
         .single();
       casinoId = casino!.id;
 
-      await svc.from('casino_settings').insert({
+      await setupClient.from('casino_settings').insert({
         casino_id: casinoId,
         gaming_day_start_time: '06:00',
         timezone: 'America/Los_Angeles',
       });
 
-      // Staff (pit_boss)
-      const { data: pbStaff } = await svc
+      // 4. Staff (pit_boss)
+      const { data: pbStaff } = await setupClient
         .from('staff')
         .insert({
           user_id: pitBossUserId,
@@ -203,8 +210,8 @@ describeIntegration(
         .single();
       pitBossId = pbStaff!.id;
 
-      // Staff (dealer — for AC-18)
-      const { data: dlrStaff } = await svc
+      // 5. Staff (dealer — for AC-18)
+      const { data: dlrStaff } = await setupClient
         .from('staff')
         .insert({
           user_id: dealerUserId,
@@ -218,8 +225,25 @@ describeIntegration(
         .single();
       dealerId = dlrStaff!.id;
 
-      // Gaming table
-      const { data: table } = await svc
+      // 6. Two-phase ADR-024: stamp staff_id into app_metadata for both users
+      await setupClient.auth.admin.updateUserById(pitBossUserId, {
+        app_metadata: {
+          casino_id: casinoId,
+          staff_id: pitBossId,
+          staff_role: 'pit_boss',
+        },
+      });
+
+      await setupClient.auth.admin.updateUserById(dealerUserId, {
+        app_metadata: {
+          casino_id: casinoId,
+          staff_id: dealerId,
+          staff_role: 'dealer',
+        },
+      });
+
+      // 7. Gaming table
+      const { data: table } = await setupClient
         .from('gaming_table')
         .insert({
           casino_id: casinoId,
@@ -231,29 +255,61 @@ describeIntegration(
         .select('id')
         .single();
       tableId = table!.id;
+
+      // 8. Sign in pit_boss
+      pitBossClient = createClient<Database>(supabaseUrl!, supabaseAnonKey!);
+      const { error: pbSignInErr } =
+        await pitBossClient.auth.signInWithPassword({
+          email: PB_EMAIL,
+          password: TEST_PASSWORD,
+        });
+      if (pbSignInErr)
+        throw new Error(`PitBoss sign-in failed: ${pbSignInErr.message}`);
+
+      // 9. Sign in dealer
+      dealerClient = createClient<Database>(supabaseUrl!, supabaseAnonKey!);
+      const { error: dlrSignInErr } =
+        await dealerClient.auth.signInWithPassword({
+          email: DLR_EMAIL,
+          password: TEST_PASSWORD,
+        });
+      if (dlrSignInErr)
+        throw new Error(`Dealer sign-in failed: ${dlrSignInErr.message}`);
     });
 
     afterAll(async () => {
-      // Cleanup in dependency order
-      await svc.from('audit_log').delete().eq('casino_id', casinoId);
-      await svc
+      // Cleanup in dependency order (via setupClient)
+      await setupClient.from('audit_log').delete().eq('casino_id', casinoId);
+      await setupClient
         .from('table_opening_attestation')
         .delete()
         .eq('casino_id', casinoId);
-      await svc.from('table_rundown_report').delete().eq('casino_id', casinoId);
-      await svc.from('table_session').delete().eq('casino_id', casinoId);
-      await svc
+      await setupClient
+        .from('table_rundown_report')
+        .delete()
+        .eq('casino_id', casinoId);
+      await setupClient
+        .from('table_session')
+        .delete()
+        .eq('casino_id', casinoId);
+      await setupClient
         .from('table_inventory_snapshot')
         .delete()
         .eq('casino_id', casinoId);
-      await svc.from('table_drop_event').delete().eq('casino_id', casinoId);
-      await svc.from('gaming_table').delete().eq('casino_id', casinoId);
-      await svc.from('staff').delete().eq('casino_id', casinoId);
-      await svc.from('casino_settings').delete().eq('casino_id', casinoId);
-      await svc.from('casino').delete().eq('id', casinoId);
-      await svc.from('company').delete().eq('id', companyId);
-      await svc.auth.admin.deleteUser(pitBossUserId);
-      await svc.auth.admin.deleteUser(dealerUserId);
+      await setupClient
+        .from('table_drop_event')
+        .delete()
+        .eq('casino_id', casinoId);
+      await setupClient.from('gaming_table').delete().eq('casino_id', casinoId);
+      await setupClient.from('staff').delete().eq('casino_id', casinoId);
+      await setupClient
+        .from('casino_settings')
+        .delete()
+        .eq('casino_id', casinoId);
+      await setupClient.from('casino').delete().eq('id', casinoId);
+      await setupClient.from('company').delete().eq('id', companyId);
+      await setupClient.auth.admin.deleteUser(pitBossUserId);
+      await setupClient.auth.admin.deleteUser(dealerUserId);
     });
 
     // =========================================================================
@@ -272,18 +328,20 @@ describeIntegration(
       });
 
       it('creates attestation with all required fields', async () => {
-        await asPitBoss();
-        const { error } = await svc.rpc('rpc_activate_table_session', {
-          p_table_session_id: sessionId,
-          p_opening_total_cents: 50000,
-          p_dealer_confirmed: true,
-          p_opening_note: 'Bootstrap opening',
-        });
+        const { error } = await pitBossClient.rpc(
+          'rpc_activate_table_session',
+          {
+            p_table_session_id: sessionId,
+            p_opening_total_cents: 50000,
+            p_dealer_confirmed: true,
+            p_opening_note: 'Bootstrap opening',
+          },
+        );
 
         expect(error).toBeNull();
 
-        // Verify attestation row
-        const { data: attestation } = await svc
+        // Verify attestation row via setupClient (service-role, bypasses RLS)
+        const { data: attestation } = await setupClient
           .from('table_opening_attestation')
           .select('*')
           .eq('session_id', sessionId)
@@ -316,19 +374,21 @@ describeIntegration(
       });
 
       it('transitions session status to ACTIVE', async () => {
-        await asPitBoss();
-        const { data, error } = await svc.rpc('rpc_activate_table_session', {
-          p_table_session_id: sessionId,
-          p_opening_total_cents: 50000,
-          p_dealer_confirmed: true,
-          p_opening_note: 'Bootstrap opening',
-        });
+        const { data, error } = await pitBossClient.rpc(
+          'rpc_activate_table_session',
+          {
+            p_table_session_id: sessionId,
+            p_opening_total_cents: 50000,
+            p_dealer_confirmed: true,
+            p_opening_note: 'Bootstrap opening',
+          },
+        );
 
         expect(error).toBeNull();
         expect(data!.status).toBe('ACTIVE');
 
-        // Verify in database
-        const { data: session } = await svc
+        // Verify in database via setupClient
+        const { data: session } = await setupClient
           .from('table_session')
           .select('status')
           .eq('id', sessionId)
@@ -348,8 +408,7 @@ describeIntegration(
         await cleanAll();
         // Create and activate a session (making it ACTIVE)
         activeSessionId = await openSession();
-        await asPitBoss();
-        await svc.rpc('rpc_activate_table_session', {
+        await pitBossClient.rpc('rpc_activate_table_session', {
           p_table_session_id: activeSessionId,
           p_opening_total_cents: 50000,
           p_dealer_confirmed: true,
@@ -362,13 +421,15 @@ describeIntegration(
       });
 
       it('raises P0003 when session is already ACTIVE', async () => {
-        await asPitBoss();
-        const { error } = await svc.rpc('rpc_activate_table_session', {
-          p_table_session_id: activeSessionId,
-          p_opening_total_cents: 50000,
-          p_dealer_confirmed: true,
-          p_opening_note: 'Should fail',
-        });
+        const { error } = await pitBossClient.rpc(
+          'rpc_activate_table_session',
+          {
+            p_table_session_id: activeSessionId,
+            p_opening_total_cents: 50000,
+            p_dealer_confirmed: true,
+            p_opening_note: 'Should fail',
+          },
+        );
 
         expect(error).not.toBeNull();
         expect(error!.message).toContain('invalid_state_transition');
@@ -391,13 +452,15 @@ describeIntegration(
       });
 
       it('raises P0008 when dealer_confirmed is false', async () => {
-        await asPitBoss();
-        const { error } = await svc.rpc('rpc_activate_table_session', {
-          p_table_session_id: sessionId,
-          p_opening_total_cents: 50000,
-          p_dealer_confirmed: false,
-          p_opening_note: 'Should fail',
-        });
+        const { error } = await pitBossClient.rpc(
+          'rpc_activate_table_session',
+          {
+            p_table_session_id: sessionId,
+            p_opening_total_cents: 50000,
+            p_dealer_confirmed: false,
+            p_opening_note: 'Should fail',
+          },
+        );
 
         expect(error).not.toBeNull();
         expect(error!.message).toContain('dealer_not_confirmed');
@@ -421,13 +484,15 @@ describeIntegration(
       });
 
       it('raises P0009 when note is null for par_bootstrap', async () => {
-        await asPitBoss();
-        const { error } = await svc.rpc('rpc_activate_table_session', {
-          p_table_session_id: sessionId,
-          p_opening_total_cents: 50000,
-          p_dealer_confirmed: true,
-          // No note provided
-        });
+        const { error } = await pitBossClient.rpc(
+          'rpc_activate_table_session',
+          {
+            p_table_session_id: sessionId,
+            p_opening_total_cents: 50000,
+            p_dealer_confirmed: true,
+            // No note provided
+          },
+        );
 
         expect(error).not.toBeNull();
         expect(error!.message).toContain('note_required');
@@ -455,14 +520,16 @@ describeIntegration(
       });
 
       it('raises P0009 when opening amount differs from predecessor close total', async () => {
-        await asPitBoss();
         // Opening with 60000 but predecessor closed with 50000 => variance
-        const { error } = await svc.rpc('rpc_activate_table_session', {
-          p_table_session_id: sessionId,
-          p_opening_total_cents: 60000,
-          p_dealer_confirmed: true,
-          // No note provided
-        });
+        const { error } = await pitBossClient.rpc(
+          'rpc_activate_table_session',
+          {
+            p_table_session_id: sessionId,
+            p_opening_total_cents: 60000,
+            p_dealer_confirmed: true,
+            // No note provided
+          },
+        );
 
         expect(error).not.toBeNull();
         expect(error!.message).toContain('note_required');
@@ -490,14 +557,16 @@ describeIntegration(
       });
 
       it('raises P0009 when predecessor requires_reconciliation and no note', async () => {
-        await asPitBoss();
         // Same amount (no variance) but requires_reconciliation flag is set
-        const { error } = await svc.rpc('rpc_activate_table_session', {
-          p_table_session_id: sessionId,
-          p_opening_total_cents: 50000,
-          p_dealer_confirmed: true,
-          // No note provided
-        });
+        const { error } = await pitBossClient.rpc(
+          'rpc_activate_table_session',
+          {
+            p_table_session_id: sessionId,
+            p_opening_total_cents: 50000,
+            p_dealer_confirmed: true,
+            // No note provided
+          },
+        );
 
         expect(error).not.toBeNull();
         expect(error!.message).toContain('note_required');
@@ -525,13 +594,15 @@ describeIntegration(
       });
 
       it('succeeds without note when amounts match and no flags', async () => {
-        await asPitBoss();
-        const { data, error } = await svc.rpc('rpc_activate_table_session', {
-          p_table_session_id: sessionId,
-          p_opening_total_cents: 50000,
-          p_dealer_confirmed: true,
-          // No note — should succeed
-        });
+        const { data, error } = await pitBossClient.rpc(
+          'rpc_activate_table_session',
+          {
+            p_table_session_id: sessionId,
+            p_opening_total_cents: 50000,
+            p_dealer_confirmed: true,
+            // No note — should succeed
+          },
+        );
 
         expect(error).toBeNull();
         expect(data!.status).toBe('ACTIVE');
@@ -555,15 +626,15 @@ describeIntegration(
       });
 
       it('attestation has provenance_source = par_bootstrap', async () => {
-        await asPitBoss();
-        await svc.rpc('rpc_activate_table_session', {
+        await pitBossClient.rpc('rpc_activate_table_session', {
           p_table_session_id: sessionId,
           p_opening_total_cents: 50000,
           p_dealer_confirmed: true,
           p_opening_note: 'First opening — no predecessor',
         });
 
-        const { data: attestation } = await svc
+        // Verify via setupClient
+        const { data: attestation } = await setupClient
           .from('table_opening_attestation')
           .select('provenance_source')
           .eq('session_id', sessionId)
@@ -592,15 +663,15 @@ describeIntegration(
       });
 
       it('attestation has provenance_source = predecessor', async () => {
-        await asPitBoss();
-        await svc.rpc('rpc_activate_table_session', {
+        await pitBossClient.rpc('rpc_activate_table_session', {
           p_table_session_id: sessionId,
           p_opening_total_cents: 50000,
           p_dealer_confirmed: true,
           // Amounts match, no note required
         });
 
-        const { data: attestation } = await svc
+        // Verify via setupClient
+        const { data: attestation } = await setupClient
           .from('table_opening_attestation')
           .select('provenance_source')
           .eq('session_id', sessionId)
@@ -631,14 +702,14 @@ describeIntegration(
       });
 
       it('sets consumed_by_session_id on predecessor snapshot', async () => {
-        await asPitBoss();
-        await svc.rpc('rpc_activate_table_session', {
+        await pitBossClient.rpc('rpc_activate_table_session', {
           p_table_session_id: sessionId,
           p_opening_total_cents: 50000,
           p_dealer_confirmed: true,
         });
 
-        const { data: snapshot } = await svc
+        // Verify via setupClient
+        const { data: snapshot } = await setupClient
           .from('table_inventory_snapshot')
           .select('consumed_by_session_id, consumed_at')
           .eq('id', snapshotId)
@@ -665,15 +736,14 @@ describeIntegration(
 
         // First session: open and activate (consumes snapshot)
         const firstSessionId = await openSession();
-        await asPitBoss();
-        await svc.rpc('rpc_activate_table_session', {
+        await pitBossClient.rpc('rpc_activate_table_session', {
           p_table_session_id: firstSessionId,
           p_opening_total_cents: 50000,
           p_dealer_confirmed: true,
         });
 
-        // Close first session so we can open another
-        await svc
+        // Close first session so we can open another (via setupClient)
+        await setupClient
           .from('table_session')
           .update({
             status: 'CLOSED',
@@ -694,12 +764,14 @@ describeIntegration(
       });
 
       it('raises P0011 when snapshot was already consumed', async () => {
-        await asPitBoss();
-        const { error } = await svc.rpc('rpc_activate_table_session', {
-          p_table_session_id: secondSessionId,
-          p_opening_total_cents: 50000,
-          p_dealer_confirmed: true,
-        });
+        const { error } = await pitBossClient.rpc(
+          'rpc_activate_table_session',
+          {
+            p_table_session_id: secondSessionId,
+            p_opening_total_cents: 50000,
+            p_dealer_confirmed: true,
+          },
+        );
 
         expect(error).not.toBeNull();
         expect(error!.message).toContain('predecessor_already_consumed');
@@ -722,15 +794,15 @@ describeIntegration(
       });
 
       it('attested_by matches the pit_boss actor_id from context', async () => {
-        await asPitBoss();
-        await svc.rpc('rpc_activate_table_session', {
+        await pitBossClient.rpc('rpc_activate_table_session', {
           p_table_session_id: sessionId,
           p_opening_total_cents: 50000,
           p_dealer_confirmed: true,
           p_opening_note: 'Bootstrap',
         });
 
-        const { data: attestation } = await svc
+        // Verify via setupClient
+        const { data: attestation } = await setupClient
           .from('table_opening_attestation')
           .select('attested_by')
           .eq('session_id', sessionId)
@@ -758,8 +830,7 @@ describeIntegration(
       });
 
       it('raises P0001 (forbidden) for dealer role', async () => {
-        await asDealer();
-        const { error } = await svc.rpc('rpc_activate_table_session', {
+        const { error } = await dealerClient.rpc('rpc_activate_table_session', {
           p_table_session_id: sessionId,
           p_opening_total_cents: 50000,
           p_dealer_confirmed: true,

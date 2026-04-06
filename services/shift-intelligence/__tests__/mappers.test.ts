@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * ShiftIntelligenceService Mappers Unit Tests
  * Tests RPC row → DTO transformations.

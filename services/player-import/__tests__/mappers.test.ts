@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * PlayerImportService Mappers Tests
  *

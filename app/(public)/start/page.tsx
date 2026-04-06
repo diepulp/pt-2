@@ -29,8 +29,20 @@ export default async function StartGatewayPage() {
   }
 
   if (!staff) {
-    // No staff row — needs bootstrap
-    redirect('/bootstrap');
+    // Check for pending company registration
+    const { data: registration } = await supabase
+      .from('onboarding_registration')
+      .select('id')
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (registration) {
+      // Has pending registration — proceed to bootstrap
+      redirect('/bootstrap');
+    }
+
+    // No registration — needs to register company first
+    redirect('/register');
   }
 
   if (staff.status !== 'active') {

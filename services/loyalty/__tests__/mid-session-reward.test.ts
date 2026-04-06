@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 import { buildMidSessionRewardRpcInput } from '@/services/loyalty/mid-session-reward';
 
 const baseInput = {

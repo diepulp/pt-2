@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 import {
   deriveAdminDisplayBadge,
   ADMIN_DISPLAY_LABELS,

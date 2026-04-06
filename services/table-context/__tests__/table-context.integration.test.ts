@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * TableContext Integration Tests (STUB)
  *
@@ -9,7 +11,11 @@
  * TODO: Implement after WS-4 completes all service modules
  */
 
-describe('TableContext Integration', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('TableContext Integration', () => {
   describe('Full Table Lifecycle', () => {
     it.todo('activate -> assign dealer -> fill -> close');
     it.todo('activate -> deactivate -> activate again');

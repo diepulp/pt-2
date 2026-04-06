@@ -2,280 +2,151 @@
 
 Row-Level Security performance considerations for PT-2's multi-tenant Supabase architecture.
 
+## PT-2 RLS Context Model (ADR-015 / ADR-024)
+
+PT-2 uses these session variables for RLS, set via `SET LOCAL` (pooler-safe):
+
+| Variable | Purpose | Set by |
+|----------|---------|--------|
+| `app.casino_id` | Casino tenant scope | `set_rls_context_from_staff()` |
+| `app.actor_id` | Staff identity | `set_rls_context_from_staff()` |
+| `app.staff_role` | Role for RBAC | `set_rls_context_from_staff()` |
+
+Context is derived authoritatively from the JWT `staff_id` claim + staff table lookup (ADR-024). It is **not** user-provided — this prevents spoofing.
+
+## InitPlan Subselect Pattern (Critical)
+
+This is the single most impactful performance pattern in PT-2. Without the subselect wrapper, Postgres re-evaluates `current_setting()` for every row scanned. With it, the value is cached once per query.
+
+```sql
+-- BAD: re-evaluated per-row (Supabase advisor flags as auth_rls_initplan WARN)
+CREATE POLICY casino_isolation ON visits
+USING (casino_id = current_setting('app.casino_id', true)::uuid);
+
+-- GOOD: cached as InitPlan, evaluated once per query
+CREATE POLICY casino_isolation ON visits
+USING (casino_id = (SELECT current_setting('app.casino_id', true)::uuid));
+```
+
+As of 2026-04-02, 57 policies across 27 tables lack the subselect wrapper. Fixing this is the highest-impact batch optimization available.
+
+**How to detect:** Run Supabase MCP `get_advisors(type="performance")` and look for `auth_rls_initplan` entries.
+
 ## RLS Overhead Model
 
 Every query with RLS enabled incurs:
 
-1. **Policy evaluation** - Predicate check per row
-2. **Context lookup** - `current_setting()` calls
-3. **Subquery execution** - If policy uses subqueries
+1. **Policy evaluation** — predicate check per row (mitigated by InitPlan)
+2. **Context lookup** — `current_setting()` calls (mitigated by subselect)
+3. **Index scan** — if predicate column is indexed (ensure it is)
 
-Typical overhead: 5-30% depending on policy complexity.
+Typical overhead with InitPlan + index: 5-15%. Without InitPlan: 15-40%.
 
 ## Policy Design Principles
 
-### 1. Use Indexed Predicates
+### 1. Use Indexed Predicates with InitPlan
 
 ```sql
--- GOOD: casino_id is indexed
+-- Canonical PT-2 pattern
 CREATE POLICY casino_isolation ON visits
-USING (casino_id = current_setting('app.current_casino_id')::uuid);
+USING (casino_id = (SELECT current_setting('app.casino_id', true)::uuid));
 
 -- Ensure index exists
 CREATE INDEX idx_visits_casino ON visits(casino_id);
 ```
 
+### 2. Always Include auth.uid() Guard
+
+All PT-2 policies include an authentication check:
+
 ```sql
--- BAD: Function call prevents index usage
-CREATE POLICY check_access ON visits
-USING (check_user_access(auth.uid(), casino_id));
+CREATE POLICY visit_select ON visits FOR SELECT
+USING (
+  auth.uid() IS NOT NULL
+  AND casino_id = (SELECT current_setting('app.casino_id', true)::uuid)
+);
 ```
 
-### 2. Avoid Subqueries in Policies
+### 3. Avoid Subqueries in Policies
 
 ```sql
 -- BAD: Subquery executed per-row
 CREATE POLICY role_based ON visits
 USING (
   EXISTS (
-    SELECT 1 FROM user_casino_roles
-    WHERE user_id = auth.uid()
+    SELECT 1 FROM staff
+    WHERE id = (SELECT current_setting('app.actor_id', true)::uuid)
       AND casino_id = visits.casino_id
   )
 );
 
--- GOOD: Store role in JWT claim, check directly
+-- GOOD: Use session variable directly (already validated by set_rls_context_from_staff)
 CREATE POLICY role_based ON visits
 USING (
-  casino_id = (current_setting('request.jwt.claims', true)::json->>'casino_id')::uuid
+  casino_id = (SELECT current_setting('app.casino_id', true)::uuid)
 );
 ```
 
-### 3. Combine Policies Efficiently
+### 4. Consolidate Permissive Policies
 
 ```sql
--- BAD: Multiple permissive policies (OR'd together)
-CREATE POLICY p1 ON visits USING (is_admin());
-CREATE POLICY p2 ON visits USING (casino_id = get_user_casino());
-CREATE POLICY p3 ON visits USING (is_supervisor());
+-- BAD: Multiple permissive policies (OR'd together, each evaluated)
+CREATE POLICY p1 ON staff FOR UPDATE USING (is_admin());
+CREATE POLICY p2 ON staff FOR UPDATE USING (id = (SELECT current_setting('app.actor_id', true)::uuid));
 
 -- GOOD: Single policy with explicit logic
-CREATE POLICY access_control ON visits
+CREATE POLICY staff_update ON staff FOR UPDATE
 USING (
-  is_admin()
-  OR casino_id = (current_setting('request.jwt.claims', true)::json->>'casino_id')::uuid
+  auth.uid() IS NOT NULL
+  AND (
+    (SELECT current_setting('app.staff_role', true)) = 'pit_boss'
+    OR id = (SELECT current_setting('app.actor_id', true)::uuid)
+  )
 );
 ```
 
-## Context Injection Patterns
+## SECURITY DEFINER Escape Hatch
 
-### Pattern A: JWT Claims (Preferred)
-
-```sql
--- Extract from JWT set by Supabase Auth
-CREATE POLICY tenant_isolation ON visits
-USING (
-  casino_id = (
-    current_setting('request.jwt.claims', true)::json->>'casino_id'
-  )::uuid
-);
-```
-
-**Pros:** No extra query, validated by auth
-**Cons:** Requires custom JWT claims setup
-
-### Pattern B: Session Variable
+For hot paths where RLS overhead is unacceptable, use SECURITY DEFINER RPCs. These bypass RLS but must validate access internally.
 
 ```sql
--- Set via RPC at connection start
-CREATE POLICY tenant_isolation ON visits
-USING (
-  casino_id = current_setting('app.current_casino_id', true)::uuid
-);
-```
-
-```typescript
-// Set context before queries
-await supabase.rpc('set_context', { casino_id: casinoId });
-```
-
-**Pros:** Flexible, works with any auth
-**Cons:** Extra RPC call, session pooling issues
-
-### Pattern C: Function-Based
-
-```sql
--- Lookup in auth context
-CREATE OR REPLACE FUNCTION get_current_casino_id()
-RETURNS uuid
+CREATE OR REPLACE FUNCTION get_active_visits_fast(p_casino_id uuid)
+RETURNS SETOF visits
 LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''  -- Prevent search-path hijacking
 STABLE
 AS $$
-  SELECT casino_id FROM user_profiles
-  WHERE user_id = auth.uid()
+  SELECT * FROM public.visits
+  WHERE casino_id = p_casino_id
+    AND status = 'active';
 $$;
 
-CREATE POLICY tenant_isolation ON visits
-USING (casino_id = get_current_casino_id());
+-- Restrict access
+REVOKE ALL ON FUNCTION get_active_visits_fast FROM public;
+GRANT EXECUTE ON FUNCTION get_active_visits_fast TO authenticated;
 ```
 
-**Pros:** Always current
-**Cons:** Query per policy evaluation
+Per ADR-018, SECURITY DEFINER functions must:
+- Include `SET search_path = ''`
+- Validate caller access internally
+- Be explicitly granted (not public)
+- Be documented in SEC-001 matrix
 
 ## Measuring RLS Overhead
 
 ### Compare With/Without RLS
 
 ```sql
--- Session 1: With RLS (default)
+-- With RLS (default for authenticated role)
 SET row_security = on;
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT * FROM visits WHERE player_id = $1;
 
--- Session 2: Without RLS (superuser only)
+-- Without RLS (superuser only — for measurement, not production)
 SET row_security = off;
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT * FROM visits WHERE player_id = $1;
-```
-
-### Check Policy Execution
-
-```sql
--- View active policies
-SELECT * FROM pg_policies WHERE tablename = 'visits';
-
--- Check if policy is being used
-EXPLAIN (ANALYZE, VERBOSE)
-SELECT * FROM visits LIMIT 10;
--- Look for "Filter:" lines showing policy predicate
-```
-
-## Optimization Techniques
-
-### 1. SECURITY DEFINER Escape Hatch
-
-For hot paths where RLS overhead is unacceptable:
-
-```sql
-CREATE FUNCTION get_active_visits_fast(p_casino_id uuid)
-RETURNS SETOF visits
-LANGUAGE sql
-SECURITY DEFINER  -- Bypasses RLS
-STABLE
-AS $$
-  SELECT * FROM visits
-  WHERE casino_id = p_casino_id
-    AND status = 'active';
-$$;
-
--- Still validate caller has access!
-REVOKE ALL ON FUNCTION get_active_visits_fast FROM public;
-GRANT EXECUTE ON FUNCTION get_active_visits_fast TO authenticated;
-```
-
-**Warning:** Security Definer bypasses RLS. Always validate access in the function!
-
-### 2. Materialized Views
-
-For reports that aggregate across tenants:
-
-```sql
--- View with RLS applied at creation
-CREATE MATERIALIZED VIEW mv_casino_daily_stats AS
-SELECT
-  casino_id,
-  date_trunc('day', created_at) as day,
-  count(*) as visit_count
-FROM visits
-GROUP BY 1, 2;
-
--- RLS on the materialized view (not source table)
-CREATE POLICY casino_access ON mv_casino_daily_stats
-USING (casino_id = current_setting('app.current_casino_id')::uuid);
-```
-
-### 3. Denormalization
-
-For complex policies requiring joins:
-
-```sql
--- Instead of joining to check casino access
--- Store casino_id directly on child tables
-ALTER TABLE rating_slips ADD COLUMN casino_id uuid;
-
--- Simple policy, no join needed
-CREATE POLICY casino_access ON rating_slips
-USING (casino_id = current_setting('app.current_casino_id')::uuid);
-```
-
-## Common Pitfalls
-
-### 1. Missing Index on RLS Column
-
-```sql
--- Policy uses casino_id
-CREATE POLICY tenant_isolation ON visits
-USING (casino_id = current_setting('app.current_casino_id')::uuid);
-
--- But no index! Full table scan per query.
--- ALWAYS add:
-CREATE INDEX idx_visits_casino ON visits(casino_id);
-```
-
-### 2. current_setting Without Default
-
-```sql
--- BAD: Throws error if not set
-current_setting('app.current_casino_id')
-
--- GOOD: Returns NULL if not set
-current_setting('app.current_casino_id', true)
-```
-
-### 3. Type Mismatch
-
-```sql
--- BAD: String comparison when column is UUID
-USING (casino_id::text = current_setting('app.current_casino_id'))
-
--- GOOD: Cast setting to UUID
-USING (casino_id = current_setting('app.current_casino_id')::uuid)
-```
-
-### 4. Policy on Views
-
-```sql
--- Views don't support RLS directly
--- RLS applies to underlying tables
-
--- If view joins multiple tables, ensure all have appropriate policies
-CREATE VIEW visit_details AS
-SELECT v.*, p.name as player_name
-FROM visits v
-JOIN players p ON v.player_id = p.player_id;
-
--- Both visits AND players need RLS policies
-```
-
-## Benchmarking RLS Impact
-
-### Test Query Template
-
-```sql
--- 1. Baseline (no RLS)
-SET row_security = off;
-\timing on
-SELECT count(*) FROM visits WHERE player_id = 'test-uuid';
--- Note: X.XX ms
-
--- 2. With RLS
-SET row_security = on;
-SET app.current_casino_id = 'casino-uuid';
-SELECT count(*) FROM visits WHERE player_id = 'test-uuid';
--- Note: Y.YY ms
-
--- 3. Calculate overhead
--- Overhead = (Y - X) / X * 100%
 ```
 
 ### Acceptable Overhead
@@ -288,6 +159,59 @@ SELECT count(*) FROM visits WHERE player_id = 'test-uuid';
 | Complex join | +30% |
 
 If exceeding these thresholds:
-1. Check index on RLS predicate column
-2. Simplify policy logic
-3. Consider SECURITY DEFINER function
+1. Verify InitPlan subselect wrapper is present
+2. Check index on RLS predicate column
+3. Simplify policy logic
+4. Consider SECURITY DEFINER function
+
+## Common Pitfalls
+
+### 1. Missing Index on RLS Column
+
+```sql
+-- Policy uses casino_id but no index → full table scan per query
+CREATE INDEX idx_visits_casino ON visits(casino_id);
+```
+
+### 2. current_setting Without Default
+
+```sql
+-- BAD: Throws error if not set
+current_setting('app.casino_id')
+
+-- GOOD: Returns empty string if not set
+current_setting('app.casino_id', true)
+```
+
+### 3. Missing InitPlan Wrapper
+
+```sql
+-- BAD: Per-row evaluation
+USING (casino_id = current_setting('app.casino_id', true)::uuid)
+
+-- GOOD: Cached
+USING (casino_id = (SELECT current_setting('app.casino_id', true)::uuid))
+```
+
+### 4. Missing search_path on Functions
+
+```sql
+-- BAD: Supabase advisor flags as function_search_path_mutable WARN
+CREATE FUNCTION compute_gaming_day() ...
+
+-- GOOD:
+CREATE FUNCTION compute_gaming_day()
+...
+SET search_path = ''
+AS $$ ... $$;
+```
+
+### 5. Type Mismatch
+
+```sql
+-- BAD: String comparison when column is UUID
+USING (casino_id::text = current_setting('app.casino_id'))
+
+-- GOOD: Cast setting to UUID
+USING (casino_id = (SELECT current_setting('app.casino_id', true)::uuid))
+```

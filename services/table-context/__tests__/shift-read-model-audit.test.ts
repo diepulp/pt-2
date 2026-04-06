@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Shift Read-Model Audit Tests
  *

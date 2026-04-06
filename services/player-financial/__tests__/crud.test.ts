@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';

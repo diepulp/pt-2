@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Bypass Lockdown Tests (AUTH-HARDENING v0.1 WS4)
  *

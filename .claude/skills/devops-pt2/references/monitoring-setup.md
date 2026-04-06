@@ -1,32 +1,36 @@
 # Monitoring & Observability Setup
 
-Comprehensive guide for setting up monitoring, alerting, and observability for PT-2.
+Setup guide for monitoring, alerting, and observability for PT-2.
 
-## Monitoring Stack Overview
+> **Status as of 2026-04-02:** This is a **planning reference** — a blueprint for what to implement. Sentry, Axiom, and Grafana are **not yet configured**. Vercel Analytics and Supabase Dashboard are available out of the box. The health check endpoint has not been implemented yet. Use this guide when setting up each component for the first time.
+
+## Target Monitoring Stack
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        PT-2 Observability Stack                          │
+│                    PT-2 Observability Stack (Target)                      │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  Frontend                 Backend                    Database            │
 │  ┌─────────────┐         ┌─────────────┐           ┌─────────────┐     │
 │  │   Vercel    │         │   Sentry    │           │  Supabase   │     │
 │  │  Analytics  │         │   (Errors)  │           │  Dashboard  │     │
-│  │  (Vitals)   │         │             │           │  (Metrics)  │     │
-│  └──────┬──────┘         └──────┬──────┘           └──────┬──────┘     │
+│  │  (Vitals)   │         │  [PLANNED]  │           │  [AVAILABLE]│     │
+│  │ [AVAILABLE] │         └──────┬──────┘           └──────┬──────┘     │
+│  └──────┬──────┘                │                         │             │
 │         │                       │                         │             │
 │         └───────────────────────┴─────────────────────────┘             │
 │                                 │                                        │
 │                         ┌───────▼───────┐                               │
 │                         │     Axiom     │                               │
 │                         │(Log Aggregation)│                              │
+│                         │  [PLANNED]    │                               │
 │                         └───────────────┘                               │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 1. Vercel Analytics (Built-in)
+## 1. Vercel Analytics (Available — enable in dashboard)
 
 ### Enable Analytics
 
@@ -61,7 +65,7 @@ export function trackPlayerCheckIn(playerId: string) {
 }
 ```
 
-## 2. Sentry Setup
+## 2. Sentry Setup (PLANNED — not yet installed)
 
 ### Installation
 
@@ -169,7 +173,7 @@ Sentry.setUser({
 Sentry.setUser(null);
 ```
 
-## 3. Supabase Monitoring
+## 3. Supabase Monitoring (Available — built into Supabase Dashboard)
 
 ### Dashboard Metrics
 
@@ -211,7 +215,7 @@ WHERE state != 'idle'
    - Connection pool exhaustion (> 90%)
    - Slow queries (> 1s average)
 
-## 4. Axiom Integration (Log Aggregation)
+## 4. Axiom Integration (PLANNED — not yet configured)
 
 ### Setup via Vercel
 
@@ -242,7 +246,7 @@ logEvent('slip_created', {
 });
 ```
 
-## 5. Health Check Endpoint
+## 5. Health Check Endpoint (PLANNED — not yet implemented)
 
 ### Implementation
 
@@ -359,7 +363,7 @@ Example rules:
 - Database query times
 - Cache hit rates
 
-### Grafana Setup (Optional)
+### Grafana Setup (PLANNED — optional, not yet configured)
 
 If using Grafana Cloud:
 

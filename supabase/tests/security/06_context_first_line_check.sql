@@ -17,6 +17,7 @@ DECLARE
     'rpc_get_rating_slip_duration',
     'rpc_bootstrap_casino',
     'rpc_accept_staff_invite',
+    'rpc_register_company',
     'rpc_current_gaming_day',
     'rpc_gaming_day_range'
   ];

@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Loyalty Accrual Lifecycle Integration Tests
  *
@@ -10,10 +12,10 @@
  * 3. Player balance updates (current_balance)
  * 4. Theo and points calculation accuracy
  *
- * APPROACH: Uses direct SQL operations (service client) to:
- * - Bypass RPC auth requirements (ADR-024 requires auth.uid())
- * - Focus on business logic verification, not RLS enforcement
- * - Test the accrual calculation formula directly
+ * AUTH: Mode C (ADR-024) — setupClient (service-role) for fixture creation,
+ * authenticated anon client reserved for RPC operations if needed.
+ * This suite uses direct SQL for simulation so most operations remain on
+ * setupClient. The auth user + staff are created for ADR-024 consistency.
  *
  * @see ISSUE-47B1DFF1 Loyalty accrual never called on rating slip close
  * @see ADR-024 RLS Context Self-Injection Remediation
@@ -41,8 +43,9 @@ import type { Database } from '@/types/database.types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-const TEST_PREFIX = 'test-lac-int'; // loyalty-accrual-lifecycle integration
+const TEST_PREFIX = 'test-lac-mc'; // loyalty-accrual-lifecycle Mode C
 
 // Policy values used in calculations (must match fixture setup)
 const POLICY = {
@@ -58,7 +61,7 @@ const POLICY = {
 
 /**
  * Calculate theoretical win (theo) based on policy snapshot values.
- * Formula: avg_bet × (house_edge/100) × (duration_hours) × decisions_per_hour
+ * Formula: avg_bet * (house_edge/100) * (duration_hours) * decisions_per_hour
  */
 function calculateTheo(
   avgBet: number,
@@ -72,7 +75,7 @@ function calculateTheo(
 
 /**
  * Calculate loyalty points from theo.
- * Formula: ROUND(theo × points_conversion_rate × point_multiplier)
+ * Formula: ROUND(theo * points_conversion_rate * point_multiplier)
  */
 function calculatePoints(
   theo: number,
@@ -90,6 +93,7 @@ interface TestFixture {
   casinoId: string;
   tableId: string;
   actorId: string;
+  authUserId: string;
   cleanup: () => Promise<void>;
 }
 
@@ -114,622 +118,645 @@ interface RatingSlipData {
 // Test Suite
 // ============================================================================
 
-describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
-  let supabase: SupabaseClient<Database>;
-  let fixture: TestFixture;
-  let playerCounter = 0;
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
 
-  beforeAll(async () => {
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error(
-        'Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY',
+(RUN_INTEGRATION ? describe : describe.skip)(
+  'Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)',
+  () => {
+    let setupClient: SupabaseClient<Database>;
+    let supabase: SupabaseClient<Database>;
+    let fixture: TestFixture;
+    let playerCounter = 0;
+
+    beforeAll(async () => {
+      if (!supabaseUrl || !supabaseServiceKey) {
+        throw new Error(
+          'Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY',
+        );
+      }
+
+      // Phase 1: Service-role client for fixture setup
+      setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
+
+      // Phase 2-6: Create fixtures and Mode C auth user
+      fixture = await createTestFixture(setupClient);
+
+      // Phase 7: Create authenticated anon client (Mode C ADR-024)
+      const signInClient = createClient<Database>(
+        supabaseUrl,
+        supabaseServiceKey,
+        {
+          auth: { autoRefreshToken: false, persistSession: false },
+        },
       );
-    }
+      const testEmail = `${TEST_PREFIX}-actor-${Date.now()}@test.local`;
+      const testPassword = 'TestPassword123!';
 
-    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    fixture = await createTestFixture(supabase);
-  });
+      const { data: authData, error: authError } =
+        await setupClient.auth.admin.createUser({
+          email: testEmail,
+          password: testPassword,
+          email_confirm: true,
+          app_metadata: {
+            casino_id: fixture.casinoId,
+            staff_role: 'pit_boss',
+          },
+        });
 
-  afterAll(async () => {
-    if (fixture?.cleanup) {
-      await fixture.cleanup();
-    }
-  });
+      if (authError || !authData.user) {
+        throw new Error(`Failed to create auth user: ${authError?.message}`);
+      }
 
-  // ==========================================================================
-  // Helper: Create isolated player with visit and loyalty account
-  // ==========================================================================
-  async function createTestPlayer(): Promise<TestPlayer> {
-    playerCounter++;
+      fixture.authUserId = authData.user.id;
 
-    // 1. Create player
-    const { data: player, error: playerError } = await supabase
-      .from('player')
-      .insert({
-        first_name: 'Loyalty',
-        last_name: `Test${playerCounter}_${Date.now()}`,
-        birth_date: '1985-01-15',
-      })
-      .select()
-      .single();
+      // Stamp staff_id back to auth user (two-phase ADR-024)
+      await setupClient.auth.admin.updateUserById(authData.user.id, {
+        app_metadata: {
+          casino_id: fixture.casinoId,
+          staff_id: fixture.actorId,
+          staff_role: 'pit_boss',
+        },
+      });
 
-    if (playerError || !player) {
-      throw new Error(`Failed to create player: ${playerError?.message}`);
-    }
+      // Link staff to auth user
+      await setupClient
+        .from('staff')
+        .update({ user_id: authData.user.id })
+        .eq('id', fixture.actorId);
 
-    // 2. Link player to casino
-    await supabase.from('player_casino').insert({
-      player_id: player.id,
-      casino_id: fixture.casinoId,
-      status: 'active',
-    });
+      // Sign in to get JWT
+      const { data: signInData, error: signInError } =
+        await signInClient.auth.signInWithPassword({
+          email: testEmail,
+          password: testPassword,
+        });
 
-    // 3. Create player_loyalty record (required for accrual)
-    await supabase.from('player_loyalty').insert({
-      player_id: player.id,
-      casino_id: fixture.casinoId,
-      current_balance: 0,
-      tier: 'bronze',
-    });
+      if (signInError || !signInData.session) {
+        throw new Error(`Failed to sign in: ${signInError?.message}`);
+      }
 
-    // 4. Create active visit
-    const visitGroupId = randomUUID();
-    const { data: visit, error: visitError } = await supabase
-      .from('visit')
-      .insert({
+      // Create authenticated anon client with JWT
+      supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${signInData.session.access_token}`,
+          },
+        },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+    }, 30_000);
+
+    afterAll(async () => {
+      if (fixture?.cleanup) {
+        await fixture.cleanup();
+      }
+    }, 15_000);
+
+    // ==========================================================================
+    // Helper: Create isolated player with visit and loyalty account
+    // ==========================================================================
+    async function createTestPlayer(): Promise<TestPlayer> {
+      playerCounter++;
+
+      // 1. Create player (setupClient — fixture creation)
+      const { data: player, error: playerError } = await setupClient
+        .from('player')
+        .insert({
+          first_name: 'Loyalty',
+          last_name: `Test${playerCounter}_${Date.now()}`,
+          birth_date: '1985-01-15',
+        })
+        .select()
+        .single();
+
+      if (playerError || !player) {
+        throw new Error(`Failed to create player: ${playerError?.message}`);
+      }
+
+      // 2. Link player to casino
+      await setupClient.from('player_casino').insert({
         player_id: player.id,
         casino_id: fixture.casinoId,
-        started_at: new Date().toISOString(),
-        ended_at: null,
-        visit_kind: 'gaming_identified_rated',
-        visit_group_id: visitGroupId,
-      })
-      .select()
-      .single();
+        status: 'active',
+      });
 
-    if (visitError || !visit) {
-      throw new Error(`Failed to create visit: ${visitError?.message}`);
+      // 3. Create player_loyalty record (required for accrual)
+      await setupClient.from('player_loyalty').insert({
+        player_id: player.id,
+        casino_id: fixture.casinoId,
+        current_balance: 0,
+        tier: 'bronze',
+      });
+
+      // 4. Create active visit
+      const visitGroupId = randomUUID();
+      const { data: visit, error: visitError } = await setupClient
+        .from('visit')
+        .insert({
+          player_id: player.id,
+          casino_id: fixture.casinoId,
+          started_at: new Date().toISOString(),
+          ended_at: null,
+          visit_kind: 'gaming_identified_rated',
+          visit_group_id: visitGroupId,
+        })
+        .select()
+        .single();
+
+      if (visitError || !visit) {
+        throw new Error(`Failed to create visit: ${visitError?.message}`);
+      }
+
+      // Cleanup function
+      const cleanup = async () => {
+        await setupClient
+          .from('loyalty_ledger')
+          .delete()
+          .eq('player_id', player.id);
+        await setupClient.from('rating_slip').delete().eq('visit_id', visit.id);
+        await setupClient.from('visit').delete().eq('id', visit.id);
+        await setupClient
+          .from('player_loyalty')
+          .delete()
+          .eq('player_id', player.id);
+        await setupClient
+          .from('player_casino')
+          .delete()
+          .eq('player_id', player.id);
+        await setupClient.from('player').delete().eq('id', player.id);
+      };
+
+      return {
+        id: player.id,
+        visitId: visit.id,
+        cleanup,
+      };
     }
 
-    // Cleanup function
-    const cleanup = async () => {
-      await supabase.from('loyalty_ledger').delete().eq('player_id', player.id);
-      await supabase.from('rating_slip').delete().eq('visit_id', visit.id);
-      await supabase.from('visit').delete().eq('id', visit.id);
-      await supabase.from('player_loyalty').delete().eq('player_id', player.id);
-      await supabase.from('player_casino').delete().eq('player_id', player.id);
-      await supabase.from('player').delete().eq('id', player.id);
-    };
+    // ==========================================================================
+    // Helper: Create a closed rating slip with policy_snapshot (direct SQL)
+    // ==========================================================================
+    async function createClosedRatingSlip(
+      player: TestPlayer,
+      avgBet: number,
+      durationSeconds: number,
+    ): Promise<RatingSlipData> {
+      const slipId = randomUUID();
+      const startTime = new Date(Date.now() - durationSeconds * 1000);
+      const endTime = new Date();
 
-    return {
-      id: player.id,
-      visitId: visit.id,
-      cleanup,
-    };
-  }
-
-  // ==========================================================================
-  // Helper: Create a closed rating slip with policy_snapshot (direct SQL)
-  // ==========================================================================
-  async function createClosedRatingSlip(
-    player: TestPlayer,
-    avgBet: number,
-    durationSeconds: number,
-  ): Promise<RatingSlipData> {
-    const slipId = randomUUID();
-    const startTime = new Date(Date.now() - durationSeconds * 1000);
-    const endTime = new Date();
-
-    // Create policy_snapshot matching game_settings
-    const policySnapshot = {
-      loyalty: {
-        house_edge: POLICY.houseEdge,
-        decisions_per_hour: POLICY.decisionsPerHour,
-        points_conversion_rate: POLICY.pointsConversionRate,
-        point_multiplier: POLICY.pointMultiplier,
-      },
-      game_type: 'blackjack',
-      captured_at: startTime.toISOString(),
-    };
-
-    const { error: slipError } = await supabase.from('rating_slip').insert({
-      id: slipId,
-      casino_id: fixture.casinoId,
-      visit_id: player.visitId,
-      table_id: fixture.tableId,
-      seat_number: String(playerCounter),
-      average_bet: avgBet,
-      status: 'closed',
-      start_time: startTime.toISOString(),
-      end_time: endTime.toISOString(),
-      duration_seconds: durationSeconds,
-      policy_snapshot: policySnapshot,
-      accrual_kind: 'loyalty',
-    });
-
-    if (slipError) {
-      throw new Error(`Failed to create rating slip: ${slipError.message}`);
-    }
-
-    return {
-      id: slipId,
-      visitId: player.visitId,
-      tableId: fixture.tableId,
-      casinoId: fixture.casinoId,
-      playerId: player.id,
-      averageBet: avgBet,
-      durationSeconds,
-      policySnapshot,
-    };
-  }
-
-  // ==========================================================================
-  // Helper: Create loyalty ledger entry (simulating what RPC does)
-  // ==========================================================================
-  async function createLoyaltyLedgerEntry(
-    slip: RatingSlipData,
-    idempotencyKey: string,
-  ): Promise<{
-    ledgerId: string;
-    pointsDelta: number;
-    theo: number;
-    balanceAfter: number;
-  }> {
-    // Calculate theo and points using the formula
-    const theo = calculateTheo(slip.averageBet, slip.durationSeconds);
-    const pointsDelta = calculatePoints(theo);
-
-    // Insert ledger entry
-    const { data: ledgerEntry, error: ledgerError } = await supabase
-      .from('loyalty_ledger')
-      .insert({
-        casino_id: slip.casinoId,
-        player_id: slip.playerId,
-        rating_slip_id: slip.id,
-        visit_id: slip.visitId,
-        points_delta: pointsDelta,
-        reason: 'base_accrual',
-        idempotency_key: idempotencyKey,
-        source_kind: 'rating_slip',
-        source_id: slip.id,
-        metadata: {
-          theo,
-          avg_bet: slip.averageBet,
-          duration_seconds: slip.durationSeconds,
-          policy_snapshot: slip.policySnapshot,
+      // Create policy_snapshot matching game_settings
+      const policySnapshot = {
+        loyalty: {
+          house_edge: POLICY.houseEdge,
+          decisions_per_hour: POLICY.decisionsPerHour,
+          points_conversion_rate: POLICY.pointsConversionRate,
+          point_multiplier: POLICY.pointMultiplier,
         },
-      })
-      .select()
-      .single();
+        game_type: 'blackjack',
+        captured_at: startTime.toISOString(),
+      };
 
-    if (ledgerError) {
-      throw new Error(`Failed to create ledger entry: ${ledgerError.message}`);
+      // Calculate computed_theo_cents (required by chk_closed_slip_has_theo constraint)
+      const theo = calculateTheo(avgBet, durationSeconds);
+      const computedTheoCents = Math.max(Math.round(theo * 100), 0);
+
+      // setupClient — fixture creation (direct INSERT bypasses RLS)
+      const { error: slipError } = await setupClient
+        .from('rating_slip')
+        .insert({
+          id: slipId,
+          casino_id: fixture.casinoId,
+          visit_id: player.visitId,
+          table_id: fixture.tableId,
+          seat_number: String(playerCounter),
+          average_bet: avgBet,
+          status: 'closed',
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          duration_seconds: durationSeconds,
+          policy_snapshot: policySnapshot,
+          accrual_kind: 'loyalty',
+          computed_theo_cents: computedTheoCents,
+        });
+
+      if (slipError) {
+        throw new Error(`Failed to create rating slip: ${slipError.message}`);
+      }
+
+      return {
+        id: slipId,
+        visitId: player.visitId,
+        tableId: fixture.tableId,
+        casinoId: fixture.casinoId,
+        playerId: player.id,
+        averageBet: avgBet,
+        durationSeconds,
+        policySnapshot,
+      };
     }
 
-    // Update player balance
-    const { data: balance, error: balanceError } = await supabase
-      .from('player_loyalty')
-      .update({ current_balance: supabase.rpc as unknown }) // Will use raw SQL below
-      .eq('player_id', slip.playerId)
-      .eq('casino_id', slip.casinoId)
-      .select()
-      .single();
+    // ==========================================================================
+    // Helper: Simulate accrual and update balance directly
+    // Uses setupClient (service-role) for direct table manipulation.
+    // This simulates what rpc_accrue_on_close does, but via direct SQL
+    // to focus on business logic verification.
+    // ==========================================================================
+    async function simulateAccrual(
+      slip: RatingSlipData,
+      idempotencyKey: string,
+    ): Promise<{
+      ledgerId: string;
+      pointsDelta: number;
+      theo: number;
+      balanceAfter: number;
+      isExisting: boolean;
+    }> {
+      // Check for existing entry with same idempotency key (setupClient — verification)
+      const { data: existingEntry } = await setupClient
+        .from('loyalty_ledger')
+        .select('*')
+        .eq('idempotency_key', idempotencyKey)
+        .single();
 
-    // Use raw SQL to increment balance atomically
+      if (existingEntry) {
+        // Get current balance
+        const { data: balance } = await setupClient
+          .from('player_loyalty')
+          .select('current_balance')
+          .eq('player_id', slip.playerId)
+          .eq('casino_id', slip.casinoId)
+          .single();
 
-    const { error: updateError } = await supabase.rpc('execute_sql' as string, {
-      query: `
-        UPDATE player_loyalty
-        SET current_balance = current_balance + ${pointsDelta}
-        WHERE player_id = '${slip.playerId}' AND casino_id = '${slip.casinoId}'
-      `,
-    });
+        return {
+          ledgerId: existingEntry.id,
+          pointsDelta: existingEntry.points_delta,
+          theo: (existingEntry.metadata as Record<string, number>)?.theo ?? 0,
+          balanceAfter: balance?.current_balance ?? 0,
+          isExisting: true,
+        };
+      }
 
-    // Get updated balance
-    const { data: updatedBalance } = await supabase
-      .from('player_loyalty')
-      .select('current_balance')
-      .eq('player_id', slip.playerId)
-      .eq('casino_id', slip.casinoId)
-      .single();
+      // Calculate theo and points
+      const theo = calculateTheo(slip.averageBet, slip.durationSeconds);
+      const pointsDelta = calculatePoints(theo);
 
-    return {
-      ledgerId: ledgerEntry!.id,
-      pointsDelta,
-      theo,
-      balanceAfter: updatedBalance?.current_balance ?? pointsDelta,
-    };
-  }
+      // Insert ledger entry (setupClient — direct SQL simulation)
+      const { data: ledgerEntry, error: ledgerError } = await setupClient
+        .from('loyalty_ledger')
+        .insert({
+          casino_id: slip.casinoId,
+          player_id: slip.playerId,
+          rating_slip_id: slip.id,
+          visit_id: slip.visitId,
+          points_delta: pointsDelta,
+          reason: 'base_accrual',
+          idempotency_key: idempotencyKey,
+          source_kind: 'rating_slip',
+          source_id: slip.id,
+          metadata: {
+            theo,
+            avg_bet: slip.averageBet,
+            duration_seconds: slip.durationSeconds,
+            policy_snapshot: slip.policySnapshot,
+          },
+        })
+        .select()
+        .single();
 
-  // ==========================================================================
-  // Helper: Simulate accrual and update balance directly
-  // ==========================================================================
-  async function simulateAccrual(
-    slip: RatingSlipData,
-    idempotencyKey: string,
-  ): Promise<{
-    ledgerId: string;
-    pointsDelta: number;
-    theo: number;
-    balanceAfter: number;
-    isExisting: boolean;
-  }> {
-    // Check for existing entry with same idempotency key
-    const { data: existingEntry } = await supabase
-      .from('loyalty_ledger')
-      .select('*')
-      .eq('idempotency_key', idempotencyKey)
-      .single();
+      if (ledgerError) {
+        throw new Error(
+          `Failed to create ledger entry: ${ledgerError.message}`,
+        );
+      }
 
-    if (existingEntry) {
-      // Get current balance
-      const { data: balance } = await supabase
+      // Get current balance and update (setupClient — direct SQL simulation)
+      const { data: currentBalance } = await setupClient
         .from('player_loyalty')
         .select('current_balance')
         .eq('player_id', slip.playerId)
         .eq('casino_id', slip.casinoId)
         .single();
 
+      const newBalance = (currentBalance?.current_balance ?? 0) + pointsDelta;
+
+      await setupClient
+        .from('player_loyalty')
+        .update({ current_balance: newBalance })
+        .eq('player_id', slip.playerId)
+        .eq('casino_id', slip.casinoId);
+
       return {
-        ledgerId: existingEntry.id,
-        pointsDelta: existingEntry.points_delta,
-        theo: (existingEntry.metadata as Record<string, number>)?.theo ?? 0,
-        balanceAfter: balance?.current_balance ?? 0,
-        isExisting: true,
+        ledgerId: ledgerEntry!.id,
+        pointsDelta,
+        theo,
+        balanceAfter: newBalance,
+        isExisting: false,
       };
     }
 
-    // Calculate theo and points
-    const theo = calculateTheo(slip.averageBet, slip.durationSeconds);
-    const pointsDelta = calculatePoints(theo);
+    // ==========================================================================
+    // TEST 1: Complete accrual lifecycle
+    // ==========================================================================
+    describe('Complete Accrual Lifecycle', () => {
+      let testPlayer: TestPlayer;
 
-    // Insert ledger entry
-    const { data: ledgerEntry, error: ledgerError } = await supabase
-      .from('loyalty_ledger')
-      .insert({
-        casino_id: slip.casinoId,
-        player_id: slip.playerId,
-        rating_slip_id: slip.id,
-        visit_id: slip.visitId,
-        points_delta: pointsDelta,
-        reason: 'base_accrual',
-        idempotency_key: idempotencyKey,
-        source_kind: 'rating_slip',
-        source_id: slip.id,
-        metadata: {
-          theo,
-          avg_bet: slip.averageBet,
-          duration_seconds: slip.durationSeconds,
-          policy_snapshot: slip.policySnapshot,
-        },
-      })
-      .select()
-      .single();
+      beforeEach(async () => {
+        testPlayer = await createTestPlayer();
+      });
 
-    if (ledgerError) {
-      throw new Error(`Failed to create ledger entry: ${ledgerError.message}`);
-    }
+      afterEach(async () => {
+        if (testPlayer?.cleanup) {
+          await testPlayer.cleanup();
+        }
+      });
 
-    // Get current balance and update
-    const { data: currentBalance } = await supabase
-      .from('player_loyalty')
-      .select('current_balance')
-      .eq('player_id', slip.playerId)
-      .eq('casino_id', slip.casinoId)
-      .single();
+      it('should create loyalty_ledger entry when rating slip is closed', async () => {
+        // === ARRANGE ===
+        const avgBet = 100; // $1.00
+        const durationSeconds = 3600; // 1 hour
 
-    const newBalance = (currentBalance?.current_balance ?? 0) + pointsDelta;
+        const slip = await createClosedRatingSlip(
+          testPlayer,
+          avgBet,
+          durationSeconds,
+        );
 
-    await supabase
-      .from('player_loyalty')
-      .update({ current_balance: newBalance })
-      .eq('player_id', slip.playerId)
-      .eq('casino_id', slip.casinoId);
+        // === ACT ===
+        const idempotencyKey = randomUUID();
+        const result = await simulateAccrual(slip, idempotencyKey);
 
-    return {
-      ledgerId: ledgerEntry!.id,
-      pointsDelta,
-      theo,
-      balanceAfter: newBalance,
-      isExisting: false,
-    };
-  }
+        // === ASSERT ===
+        // 1. Verify result structure
+        expect(result.ledgerId).toBeDefined();
+        expect(result.pointsDelta).toBeGreaterThan(0);
+        expect(result.theo).toBeGreaterThan(0);
+        expect(result.balanceAfter).toBe(result.pointsDelta);
+        expect(result.isExisting).toBe(false);
 
-  // ==========================================================================
-  // TEST 1: Complete accrual lifecycle
-  // ==========================================================================
-  describe('Complete Accrual Lifecycle', () => {
-    let testPlayer: TestPlayer;
+        // 2. Verify loyalty_ledger entry in database (setupClient — verification)
+        const { data: ledgerEntry } = await setupClient
+          .from('loyalty_ledger')
+          .select('*')
+          .eq('id', result.ledgerId)
+          .single();
 
-    beforeEach(async () => {
-      testPlayer = await createTestPlayer();
-    });
+        expect(ledgerEntry).toBeDefined();
+        expect(ledgerEntry!.player_id).toBe(testPlayer.id);
+        expect(ledgerEntry!.casino_id).toBe(fixture.casinoId);
+        expect(ledgerEntry!.rating_slip_id).toBe(slip.id);
+        expect(ledgerEntry!.reason).toBe('base_accrual');
+        expect(ledgerEntry!.points_delta).toBe(result.pointsDelta);
 
-    afterEach(async () => {
-      if (testPlayer?.cleanup) {
-        await testPlayer.cleanup();
-      }
-    });
+        // 3. Verify player_loyalty balance in database (setupClient — verification)
+        const { data: balance } = await setupClient
+          .from('player_loyalty')
+          .select('current_balance')
+          .eq('player_id', testPlayer.id)
+          .eq('casino_id', fixture.casinoId)
+          .single();
 
-    it('should create loyalty_ledger entry when rating slip is closed', async () => {
-      // === ARRANGE ===
-      const avgBet = 100; // $1.00
-      const durationSeconds = 3600; // 1 hour
+        expect(balance!.current_balance).toBe(result.pointsDelta);
+      });
 
-      const slip = await createClosedRatingSlip(
-        testPlayer,
-        avgBet,
-        durationSeconds,
-      );
+      it('should calculate correct points based on ADR-019 formula', async () => {
+        // Test with known values for verifiable calculation
+        const avgBet = 50; // 50 cents
+        const durationSeconds = 7200; // 2 hours
 
-      // === ACT ===
-      const idempotencyKey = randomUUID();
-      const result = await simulateAccrual(slip, idempotencyKey);
+        // Expected calculation:
+        // theo = 50 * (1.5/100) * 2 * 70 = 105 cents
+        // points = ROUND(105 * 10) = 1050
+        const expectedTheo = calculateTheo(avgBet, durationSeconds);
+        const expectedPoints = calculatePoints(expectedTheo);
 
-      // === ASSERT ===
-      // 1. Verify result structure
-      expect(result.ledgerId).toBeDefined();
-      expect(result.pointsDelta).toBeGreaterThan(0);
-      expect(result.theo).toBeGreaterThan(0);
-      expect(result.balanceAfter).toBe(result.pointsDelta);
-      expect(result.isExisting).toBe(false);
+        expect(expectedTheo).toBeCloseTo(105, 1);
+        expect(expectedPoints).toBe(1050);
 
-      // 2. Verify loyalty_ledger entry in database
-      const { data: ledgerEntry } = await supabase
-        .from('loyalty_ledger')
-        .select('*')
-        .eq('id', result.ledgerId)
-        .single();
-
-      expect(ledgerEntry).toBeDefined();
-      expect(ledgerEntry!.player_id).toBe(testPlayer.id);
-      expect(ledgerEntry!.casino_id).toBe(fixture.casinoId);
-      expect(ledgerEntry!.rating_slip_id).toBe(slip.id);
-      expect(ledgerEntry!.reason).toBe('base_accrual');
-      expect(ledgerEntry!.points_delta).toBe(result.pointsDelta);
-
-      // 3. Verify player_loyalty balance in database
-      const { data: balance } = await supabase
-        .from('player_loyalty')
-        .select('current_balance')
-        .eq('player_id', testPlayer.id)
-        .eq('casino_id', fixture.casinoId)
-        .single();
-
-      expect(balance!.current_balance).toBe(result.pointsDelta);
-    });
-
-    it('should calculate correct points based on ADR-019 formula', async () => {
-      // Test with known values for verifiable calculation
-      const avgBet = 50; // 50 cents
-      const durationSeconds = 7200; // 2 hours
-
-      // Expected calculation:
-      // theo = 50 × (1.5/100) × 2 × 70 = 105 cents
-      // points = ROUND(105 × 10) = 1050
-      const expectedTheo = calculateTheo(avgBet, durationSeconds);
-      const expectedPoints = calculatePoints(expectedTheo);
-
-      expect(expectedTheo).toBeCloseTo(105, 1);
-      expect(expectedPoints).toBe(1050);
-
-      const slip = await createClosedRatingSlip(
-        testPlayer,
-        avgBet,
-        durationSeconds,
-      );
-      const result = await simulateAccrual(slip, randomUUID());
-
-      // Verify calculations match
-      expect(result.theo).toBeCloseTo(expectedTheo, 1);
-      expect(result.pointsDelta).toBe(expectedPoints);
-    });
-  });
-
-  // ==========================================================================
-  // TEST 2: Idempotency
-  // ==========================================================================
-  describe('Idempotency', () => {
-    let testPlayer: TestPlayer;
-
-    beforeEach(async () => {
-      testPlayer = await createTestPlayer();
-    });
-
-    afterEach(async () => {
-      if (testPlayer?.cleanup) {
-        await testPlayer.cleanup();
-      }
-    });
-
-    it('should return existing entry for duplicate idempotency key', async () => {
-      const slip = await createClosedRatingSlip(testPlayer, 100, 1800); // 30 min
-      const idempotencyKey = randomUUID();
-
-      // First call
-      const firstResult = await simulateAccrual(slip, idempotencyKey);
-      expect(firstResult.isExisting).toBe(false);
-
-      // Second call with same key
-      const secondResult = await simulateAccrual(slip, idempotencyKey);
-      expect(secondResult.isExisting).toBe(true);
-      expect(secondResult.ledgerId).toBe(firstResult.ledgerId);
-      expect(secondResult.pointsDelta).toBe(firstResult.pointsDelta);
-
-      // Verify only one ledger entry exists
-      const { data: entries } = await supabase
-        .from('loyalty_ledger')
-        .select('id')
-        .eq('rating_slip_id', slip.id);
-
-      expect(entries).toHaveLength(1);
-    });
-
-    it('should not double-count points on duplicate calls', async () => {
-      const slip = await createClosedRatingSlip(testPlayer, 200, 3600);
-      const idempotencyKey = randomUUID();
-
-      const result1 = await simulateAccrual(slip, idempotencyKey);
-      await simulateAccrual(slip, idempotencyKey);
-      await simulateAccrual(slip, idempotencyKey);
-
-      // Balance should equal single accrual
-      const { data: balance } = await supabase
-        .from('player_loyalty')
-        .select('current_balance')
-        .eq('player_id', testPlayer.id)
-        .eq('casino_id', fixture.casinoId)
-        .single();
-
-      expect(balance!.current_balance).toBe(result1.pointsDelta);
-    });
-  });
-
-  // ==========================================================================
-  // TEST 3: Balance accumulation
-  // ==========================================================================
-  describe('Balance Accumulation', () => {
-    let testPlayer: TestPlayer;
-
-    beforeEach(async () => {
-      testPlayer = await createTestPlayer();
-    });
-
-    afterEach(async () => {
-      if (testPlayer?.cleanup) {
-        await testPlayer.cleanup();
-      }
-    });
-
-    it('should accumulate balance across multiple rating slips', async () => {
-      const results: { pointsDelta: number }[] = [];
-
-      // Create 3 slips with different bets
-      for (let i = 1; i <= 3; i++) {
-        // Need unique seat number for each slip
-        playerCounter++;
-        const slip = await createClosedRatingSlip(testPlayer, 100 * i, 1800);
+        const slip = await createClosedRatingSlip(
+          testPlayer,
+          avgBet,
+          durationSeconds,
+        );
         const result = await simulateAccrual(slip, randomUUID());
-        results.push(result);
-      }
 
-      const expectedTotal = results.reduce((sum, r) => sum + r.pointsDelta, 0);
-
-      const { data: balance } = await supabase
-        .from('player_loyalty')
-        .select('current_balance')
-        .eq('player_id', testPlayer.id)
-        .eq('casino_id', fixture.casinoId)
-        .single();
-
-      expect(balance!.current_balance).toBe(expectedTotal);
-    });
-  });
-
-  // ==========================================================================
-  // TEST 4: Edge cases
-  // ==========================================================================
-  describe('Edge Cases', () => {
-    let testPlayer: TestPlayer;
-
-    beforeEach(async () => {
-      testPlayer = await createTestPlayer();
+        // Verify calculations match
+        expect(result.theo).toBeCloseTo(expectedTheo, 1);
+        expect(result.pointsDelta).toBe(expectedPoints);
+      });
     });
 
-    afterEach(async () => {
-      if (testPlayer?.cleanup) {
-        await testPlayer.cleanup();
-      }
+    // ==========================================================================
+    // TEST 2: Idempotency
+    // ==========================================================================
+    describe('Idempotency', () => {
+      let testPlayer: TestPlayer;
+
+      beforeEach(async () => {
+        testPlayer = await createTestPlayer();
+      });
+
+      afterEach(async () => {
+        if (testPlayer?.cleanup) {
+          await testPlayer.cleanup();
+        }
+      });
+
+      it('should return existing entry for duplicate idempotency key', async () => {
+        const slip = await createClosedRatingSlip(testPlayer, 100, 1800); // 30 min
+        const idempotencyKey = randomUUID();
+
+        // First call
+        const firstResult = await simulateAccrual(slip, idempotencyKey);
+        expect(firstResult.isExisting).toBe(false);
+
+        // Second call with same key
+        const secondResult = await simulateAccrual(slip, idempotencyKey);
+        expect(secondResult.isExisting).toBe(true);
+        expect(secondResult.ledgerId).toBe(firstResult.ledgerId);
+        expect(secondResult.pointsDelta).toBe(firstResult.pointsDelta);
+
+        // Verify only one ledger entry exists (setupClient — verification)
+        const { data: entries } = await setupClient
+          .from('loyalty_ledger')
+          .select('id')
+          .eq('rating_slip_id', slip.id);
+
+        expect(entries).toHaveLength(1);
+      });
+
+      it('should not double-count points on duplicate calls', async () => {
+        const slip = await createClosedRatingSlip(testPlayer, 200, 3600);
+        const idempotencyKey = randomUUID();
+
+        const result1 = await simulateAccrual(slip, idempotencyKey);
+        await simulateAccrual(slip, idempotencyKey);
+        await simulateAccrual(slip, idempotencyKey);
+
+        // Balance should equal single accrual (setupClient — verification)
+        const { data: balance } = await setupClient
+          .from('player_loyalty')
+          .select('current_balance')
+          .eq('player_id', testPlayer.id)
+          .eq('casino_id', fixture.casinoId)
+          .single();
+
+        expect(balance!.current_balance).toBe(result1.pointsDelta);
+      });
     });
 
-    it('should handle zero duration (0 points)', async () => {
-      const slip = await createClosedRatingSlip(testPlayer, 100, 0);
-      const result = await simulateAccrual(slip, randomUUID());
+    // ==========================================================================
+    // TEST 3: Balance accumulation
+    // ==========================================================================
+    describe('Balance Accumulation', () => {
+      let testPlayer: TestPlayer;
 
-      expect(result.theo).toBe(0);
-      expect(result.pointsDelta).toBe(0);
+      beforeEach(async () => {
+        testPlayer = await createTestPlayer();
+      });
+
+      afterEach(async () => {
+        if (testPlayer?.cleanup) {
+          await testPlayer.cleanup();
+        }
+      });
+
+      it('should accumulate balance across multiple rating slips', async () => {
+        const results: { pointsDelta: number }[] = [];
+
+        // Create 3 slips with different bets
+        for (let i = 1; i <= 3; i++) {
+          // Need unique seat number for each slip
+          playerCounter++;
+          const slip = await createClosedRatingSlip(testPlayer, 100 * i, 1800);
+          const result = await simulateAccrual(slip, randomUUID());
+          results.push(result);
+        }
+
+        const expectedTotal = results.reduce(
+          (sum, r) => sum + r.pointsDelta,
+          0,
+        );
+
+        // Verify accumulated balance (setupClient — verification)
+        const { data: balance } = await setupClient
+          .from('player_loyalty')
+          .select('current_balance')
+          .eq('player_id', testPlayer.id)
+          .eq('casino_id', fixture.casinoId)
+          .single();
+
+        expect(balance!.current_balance).toBe(expectedTotal);
+      });
     });
 
-    it('should handle small durations correctly', async () => {
-      // 1 minute session
-      const slip = await createClosedRatingSlip(testPlayer, 100, 60);
-      const result = await simulateAccrual(slip, randomUUID());
+    // ==========================================================================
+    // TEST 4: Edge cases
+    // ==========================================================================
+    describe('Edge Cases', () => {
+      let testPlayer: TestPlayer;
 
-      // Expected: 100 × 0.015 × (1/60) × 70 = 1.75 cents → 18 points
-      const expectedTheo = calculateTheo(100, 60);
-      const expectedPoints = calculatePoints(expectedTheo);
+      beforeEach(async () => {
+        testPlayer = await createTestPlayer();
+      });
 
-      expect(result.theo).toBeCloseTo(expectedTheo, 2);
-      expect(result.pointsDelta).toBe(expectedPoints);
+      afterEach(async () => {
+        if (testPlayer?.cleanup) {
+          await testPlayer.cleanup();
+        }
+      });
+
+      it('should handle zero duration (0 points)', async () => {
+        const slip = await createClosedRatingSlip(testPlayer, 100, 0);
+        const result = await simulateAccrual(slip, randomUUID());
+
+        expect(result.theo).toBe(0);
+        expect(result.pointsDelta).toBe(0);
+      });
+
+      it('should handle small durations correctly', async () => {
+        // 1 minute session
+        const slip = await createClosedRatingSlip(testPlayer, 100, 60);
+        const result = await simulateAccrual(slip, randomUUID());
+
+        // Expected: 100 * 0.015 * (1/60) * 70 = 1.75 cents -> 18 points
+        const expectedTheo = calculateTheo(100, 60);
+        const expectedPoints = calculatePoints(expectedTheo);
+
+        expect(result.theo).toBeCloseTo(expectedTheo, 2);
+        expect(result.pointsDelta).toBe(expectedPoints);
+      });
+
+      it('should handle high-roller session correctly', async () => {
+        // $500 average bet, 4 hours
+        const slip = await createClosedRatingSlip(testPlayer, 50000, 14400);
+        const result = await simulateAccrual(slip, randomUUID());
+
+        // Expected: 50000 * 0.015 * 4 * 70 = 210000 cents -> 2,100,000 points
+        const expectedTheo = calculateTheo(50000, 14400);
+        const expectedPoints = calculatePoints(expectedTheo);
+
+        expect(result.theo).toBeCloseTo(expectedTheo, 1);
+        expect(result.pointsDelta).toBe(expectedPoints);
+      });
     });
 
-    it('should handle high-roller session correctly', async () => {
-      // $500 average bet, 4 hours
-      const slip = await createClosedRatingSlip(testPlayer, 50000, 14400);
-      const result = await simulateAccrual(slip, randomUUID());
+    // ==========================================================================
+    // TEST 5: Policy snapshot immutability
+    // ==========================================================================
+    describe('Policy Snapshot', () => {
+      let testPlayer: TestPlayer;
 
-      // Expected: 50000 × 0.015 × 4 × 70 = 210000 cents → 2,100,000 points
-      const expectedTheo = calculateTheo(50000, 14400);
-      const expectedPoints = calculatePoints(expectedTheo);
+      beforeEach(async () => {
+        testPlayer = await createTestPlayer();
+      });
 
-      expect(result.theo).toBeCloseTo(expectedTheo, 1);
-      expect(result.pointsDelta).toBe(expectedPoints);
+      afterEach(async () => {
+        if (testPlayer?.cleanup) {
+          await testPlayer.cleanup();
+        }
+      });
+
+      it('should store calculation provenance in metadata', async () => {
+        const avgBet = 150;
+        const durationSeconds = 5400; // 1.5 hours
+
+        const slip = await createClosedRatingSlip(
+          testPlayer,
+          avgBet,
+          durationSeconds,
+        );
+        const result = await simulateAccrual(slip, randomUUID());
+
+        // Verify metadata contains calculation details (setupClient — verification)
+        const { data: ledgerEntry } = await setupClient
+          .from('loyalty_ledger')
+          .select('metadata')
+          .eq('id', result.ledgerId)
+          .single();
+
+        const metadata = ledgerEntry!.metadata as Record<string, unknown>;
+
+        expect(metadata.theo).toBe(result.theo);
+        expect(metadata.avg_bet).toBe(avgBet);
+        expect(metadata.duration_seconds).toBe(durationSeconds);
+        expect(metadata.policy_snapshot).toBeDefined();
+      });
     });
-  });
-
-  // ==========================================================================
-  // TEST 5: Policy snapshot immutability
-  // ==========================================================================
-  describe('Policy Snapshot', () => {
-    let testPlayer: TestPlayer;
-
-    beforeEach(async () => {
-      testPlayer = await createTestPlayer();
-    });
-
-    afterEach(async () => {
-      if (testPlayer?.cleanup) {
-        await testPlayer.cleanup();
-      }
-    });
-
-    it('should store calculation provenance in metadata', async () => {
-      const avgBet = 150;
-      const durationSeconds = 5400; // 1.5 hours
-
-      const slip = await createClosedRatingSlip(
-        testPlayer,
-        avgBet,
-        durationSeconds,
-      );
-      const result = await simulateAccrual(slip, randomUUID());
-
-      // Verify metadata contains calculation details
-      const { data: ledgerEntry } = await supabase
-        .from('loyalty_ledger')
-        .select('metadata')
-        .eq('id', result.ledgerId)
-        .single();
-
-      const metadata = ledgerEntry!.metadata as Record<string, unknown>;
-
-      expect(metadata.theo).toBe(result.theo);
-      expect(metadata.avg_bet).toBe(avgBet);
-      expect(metadata.duration_seconds).toBe(durationSeconds);
-      expect(metadata.policy_snapshot).toBeDefined();
-    });
-  });
-});
+  },
+);
 
 // ============================================================================
 // Fixture Factory
 // ============================================================================
 
 async function createTestFixture(
-  supabase: SupabaseClient<Database>,
+  setupClient: SupabaseClient<Database>,
 ): Promise<TestFixture> {
   // 1. Create company (ADR-043: company before casino)
-  const { data: company, error: companyError } = await supabase
+  const { data: company, error: companyError } = await setupClient
     .from('company')
     .insert({ name: `${TEST_PREFIX} Company ${Date.now()}` })
     .select()
@@ -740,7 +767,7 @@ async function createTestFixture(
   }
 
   // 2. Create casino
-  const { data: casino, error: casinoError } = await supabase
+  const { data: casino, error: casinoError } = await setupClient
     .from('casino')
     .insert({
       name: `${TEST_PREFIX} Casino ${Date.now()}`,
@@ -755,7 +782,7 @@ async function createTestFixture(
   }
 
   // 3. Create casino settings
-  await supabase.from('casino_settings').insert({
+  await setupClient.from('casino_settings').insert({
     casino_id: casino.id,
     gaming_day_start_time: '06:00:00',
     timezone: 'America/Los_Angeles',
@@ -764,7 +791,7 @@ async function createTestFixture(
   });
 
   // 4. Create gaming table
-  const { data: table, error: tableError } = await supabase
+  const { data: table, error: tableError } = await setupClient
     .from('gaming_table')
     .insert({
       casino_id: casino.id,
@@ -781,7 +808,7 @@ async function createTestFixture(
   }
 
   // 5. Create game_settings for blackjack with known policy values
-  await supabase.from('game_settings').insert({
+  await setupClient.from('game_settings').insert({
     casino_id: casino.id,
     game_type: 'blackjack',
     name: 'Blackjack Standard',
@@ -792,7 +819,7 @@ async function createTestFixture(
   });
 
   // 6. Create staff actor (required for audit trail)
-  const { data: actor, error: actorError } = await supabase
+  const { data: actor, error: actorError } = await setupClient
     .from('staff')
     .insert({
       casino_id: casino.id,
@@ -810,26 +837,43 @@ async function createTestFixture(
     throw new Error(`Failed to create actor: ${actorError?.message}`);
   }
 
-  // Cleanup function
+  // Cleanup function (reverse dependency order)
   const cleanup = async () => {
-    await supabase.from('loyalty_ledger').delete().eq('casino_id', casino.id);
-    await supabase.from('rating_slip').delete().eq('casino_id', casino.id);
-    await supabase.from('visit').delete().eq('casino_id', casino.id);
-    await supabase.from('player_loyalty').delete().eq('casino_id', casino.id);
-    await supabase.from('player_casino').delete().eq('casino_id', casino.id);
-    await supabase.from('player').delete().like('last_name', 'Test%');
-    await supabase.from('staff').delete().eq('id', actor.id);
-    await supabase.from('game_settings').delete().eq('casino_id', casino.id);
-    await supabase.from('gaming_table').delete().eq('id', table.id);
-    await supabase.from('casino_settings').delete().eq('casino_id', casino.id);
-    await supabase.from('casino').delete().eq('id', casino.id);
-    await supabase.from('company').delete().eq('id', company.id);
+    await setupClient
+      .from('loyalty_ledger')
+      .delete()
+      .eq('casino_id', casino.id);
+    await setupClient.from('rating_slip').delete().eq('casino_id', casino.id);
+    await setupClient.from('visit').delete().eq('casino_id', casino.id);
+    await setupClient
+      .from('player_loyalty')
+      .delete()
+      .eq('casino_id', casino.id);
+    await setupClient.from('player_casino').delete().eq('casino_id', casino.id);
+    await setupClient.from('player').delete().like('last_name', 'Test%');
+    // Delete auth user if created
+    if (fixture?.authUserId) {
+      await setupClient.auth.admin.deleteUser(fixture.authUserId);
+    }
+    await setupClient.from('staff').delete().eq('id', actor.id);
+    await setupClient.from('game_settings').delete().eq('casino_id', casino.id);
+    await setupClient.from('gaming_table').delete().eq('id', table.id);
+    await setupClient
+      .from('casino_settings')
+      .delete()
+      .eq('casino_id', casino.id);
+    await setupClient.from('casino').delete().eq('id', casino.id);
+    await setupClient.from('company').delete().eq('id', company.id);
   };
 
-  return {
+  // Note: authUserId is set in beforeAll after auth user creation
+  const fixture: TestFixture = {
     casinoId: casino.id,
     tableId: table.id,
     actorId: actor.id,
+    authUserId: '', // set in beforeAll
     cleanup,
   };
+
+  return fixture;
 }

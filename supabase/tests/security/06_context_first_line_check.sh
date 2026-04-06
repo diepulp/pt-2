@@ -22,7 +22,8 @@ CONTAINER="${SUPABASE_DB_CONTAINER:-supabase_db_pt-2}"
 #   - rpc_accept_staff_invite: auth-flow, called before staff context available
 #   - rpc_current_gaming_day: utility, no tenant data access
 #   - rpc_gaming_day_range: utility, no tenant data access
-ALLOWLIST="'rpc_get_rating_slip_duration','rpc_bootstrap_casino','rpc_accept_staff_invite','rpc_current_gaming_day','rpc_gaming_day_range'"
+# rpc_register_company: auth-flow, called before staff exists (PRD-060)
+ALLOWLIST="'rpc_get_rating_slip_duration','rpc_bootstrap_casino','rpc_accept_staff_invite','rpc_register_company','rpc_current_gaming_day','rpc_gaming_day_range'"
 
 # Query all SECURITY DEFINER rpc_* functions, extract proname and first PERFORM target.
 # The regex handles schema-qualified calls: PERFORM public.set_rls_context_from_staff()

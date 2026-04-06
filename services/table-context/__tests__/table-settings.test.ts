@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Table Settings (Betting Limits) Schema Validation Tests
  *

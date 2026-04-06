@@ -1,6 +1,6 @@
 ---
 name: qa-specialist
-description: Run existing E2E and unit test suites, execute pre-release quality gates, produce quality gate reports, validate route handler coverage (QA-005), and enforce QA-006 E2E testing standard for PT-2. This skill should be used when running test suites before deployment, executing quality gate checklists, producing quality reports with verification tier semantics, validating route handler test coverage, or auditing E2E verification taxonomy compliance (Mode A/B/C, E2E vs System Verification vs Local Verification). For writing new E2E tests or debugging flaky tests, use e2e-testing instead. (project)
+description: Run existing E2E and unit test suites, execute pre-release quality gates, produce quality gate reports, validate route handler coverage (QA-005), enforce QA-006 E2E testing standard, and validate integration test remediation posture for PT-2. This skill should be used when running test suites before deployment, executing quality gate checklists, producing quality reports with verification tier semantics, validating route handler test coverage, auditing E2E verification taxonomy compliance (Mode A/B/C, E2E vs System Verification vs Local Verification), validating integration test directive/gate compliance, or executing the CONTEXT-ROLLOUT-TEMPLATE. Also use when verifying Mode C auth patterns, checking RUN_INTEGRATION_TESTS gate consistency, or assessing integration test remediation posture across bounded contexts. For writing new E2E tests or debugging flaky tests, use e2e-testing instead. (project)
 ---
 
 # QA Specialist
@@ -23,6 +23,7 @@ Orchestrates test execution, quality gate validation, and reporting for PT-2 cas
 1. **Level 1 (Always loaded)**: Quality gate workflow in this SKILL.md
 2. **Level 2 (On demand)**: `references/critical-workflows.md` — Detailed workflow specs with acceptance criteria
 3. **Level 3 (On demand)**: `references/test-patterns.md` — PT-2 testing patterns and ADR-044 environment rules
+4. **Level 4 (On demand)**: `references/integration-remediation-ops.md` — Operational patterns for CONTEXT-ROLLOUT-TEMPLATE execution, Mode C auth rewrites, and integration test infrastructure
 
 ---
 
@@ -258,6 +259,20 @@ npm run e2e:playwright:debug    # Debug with inspector
 
 ---
 
+## Integration Test Remediation (CONTEXT-ROLLOUT-TEMPLATE)
+
+When validating integration test posture or executing the rollout template across bounded contexts, refer to `references/integration-remediation-ops.md` for operational patterns. Key rules that affect quality gate execution:
+
+**Jest config awareness**: Slice scripts (`test:slice:{context}`) use `jest.node.config.js` which **excludes** `*.int.test.ts` and `*.integration.test.ts` files. To verify integration tests, use `jest.integration.config.js` with `RUN_INTEGRATION_TESTS=true` and worktree exclusion flags (`--testPathIgnorePatterns='trees/' --testPathIgnorePatterns='\.claude/'`).
+
+**Gate consistency**: The canonical `RUN_INTEGRATION_TESTS` gate must accept both `'true'` and `'1'`. Pre-existing gates that only check `=== 'true'` silently skip when `=1` is used. Audit during remediation.
+
+**Misclassified integration files**: Files named `*.int.test.ts` that `jest.mock()` all of supabase are mocked unit tests, not integration tests. Reclassify in posture docs as "Unit (Mocked)" — don't rename or rewrite. Only files with real `createClient` calls need Mode C rewrite.
+
+**Mode C auth**: After rewrite, zero `set_rls_context_internal` calls should remain. The JWT flow through `set_rls_context_from_staff` (called internally by RPCs) handles context derivation. Two-phase staff_id stamping order is non-negotiable: create staff record first, then stamp `staff_id` into auth `app_metadata`.
+
+---
+
 ## Quality Gate Checklist
 
 Before approving a release, verify all gates pass. Per ADR-044, report each gate's verification tier honestly.
@@ -301,7 +316,16 @@ Before approving a release, verify all gates pass. Per ADR-044, report each gate
 - [ ] All route-handler tests use `/** @jest-environment node */` directive
 - [ ] No net-new shallow mock-everything tests
 
-### GATE-6: Temporal Integrity (TEMP-003 S7, PRD-027)
+### GATE-6: Integration Test Remediation Posture
+- [ ] All server-side test files have `/** @jest-environment node */` directive (ADR-044 S4)
+- [ ] All `*.int.test.ts` / `*.integration.test.ts` files have `RUN_INTEGRATION_TESTS` gate (canonical form: checks both `'true'` and `'1'`)
+- [ ] Integration tests pass: `RUN_INTEGRATION_TESTS=true npx jest --config jest.integration.config.js --testPathIgnorePatterns='trees/' --testPathIgnorePatterns='\.claude/'`
+- [ ] Zero references to dropped `set_rls_context` RPC in test files
+- [ ] Mode C auth files have zero `set_rls_context_internal` calls (replaced by JWT auth flow)
+- [ ] Mocked unit tests with `.int.test.ts` naming reclassified in posture docs
+- [ ] Posture doc exists per remediated context (`{CONTEXT}-POSTURE.md`)
+
+### GATE-7: Temporal Integrity (TEMP-003 S7, PRD-027)
 - [ ] Gaming day boundary tests pass: 05:50 local, 06:10 local, 00:10 UTC
 - [ ] DST transition tests pass: spring forward, fall back
 - [ ] No JS gaming day computation in query paths
@@ -383,6 +407,7 @@ Before reporting coverage status, check the gap analysis:
 ### Bundled References
 - `references/critical-workflows.md` — Detailed workflow specs with acceptance criteria
 - `references/test-patterns.md` — PT-2 testing patterns and ADR-044 environment rules
+- `references/integration-remediation-ops.md` — Operational patterns for CONTEXT-ROLLOUT-TEMPLATE execution, Mode C auth rewrites, Jest config split, worktree contamination, and blocker protocol
 
 ### Bundled Scripts
 - `scripts/run-quality-gate.sh` — Automated quality gate execution

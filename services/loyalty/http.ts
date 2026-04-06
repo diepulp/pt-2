@@ -217,9 +217,16 @@ export async function updateValuationRate(
   input: UpdateValuationPolicyInput,
   idempotencyKey: string,
 ): Promise<ValuationPolicyDTO> {
-  return mutateJSON<ValuationPolicyDTO, UpdateValuationPolicyInput>(
+  // API schema expects snake_case keys (updateValuationPolicySchema)
+  const body = {
+    cents_per_point: input.centsPerPoint,
+    effective_date: input.effectiveDate,
+    version_identifier: input.versionIdentifier,
+  };
+
+  return mutateJSON<ValuationPolicyDTO, typeof body>(
     `${BASE_LOYALTY}/valuation-policy`,
-    input,
+    body,
     idempotencyKey,
   );
 }
