@@ -510,6 +510,37 @@ export async function updateReward(
       );
     }
 
+    // PRD-061: limits: replace-all or delete all
+    if (input.limits !== undefined) {
+      childOps.push(
+        (async () => {
+          // Always delete existing limits first
+          const { error: delErr } = await supabase
+            .from('reward_limits')
+            .delete()
+            .eq('reward_id', rewardId);
+          if (delErr) throw mapRewardError(delErr);
+
+          // Insert new set if non-null and non-empty
+          if (input.limits && input.limits.length > 0) {
+            const { error: insErr } = await supabase
+              .from('reward_limits')
+              .insert(
+                input.limits.map((l) => ({
+                  reward_id: rewardId,
+                  casino_id: casinoId,
+                  max_issues: l.maxIssues,
+                  scope: l.scope,
+                  cooldown_minutes: l.cooldownMinutes ?? null,
+                  requires_note: l.requiresNote ?? false,
+                })),
+              );
+            if (insErr) throw mapRewardError(insErr);
+          }
+        })(),
+      );
+    }
+
     await Promise.all(childOps);
 
     return toRewardCatalogDTO(data);

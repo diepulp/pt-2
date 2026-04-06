@@ -92,7 +92,6 @@ export async function getPlayerSummary(
       financialSummaryResult,
       loyaltyResult,
       timelineResult,
-      lastRedemptionResult,
     ] = await Promise.all([
       // 1. Get active visit for the player
       supabase
@@ -122,16 +121,6 @@ export async function getPlayerSummary(
         p_player_id: playerId,
         p_limit: 1,
       }),
-
-      // 5. WS3: Get most recent reward redemption for cooldown check
-      supabase
-        .from('loyalty_ledger')
-        .select('created_at')
-        .eq('player_id', playerId)
-        .eq('reason', 'redeem')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
     ]);
 
     // Handle errors
@@ -151,19 +140,10 @@ export async function getPlayerSummary(
     if (timelineResult.error) {
       throw mapDatabaseError(timelineResult.error);
     }
-    // Last redemption may not exist (PGRST116 is OK)
-    if (
-      lastRedemptionResult.error &&
-      lastRedemptionResult.error.code !== 'PGRST116'
-    ) {
-      throw mapDatabaseError(lastRedemptionResult.error);
-    }
-
     const activeVisit = activeVisitResult.data;
     const transactions = financialSummaryResult.data ?? [];
     const loyaltyData = loyaltyResult.data;
     const timelineEvents = timelineResult.data ?? [];
-    const lastRedemption = lastRedemptionResult.data;
 
     // WS5: Fetch rating slips for theo calculation (only if active visit exists)
     // house_edge + decisions_per_hour live in policy_snapshot.loyalty (NOT game_settings)
@@ -275,11 +255,9 @@ export async function getPlayerSummary(
     // Parse loyalty balance safely using type-safe mapper
     const loyaltyBalance = parseLoyaltyData(loyaltyData);
 
-    // WS3: Pass last redemption timestamp for cooldown check
-    const rewardsEligibility = mapToRewardsEligibility(
-      loyaltyBalance,
-      lastRedemption?.created_at ?? null,
-    );
+    // PRD-061: Per-reward cadence is evaluated at the reward card level,
+    // not the summary level. Summary passes null (no cadence context).
+    const rewardsEligibility = mapToRewardsEligibility(loyaltyBalance, null);
 
     // WS5: Override theoEstimate in sessionValue with calculated value
     const sessionValueWithTheo = {

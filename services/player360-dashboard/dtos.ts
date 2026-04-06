@@ -17,7 +17,8 @@ export type ReasonCode =
   | 'AVAILABLE'
   | 'COOLDOWN_ACTIVE'
   | 'MIN_PLAY_NOT_MET'
-  | 'DAILY_LIMIT_REACHED'
+  | 'LIMIT_REACHED'
+  | 'VISIT_REQUIRED'
   | 'RULES_NOT_CONFIGURED';
 
 // === Snapshot Band DTOs ===

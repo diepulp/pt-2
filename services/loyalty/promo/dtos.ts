@@ -520,6 +520,9 @@ export interface IssueEntitlementParams {
 
   /** Idempotency key for request deduplication */
   idempotencyKey: string;
+
+  /** PRD-061: Operator note (required when reward_limits.requires_note = true) */
+  note?: string;
 }
 
 /**

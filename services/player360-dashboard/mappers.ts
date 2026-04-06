@@ -267,21 +267,37 @@ export function mapToEngagement(
 
 // === Rewards Eligibility Mappers ===
 
+/** Per-reward cadence status for dashboard display (PRD-061) */
+export interface RewardCadenceInfo {
+  /** Configured cooldown minutes (null if no cooldown rule) */
+  cooldownMinutes: number | null;
+  /** Last issuance timestamp for this reward (null if never issued) */
+  lastIssuedAt: string | null;
+  /** Whether any scope limit is reached */
+  limitReached: boolean;
+  /** Window expiry for the most restrictive blocking scope (null if not blocked) */
+  windowExpiresAt: string | null;
+  /** Whether per_visit scope is active but no visit exists */
+  visitRequired: boolean;
+  /** Human-readable scope label for guidance text */
+  scopeLabel: string | null;
+}
+
 /**
  * Map loyalty data to RewardsEligibilityDTO.
  *
- * Since rewards eligibility rules may not be configured,
- * this function handles the "unknown" state explicitly.
+ * PRD-061: Uses per-reward cadence data instead of hardcoded 30m cooldown.
+ * Points comps with no limits are always available if balance > 0.
+ * Entitlements are cadence-gated per reward_limits configuration.
  *
  * @param loyaltyBalance - Player loyalty balance (nullable)
- * @param recentRewardAt - Timestamp of most recent reward (nullable)
- * @param cooldownMinutes - Cooldown period in minutes (default 30)
+ * @param cadence - Per-reward cadence status (nullable for backwards compat)
  * @returns RewardsEligibilityDTO with status and reason codes
+ * @see PRD-061 §6 Dashboard Status Derivation Rules
  */
 export function mapToRewardsEligibility(
   loyaltyBalance: { balance: number; tier: string | null } | null,
-  recentRewardAt: string | null,
-  cooldownMinutes = 30,
+  cadence: RewardCadenceInfo | null = null,
 ): RewardsEligibilityDTO {
   // If no loyalty record, rules aren't configured
   if (!loyaltyBalance) {
@@ -296,23 +312,69 @@ export function mapToRewardsEligibility(
 
   const points = loyaltyBalance.balance;
 
-  // Check cooldown
-  if (recentRewardAt) {
-    const cooldownExpires = new Date(recentRewardAt);
-    cooldownExpires.setMinutes(cooldownExpires.getMinutes() + cooldownMinutes);
+  // No cadence data = no limits configured (points comps with balance > 0 are available)
+  if (!cadence) {
+    return {
+      status: 'available',
+      nextEligibleAt: null,
+      reasonCodes: ['AVAILABLE'],
+      guidance: null,
+      pointsAvailable: points,
+    };
+  }
 
-    if (cooldownExpires.getTime() > Date.now()) {
+  // Priority 2: per_visit rule active, no active visit (§6)
+  if (cadence.visitRequired) {
+    return {
+      status: 'not_available',
+      nextEligibleAt: null,
+      reasonCodes: ['VISIT_REQUIRED'],
+      guidance: 'Player must have an active visit',
+      pointsAvailable: points,
+    };
+  }
+
+  // Priority 3/5: Cooldown active (§6)
+  if (cadence.cooldownMinutes && cadence.lastIssuedAt) {
+    const lastTime = new Date(cadence.lastIssuedAt).getTime();
+    const cooldownMs = cadence.cooldownMinutes * 60 * 1000;
+    const cooldownExpiry = lastTime + cooldownMs;
+    const now = Date.now();
+
+    if (cooldownExpiry > now) {
+      // When both cooldown and limit block, use max expiry
+      let nextEligibleAt = new Date(cooldownExpiry).toISOString();
+      if (cadence.limitReached && cadence.windowExpiresAt) {
+        const windowExpiry = new Date(cadence.windowExpiresAt).getTime();
+        if (windowExpiry > cooldownExpiry) {
+          nextEligibleAt = cadence.windowExpiresAt;
+        }
+      }
+
       return {
         status: 'not_available',
-        nextEligibleAt: cooldownExpires.toISOString(),
+        nextEligibleAt,
         reasonCodes: ['COOLDOWN_ACTIVE'],
-        guidance: `Cooldown active until ${cooldownExpires.toLocaleTimeString()}`,
+        guidance: `Cooldown active: ${cadence.cooldownMinutes}min`,
         pointsAvailable: points,
       };
     }
   }
 
-  // Player is eligible
+  // Priority 4: Scope limit reached (§6)
+  if (cadence.limitReached) {
+    return {
+      status: 'not_available',
+      nextEligibleAt: cadence.windowExpiresAt,
+      reasonCodes: ['LIMIT_REACHED'],
+      guidance: cadence.scopeLabel
+        ? `Limit reached: ${cadence.scopeLabel}`
+        : 'Limit reached',
+      pointsAvailable: points,
+    };
+  }
+
+  // Priority 6: No rules blocking
   return {
     status: 'available',
     nextEligibleAt: null,

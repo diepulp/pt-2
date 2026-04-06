@@ -2130,6 +2130,7 @@ export type Database = {
           replaced_by_staff_id: string | null
           replacement_coupon_id: string | null
           required_match_wager_amount: number
+          reward_catalog_id: string | null
           status: Database["public"]["Enums"]["promo_coupon_status"]
           validation_number: string
           visit_id: string | null
@@ -2152,6 +2153,7 @@ export type Database = {
           replaced_by_staff_id?: string | null
           replacement_coupon_id?: string | null
           required_match_wager_amount: number
+          reward_catalog_id?: string | null
           status?: Database["public"]["Enums"]["promo_coupon_status"]
           validation_number: string
           visit_id?: string | null
@@ -2174,6 +2176,7 @@ export type Database = {
           replaced_by_staff_id?: string | null
           replacement_coupon_id?: string | null
           required_match_wager_amount?: number
+          reward_catalog_id?: string | null
           status?: Database["public"]["Enums"]["promo_coupon_status"]
           validation_number?: string
           visit_id?: string | null
@@ -2221,6 +2224,13 @@ export type Database = {
             columns: ["replacement_coupon_id"]
             isOneToOne: false
             referencedRelation: "promo_coupon"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_coupon_reward_catalog_id_fkey"
+            columns: ["reward_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "reward_catalog"
             referencedColumns: ["id"]
           },
           {
@@ -5280,6 +5290,7 @@ export type Database = {
           p_idempotency_key: string
           p_player_id?: string
           p_promo_program_id: string
+          p_reward_catalog_id?: string
           p_validation_number: string
           p_visit_id?: string
         }
@@ -6254,8 +6265,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       sync_staff_jwt_claims: {
         Args: { p_staff_id: string }
         Returns: undefined

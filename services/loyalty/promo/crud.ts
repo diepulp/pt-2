@@ -660,6 +660,7 @@ export async function issueEntitlement(
 ): Promise<EntitlementIssuanceResult> {
   // Lazy import to avoid circular dependency (reward is a sub-module of loyalty)
   const { getReward } = await import('../reward/crud');
+  const { checkCadence, requiresNote } = await import('../cadence');
 
   try {
     // 1. Use existing getReward() for single-call fetch with children (R5 waterfall fix)
@@ -689,7 +690,38 @@ export async function issueEntitlement(
       );
     }
 
-    // 5. Resolve commercial values from entitlement tiers (P2K-28 fix)
+    // 5. PRD-061: Cadence enforcement (always for entitlements — this is the core gate)
+    if (reward.limits.length > 0) {
+      // requires_note enforcement (§5.6)
+      if (requiresNote(reward.limits) && !params.note) {
+        throw new DomainError(
+          'VALIDATION_ERROR',
+          'Note is required for this reward (requires_note policy)',
+        );
+      }
+
+      const cadenceResult = await checkCadence(
+        supabase,
+        params.playerId,
+        params.rewardId,
+        reward.casinoId,
+        'entitlement',
+        reward.limits,
+      );
+
+      if (!cadenceResult.allowed) {
+        throw new DomainError(cadenceResult.code!, cadenceResult.guidance, {
+          httpStatus:
+            cadenceResult.code === 'REWARD_VISIT_REQUIRED' ? 422 : 429,
+          details: {
+            retryAfterSeconds: cadenceResult.retryAfterSeconds,
+            nextEligibleAt: cadenceResult.nextEligibleAt,
+          },
+        });
+      }
+    }
+
+    // 6. Resolve commercial values from entitlement tiers (P2K-28 fix)
     //    Look up the player's current tier via getBalance(), then select the
     //    matching entitlement tier row for face_value_cents / instrument_type.
     const { getBalance } = await import('../crud');
@@ -743,12 +775,14 @@ export async function issueEntitlement(
     const validationNumber = crypto.randomUUID();
 
     // 8. Call rpc_issue_promo_coupon with resolved params
+    //    PRD-061: Thread reward_catalog_id for cadence counting linkage
     const { data, error } = await supabase.rpc('rpc_issue_promo_coupon', {
       p_promo_program_id: programData.id,
       p_validation_number: validationNumber,
       p_idempotency_key: params.idempotencyKey,
       p_player_id: params.playerId,
       p_visit_id: params.visitId ?? undefined,
+      p_reward_catalog_id: params.rewardId,
     });
 
     if (error) {

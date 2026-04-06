@@ -76,6 +76,8 @@ export const updateRewardSchema = z.object({
   uiTags: z.array(z.string()).nullable().optional(),
   pricePoints: pricePointsSchema.nullable().optional(),
   entitlementTiers: z.array(entitlementTierSchema).nullable().optional(),
+  /** PRD-061: Frequency limits (replace-all semantics) */
+  limits: z.array(limitSchema).nullable().optional(),
 });
 
 export const rewardListQuerySchema = z.object({
