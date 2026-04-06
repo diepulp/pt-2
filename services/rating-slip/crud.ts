@@ -17,6 +17,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 // Note: VisitLiveViewDTO is now accessed via the mapper
 import type { Database } from '@/types/database.types';
 
@@ -141,7 +142,9 @@ function mapDatabaseError(error: {
     return new DomainError('RATING_SLIP_NOT_FOUND', 'Rating slip not found');
   }
 
-  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  return new DomainError('INTERNAL_ERROR', error.message, {
+    details: safeErrorDetails(error),
+  });
 }
 
 // === State Machine Operations (RPC-backed) ===

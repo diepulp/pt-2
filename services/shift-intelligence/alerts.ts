@@ -5,6 +5,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -36,7 +37,7 @@ export async function persistAlerts(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to persist alerts: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 
@@ -58,7 +59,7 @@ export async function acknowledgeAlert(
   if (error) {
     if (error.message.includes('SHIFT_ALERT_NOT_FOUND')) {
       throw new DomainError('NOT_FOUND', 'Alert not found', {
-        details: error,
+        details: safeErrorDetails(error),
       });
     }
     if (error.message.includes('SHIFT_ACKNOWLEDGE_UNAUTHORIZED')) {
@@ -66,14 +67,14 @@ export async function acknowledgeAlert(
         'FORBIDDEN',
         'Insufficient role to acknowledge alerts',
         {
-          details: error,
+          details: safeErrorDetails(error),
         },
       );
     }
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to acknowledge alert: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 
@@ -114,7 +115,7 @@ export async function getAlerts(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to fetch alerts: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 
@@ -172,7 +173,7 @@ export async function getAlertQuality(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to fetch alert quality: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 

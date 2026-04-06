@@ -17,6 +17,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import * as crud from './crud';
@@ -223,7 +224,7 @@ export function createCasinoService(
 
       if (error) {
         throw new DomainError('INTERNAL_ERROR', error.message, {
-          details: error,
+          details: safeErrorDetails(error),
         });
       }
 

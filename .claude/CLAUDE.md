@@ -56,7 +56,7 @@ Use `docs/patterns/SDLC_DOCS_TAXONOMY.md` to locate docs by SDLC category.
 1. **Types**: Import from `@/types/database.types` for all application code. Run `npm run db:types-local` after local migrations. Run `npm run db:types` for remote validation only.
 2. **Services**: Functional factories, not classes. Explicit interfaces, no `ReturnType<>`.
 3. **DTOs**: Derive from `Database` types using Pick/Omit/Partial. Cross-context consumption via published DTOs only.
-4. **Code Quality**: No `as any`, no `console.*` in production code.
+4. **Code Quality**: No `as any`, no `console.*` in production code. No `details: error` (raw Error objects) in DomainError — use `safeErrorDetails(error)` from `@/lib/errors/safe-error-details` (INV-ERR-DETAILS).
 5. **Complexity**: See Over-Engineering Guardrail before adding abstractions. YAGNI applies.
 6. **Migrations**: Follow `docs/60-release/MIGRATION_NAMING_STANDARD.md` strictly:
    - **Format**: `YYYYMMDDHHMMSS_descriptive_name.sql` — generate timestamp with `date +"%Y%m%d%H%M%S"`, never fabricate.

@@ -63,7 +63,12 @@ export function withAuth<T>(): Middleware<T> {
         throw new DomainError('FORBIDDEN', message);
       }
 
-      throw new DomainError('INTERNAL_ERROR', message, { details: error });
+      throw new DomainError('INTERNAL_ERROR', message, {
+        details:
+          error instanceof Error
+            ? { message: error.message, name: error.name }
+            : String(error),
+      });
     }
   };
 }

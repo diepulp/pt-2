@@ -17,6 +17,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -79,7 +80,9 @@ function mapExclusionRpcError(error: {
     return new DomainError('EXCLUSION_IMMUTABLE', msg);
   }
 
-  return new DomainError('INTERNAL_ERROR', msg, { details: error });
+  return new DomainError('INTERNAL_ERROR', msg, {
+    details: safeErrorDetails(error),
+  });
 }
 
 // === Singleton Assertion ===

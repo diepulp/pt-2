@@ -12,6 +12,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -39,7 +40,9 @@ export async function registerCompany(
     if (error.code === '23505') {
       throw new DomainError('REGISTRATION_CONFLICT');
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   const row = Array.isArray(data) ? data[0] : data;
@@ -69,7 +72,9 @@ export async function getRegistrationStatus(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   if (!data) {

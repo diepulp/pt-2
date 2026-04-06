@@ -13,6 +13,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import { reconcileStaffClaims } from '@/lib/supabase/claims-reconcile';
 import type { Database } from '@/types/database.types';
 
@@ -81,7 +82,9 @@ export async function listCasinos(
   const { data, error } = await query;
 
   if (error) {
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   const hasMore = (data?.length ?? 0) > limit;
@@ -105,7 +108,9 @@ export async function getCasinoById(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toCasinoDTOOrNull(data);
@@ -133,7 +138,9 @@ export async function createCasino(
     if (error.code === '23505') {
       throw new DomainError('UNIQUE_VIOLATION', 'Casino already exists');
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toCasinoDTO(data);
@@ -164,7 +171,9 @@ export async function updateCasino(
     if (error.code === 'PGRST116') {
       throw new DomainError('CASINO_NOT_FOUND');
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toCasinoDTO(data);
@@ -186,7 +195,9 @@ export async function deleteCasino(
     if (error.code === 'PGRST116') {
       throw new DomainError('CASINO_NOT_FOUND');
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 }
 
@@ -206,7 +217,9 @@ export async function getCasinoSettings(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toCasinoSettingsDTOOrNull(data);
@@ -245,7 +258,9 @@ export async function updateCasinoSettings(
     if (error.code === 'PGRST116') {
       throw new DomainError('CASINO_SETTINGS_NOT_FOUND');
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toCasinoSettingsDTO(data);
@@ -283,7 +298,9 @@ export async function listStaff(
   const { data, error } = await query;
 
   if (error) {
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   const hasMore = (data?.length ?? 0) > limit;
@@ -308,7 +325,9 @@ export async function getStaffById(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toStaffDTOOrNull(data);
@@ -355,7 +374,9 @@ export async function createStaff(
     if (error.code === '23503') {
       throw new DomainError('CASINO_NOT_FOUND', 'Casino does not exist');
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   // AUTH-HARDENING WS3: Deterministic claims sync — errors propagate
@@ -389,7 +410,7 @@ export async function updateStaff(
 
   if (fetchError) {
     throw new DomainError('INTERNAL_ERROR', fetchError.message, {
-      details: fetchError,
+      details: safeErrorDetails(fetchError),
     });
   }
 
@@ -429,7 +450,9 @@ export async function updateStaff(
     if (error.code === '23503') {
       throw new DomainError('CASINO_NOT_FOUND', 'Casino does not exist');
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   // AUTH-HARDENING WS3: Deterministic claims reconciliation — errors propagate
@@ -491,7 +514,9 @@ export async function enrollPlayer(
     if (error.code === '23503') {
       throw new DomainError('PLAYER_NOT_FOUND', 'Player does not exist');
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   // NOTE: player_loyalty is created atomically by rpc_create_player (SECURITY DEFINER).
@@ -547,7 +572,9 @@ export async function bootstrapCasino(
     if (error.code === '23505') {
       throw new DomainError('STAFF_ALREADY_BOUND');
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   const row = Array.isArray(data) ? data[0] : data;
@@ -593,7 +620,9 @@ export async function createStaffInvite(
     if (error.code === 'P0001') {
       throw new DomainError('FORBIDDEN');
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   const row = Array.isArray(data) ? data[0] : data;
@@ -633,7 +662,9 @@ export async function acceptStaffInvite(
     if (error.code === '23505') {
       throw new DomainError('STAFF_ALREADY_BOUND');
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   const row = Array.isArray(data) ? data[0] : data;
@@ -677,7 +708,9 @@ export async function listStaffInvites(
     .order('created_at', { ascending: false });
 
   if (error) {
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toStaffInviteDTOList(data ?? []);

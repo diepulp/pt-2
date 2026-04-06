@@ -607,11 +607,11 @@ export function toDomainError(error: unknown): DomainError {
 
   if (error instanceof Error) {
     return new DomainError('INTERNAL_ERROR', error.message, {
-      details: error,
+      details: { message: error.message, name: error.name },
     });
   }
 
   return new DomainError('INTERNAL_ERROR', 'An unexpected error occurred', {
-    details: error,
+    details: typeof error === 'object' ? String(error) : error,
   });
 }

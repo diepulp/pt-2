@@ -10,6 +10,9 @@
 
 **❌ BANNED:**
 ```typescript
+// Raw Error object stored as details (causes cyclic JSON serialization crash)
+throw new DomainError('INTERNAL_ERROR', error.message, { details: error }); // ❌
+
 // Postgres error leaking to UI
 catch (error) {
   return { error: '23505: duplicate key violation' }; // ❌
@@ -23,6 +26,10 @@ for (let i = 0; i < 3; i++) {
 
 **✅ REQUIRED:**
 ```typescript
+// Safe error details extraction (INV-ERR-DETAILS)
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
+throw new DomainError('INTERNAL_ERROR', error.message, { details: safeErrorDetails(error) });
+
 // Domain errors with business context
 throw new DomainError('REWARD_ALREADY_ISSUED', 'Reward has already been issued');
 
@@ -101,6 +108,41 @@ export class DomainError extends Error {
   }
 }
 ```
+
+### INV-ERR-DETAILS: Error Details Must Be JSON-Serializable
+
+**Status**: MANDATORY | **Effective**: 2026-04-06 | **Enforced by**: `safeDetails()` boundary guard + code review
+
+The `details` field of `DomainError` and `ServiceResult` **MUST** be JSON-serializable. Raw `Error` objects, Supabase client objects, or any value containing circular references **MUST NOT** be stored in `details`.
+
+**Why**: `NextResponse.json()` calls `JSON.stringify()` on the full response envelope. Raw Error objects from Supabase (PostgrestError, FetchError) contain internal circular references through client/request/response refs, causing `TypeError: cyclic object value` (Firefox) or `TypeError: Converting circular structure to JSON` (Chrome/Node). This crash masks the actual business error, making debugging impossible.
+
+**The rule**:
+```typescript
+// ❌ BANNED — raw Error objects have circular references
+throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+
+// ✅ REQUIRED — extract only serializable properties
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
+throw new DomainError('INTERNAL_ERROR', error.message, { details: safeErrorDetails(error) });
+
+// ✅ ALSO OK — manual extraction of known primitive fields
+throw new DomainError('INTERNAL_ERROR', error.message, {
+  details: { code: error.code, message: error.message },
+});
+```
+
+**Defense in depth** (3 layers):
+
+| Layer | File | Responsibility |
+|-------|------|----------------|
+| Source | Service `mapDatabaseError()` functions | Use `safeErrorDetails()` when wrapping errors |
+| Central | `lib/server-actions/error-map.ts` | Sanitizes all error paths via `safeErrorDetails()` |
+| Boundary | `lib/http/service-response.ts` | `safeDetails()` guard in `baseResult()` catches any remaining cyclic refs |
+
+**Canonical utility**: `lib/errors/safe-error-details.ts` — extracts `{ message, name, code, hint, details }` (primitives only) from Error objects.
+
+---
 
 **Usage in Service Layer:**
 

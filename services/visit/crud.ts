@@ -13,6 +13,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -77,7 +78,9 @@ function mapDatabaseError(error: {
     return new DomainError('VISIT_NOT_FOUND', 'Visit not found');
   }
 
-  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  return new DomainError('INTERNAL_ERROR', error.message, {
+    details: safeErrorDetails(error),
+  });
 }
 
 // === Read Operations ===

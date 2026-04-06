@@ -91,12 +91,62 @@ export class RouteError extends Error {
   }
 }
 
+/**
+ * Strip non-serializable values from error details to prevent
+ * "cyclic object value" when NextResponse.json() calls JSON.stringify().
+ * Raw Error objects (e.g. PostgrestError, FetchError) often contain
+ * circular references through internal client/request/response refs.
+ *
+ * This is the LAST line of defense — upstream code should use
+ * safeErrorDetails() from @/lib/errors/safe-error-details at error creation.
+ */
+function safeDetails(details: unknown): unknown {
+  if (details == null) return undefined;
+
+  // Error objects are the primary source of circular refs
+  if (details instanceof Error) {
+    const safe: Record<string, unknown> = {
+      message: details.message,
+      name: details.name,
+    };
+    if ('code' in details) safe.code = (details as { code: unknown }).code;
+    return safe;
+  }
+
+  // Attempt serialization; deep-clone via parse to sever any shared refs.
+  // Fall back to safeErrorDetails() on circular ref.
+  try {
+    return JSON.parse(JSON.stringify(details)) as unknown;
+  } catch {
+    // Circular reference detected — extract safe primitives
+    if (typeof details === 'object' && details !== null) {
+      const safe: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(details as Record<string, unknown>)) {
+        if (
+          typeof v === 'string' ||
+          typeof v === 'number' ||
+          typeof v === 'boolean' ||
+          v === null
+        ) {
+          safe[k] = v;
+        }
+      }
+      return Object.keys(safe).length > 0
+        ? safe
+        : 'Non-serializable error details';
+    }
+    return String(details);
+  }
+}
+
 function baseResult<T>(
   ctx: RequestContext,
   partial: Omit<ServiceHttpResult<T>, 'durationMs' | 'timestamp' | 'requestId'>,
 ): ServiceHttpResult<T> {
   return {
     ...partial,
+    // Sanitize details at the serialization boundary
+    details: safeDetails(partial.details),
     requestId: ctx.requestId,
     durationMs: Date.now() - ctx.startedAt,
     timestamp: new Date().toISOString(),
@@ -139,7 +189,12 @@ export function errorResponse(
         ? serviceResult.status
         : toHttpStatus((serviceResult.code as ResultCode) ?? 'INTERNAL_ERROR');
 
-    return NextResponse.json(serviceResult, { status });
+    // Sanitize details before serialization to prevent cyclic object errors
+    const sanitized = {
+      ...serviceResult,
+      details: safeDetails(serviceResult.details),
+    };
+    return NextResponse.json(sanitized, { status });
   }
 
   if (error instanceof DomainError) {

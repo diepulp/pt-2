@@ -162,7 +162,9 @@ function mapPromoError(error: { code?: string; message: string }): DomainError {
     return new DomainError('NOT_FOUND', 'Requested record not found');
   }
 
-  return new DomainError('INTERNAL_ERROR', message, { details: error });
+  return new DomainError('INTERNAL_ERROR', message, {
+    details: { code: error.code, message: error.message },
+  });
 }
 
 // === Promo Program Operations ===

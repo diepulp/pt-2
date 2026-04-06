@@ -126,6 +126,7 @@ export async function withServerAction<T>(
       return envelope;
     } catch (error) {
       const mapped = mapDatabaseError(error);
+      // mapped.details is already sanitized by mapDatabaseError via safeErrorDetails
       const failure: ServiceResult<T> = {
         data: undefined,
         ok: false,

@@ -13,6 +13,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -54,7 +55,9 @@ function mapDatabaseError(error: {
   if (error.code === '23503') {
     return new DomainError('PLAYER_NOT_FOUND', 'Referenced player not found');
   }
-  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  return new DomainError('INTERNAL_ERROR', error.message, {
+    details: safeErrorDetails(error),
+  });
 }
 
 // === Player CRUD ===

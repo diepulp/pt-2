@@ -42,7 +42,10 @@ export function withRLS<T>(): Middleware<T> {
       return next();
     } catch (error) {
       throw new DomainError('INTERNAL_ERROR', 'Failed to inject RLS context', {
-        details: error,
+        details:
+          error instanceof Error
+            ? { message: error.message, name: error.name }
+            : String(error),
       });
     }
   };

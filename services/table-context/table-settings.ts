@@ -10,6 +10,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import type { TableSettingsDTO, UpdateTableLimitsDTO, GameType } from './dtos';
@@ -44,7 +45,7 @@ async function getGameSettingsDefaults(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to fetch game settings defaults: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 
@@ -90,7 +91,7 @@ export async function getTableSettings(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to fetch table settings: ${settingsError.message}`,
-      { details: settingsError },
+      { details: safeErrorDetails(settingsError) },
     );
   }
 
@@ -110,7 +111,7 @@ export async function getTableSettings(
 
   if (tableError || !table) {
     throw new DomainError('TABLE_NOT_FOUND', `Table ${tableId} not found`, {
-      details: tableError,
+      details: safeErrorDetails(tableError),
     });
   }
 
@@ -140,7 +141,7 @@ export async function getTableSettings(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to create table settings: ${insertError?.message}`,
-      { details: insertError },
+      { details: safeErrorDetails(insertError) },
     );
   }
 
@@ -182,7 +183,7 @@ export async function updateTableLimits(
 
   if (tableError || !table) {
     throw new DomainError('TABLE_NOT_FOUND', `Table ${tableId} not found`, {
-      details: tableError,
+      details: safeErrorDetails(tableError),
     });
   }
 
@@ -213,7 +214,7 @@ export async function updateTableLimits(
       throw new DomainError(
         'INTERNAL_ERROR',
         `Failed to update table limits: ${updateError?.message}`,
-        { details: updateError },
+        { details: safeErrorDetails(updateError) },
       );
     }
 
@@ -238,7 +239,7 @@ export async function updateTableLimits(
       throw new DomainError(
         'INTERNAL_ERROR',
         `Failed to insert table limits: ${insertError?.message}`,
-        { details: insertError },
+        { details: safeErrorDetails(insertError) },
       );
     }
 

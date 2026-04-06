@@ -5,6 +5,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import type { BaselineComputeResultDTO, ComputeBaselineInput } from './dtos';
@@ -23,7 +24,7 @@ export async function computeBaselines(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to compute baselines: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 

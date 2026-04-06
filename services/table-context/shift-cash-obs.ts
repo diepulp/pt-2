@@ -11,6 +11,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -48,7 +49,7 @@ export async function getShiftCashObsTable(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to fetch table cash observation rollups: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 
@@ -72,7 +73,7 @@ export async function getShiftCashObsPit(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to fetch pit cash observation rollups: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 
@@ -96,7 +97,7 @@ export async function getShiftCashObsCasino(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to fetch casino cash observation rollups: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 
@@ -123,7 +124,7 @@ export async function getShiftCashObsAlerts(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to fetch cash observation alerts: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 

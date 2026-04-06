@@ -11,6 +11,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -49,7 +50,7 @@ export async function getShiftTableMetrics(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to fetch table shift metrics: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 
@@ -74,7 +75,7 @@ export async function getShiftPitMetrics(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to fetch pit shift metrics: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 
@@ -138,7 +139,7 @@ export async function getShiftCasinoMetrics(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to fetch casino shift metrics: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 

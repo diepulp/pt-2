@@ -221,8 +221,20 @@ export async function POST(request: NextRequest) {
           retryable: error.retryable,
           details: {
             responseCode: mapped.code,
+            // Only spread safe primitive properties from error.details
+            // to prevent cyclic object value from raw Error refs
             ...(typeof error.details === 'object' && error.details !== null
-              ? error.details
+              ? Object.fromEntries(
+                  Object.entries(
+                    error.details as Record<string, unknown>,
+                  ).filter(
+                    ([, v]) =>
+                      typeof v === 'string' ||
+                      typeof v === 'number' ||
+                      typeof v === 'boolean' ||
+                      v === null,
+                  ),
+                )
               : {}),
           },
         }),

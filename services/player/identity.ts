@@ -13,6 +13,7 @@ import { createHash } from 'crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import type { PlayerIdentityDTO, PlayerIdentityInput } from './dtos';
@@ -128,7 +129,7 @@ export async function upsertIdentity(
       throw new DomainError(
         'PLAYER_NOT_FOUND',
         'Player must be enrolled before adding identity',
-        { details: error },
+        { details: safeErrorDetails(error) },
       );
     }
     if (
@@ -138,10 +139,12 @@ export async function upsertIdentity(
       throw new DomainError(
         'UNIQUE_VIOLATION',
         'Document number already registered in this casino',
-        { details: error },
+        { details: safeErrorDetails(error) },
       );
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toPlayerIdentityDTO(data);
@@ -168,7 +171,9 @@ export async function getIdentityByPlayerId(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return data ? toPlayerIdentityDTO(data) : null;
@@ -207,7 +212,9 @@ export async function verifyIdentity(
     if (error.code === 'PGRST116') {
       throw new DomainError('PLAYER_NOT_FOUND');
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toPlayerIdentityDTO(data);

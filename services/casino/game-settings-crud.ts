@@ -8,6 +8,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -64,7 +65,9 @@ export async function listGameSettings(
   const { data, error } = await query;
 
   if (error) {
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toGameSettingsDTOList(data ?? []);
@@ -84,7 +87,9 @@ export async function getGameSettingsByCode(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toGameSettingsDTOOrNull(data);
@@ -104,7 +109,9 @@ export async function getGameSettingsById(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toGameSettingsDTOOrNull(data);
@@ -151,7 +158,9 @@ export async function createGameSettings(
         'CHECK constraint violated: ' + error.message,
       );
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toGameSettingsDTOOrNull(data)!;
@@ -201,7 +210,9 @@ export async function updateGameSettings(
         'CHECK constraint violated: ' + error.message,
       );
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toGameSettingsDTOOrNull(data)!;
@@ -223,7 +234,9 @@ export async function listSideBets(
     .order('side_bet_name');
 
   if (error) {
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toGameSettingsSideBetDTOList(data ?? []);
@@ -265,7 +278,9 @@ export async function createSideBet(
         'CHECK constraint violated: ' + error.message,
       );
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toGameSettingsSideBetDTO(data);
@@ -305,7 +320,9 @@ export async function updateSideBet(
         'CHECK constraint violated: ' + error.message,
       );
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return toGameSettingsSideBetDTO(data);
@@ -326,7 +343,9 @@ export async function deleteGameSettings(
     .eq('id', id);
 
   if (error) {
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   if (count === 0) {
@@ -358,7 +377,9 @@ export async function seedGameSettingsDefaults(
     if (error.code === 'P0001' && error.message.includes('UNAUTHORIZED')) {
       throw new DomainError('UNAUTHORIZED', error.message);
     }
-    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, {
+      details: safeErrorDetails(error),
+    });
   }
 
   return data ?? 0;

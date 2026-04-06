@@ -189,8 +189,10 @@ function mapDatabaseError(error: {
     return new DomainError('NOT_FOUND', 'Requested loyalty record not found');
   }
 
-  // Default to internal error
-  return new DomainError('INTERNAL_ERROR', message, { details: error });
+  // Default to internal error — extract safe properties to avoid cyclic JSON on serialization
+  return new DomainError('INTERNAL_ERROR', message, {
+    details: { code: error.code, message: error.message },
+  });
 }
 
 // === Accrual Operations ===

@@ -20,6 +20,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -110,7 +111,9 @@ function mapDatabaseError(error: {
     return new DomainError('MTL_ENTRY_NOT_FOUND', 'MTL entry not found');
   }
 
-  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  return new DomainError('INTERNAL_ERROR', error.message, {
+    details: safeErrorDetails(error),
+  });
 }
 
 // ============================================================================

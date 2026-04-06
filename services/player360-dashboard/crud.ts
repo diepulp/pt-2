@@ -16,6 +16,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import { calculateTheoFromDuration } from '@/lib/theo';
 import type { Database, Json } from '@/types/database.types';
 
@@ -62,7 +63,9 @@ function mapDatabaseError(error: {
     return new DomainError('NOT_FOUND', 'Player not found');
   }
 
-  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  return new DomainError('INTERNAL_ERROR', error.message, {
+    details: safeErrorDetails(error),
+  });
 }
 
 // === Summary Operations ===

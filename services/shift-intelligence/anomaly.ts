@@ -5,6 +5,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
 
 import type { AnomalyAlertsQuery, AnomalyAlertsResponseDTO } from './dtos';
@@ -23,7 +24,7 @@ export async function getAnomalyAlerts(
     throw new DomainError(
       'INTERNAL_ERROR',
       `Failed to fetch anomaly alerts: ${error.message}`,
-      { details: error },
+      { details: safeErrorDetails(error) },
     );
   }
 

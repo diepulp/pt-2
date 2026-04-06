@@ -1,5 +1,6 @@
 import type { DomainErrorCode } from '@/lib/errors/domain-errors';
 import { DomainError, isDomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { ResultCode } from '@/lib/http/service-response';
 
 /**
@@ -56,10 +57,13 @@ function normalizeMessage(
  * Map database/application errors to domain errors
  *
  * Pattern:
- * 1. Check if already a DomainError (preserve it)
+ * 1. Check if already a DomainError (preserve it — details already sanitized at source)
  * 2. Map Postgres errors to domain errors
  * 3. Map PostgREST errors to domain errors
  * 4. Fall back to INTERNAL_ERROR
+ *
+ * INV-ERR-DETAILS: All paths sanitize `details` via safeErrorDetails() to prevent
+ * cyclic object serialization errors in NextResponse.json().
  */
 export function mapDatabaseError(error: unknown): MappedError {
   // Already a domain error - preserve it
@@ -77,36 +81,34 @@ export function mapDatabaseError(error: unknown): MappedError {
   if (error && typeof error === 'object') {
     const code = Reflect.get(error, 'code');
     const message = Reflect.get(error, 'message');
-    const details = Reflect.get(error, 'details');
+    const rawDetails = Reflect.get(error, 'details');
+    // Sanitize extracted details — PostgREST details are strings (safe),
+    // but other error shapes may carry circular refs.
+    const details =
+      typeof rawDetails === 'string' || typeof rawDetails === 'number'
+        ? rawDetails
+        : safeErrorDetails(rawDetails);
 
     // Postgres error codes
     if (typeof code === 'string' && PG_ERROR_CODE_MAP[code]) {
       const domainCode = PG_ERROR_CODE_MAP[code];
-      const domainError = new DomainError(
-        domainCode,
-        normalizeMessage(message, 'Database constraint violated'),
-        { details },
-      );
       return {
-        code: domainError.code,
-        message: domainError.message,
-        httpStatus: domainError.httpStatus,
-        retryable: domainError.retryable,
-        details: domainError.details,
+        code: domainCode,
+        message: normalizeMessage(message, 'Database constraint violated'),
+        httpStatus: new DomainError(domainCode).httpStatus,
+        retryable: new DomainError(domainCode).retryable,
+        details,
       };
     }
 
     // PostgREST errors
     if (code === 'PGRST116') {
-      const domainError = new DomainError('NOT_FOUND', 'Record not found', {
-        details,
-      });
       return {
-        code: domainError.code,
-        message: domainError.message,
-        httpStatus: domainError.httpStatus,
-        retryable: domainError.retryable,
-        details: domainError.details,
+        code: 'NOT_FOUND',
+        message: 'Record not found',
+        httpStatus: 404,
+        retryable: false,
+        details,
       };
     }
 
@@ -125,33 +127,23 @@ export function mapDatabaseError(error: unknown): MappedError {
     }
   }
 
-  // Generic Error
+  // Generic Error — safeErrorDetails strips circular refs
   if (error instanceof Error) {
-    const domainError = new DomainError('INTERNAL_ERROR', error.message, {
-      details: error,
-    });
     return {
-      code: domainError.code,
-      message: domainError.message,
-      httpStatus: domainError.httpStatus,
-      retryable: domainError.retryable,
-      details: domainError.details,
+      code: 'INTERNAL_ERROR',
+      message: error.message,
+      httpStatus: 500,
+      retryable: false,
+      details: safeErrorDetails(error),
     };
   }
 
   // Unknown error type
-  const domainError = new DomainError(
-    'INTERNAL_ERROR',
-    'Internal error occurred',
-    {
-      details: error,
-    },
-  );
   return {
-    code: domainError.code,
-    message: domainError.message,
-    httpStatus: domainError.httpStatus,
-    retryable: domainError.retryable,
-    details: domainError.details,
+    code: 'INTERNAL_ERROR',
+    message: 'Internal error occurred',
+    httpStatus: 500,
+    retryable: false,
+    details: safeErrorDetails(error),
   };
 }
