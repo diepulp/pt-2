@@ -110,7 +110,7 @@ export function TelemetryDrawer({
               {/* Casino Summary */}
               {casinoData && (
                 <div className="rounded-lg bg-muted/30 p-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                  <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-2">
                     Casino Totals
                   </p>
                   <div className="grid grid-cols-2 gap-4">
