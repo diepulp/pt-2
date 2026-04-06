@@ -4,7 +4,7 @@
 
 **Goal:** Enforce reward issuance cadence limits (max_issues per scope window, cooldown_minutes) that are schematically complete but currently unenforced, closing the gap where entitlements can be issued without frequency restrictions.
 
-**Architecture:** Add a cadence enforcement module (`services/loyalty/reward/cadence.ts`) with pure scope-resolution logic and Supabase counting queries. Wire pre-flight cadence checks into `issueComp()` and `issueEntitlement()` before their respective RPC calls. Replace the hardcoded 30-minute dashboard cooldown with data from `reward_limits`. Two new DomainError codes (`REWARD_LIMIT_REACHED`, `REWARD_COOLDOWN_ACTIVE`) map to HTTP 429 at the route layer.
+**Architecture:** Add a cadence enforcement module (`services/loyalty/reward/cadence.ts`) with scope-resolution logic and Supabase counting queries. Wire pre-flight cadence checks into `issueComp()` and `issueEntitlement()` before their respective RPC calls. Replace the hardcoded 30-minute dashboard cooldown with data from `reward_limits`. Three new DomainError codes: `REWARD_LIMIT_REACHED` (429), `REWARD_COOLDOWN_ACTIVE` (429), and `REWARD_SCOPE_UNSUPPORTED` (400, fail-closed for `per_visit`).
 
 **Tech Stack:** TypeScript, Supabase (PostgreSQL), Jest, Next.js App Router
 
@@ -13,9 +13,35 @@
 - **Entitlements**: `promo_coupon` WHERE `player_id = Y AND promo_program_id = P AND status != 'voided'` — no `reward_id` on `promo_coupon`, so count via resolved `promo_program_id`
 
 **Scope decisions:**
-- `per_gaming_day`: UTC day boundaries (00:00 UTC). Gaming-day-start-hour configuration deferred (requires `casino_settings` plumbing not in scope).
-- `per_visit`: Deferred — seed data uses `per_gaming_day` only. The scope resolution throws a clear error if encountered.
-- Phase 3 (RPC hard enforcement): Not in this plan. Service-layer enforcement is sufficient for pilot; RPC defense-in-depth is a follow-up ticket.
+- `per_gaming_day`: Resolve using casino-local gaming day boundaries via `rpc_current_gaming_day()` + `casino_settings.gaming_day_start_time` + `casino_settings.timezone`. A new migration adds `rpc_gaming_day_start_utc()` to return the gaming day start as a UTC timestamp. This avoids the contract mutation of silently substituting UTC midnight under the `per_gaming_day` label.
+- `per_visit`: **Fail closed.** If a `per_visit` limit is configured, issuance is blocked with `REWARD_SCOPE_UNSUPPORTED`. Seed data uses `per_gaming_day` only, so this is a safety net for misconfiguration.
+- `per_week`: Rolling 7 days from now.
+- `per_month`: Rolling 30 days from now.
+- Phase 3 (RPC hard enforcement): Not in this plan. See Pilot Limitation below.
+
+---
+
+## Product Rules Locked for P2K-31
+
+- Entitlements are cadence-enforced when `reward_limits` exist.
+- Points comps are cadence-enforced **only** when limits are explicitly configured (balance is the natural limiter).
+- `max_issues` is evaluated before `cooldown_minutes` — first violation short-circuits.
+- `requires_note` is explicitly **out of scope** for this ticket.
+- Dashboard eligibility is a **summary indicator for entitlement cadence state**, derived from `promo_coupon` (entitlement issuance history) and `reward_limits` filtered by `family='entitlement'`. Points comp availability is communicated by `pointsAvailable`. Per-reward eligibility is available downstream via `EligibleRewardDTO.limits[]`.
+
+## Pilot Limitation
+
+> **Service-layer-only enforcement:** Cadence enforcement in this slice is authoritative only through the service-layer issuance path (`issueComp()` / `issueEntitlement()`). Direct RPC calls (`rpc_redeem`, `rpc_issue_promo_coupon`) bypass cadence checks entirely. RPC-level defense-in-depth is deferred and remains a known integrity gap. Backlog item: P2K-31-phase3.
+
+## Acceptance Criteria
+
+1. Entitlement with `per_gaming_day / max_issues=1` blocks second issuance in the same gaming day (casino-local boundary, not UTC midnight).
+2. Entitlement with `cooldown_minutes=240` returns remaining wait time in error details when retried early.
+3. Points comp with **no** configured limits is not blocked by cadence checks (balance-bounded only).
+4. Points comp with configured limits enforces those limits.
+5. `per_visit` scope blocks issuance with `REWARD_SCOPE_UNSUPPORTED` (fail-closed).
+6. Dashboard entitlement summary state reflects the same entitlement issuance history (`promo_coupon`) and configured limit family (`reward_limits` filtered by `family='entitlement'`) used by enforcement inputs.
+7. `REWARD_COOLDOWN_ACTIVE` maps to HTTP 429 with `retryAfterSeconds` in error details. `REWARD_LIMIT_REACHED` maps to HTTP 429 without `retryAfterSeconds` (window-reset time is not computed in this slice).
 
 ---
 
@@ -23,16 +49,89 @@
 
 | Action | File | Responsibility |
 |--------|------|---------------|
+| **Create** | `supabase/migrations/{timestamp}_add_gaming_day_start_utc_rpc.sql` | RPC returning gaming day start as UTC timestamp |
 | **Create** | `services/loyalty/reward/cadence.ts` | Scope resolution, issuance counting, cadence enforcement |
 | **Create** | `services/loyalty/reward/__tests__/cadence.test.ts` | Unit tests for cadence module |
-| **Modify** | `lib/errors/domain-errors.ts:70-130` | Add `REWARD_LIMIT_REACHED`, `REWARD_COOLDOWN_ACTIVE` to `LoyaltyErrorCode` |
+| **Modify** | `lib/errors/domain-errors.ts:70-130` | Add `REWARD_LIMIT_REACHED`, `REWARD_COOLDOWN_ACTIVE`, `REWARD_SCOPE_UNSUPPORTED` to `LoyaltyErrorCode` |
 | **Modify** | `services/loyalty/crud.ts:789-905` | Add cadence pre-flight to `issueComp()` |
 | **Modify** | `services/loyalty/promo/crud.ts:657-788` | Add cadence pre-flight to `issueEntitlement()` |
 | **Modify** | `app/api/v1/loyalty/issue/route.ts:43-66` | Map new error codes to HTTP 429 |
-| **Modify** | `services/player360-dashboard/mappers.ts:281-323` | Replace hardcoded 30m with configurable cooldown + add `LIMIT_REACHED` |
-| **Modify** | `services/player360-dashboard/crud.ts:126-134,279-282` | Fetch min cooldown from `reward_limits` |
+| **Modify** | `services/player360-dashboard/mappers.ts:281-323` | Replace hardcoded 30m with entitlement-scoped cadence state + add `LIMIT_REACHED` |
+| **Modify** | `services/player360-dashboard/crud.ts:126-134,279-282` | Fetch entitlement limits (family-filtered) + entitlement issuance history from `promo_coupon` |
 | **Modify** | `services/player360-dashboard/dtos.ts:67-87` | Add `LIMIT_REACHED` to `ReasonCode` |
 | **Modify** | `services/player360-dashboard/__tests__/mappers.test.ts:122-186` | Update tests for new mapper signature |
+
+---
+
+### Task 0: Migration — Add rpc_gaming_day_start_utc()
+
+**Files:**
+- Create: `supabase/migrations/{timestamp}_add_gaming_day_start_utc_rpc.sql`
+
+This RPC returns the start of the current gaming day as a UTC timestamp, using the casino's configured `gaming_day_start_time` and `timezone` from `casino_settings`. This is the canonical way to resolve `per_gaming_day` scope without silently using UTC midnight.
+
+**Operational preconditions:**
+- RLS context must be set (`app.casino_id` via `set_rls_context_from_staff()`). If missing, `current_setting('app.casino_id')` returns empty string → cast to UUID fails → PostgreSQL raises error → TypeScript layer catches and throws `INTERNAL_ERROR`.
+- `casino_settings` row must exist for the casino. If absent, the SQL returns NULL → TypeScript `getGamingDayStartUTC()` throws `INTERNAL_ERROR('Gaming day start RPC returned null')`.
+- `rpc_current_gaming_day()` must succeed (depends on same RLS context). If it fails, the SQL fails → same error path.
+
+All three conditions are guaranteed in the normal issuance path (called after `withServerAction` sets RLS context, and casino_settings is created during casino setup). These are not new failure modes — they are the same preconditions required by existing RPCs.
+
+- [ ] **Step 1: Generate migration timestamp**
+
+Run: `date +"%Y%m%d%H%M%S"`
+Note the output (e.g. `20260405163000`).
+
+- [ ] **Step 2: Create migration file**
+
+Create `supabase/migrations/{timestamp}_add_gaming_day_start_utc_rpc.sql`:
+
+```sql
+-- P2K-31: Gaming day start timestamp for cadence enforcement
+--
+-- Returns the UTC timestamp of the current gaming day's start boundary.
+-- Uses rpc_current_gaming_day() for the date, then combines with
+-- casino_settings.gaming_day_start_time and timezone to produce
+-- a timezone-correct UTC timestamp.
+--
+-- SECURITY INVOKER: uses caller's RLS context (casino_id from app.casino_id).
+-- Requires RLS context set via set_rls_context_from_staff().
+
+CREATE OR REPLACE FUNCTION public.rpc_gaming_day_start_utc()
+RETURNS timestamptz
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+  SELECT (
+    (public.rpc_current_gaming_day() || ' ' || cs.gaming_day_start_time)::timestamp
+    AT TIME ZONE cs.timezone
+  )
+  FROM public.casino_settings cs
+  WHERE cs.casino_id = current_setting('app.casino_id')::uuid;
+$$;
+
+COMMENT ON FUNCTION public.rpc_gaming_day_start_utc() IS
+  'P2K-31: Returns UTC timestamp of current gaming day start for cadence scope resolution';
+```
+
+- [ ] **Step 3: Regenerate types**
+
+Run: `npm run db:types-local 2>&1 | tail -5`
+Expected: Types regenerated with new RPC signature.
+
+- [ ] **Step 4: Verify RPC appears in types**
+
+Run: `grep -A5 'rpc_gaming_day_start_utc' types/database.types.ts`
+Expected: Shows `Args: Record<string, never>` and `Returns: string`.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add supabase/migrations/*_add_gaming_day_start_utc_rpc.sql types/database.types.ts
+git commit -m "feat(loyalty): add rpc_gaming_day_start_utc for cadence scope resolution (P2K-31)"
+```
 
 ---
 
@@ -44,14 +143,15 @@
 
 - [ ] **Step 1: Add error codes to LoyaltyErrorCode union**
 
-In `lib/errors/domain-errors.ts`, add two new codes after the `VALUATION_POLICY_MISSING` line:
+In `lib/errors/domain-errors.ts`, add three new codes after the `VALUATION_POLICY_MISSING` line:
 
 ```typescript
   // Valuation Policy Errors (PRD-053)
   | 'VALUATION_POLICY_MISSING'
   // Cadence Enforcement Errors (P2K-31)
   | 'REWARD_LIMIT_REACHED'
-  | 'REWARD_COOLDOWN_ACTIVE';
+  | 'REWARD_COOLDOWN_ACTIVE'
+  | 'REWARD_SCOPE_UNSUPPORTED';
 ```
 
 - [ ] **Step 2: Add error messages**
@@ -66,11 +166,13 @@ In the `LOYALTY_ERROR_MESSAGES` record, add after the `VALUATION_POLICY_MISSING`
     'Maximum issuances for this reward in the current scope window exceeded',
   REWARD_COOLDOWN_ACTIVE:
     'Minimum interval between issuances has not elapsed',
+  REWARD_SCOPE_UNSUPPORTED:
+    'Reward limit scope is not supported in this enforcement slice',
 ```
 
 - [ ] **Step 3: Add 429 mapping to getDefaultHttpStatus**
 
-In the `getDefaultHttpStatus` method (~line 507), add a case before the `INSUFFICIENT_BALANCE` check or in the appropriate section:
+In the `getDefaultHttpStatus` method (~line 507), add a case:
 
 ```typescript
     // 429 - Rate limited (cadence enforcement)
@@ -114,6 +216,10 @@ Create `services/loyalty/reward/__tests__/cadence.test.ts`:
  *
  * Tests scope resolution and enforcement logic.
  * Counting functions are injected as lambdas — no Supabase mocking needed.
+ *
+ * Note: per_gaming_day resolution requires an async DB call (rpc_gaming_day_start_utc).
+ * resolveWindowStart handles per_week/per_month synchronously; per_gaming_day
+ * window start is pre-resolved by the caller and passed directly.
  */
 
 import { DomainError } from '@/lib/errors/domain-errors';
@@ -127,11 +233,6 @@ describe('resolveWindowStart', () => {
   // Fixed reference time: 2026-04-05T14:30:00.000Z (Saturday)
   const now = new Date('2026-04-05T14:30:00.000Z');
 
-  it('per_gaming_day returns UTC midnight of same day', () => {
-    const start = resolveWindowStart('per_gaming_day', now);
-    expect(start.toISOString()).toBe('2026-04-05T00:00:00.000Z');
-  });
-
   it('per_week returns 7 days before now', () => {
     const start = resolveWindowStart('per_week', now);
     expect(start.toISOString()).toBe('2026-03-29T14:30:00.000Z');
@@ -142,16 +243,19 @@ describe('resolveWindowStart', () => {
     expect(start.toISOString()).toBe('2026-03-06T14:30:00.000Z');
   });
 
-  it('per_visit throws (not supported without visit context)', () => {
-    expect(() => resolveWindowStart('per_visit', now)).toThrow(
-      'per_visit scope requires visit context',
+  it('per_gaming_day throws — must be pre-resolved via RPC', () => {
+    expect(() => resolveWindowStart('per_gaming_day', now)).toThrow(
+      'per_gaming_day must be pre-resolved',
     );
   });
 
-  it('per_gaming_day at midnight boundary returns same day', () => {
-    const midnight = new Date('2026-04-05T00:00:00.000Z');
-    const start = resolveWindowStart('per_gaming_day', midnight);
-    expect(start.toISOString()).toBe('2026-04-05T00:00:00.000Z');
+  it('per_visit throws REWARD_SCOPE_UNSUPPORTED (fail-closed)', () => {
+    expect(() => resolveWindowStart('per_visit', now)).toThrow(DomainError);
+    try {
+      resolveWindowStart('per_visit', now);
+    } catch (e) {
+      expect((e as DomainError).code).toBe('REWARD_SCOPE_UNSUPPORTED');
+    }
   });
 });
 ```
@@ -173,7 +277,8 @@ Create `services/loyalty/reward/cadence.ts`:
  * constraints (max_issues per scope window, cooldown_minutes between issuances).
  *
  * Design:
- * - Pure scope resolution (no DB access)
+ * - per_gaming_day scope resolved via rpc_gaming_day_start_utc() (casino-local boundary)
+ * - per_visit scope: fail-closed (REWARD_SCOPE_UNSUPPORTED)
  * - Counting functions injected as lambdas (testable without Supabase mocks)
  * - Throws DomainError on violation (REWARD_LIMIT_REACHED, REWARD_COOLDOWN_ACTIVE)
  *
@@ -181,34 +286,66 @@ Create `services/loyalty/reward/cadence.ts`:
  * @see P2K-31 eligibility-cadence-gap.md
  */
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import type { LimitScope, RewardLimitDTO } from './dtos';
+
+// === Gaming Day Resolution ===
+
+/**
+ * Fetches the UTC start timestamp of the current gaming day from the database.
+ * Uses rpc_gaming_day_start_utc() which resolves via casino_settings.
+ * Requires RLS context to be set.
+ */
+export async function getGamingDayStartUTC(
+  supabase: SupabaseClient<Database>,
+): Promise<Date> {
+  const { data, error } = await supabase.rpc('rpc_gaming_day_start_utc');
+
+  if (error) {
+    throw new DomainError(
+      'INTERNAL_ERROR',
+      `Failed to resolve gaming day start: ${error.message}`,
+    );
+  }
+
+  if (!data) {
+    throw new DomainError(
+      'INTERNAL_ERROR',
+      'Gaming day start RPC returned null',
+    );
+  }
+
+  return new Date(data);
+}
 
 // === Scope Resolution ===
 
 /**
  * Resolves a limit scope to a window-start timestamp.
  *
- * - per_gaming_day: UTC midnight of `now`'s day (gaming-day-start-hour deferred)
+ * - per_gaming_day: MUST be pre-resolved via getGamingDayStartUTC() — throws if called here
  * - per_week: 7 days before `now`
  * - per_month: 30 days before `now`
- * - per_visit: not supported without visit context — throws
+ * - per_visit: fail-closed — throws REWARD_SCOPE_UNSUPPORTED
  */
 export function resolveWindowStart(scope: LimitScope, now: Date): Date {
   switch (scope) {
-    case 'per_gaming_day': {
-      const start = new Date(now);
-      start.setUTCHours(0, 0, 0, 0);
-      return start;
-    }
+    case 'per_gaming_day':
+      throw new Error(
+        'per_gaming_day must be pre-resolved via getGamingDayStartUTC() before calling resolveWindowStart',
+      );
     case 'per_week':
       return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     case 'per_month':
       return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     case 'per_visit':
-      throw new Error(
-        'per_visit scope requires visit context — not yet supported in cadence enforcement',
+      throw new DomainError(
+        'REWARD_SCOPE_UNSUPPORTED',
+        'per_visit scope is not supported in this enforcement slice. Contact admin to reconfigure reward limits.',
       );
   }
 }
@@ -217,7 +354,7 @@ export function resolveWindowStart(scope: LimitScope, now: Date): Date {
 - [ ] **Step 4: Run resolveWindowStart tests**
 
 Run: `npx jest services/loyalty/reward/__tests__/cadence.test.ts --no-coverage -t "resolveWindowStart" 2>&1 | tail -5`
-Expected: PASS (5 tests)
+Expected: PASS (4 tests)
 
 - [ ] **Step 5: Write failing tests for enforceRewardLimits()**
 
@@ -243,12 +380,13 @@ describe('enforceRewardLimits', () => {
   }
 
   it('allows issuance when count is below max_issues', async () => {
+    const gamingDayStart = new Date('2026-04-05T13:00:00.000Z'); // 06:00 PDT
     const countFn = jest.fn().mockResolvedValue(0);
     const lastTimeFn = jest.fn().mockResolvedValue(null);
 
     // Should not throw
-    await enforceRewardLimits([makeLimit()], countFn, lastTimeFn, now);
-    expect(countFn).toHaveBeenCalledWith('2026-04-05T00:00:00.000Z');
+    await enforceRewardLimits([makeLimit()], countFn, lastTimeFn, now, gamingDayStart);
+    expect(countFn).toHaveBeenCalledWith('2026-04-05T13:00:00.000Z');
   });
 
   it('throws REWARD_LIMIT_REACHED when count equals max_issues', async () => {
@@ -339,19 +477,29 @@ describe('enforceRewardLimits', () => {
     expect(lastTimeFn).not.toHaveBeenCalled();
   });
 
-  it('skips per_visit scope (unsupported — does not throw, just skips)', async () => {
+  it('throws REWARD_SCOPE_UNSUPPORTED for per_visit scope (fail-closed)', async () => {
     const countFn = jest.fn().mockResolvedValue(0);
     const lastTimeFn = jest.fn().mockResolvedValue(null);
 
-    // per_visit limits should be skipped (logged, not thrown) at enforcement time
-    await enforceRewardLimits(
-      [makeLimit({ scope: 'per_visit' })],
-      countFn,
-      lastTimeFn,
-      now,
-    );
-    // countFn should not be called — scope was skipped
-    expect(countFn).not.toHaveBeenCalled();
+    await expect(
+      enforceRewardLimits(
+        [makeLimit({ scope: 'per_visit' })],
+        countFn,
+        lastTimeFn,
+        now,
+      ),
+    ).rejects.toThrow(DomainError);
+
+    try {
+      await enforceRewardLimits(
+        [makeLimit({ scope: 'per_visit' })],
+        countFn,
+        lastTimeFn,
+        now,
+      );
+    } catch (e) {
+      expect((e as DomainError).code).toBe('REWARD_SCOPE_UNSUPPORTED');
+    }
   });
 });
 ```
@@ -389,34 +537,49 @@ export type LastIssuedAtFn = () => Promise<string | null>;
  * 1. max_issues — counts issuances in scope window
  * 2. cooldown_minutes — checks elapsed time since last issuance
  *
- * Throws DomainError on first violation. Skips `per_visit` scope
- * (not yet supported — requires visit context plumbing).
+ * Scope resolution:
+ * - per_gaming_day: uses pre-resolved gamingDayStart (from rpc_gaming_day_start_utc)
+ * - per_week/per_month: resolved from `now`
+ * - per_visit: fail-closed (throws REWARD_SCOPE_UNSUPPORTED)
  *
  * @param limits - RewardLimitDTO[] from reward.limits (loaded by getReward())
  * @param countIssuances - Injected counting function (comp vs entitlement)
  * @param getLastIssuedAt - Injected last-issuance-time function
  * @param now - Optional fixed timestamp for testing
+ * @param gamingDayStart - Pre-resolved gaming day start (required if any limit uses per_gaming_day)
  * @throws REWARD_LIMIT_REACHED if max_issues exceeded
  * @throws REWARD_COOLDOWN_ACTIVE if cooldown not elapsed
+ * @throws REWARD_SCOPE_UNSUPPORTED if per_visit scope encountered
  */
 export async function enforceRewardLimits(
   limits: RewardLimitDTO[],
   countIssuances: CountIssuancesFn,
   getLastIssuedAt: LastIssuedAtFn,
   now?: Date,
+  gamingDayStart?: Date,
 ): Promise<void> {
   if (limits.length === 0) return;
 
   const effectiveNow = now ?? new Date();
 
   for (const limit of limits) {
-    // Skip per_visit scope — not yet supported
-    if (limit.scope === 'per_visit') {
-      continue;
+    // 1. Resolve window start for this scope
+    let windowStart: Date;
+
+    if (limit.scope === 'per_gaming_day') {
+      if (!gamingDayStart) {
+        throw new DomainError(
+          'INTERNAL_ERROR',
+          'gamingDayStart must be pre-resolved for per_gaming_day scope',
+        );
+      }
+      windowStart = gamingDayStart;
+    } else {
+      // per_week, per_month pass through; per_visit throws REWARD_SCOPE_UNSUPPORTED
+      windowStart = resolveWindowStart(limit.scope, effectiveNow);
     }
 
-    // 1. Check max_issues in scope window
-    const windowStart = resolveWindowStart(limit.scope, effectiveNow);
+    // 2. Check max_issues in scope window
     const count = await countIssuances(windowStart.toISOString());
 
     if (count >= limit.maxIssues) {
@@ -773,6 +936,7 @@ In `services/loyalty/crud.ts`, add the import at the top (after existing imports
 ```typescript
 import {
   enforceRewardLimits,
+  getGamingDayStartUTC,
   makeCompIssuanceCounter,
   makeCompLastIssuedAt,
 } from './reward/cadence';
@@ -785,10 +949,20 @@ Then in the `issueComp()` function, add cadence enforcement after step 4 (family
     // Points comps: limits are optional (balance is the natural limiter).
     // Only enforce if the reward has configured limits.
     if (reward.limits.length > 0) {
+      // Pre-resolve gaming day start if any limit uses per_gaming_day scope
+      const needsGamingDay = reward.limits.some(
+        (l) => l.scope === 'per_gaming_day',
+      );
+      const gamingDayStart = needsGamingDay
+        ? await getGamingDayStartUTC(supabase)
+        : undefined;
+
       await enforceRewardLimits(
         reward.limits,
         makeCompIssuanceCounter(supabase, params.playerId, params.rewardId),
         makeCompLastIssuedAt(supabase, params.playerId, params.rewardId),
+        undefined,
+        gamingDayStart,
       );
     }
 ```
@@ -906,6 +1080,7 @@ In `services/loyalty/promo/crud.ts`, add the import at the top:
 ```typescript
 import {
   enforceRewardLimits,
+  getGamingDayStartUTC,
   makeEntitlementIssuanceCounter,
   makeEntitlementLastIssuedAt,
 } from '../reward/cadence';
@@ -917,6 +1092,14 @@ Then in the `issueEntitlement()` function, add cadence enforcement after step 6 
     // 6b. Enforce cadence limits (P2K-31)
     // Entitlements: always enforce — seed data requires per_gaming_day limits.
     if (reward.limits.length > 0) {
+      // Pre-resolve gaming day start if any limit uses per_gaming_day scope
+      const needsGamingDay = reward.limits.some(
+        (l) => l.scope === 'per_gaming_day',
+      );
+      const gamingDayStart = needsGamingDay
+        ? await getGamingDayStartUTC(supabase)
+        : undefined;
+
       await enforceRewardLimits(
         reward.limits,
         makeEntitlementIssuanceCounter(
@@ -929,6 +1112,8 @@ Then in the `issueEntitlement()` function, add cadence enforcement after step 6 
           params.playerId,
           programData.id,
         ),
+        undefined,
+        gamingDayStart,
       );
     }
 ```
@@ -966,6 +1151,8 @@ In `app/api/v1/loyalty/issue/route.ts`, add to the `mapIssuanceError()` switch s
       return { code: 'LOYALTY_REWARD_LIMIT_REACHED', status: 429 };
     case 'REWARD_COOLDOWN_ACTIVE':
       return { code: 'LOYALTY_REWARD_COOLDOWN_ACTIVE', status: 429 };
+    case 'REWARD_SCOPE_UNSUPPORTED':
+      return { code: 'LOYALTY_REWARD_SCOPE_UNSUPPORTED', status: 400 };
 ```
 
 Add these cases before the `default` case.
@@ -979,12 +1166,21 @@ Expected: PASS (existing tests unaffected)
 
 ```bash
 git add app/api/v1/loyalty/issue/route.ts
-git commit -m "feat(loyalty): map REWARD_LIMIT_REACHED and REWARD_COOLDOWN_ACTIVE to HTTP 429 (P2K-31)"
+git commit -m "feat(loyalty): map REWARD_LIMIT_REACHED, REWARD_COOLDOWN_ACTIVE (429), REWARD_SCOPE_UNSUPPORTED (400) in issuance route (P2K-31)"
 ```
 
 ---
 
 ### Task 7: Fix Dashboard Mapper — Replace Hardcoded Cooldown (Phase 2)
+
+**Design constraint — what this card represents:**
+
+The `RewardsEligibilityCard` is a **summary indicator for entitlement cadence state**. It does not and cannot represent per-reward eligibility from a single status/reason-code field. Per-reward eligibility data is already available downstream via `listEligibleRewards()` → `EligibleRewardDTO.limits[]`.
+
+- **Entitlements:** Cadence-gated. This card shows the most restrictive active entitlement limit (lowest `max_issues`, shortest `cooldown_minutes`). Issuance history is from `promo_coupon` (entitlement issuances create coupon rows, not ledger entries).
+- **Points comps:** Balance-bounded only. The card's `pointsAvailable` field already communicates comp availability. No cadence inputs needed.
+
+This is explicitly a summary card, not a per-reward truth. The caller computes entitlement-specific inputs; the mapper renders status from those inputs.
 
 **Files:**
 - Modify: `services/player360-dashboard/dtos.ts:67-87`
@@ -1012,22 +1208,27 @@ In `services/player360-dashboard/mappers.ts`, replace the `mapToRewardsEligibili
 /**
  * Map loyalty data to RewardsEligibilityDTO.
  *
- * P2K-31: Replaced hardcoded 30m cooldown with configurable cooldownMinutes
- * from reward_limits. When null, no cooldown is applied (points comps behavior).
- * Added issuanceCount + maxIssues for LIMIT_REACHED status.
+ * P2K-31: Summary indicator for entitlement cadence state.
+ * - Entitlements: cadence-gated via `reward_limits` (cooldown + max_issues)
+ * - Points comps: balance-bounded only (communicated via `pointsAvailable`)
+ *
+ * Inputs are entitlement-specific: the caller must resolve the most
+ * restrictive entitlement limit and entitlement issuance history
+ * (from promo_coupon, NOT loyalty_ledger — entitlements create coupons,
+ * not ledger entries).
  *
  * @param loyaltyBalance - Player loyalty balance (nullable)
- * @param recentRewardAt - Timestamp of most recent reward (nullable)
- * @param cooldownMinutes - Cooldown period in minutes from reward_limits (null = no cooldown)
- * @param issuanceCount - Number of issuances in current scope window (default 0)
- * @param maxIssues - Maximum issuances per scope window from reward_limits (null = no limit)
+ * @param lastEntitlementIssuedAt - Timestamp of most recent entitlement coupon (nullable)
+ * @param cooldownMinutes - Entitlement cooldown from reward_limits (null = no cooldown)
+ * @param entitlementIssuanceCount - Entitlement coupons in current gaming day (default 0)
+ * @param maxIssues - Max entitlement issuances per scope from reward_limits (null = no limit)
  * @returns RewardsEligibilityDTO with status and reason codes
  */
 export function mapToRewardsEligibility(
   loyaltyBalance: { balance: number; tier: string | null } | null,
-  recentRewardAt: string | null,
+  lastEntitlementIssuedAt: string | null,
   cooldownMinutes: number | null = null,
-  issuanceCount = 0,
+  entitlementIssuanceCount = 0,
   maxIssues: number | null = null,
 ): RewardsEligibilityDTO {
   // If no loyalty record, rules aren't configured
@@ -1043,20 +1244,20 @@ export function mapToRewardsEligibility(
 
   const points = loyaltyBalance.balance;
 
-  // Check max_issues limit
-  if (maxIssues !== null && issuanceCount >= maxIssues) {
+  // Check entitlement max_issues limit (evaluated before cooldown)
+  if (maxIssues !== null && entitlementIssuanceCount >= maxIssues) {
     return {
       status: 'not_available',
       nextEligibleAt: null,
       reasonCodes: ['LIMIT_REACHED'],
-      guidance: `Daily limit reached (${issuanceCount}/${maxIssues})`,
+      guidance: `Daily limit reached (${entitlementIssuanceCount}/${maxIssues})`,
       pointsAvailable: points,
     };
   }
 
-  // Check cooldown
-  if (cooldownMinutes !== null && recentRewardAt) {
-    const cooldownExpires = new Date(recentRewardAt);
+  // Check entitlement cooldown
+  if (cooldownMinutes !== null && lastEntitlementIssuedAt) {
+    const cooldownExpires = new Date(lastEntitlementIssuedAt);
     cooldownExpires.setMinutes(cooldownExpires.getMinutes() + cooldownMinutes);
 
     if (cooldownExpires.getTime() > Date.now()) {
@@ -1081,21 +1282,34 @@ export function mapToRewardsEligibility(
 }
 ```
 
-- [ ] **Step 3: Update dashboard crud to fetch reward_limits**
+- [ ] **Step 3: Update dashboard crud — entitlement-scoped queries**
 
-In `services/player360-dashboard/crud.ts`, add a query for the minimum entitlement cooldown and max_issues count. In the `Promise.all` block (~line 96), add a new query:
+In `services/player360-dashboard/crud.ts`, make two changes:
+
+**Change A:** Replace the global `lastRedemption` query (line ~127-134). The old query fetched from `loyalty_ledger` WHERE `reason='redeem'` (any redemption). Entitlement issuances go through `rpc_issue_promo_coupon` → `promo_coupon`, NOT `loyalty_ledger`. Replace with entitlement-specific queries:
 
 ```typescript
-      // 6. P2K-31: Fetch entitlement reward limits for cadence display
+      // 5. P2K-31: Get most recent entitlement coupon issuance for cooldown display
+      supabase
+        .from('promo_coupon')
+        .select('issued_at')
+        .eq('player_id', playerId)
+        .neq('status', 'voided')
+        .order('issued_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+
+      // 6. P2K-31: Fetch most restrictive entitlement limit (family-filtered via join)
       supabase
         .from('reward_limits')
-        .select('cooldown_minutes, max_issues, scope, reward_id')
-        .not('cooldown_minutes', 'is', null)
+        .select('cooldown_minutes, max_issues, scope, reward_id, reward_catalog!inner(family)')
+        .eq('reward_catalog.family', 'entitlement')
+        .order('max_issues', { ascending: true })
         .limit(1)
         .maybeSingle(),
 ```
 
-Then destructure the result alongside existing results and pass the data to the mapper:
+**Change B:** After the `Promise.all`, count today's entitlement issuances from `promo_coupon`:
 
 ```typescript
     // Resolve entitlement limits for eligibility display
@@ -1103,43 +1317,57 @@ Then destructure the result alongside existing results and pass the data to the 
     const configuredCooldown = entitlementLimit?.cooldown_minutes ?? null;
     const configuredMaxIssues = entitlementLimit?.max_issues ?? null;
 
-    // P2K-31: Count today's entitlement issuances for limit display
-    let todayIssuanceCount = 0;
+    // P2K-31: Count today's entitlement issuances from promo_coupon (gaming day boundary)
+    let todayEntitlementCount = 0;
     if (configuredMaxIssues !== null) {
-      const todayStart = new Date();
-      todayStart.setUTCHours(0, 0, 0, 0);
+      const { data: gamingDayStartData } = await supabase.rpc(
+        'rpc_gaming_day_start_utc',
+      );
+      // DEGRADED PATH: if RPC fails, windowStart = now → count = 0 → card shows 'available'.
+      // This undercounts (permissive), never overblocks. Correct behavior requires
+      // rpc_gaming_day_start_utc to succeed. Investigate if this branch is hit in production.
+      const windowStart = gamingDayStartData
+        ? new Date(gamingDayStartData).toISOString()
+        : new Date().toISOString();
 
       const { count } = await supabase
-        .from('loyalty_ledger')
+        .from('promo_coupon')
         .select('*', { count: 'exact', head: true })
         .eq('player_id', playerId)
-        .eq('reason', 'redeem')
-        .eq('source_kind', 'reward')
-        .gte('created_at', todayStart.toISOString());
+        .neq('status', 'voided')
+        .gte('issued_at', windowStart);
 
-      todayIssuanceCount = count ?? 0;
+      todayEntitlementCount = count ?? 0;
     }
 
     const rewardsEligibility = mapToRewardsEligibility(
       loyaltyBalance,
-      lastRedemption?.created_at ?? null,
+      lastEntitlementIssuance?.issued_at ?? null,
       configuredCooldown,
-      todayIssuanceCount,
+      todayEntitlementCount,
       configuredMaxIssues,
     );
 ```
 
-**Note:** The exact implementation depends on the existing Promise.all structure. Read the current crud.ts carefully and add the new query as a parallel fetch. The counting query runs after the Promise.all since it depends on the limit result.
+**Key changes vs. original plan:**
+1. Last issuance from `promo_coupon.issued_at` (entitlement coupons), not `loyalty_ledger.created_at`
+2. Issuance count from `promo_coupon` (entitlement coupons), not `loyalty_ledger` with `source_kind='reward'`
+3. Limit query filtered by `reward_catalog.family = 'entitlement'` via inner join (not across all families)
 
 - [ ] **Step 4: Update mapper tests**
 
 In `services/player360-dashboard/__tests__/mappers.test.ts`, update the `mapToRewardsEligibility` tests:
 
 ```typescript
+// P2K-31: mapToRewardsEligibility is a summary indicator for ENTITLEMENT cadence state.
+// All time-based inputs (lastEntitlementIssuedAt, issuanceCount) are entitlement-scoped
+// (from promo_coupon, not loyalty_ledger). Points comp availability is communicated
+// by pointsAvailable alone.
+
 describe('mapToRewardsEligibility', () => {
   const balance = { balance: 500, tier: 'gold' };
 
-  it('returns "available" when no recent reward and no limits', () => {
+  it('returns "available" when no recent entitlement and no limits', () => {
     const result = mapToRewardsEligibility(balance, null);
     expect(result.status).toBe('available');
     expect(result.nextEligibleAt).toBeNull();
@@ -1147,34 +1375,34 @@ describe('mapToRewardsEligibility', () => {
     expect(result.pointsAvailable).toBe(500);
   });
 
-  it('returns "not_available" with cooldown when configured and active', () => {
+  it('returns "not_available" with cooldown when entitlement recently issued', () => {
     const result = mapToRewardsEligibility(balance, minutesAgo(10), 30);
     expect(result.status).toBe('not_available');
     expect(result.nextEligibleAt).not.toBeNull();
     expect(result.reasonCodes).toEqual(['COOLDOWN_ACTIVE']);
   });
 
-  it('returns "available" when cooldown has elapsed', () => {
+  it('returns "available" when entitlement cooldown has elapsed', () => {
     const result = mapToRewardsEligibility(balance, minutesAgo(45), 30);
     expect(result.status).toBe('available');
     expect(result.nextEligibleAt).toBeNull();
     expect(result.reasonCodes).toEqual(['AVAILABLE']);
   });
 
-  it('returns "available" when no cooldown configured (null)', () => {
-    // Even with a recent reward, no cooldown = always available
+  it('returns "available" when no cooldown configured (points comp behavior)', () => {
+    // Even with a recent issuance, null cooldown = no entitlement cadence restriction
     const result = mapToRewardsEligibility(balance, minutesAgo(5), null);
     expect(result.status).toBe('available');
   });
 
-  it('returns "not_available" with LIMIT_REACHED when max_issues exceeded', () => {
+  it('returns "not_available" with LIMIT_REACHED when entitlement max_issues exceeded', () => {
     const result = mapToRewardsEligibility(balance, null, null, 3, 3);
     expect(result.status).toBe('not_available');
     expect(result.reasonCodes).toEqual(['LIMIT_REACHED']);
     expect(result.guidance).toContain('3/3');
   });
 
-  it('checks LIMIT_REACHED before COOLDOWN_ACTIVE', () => {
+  it('checks LIMIT_REACHED before COOLDOWN_ACTIVE (max_issues short-circuits)', () => {
     // Both conditions: limit reached AND cooldown active
     const result = mapToRewardsEligibility(balance, minutesAgo(5), 30, 1, 1);
     expect(result.reasonCodes).toEqual(['LIMIT_REACHED']);
@@ -1188,7 +1416,7 @@ describe('mapToRewardsEligibility', () => {
     expect(result.pointsAvailable).toBeNull();
   });
 
-  it('returns "unknown" even if recent reward but no loyalty balance', () => {
+  it('returns "unknown" even if recent entitlement but no loyalty balance', () => {
     const result = mapToRewardsEligibility(null, minutesAgo(5));
     expect(result.status).toBe('unknown');
   });
@@ -1221,7 +1449,7 @@ Expected: No new errors
 
 ```bash
 git add services/player360-dashboard/dtos.ts services/player360-dashboard/mappers.ts services/player360-dashboard/crud.ts services/player360-dashboard/__tests__/mappers.test.ts
-git commit -m "feat(dashboard): replace hardcoded 30m cooldown with reward_limits data (P2K-31 Phase 2)"
+git commit -m "feat(dashboard): replace hardcoded 30m with entitlement-scoped cadence from promo_coupon + reward_limits (P2K-31 Phase 2)"
 ```
 
 ---
@@ -1264,12 +1492,17 @@ Expected: No errors
 
 **Spec coverage:**
 - ✅ Phase 1: Service-layer pre-flight checks in `issueComp()` / `issueEntitlement()`
-- ✅ Phase 2: Dashboard mapper fix — replace hardcoded 30m with per-reward limit data
-- ✅ New error codes: `REWARD_LIMIT_REACHED` (429) and `REWARD_COOLDOWN_ACTIVE` (429)
+- ✅ Phase 2: Dashboard mapper fix — replace hardcoded 30m with reward-scoped limit data
+- ✅ New error codes: `REWARD_LIMIT_REACHED` (429), `REWARD_COOLDOWN_ACTIVE` (429), `REWARD_SCOPE_UNSUPPORTED` (400)
 - ✅ Points comps: no temporal restriction unless admin configures limits (balance-bounded)
 - ✅ Entitlements: cadence-limited per `reward_limits` config
-- ⏳ Phase 3: RPC hard enforcement — deferred (follow-up ticket)
-- ⏳ `per_visit` scope — deferred (seed data uses `per_gaming_day` only)
+- ✅ `per_gaming_day`: uses casino-local gaming day boundary via `rpc_gaming_day_start_utc()`
+- ✅ `per_visit`: fail-closed with `REWARD_SCOPE_UNSUPPORTED`
+- ✅ Dashboard uses entitlement-scoped history (`promo_coupon`), family-filtered limits (`reward_catalog.family='entitlement'`), explicitly framed as summary indicator
+- ✅ Product rules explicitly locked
+- ✅ Pilot limitation explicitly documented
+- ✅ Acceptance criteria defined
+- ⏳ Phase 3: RPC hard enforcement — deferred (P2K-31-phase3)
 
 **Placeholder scan:** No TBD/TODO/placeholders found.
 
@@ -1278,3 +1511,20 @@ Expected: No errors
 - `LimitScope` from dtos.ts used in resolveWindowStart
 - `CountIssuancesFn` / `LastIssuedAtFn` types defined once in cadence.ts, used in both issuance paths
 - `DomainError` codes match `LoyaltyErrorCode` union additions
+- `gamingDayStart` parameter threaded consistently through enforceRewardLimits → issuance callers
+
+**Audit delta findings addressed:**
+1. ✅ Finding 1: `per_gaming_day` uses `rpc_gaming_day_start_utc()` (casino-local boundary, not UTC midnight)
+2. ✅ Finding 2: `per_visit` consistently fails closed with `REWARD_SCOPE_UNSUPPORTED`
+3. ✅ Finding 3: Dashboard uses `promo_coupon` for entitlement-scoped history, `reward_limits` filtered by `family='entitlement'`, explicitly framed as summary indicator
+4. ✅ Finding 4: Pilot limitation section added
+5. ✅ Finding 5: Product rules locked section added
+6. ✅ Finding 6: Acceptance criteria section added
+
+**Second-pass corrections:**
+- Dashboard queries fixed: `promo_coupon` (not `loyalty_ledger`) for entitlement issuances
+- Limit query uses `reward_catalog!inner(family)` join to filter by entitlement family
+- `retryAfterSeconds` scoped to `REWARD_COOLDOWN_ACTIVE` only (not `REWARD_LIMIT_REACHED`)
+- Migration failure modes documented as operational preconditions
+- Architecture headline updated to mention all 3 error codes
+- Dashboard explicitly framed as summary indicator, not per-reward truth
