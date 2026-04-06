@@ -132,7 +132,7 @@ export function Player360Header({ children, className }: Player360HeaderProps) {
       className={cn(
         'sticky top-0 z-30 shrink-0',
         'border-b border-border/40 bg-background/95 backdrop-blur-sm',
-        'supports-[backdrop-filter]:bg-background/60',
+        'supports-backdrop-filter:bg-background/60',
         className,
       )}
     >
@@ -273,7 +273,7 @@ export function Panel({ children, className }: PanelProps) {
       )}
     >
       {/* LED accent strip */}
-      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-transparent via-accent/50 to-transparent" />
       {children}
     </div>
   );

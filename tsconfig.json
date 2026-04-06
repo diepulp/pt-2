@@ -41,6 +41,16 @@
     "**/__tests__",
     "**/*.test.ts",
     "**/*.spec.ts",
-    "trees/**"
+    "trees/**",
+    ".next",
+    "dist",
+    "build",
+    "coverage",
+    ".turbo",
+    "tmp",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
   ]
 }
