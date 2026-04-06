@@ -793,6 +793,7 @@ export async function issueComp(
 ): Promise<CompIssuanceResult> {
   // Lazy import to avoid circular dependency (reward is a sub-module of loyalty)
   const { getReward } = await import('./reward/crud');
+  const { checkCadence, requiresNote } = await import('./cadence');
 
   try {
     // 1. Parallel pre-flight: fetch reward catalog + player balance + valuation rate
@@ -826,7 +827,38 @@ export async function issueComp(
       );
     }
 
-    // 5. Resolve points cost: caller-provided variable amount OR catalog default
+    // 5. PRD-061: Cadence check (only when reward_limits exist)
+    if (reward.limits.length > 0) {
+      // requires_note enforcement (§5.6)
+      if (requiresNote(reward.limits) && !params.note) {
+        throw new DomainError(
+          'VALIDATION_ERROR',
+          'Note is required for this reward (requires_note policy)',
+        );
+      }
+
+      const cadenceResult = await checkCadence(
+        supabase,
+        params.playerId,
+        params.rewardId,
+        casinoId,
+        'points_comp',
+        reward.limits,
+      );
+
+      if (!cadenceResult.allowed) {
+        throw new DomainError(cadenceResult.code!, cadenceResult.guidance, {
+          httpStatus:
+            cadenceResult.code === 'REWARD_VISIT_REQUIRED' ? 422 : 429,
+          details: {
+            retryAfterSeconds: cadenceResult.retryAfterSeconds,
+            nextEligibleAt: cadenceResult.nextEligibleAt,
+          },
+        });
+      }
+    }
+
+    // 6. Resolve points cost: caller-provided variable amount OR catalog default
     // ceil() on redeem is house-favorable rounding.
     const pointsCost = params.faceValueCents
       ? Math.ceil(params.faceValueCents / centsPerPoint)

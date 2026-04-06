@@ -31,6 +31,7 @@ import type {
 import { rewardKeys } from '@/services/loyalty/reward/keys';
 
 import { PointsPricingForm } from './points-pricing-form';
+import { RewardLimitsForm } from './reward-limits-form';
 import { TierEntitlementForm } from './tier-entitlement-form';
 
 // === Family Display Helpers ===
@@ -356,6 +357,9 @@ export function RewardDetailClient({ initialData }: RewardDetailClientProps) {
       {detail.family === 'entitlement' && (
         <TierEntitlementForm reward={detail} />
       )}
+
+      {/* PRD-061: Frequency Rules (all families) */}
+      <RewardLimitsForm reward={detail} />
     </div>
   );
 }

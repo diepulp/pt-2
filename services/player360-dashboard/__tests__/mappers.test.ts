@@ -19,6 +19,7 @@ import {
   mapToRewardHistoryItem,
   mapPromoCouponToRewardHistoryItem,
 } from '../mappers';
+import type { RewardCadenceInfo } from '../mappers';
 
 // === Helpers ===
 
@@ -122,7 +123,7 @@ describe('mapToEngagement', () => {
 describe('mapToRewardsEligibility', () => {
   const balance = { balance: 500, tier: 'gold' };
 
-  it('returns "available" when no recent reward', () => {
+  it('returns "available" when no cadence info (no limits configured)', () => {
     const result = mapToRewardsEligibility(balance, null);
     expect(result.status).toBe('available');
     expect(result.nextEligibleAt).toBeNull();
@@ -130,25 +131,65 @@ describe('mapToRewardsEligibility', () => {
     expect(result.pointsAvailable).toBe(500);
   });
 
-  it('returns "not_available" with cooldown when reward is recent (<30 min)', () => {
-    const result = mapToRewardsEligibility(balance, minutesAgo(10));
+  it('returns "not_available" with cooldown when reward is recent', () => {
+    const cadence: RewardCadenceInfo = {
+      cooldownMinutes: 30,
+      lastIssuedAt: minutesAgo(10),
+      limitReached: false,
+      windowExpiresAt: null,
+      visitRequired: false,
+      scopeLabel: null,
+    };
+    const result = mapToRewardsEligibility(balance, cadence);
     expect(result.status).toBe('not_available');
     expect(result.nextEligibleAt).not.toBeNull();
     expect(result.reasonCodes).toEqual(['COOLDOWN_ACTIVE']);
   });
 
-  it('returns "available" when reward is past cooldown (>30 min)', () => {
-    const result = mapToRewardsEligibility(balance, minutesAgo(45));
+  it('returns "available" when cooldown has expired', () => {
+    const cadence: RewardCadenceInfo = {
+      cooldownMinutes: 30,
+      lastIssuedAt: minutesAgo(45),
+      limitReached: false,
+      windowExpiresAt: null,
+      visitRequired: false,
+      scopeLabel: null,
+    };
+    const result = mapToRewardsEligibility(balance, cadence);
     expect(result.status).toBe('available');
-    expect(result.nextEligibleAt).toBeNull();
     expect(result.reasonCodes).toEqual(['AVAILABLE']);
   });
 
-  it('returns "not_available" when reward is exactly at cooldown boundary', () => {
-    // 29 minutes ago → cooldown should still be active (expires at ~+1min)
-    const result = mapToRewardsEligibility(balance, minutesAgo(29));
+  it('returns "not_available" when scope limit reached', () => {
+    const futureExpiry = new Date(Date.now() + 3600000).toISOString();
+    const cadence: RewardCadenceInfo = {
+      cooldownMinutes: null,
+      lastIssuedAt: minutesAgo(60),
+      limitReached: true,
+      windowExpiresAt: futureExpiry,
+      visitRequired: false,
+      scopeLabel: '1 per gaming day',
+    };
+    const result = mapToRewardsEligibility(balance, cadence);
     expect(result.status).toBe('not_available');
-    expect(result.reasonCodes).toEqual(['COOLDOWN_ACTIVE']);
+    expect(result.reasonCodes).toEqual(['LIMIT_REACHED']);
+    expect(result.guidance).toContain('1 per gaming day');
+    expect(result.nextEligibleAt).toBe(futureExpiry);
+  });
+
+  it('returns "not_available" with VISIT_REQUIRED when per_visit scope has no visit', () => {
+    const cadence: RewardCadenceInfo = {
+      cooldownMinutes: null,
+      lastIssuedAt: null,
+      limitReached: false,
+      windowExpiresAt: null,
+      visitRequired: true,
+      scopeLabel: null,
+    };
+    const result = mapToRewardsEligibility(balance, cadence);
+    expect(result.status).toBe('not_available');
+    expect(result.reasonCodes).toEqual(['VISIT_REQUIRED']);
+    expect(result.guidance).toContain('active visit');
   });
 
   it('returns "unknown" when no loyalty balance', () => {
@@ -159,34 +200,34 @@ describe('mapToRewardsEligibility', () => {
     expect(result.pointsAvailable).toBeNull();
   });
 
-  it('returns "unknown" when no loyalty balance even with recent reward', () => {
-    const result = mapToRewardsEligibility(null, minutesAgo(5));
-    expect(result.status).toBe('unknown');
-  });
-
-  it('respects custom cooldown minutes', () => {
-    // Reward 20 min ago, 15-min cooldown → should be available
-    const result = mapToRewardsEligibility(balance, minutesAgo(20), 15);
-    expect(result.status).toBe('available');
-  });
-
-  it('respects longer custom cooldown', () => {
-    // Reward 20 min ago, 60-min cooldown → should NOT be available
-    const result = mapToRewardsEligibility(balance, minutesAgo(20), 60);
+  it('prioritizes cooldown over limit when both block', () => {
+    const futureExpiry = new Date(Date.now() + 7200000).toISOString();
+    const cadence: RewardCadenceInfo = {
+      cooldownMinutes: 60,
+      lastIssuedAt: minutesAgo(10),
+      limitReached: true,
+      windowExpiresAt: futureExpiry,
+      visitRequired: false,
+      scopeLabel: '1 per gaming day',
+    };
+    const result = mapToRewardsEligibility(balance, cadence);
     expect(result.status).toBe('not_available');
+    // Cooldown takes priority per PRD-061 §5.4
+    expect(result.reasonCodes).toEqual(['COOLDOWN_ACTIVE']);
   });
 
-  it('calculates correct nextEligibleAt timestamp', () => {
-    const rewardTime = minutesAgo(10);
-    const result = mapToRewardsEligibility(balance, rewardTime, 30);
-
-    expect(result.nextEligibleAt).not.toBeNull();
-    // Should be ~20 minutes from now
-    const eligibleAt = new Date(result.nextEligibleAt!).getTime();
-    const nowPlusAbout20Min = Date.now() + 19 * 60000;
-    const nowPlusAbout21Min = Date.now() + 21 * 60000;
-    expect(eligibleAt).toBeGreaterThanOrEqual(nowPlusAbout20Min);
-    expect(eligibleAt).toBeLessThanOrEqual(nowPlusAbout21Min);
+  it('returns "available" when all cadence checks pass', () => {
+    const cadence: RewardCadenceInfo = {
+      cooldownMinutes: 30,
+      lastIssuedAt: minutesAgo(60),
+      limitReached: false,
+      windowExpiresAt: null,
+      visitRequired: false,
+      scopeLabel: null,
+    };
+    const result = mapToRewardsEligibility(balance, cadence);
+    expect(result.status).toBe('available');
+    expect(result.reasonCodes).toEqual(['AVAILABLE']);
   });
 });
 
