@@ -11,6 +11,7 @@
 
 import { fetchJSON } from '@/lib/http/fetch-json';
 import { IDEMPOTENCY_HEADER } from '@/lib/http/headers';
+import { createBrowserComponentClient } from '@/lib/supabase/client';
 
 import type {
   CreatePlayerDTO,
@@ -161,6 +162,35 @@ export async function getIdentity(
     }
     throw error;
   }
+}
+
+// === Batch Lookups ===
+
+/**
+ * Batch-fetches player display names by IDs.
+ * Returns a Map<player_id, full_name> for the given IDs.
+ *
+ * Uses direct Supabase query as a contained adapter — no batch
+ * endpoint exists yet. Replace with API call when one is added.
+ */
+export async function getPlayerNamesByIds(
+  playerIds: string[],
+): Promise<Map<string, string>> {
+  if (playerIds.length === 0) return new Map();
+
+  const supabase = createBrowserComponentClient();
+  const { data, error } = await supabase
+    .from('player')
+    .select('id, first_name, last_name')
+    .in('id', playerIds);
+
+  if (error) throw error;
+
+  const map = new Map<string, string>();
+  for (const p of data ?? []) {
+    map.set(p.id, `${p.first_name} ${p.last_name}`);
+  }
+  return map;
 }
 
 /**

@@ -13,7 +13,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { playerFinancialKeys } from '@/hooks/player-financial/keys';
-import { createBrowserComponentClient } from '@/lib/supabase/client';
+import { getPlayerNamesByIds } from '@/services/player/http';
 import type {
   AdjustmentReasonCode,
   FinancialTransactionDTO,
@@ -64,18 +64,9 @@ export function useRecentCashOuts(gamingDay?: string) {
       const items = result.items;
       if (items.length === 0) return [];
 
-      // Batch-fetch player names for all unique player_ids
+      // Batch-fetch player names via service fetcher
       const uniquePlayerIds = [...new Set(items.map((t) => t.player_id))];
-      const supabase = createBrowserComponentClient();
-      const { data: players } = await supabase
-        .from('player')
-        .select('id, first_name, last_name')
-        .in('id', uniquePlayerIds);
-
-      const nameMap = new Map<string, string>();
-      for (const p of players ?? []) {
-        nameMap.set(p.id, `${p.first_name} ${p.last_name}`);
-      }
+      const nameMap = await getPlayerNamesByIds(uniquePlayerIds);
 
       return items.map((txn) => ({
         ...txn,
