@@ -153,8 +153,10 @@ export function CreateProgramDialog() {
     const raw = {
       name: name.trim(),
       promoType,
-      faceValueAmount: parseFloat(faceValue),
-      requiredMatchWagerAmount: isFreePlay ? 0 : parseFloat(matchWager),
+      faceValueAmount: Math.round(parseFloat(faceValue) * 100),
+      requiredMatchWagerAmount: isFreePlay
+        ? 0
+        : Math.round(parseFloat(matchWager) * 100),
       ...(startAt ? { startAt: new Date(startAt).toISOString() } : {}),
       ...(endAt ? { endAt: new Date(endAt).toISOString() } : {}),
     };

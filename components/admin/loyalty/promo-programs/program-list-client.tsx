@@ -23,17 +23,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { usePromoPrograms } from '@/hooks/loyalty/promo-instruments/use-promo-programs';
+import { formatCents } from '@/lib/format';
 import type { PromoProgramDTO } from '@/services/loyalty/promo/dtos';
 
 import { CreateProgramDialog } from './create-program-dialog';
-
-/** Format a number as USD currency string */
-function formatUSD(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
-}
 
 /** Format an ISO date string for display */
 function formatDate(iso: string | null): string {
@@ -203,7 +196,9 @@ export function ProgramListClient({ initialData }: ProgramListClientProps) {
                           : 'Free Play'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatUSD(program.faceValueAmount)}</TableCell>
+                    <TableCell>
+                      {formatCents(program.faceValueAmount)}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={statusVariant(program.status)}>
                         {program.status}

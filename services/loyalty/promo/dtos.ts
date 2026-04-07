@@ -45,10 +45,10 @@ export interface PromoProgramDTO {
   /** Promo type */
   promoType: PromoType;
 
-  /** Face value of each coupon (e.g., 25.00) */
+  /** Face value of each coupon in cents (e.g., 2500 = $25.00). ADR-031. */
   faceValueAmount: number;
 
-  /** Required matching wager from player (e.g., 25.00) */
+  /** Required matching wager from player in cents (e.g., 2500 = $25.00). ADR-031. */
   requiredMatchWagerAmount: number;
 
   /** Program status (active, inactive, archived) */
@@ -83,10 +83,10 @@ export interface CreatePromoProgramInput {
   /** Promo type (default: match_play) */
   promoType?: PromoType;
 
-  /** Face value of each coupon */
+  /** Face value of each coupon in cents. ADR-031. */
   faceValueAmount: number;
 
-  /** Required matching wager from player */
+  /** Required matching wager from player in cents. ADR-031. */
   requiredMatchWagerAmount: number;
 
   /** Program start date (optional) */
@@ -139,10 +139,10 @@ export interface PromoCouponDTO {
   /** Coupon lifecycle status */
   status: PromoCouponStatus;
 
-  /** Face value of this coupon */
+  /** Face value of this coupon in cents. ADR-031. */
   faceValueAmount: number;
 
-  /** Required matching wager amount */
+  /** Required matching wager in cents. ADR-031. */
   requiredMatchWagerAmount: number;
 
   /** Issuance timestamp (ISO 8601) */
@@ -222,10 +222,10 @@ export interface IssueCouponOutput {
     /** Current status (should be 'issued') */
     status: PromoCouponStatus;
 
-    /** Face value */
+    /** Face value in cents. ADR-031. */
     faceValueAmount: number;
 
-    /** Required match wager */
+    /** Required match wager in cents. ADR-031. */
     requiredMatchWagerAmount: number;
 
     /** Issuance timestamp */
@@ -339,7 +339,7 @@ export interface ReplaceCouponOutput {
     /** Current status (should be 'issued') */
     status: PromoCouponStatus;
 
-    /** Face value */
+    /** Face value in cents. ADR-031. */
     faceValueAmount: number;
 
     /** Issuance timestamp */

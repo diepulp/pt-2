@@ -4,15 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePromoCouponInventory } from '@/hooks/loyalty/promo-instruments/use-promo-coupons';
+import { formatCents } from '@/lib/format';
 import type { CouponInventoryRow } from '@/services/loyalty/promo/dtos';
-
-/** Format a number as USD currency string */
-function formatUSD(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
-}
 
 /** Badge variant per coupon status */
 function statusBadgeVariant(
@@ -110,17 +103,17 @@ export function InventorySummary({ promoProgramId }: InventorySummaryProps) {
                 </div>
                 <div className="text-right text-sm">
                   <span className="font-medium">
-                    {formatUSD(row.totalFaceValue)}
+                    {formatCents(row.totalFaceValue)}
                   </span>
                   <span className="ml-2 text-muted-foreground">
-                    / {formatUSD(row.totalMatchWager)} match
+                    / {formatCents(row.totalMatchWager)} match
                   </span>
                 </div>
               </div>
             ))}
             <div className="border-t pt-3 flex items-center justify-between font-medium text-sm">
               <span>Total: {totalCount} coupons</span>
-              <span>{formatUSD(totalFace)}</span>
+              <span>{formatCents(totalFace)}</span>
             </div>
           </div>
         )}

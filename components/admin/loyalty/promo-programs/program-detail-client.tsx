@@ -19,17 +19,10 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUpdatePromoProgram } from '@/hooks/loyalty/promo-instruments/use-promo-mutations';
 import { usePromoProgram } from '@/hooks/loyalty/promo-instruments/use-promo-programs';
+import { formatCents } from '@/lib/format';
 import type { PromoProgramDTO } from '@/services/loyalty/promo/dtos';
 
 import { InventorySummary } from './inventory-summary';
-
-/** Format a number as USD currency string */
-function formatUSD(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
-}
 
 /** Convert ISO string to datetime-local input value */
 function toDateTimeLocal(iso: string | null): string {
@@ -323,7 +316,7 @@ export function ProgramDetailClient({
             <div>
               <Label className="text-muted-foreground">Face Value</Label>
               <p className="text-sm font-medium">
-                {formatUSD(displayed.faceValueAmount)}
+                {formatCents(displayed.faceValueAmount)}
               </p>
             </div>
             <div>
@@ -331,7 +324,7 @@ export function ProgramDetailClient({
                 Required Match Wager
               </Label>
               <p className="text-sm font-medium">
-                {formatUSD(displayed.requiredMatchWagerAmount)}
+                {formatCents(displayed.requiredMatchWagerAmount)}
               </p>
             </div>
           </div>
