@@ -13,6 +13,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { useCashObsSummary } from '@/hooks/shift-dashboard/use-cash-obs-summary';
 import { useShiftTableMetrics } from '@/hooks/shift-dashboard/use-shift-table-metrics';
@@ -145,7 +146,8 @@ function deriveFlags(shiftTables: ShiftTableMetricsDTO[]): FlagItem[] {
 export function useExceptionsData(
   casinoId: string | undefined,
 ): ExceptionsData {
-  const shiftWindow = getDefaultShiftWindow();
+  // Stable window reference — prevents TanStack Query key churn on every re-render.
+  const [shiftWindow] = useState(getDefaultShiftWindow);
 
   const { data: cashObs, isLoading: cashObsLoading } = useCashObsSummary({
     window: shiftWindow,
@@ -162,27 +164,31 @@ export function useExceptionsData(
     queryFn: async (): Promise<ApprovalItem[]> => {
       const supabase = createBrowserComponentClient();
 
-      const { data: fills, error: fillsErr } = await supabase
-        .from('table_fill')
-        .select(
-          'id, amount_cents, created_at, table_id, gaming_table!inner(name)',
-        )
-        .eq('status', 'requested')
-        .order('created_at', { ascending: false })
-        .limit(20);
+      // async-parallel: fills and credits are independent — fetch in parallel
+      const [fillsResult, creditsResult] = await Promise.all([
+        supabase
+          .from('table_fill')
+          .select(
+            'id, amount_cents, created_at, table_id, gaming_table!inner(name)',
+          )
+          .eq('status', 'requested')
+          .order('created_at', { ascending: false })
+          .limit(20),
+        supabase
+          .from('table_credit')
+          .select(
+            'id, amount_cents, created_at, table_id, gaming_table!inner(name)',
+          )
+          .eq('status', 'requested')
+          .order('created_at', { ascending: false })
+          .limit(20),
+      ]);
 
-      if (fillsErr) throw fillsErr;
+      if (fillsResult.error) throw fillsResult.error;
+      if (creditsResult.error) throw creditsResult.error;
 
-      const { data: credits, error: creditsErr } = await supabase
-        .from('table_credit')
-        .select(
-          'id, amount_cents, created_at, table_id, gaming_table!inner(name)',
-        )
-        .eq('status', 'requested')
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (creditsErr) throw creditsErr;
+      const fills = fillsResult.data;
+      const credits = creditsResult.data;
 
       const items: ApprovalItem[] = [];
 

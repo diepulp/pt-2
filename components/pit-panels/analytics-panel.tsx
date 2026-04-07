@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   AlertCircle,
 } from 'lucide-react';
+import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -124,7 +125,9 @@ export function AnalyticsPanel({
     gamingDay,
   );
 
-  const shiftWindow = getDefaultShiftWindow();
+  // Stable window reference — prevents TanStack Query key churn on every re-render.
+  // Same pattern as ShiftDashboardV3 (useState lazy init).
+  const [shiftWindow] = useState(getDefaultShiftWindow);
   const { data: shiftTables, isLoading: shiftLoading } = useShiftTableMetrics({
     window: shiftWindow,
     enabled: !!selectedTableId,
