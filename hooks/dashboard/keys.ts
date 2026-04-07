@@ -91,6 +91,15 @@ export const dashboardKeys = {
   casinoActivePlayers: (options?: { search?: string; limit?: number }) =>
     [...ROOT, 'casino-active-players', options ?? {}] as const,
 
+  // === Table Slip Analytics (Analytics Panel Wiring) ===
+
+  /**
+   * Closed slips for a table on a gaming day — feeds hourly chart + session breakdown.
+   * Client-fetched only, RLS-scoped.
+   */
+  tableSlipAnalytics: (tableId: string, gamingDay: string) =>
+    [...ROOT, 'table-slip-analytics', tableId, gamingDay] as const,
+
   // === Invalidation Helpers ===
 
   /**

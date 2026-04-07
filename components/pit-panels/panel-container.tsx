@@ -304,6 +304,7 @@ export function PanelContainer({
             casinoId={casinoId}
             selectedTableId={selectedTable?.id}
             gamingDay={gamingDay?.date}
+            activeSlipCount={activeSlips.length}
           />
         );
       case 'closed-sessions':

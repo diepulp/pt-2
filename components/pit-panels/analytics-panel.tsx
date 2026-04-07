@@ -14,18 +14,26 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTableCoverage } from '@/hooks/dashboard/use-table-coverage';
+import {
+  useTableSlipAnalytics,
+  type HourlyBucket,
+  type PlayerSegment,
+} from '@/hooks/dashboard/use-table-slip-analytics';
+import { useShiftTableMetrics } from '@/hooks/shift-dashboard/use-shift-table-metrics';
 import { cn } from '@/lib/utils';
+import type { ShiftTableMetricsDTO } from '@/services/table-context/shift-metrics/dtos';
 
 interface AnalyticsPanelProps {
   tableName: string;
   casinoId: string;
   selectedTableId?: string;
   gamingDay?: string | null;
+  /** Number of active (open + paused) slips at the selected table */
+  activeSlipCount?: number;
 }
 
-/**
- * Format seconds into a human-readable duration string.
- */
+// === Formatters ===
+
 function formatDuration(seconds: number | null): string {
   if (seconds === null || seconds === 0) return '0s';
   const h = Math.floor(seconds / 3600);
@@ -34,17 +42,38 @@ function formatDuration(seconds: number | null): string {
   return `${m}m`;
 }
 
-/**
- * Format ratio as percentage string.
- */
 function formatPercent(ratio: number | null): string {
   if (ratio === null) return '0%';
   return `${(ratio * 100).toFixed(1)}%`;
 }
 
-/**
- * Color class for coverage tier badge.
- */
+/** Format cents to dollar string with sign. */
+function formatCents(cents: number | null | undefined): string {
+  if (cents === null || cents === undefined) return '$0';
+  const dollars = cents / 100;
+  const abs = Math.abs(dollars).toLocaleString('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+  if (dollars >= 0) return `+$${abs}`;
+  return `-$${abs}`;
+}
+
+/** Format cents as unsigned dollar string. */
+function formatCentsUnsigned(cents: number | null | undefined): string {
+  if (cents === null || cents === undefined) return '$0';
+  const dollars = Math.abs(cents / 100);
+  return `$${dollars.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+/** Format hour (0-23) to display label. */
+function formatHour(hour: number): string {
+  if (hour === 0) return '12AM';
+  if (hour < 12) return `${hour}AM`;
+  if (hour === 12) return '12PM';
+  return `${hour - 12}PM`;
+}
+
 function tierColor(tier: string): string {
   switch (tier) {
     case 'HIGH':
@@ -58,12 +87,27 @@ function tierColor(tier: string): string {
   }
 }
 
+// === Shift Time Window ===
+
+/** Build an 8-hour lookback window from current time (same pattern as shift dashboard v3). */
+function getDefaultShiftWindow(): { start: string; end: string } {
+  const now = new Date();
+  const start = new Date(now.getTime() - 8 * 60 * 60 * 1000);
+  return { start: start.toISOString(), end: now.toISOString() };
+}
+
+// === Component ===
+
 /**
  * Analytics Panel - Table performance metrics and insights
  *
- * Renders live coverage data from measurement_rating_coverage_v (MEAS-003)
- * and labels non-coverage mock metrics as Placeholder.
+ * Live sections:
+ * - Rating Coverage (MEAS-003) — useTableCoverage
+ * - Table Metrics (Win/Loss, Handle, Avg Session, Active Players) — useShiftTableMetrics + coverage
+ * - Hourly Activity chart — useTableSlipAnalytics
+ * - Session Breakdown by player segment — useTableSlipAnalytics
  *
+ * @see analytics-panel-pre-wiring-report.md
  * @see PRD-048 WS3 — Coverage Data Wiring
  */
 export function AnalyticsPanel({
@@ -71,46 +115,71 @@ export function AnalyticsPanel({
   casinoId,
   selectedTableId,
   gamingDay,
+  activeSlipCount = 0,
 }: AnalyticsPanelProps) {
+  // === Data Hooks ===
+
   const { data: coverageData, isLoading: coverageLoading } = useTableCoverage(
     casinoId,
     gamingDay,
   );
 
-  // Filter coverage for selected table
+  const shiftWindow = getDefaultShiftWindow();
+  const { data: shiftTables, isLoading: shiftLoading } = useShiftTableMetrics({
+    window: shiftWindow,
+    enabled: !!selectedTableId,
+  });
+
+  const { data: slipAnalytics, isLoading: slipAnalyticsLoading } =
+    useTableSlipAnalytics(selectedTableId, gamingDay);
+
+  // === Derived State ===
+
   const tableCoverage = selectedTableId
     ? coverageData?.find((c) => c.gaming_table_id === selectedTableId)
     : undefined;
 
-  // Mock metrics data — labeled as Placeholder
+  const tableMetrics: ShiftTableMetricsDTO | undefined = selectedTableId
+    ? shiftTables?.find((t) => t.table_id === selectedTableId)
+    : undefined;
+
+  // Avg session: rated_seconds / slip_count from coverage data
+  const avgSessionSeconds =
+    tableCoverage && tableCoverage.slip_count && tableCoverage.slip_count > 0
+      ? Math.round(
+          (tableCoverage.rated_seconds ?? 0) / tableCoverage.slip_count,
+        )
+      : null;
+
+  const metricsLoading = shiftLoading || coverageLoading;
+
+  // Build metrics array from live data
   const metrics = [
     {
       label: 'Win/Loss',
-      value: '+$12,450',
-      change: '+8.2%',
-      positive: true,
+      value: formatCents(tableMetrics?.win_loss_inventory_cents),
       icon: DollarSign,
+      positive: (tableMetrics?.win_loss_inventory_cents ?? 0) >= 0,
+      grade: tableMetrics?.metric_grade,
     },
     {
       label: 'Handle',
-      value: '$145,200',
-      change: '+12.5%',
-      positive: true,
+      value: formatCentsUnsigned(tableMetrics?.estimated_drop_buyins_cents),
       icon: BarChart3,
+      positive: true,
     },
     {
       label: 'Avg Session',
-      value: '47 min',
-      change: '-5.1%',
-      positive: false,
+      value:
+        avgSessionSeconds !== null ? formatDuration(avgSessionSeconds) : '--',
       icon: Clock,
+      positive: true,
     },
     {
       label: 'Active Players',
-      value: '6',
-      change: '0%',
-      positive: true,
+      value: String(activeSlipCount),
       icon: Users,
+      positive: activeSlipCount > 0,
     },
   ];
 
@@ -210,168 +279,247 @@ export function AnalyticsPanel({
           )}
         </div>
 
-        {/* Placeholder Metrics Grid */}
+        {/* Table Metrics (Live — Shift Metrics + Coverage) */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <Activity className="h-4 w-4 text-accent" />
             <span className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
               Table Metrics
             </span>
-            <Badge
-              variant="outline"
-              className="text-[10px] ml-auto text-muted-foreground"
-            >
-              Placeholder
-            </Badge>
+            {tableMetrics?.metric_grade && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  'text-[10px] ml-auto',
+                  tableMetrics.metric_grade === 'AUTHORITATIVE'
+                    ? 'border-emerald-500/30 text-emerald-400'
+                    : 'border-amber-500/30 text-amber-400',
+                )}
+              >
+                {tableMetrics.metric_grade}
+              </Badge>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {metrics.map((metric) => {
-              const Icon = metric.icon;
-              return (
-                <div
-                  key={metric.label}
-                  className={cn(
-                    'relative overflow-hidden p-4 rounded-lg',
-                    'border border-border/40 bg-card/50',
-                    'backdrop-blur-sm opacity-60',
-                  )}
-                >
-                  {/* Accent strip */}
+          {metricsLoading ? (
+            <div className="grid grid-cols-2 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-24 rounded-lg" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {metrics.map((metric) => {
+                const Icon = metric.icon;
+                return (
                   <div
+                    key={metric.label}
                     className={cn(
-                      'absolute top-0 left-0 right-0 h-0.5',
-                      metric.positive
-                        ? 'bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent'
-                        : 'bg-gradient-to-r from-transparent via-amber-500/50 to-transparent',
+                      'relative overflow-hidden p-4 rounded-lg',
+                      'border border-border/40 bg-card/50',
+                      'backdrop-blur-sm',
                     )}
-                  />
-
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Icon className="h-4 w-4" />
-                        <span className="text-xs uppercase tracking-wide">
-                          {metric.label}
-                        </span>
-                      </div>
-                      <div className="font-mono text-xl font-bold text-foreground">
-                        {metric.value}
-                      </div>
-                    </div>
+                  >
+                    {/* Accent strip */}
                     <div
                       className={cn(
-                        'px-2 py-0.5 rounded text-xs font-mono',
+                        'absolute top-0 left-0 right-0 h-0.5',
                         metric.positive
-                          ? 'bg-emerald-500/10 text-emerald-400'
-                          : 'bg-amber-500/10 text-amber-400',
+                          ? 'bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent'
+                          : 'bg-gradient-to-r from-transparent via-amber-500/50 to-transparent',
                       )}
-                    >
-                      {metric.change}
+                    />
+
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Icon className="h-4 w-4" />
+                          <span className="text-xs uppercase tracking-wide">
+                            {metric.label}
+                          </span>
+                        </div>
+                        <div className="font-mono text-xl font-bold text-foreground">
+                          {metric.value}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Hourly Activity (Live — Slip Analytics) */}
+        <HourlyActivityChart
+          hourlyActivity={slipAnalytics?.hourlyActivity ?? []}
+          isLoading={slipAnalyticsLoading}
+        />
+
+        {/* Session Breakdown (Live — Slip Analytics) */}
+        <SessionBreakdown
+          segments={slipAnalytics?.sessionBreakdown ?? []}
+          isLoading={slipAnalyticsLoading}
+        />
+      </div>
+    </div>
+  );
+}
+
+// === Sub-Components ===
+
+function HourlyActivityChart({
+  hourlyActivity,
+  isLoading,
+}: {
+  hourlyActivity: HourlyBucket[];
+  isLoading: boolean;
+}) {
+  const maxCount = Math.max(1, ...hourlyActivity.map((b) => b.count));
+
+  // Build 24-hour grid (sparse fill from data)
+  const hours = Array.from({ length: 24 }, (_, i) => {
+    const bucket = hourlyActivity.find((b) => b.hour === i);
+    return { hour: i, count: bucket?.count ?? 0 };
+  });
+
+  // Only show hours in the active range (first with data - 1 to last with data + 1)
+  const firstActive =
+    hourlyActivity.length > 0 ? Math.max(0, hourlyActivity[0].hour - 1) : 6;
+  const lastActive =
+    hourlyActivity.length > 0
+      ? Math.min(23, hourlyActivity[hourlyActivity.length - 1].hour + 1)
+      : 17;
+  const visibleHours = hours.slice(firstActive, lastActive + 1);
+
+  // Label positions: first, middle, last
+  const labelIndices = new Set([
+    0,
+    Math.floor(visibleHours.length / 2),
+    visibleHours.length - 1,
+  ]);
+
+  return (
+    <div className="relative overflow-hidden rounded-lg border border-border/40 bg-card/50 p-4">
+      <div className="flex items-center gap-2 mb-4">
+        <Activity className="h-4 w-4 text-accent" />
+        <span className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+          Hourly Activity
+        </span>
+        {hourlyActivity.length > 0 && (
+          <Badge
+            variant="outline"
+            className="text-[10px] ml-auto border-accent/30 text-accent"
+          >
+            {hourlyActivity.reduce((s, b) => s + b.count, 0)} slips
+          </Badge>
+        )}
+      </div>
+
+      {isLoading ? (
+        <Skeleton className="h-32 w-full" />
+      ) : hourlyActivity.length === 0 ? (
+        <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
+          No closed slips yet today
+        </div>
+      ) : (
+        <>
+          <div className="flex items-end gap-1 h-32">
+            {visibleHours.map((h) => {
+              const pct = maxCount > 0 ? (h.count / maxCount) * 100 : 0;
+              return (
+                <div
+                  key={h.hour}
+                  className={cn(
+                    'flex-1 rounded-t transition-all',
+                    h.count > 0
+                      ? 'bg-gradient-to-t from-accent/20 to-accent/60 hover:from-accent/30 hover:to-accent/80'
+                      : 'bg-muted/20',
+                  )}
+                  style={{ height: `${Math.max(pct, 2)}%` }}
+                  title={`${formatHour(h.hour)}: ${h.count} slip${h.count !== 1 ? 's' : ''}`}
+                />
               );
             })}
           </div>
-        </div>
 
-        {/* Activity Graph Placeholder */}
-        <div className="relative overflow-hidden rounded-lg border border-border/40 bg-card/50 p-4 opacity-60">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-              Hourly Activity
-            </span>
-            <Badge
-              variant="outline"
-              className="text-[10px] ml-auto text-muted-foreground"
-            >
-              Placeholder
-            </Badge>
-          </div>
-
-          {/* Mock bar chart */}
-          <div className="flex items-end gap-2 h-32">
-            {[35, 55, 75, 45, 85, 65, 90, 70, 50, 80, 60, 40].map(
-              (height, i) => (
-                <div
-                  key={i}
-                  className="flex-1 rounded-t bg-gradient-to-t from-accent/20 to-accent/60 transition-all hover:from-accent/30 hover:to-accent/80"
-                  style={{ height: `${height}%` }}
-                />
+          <div className="flex justify-between mt-2 text-xs text-muted-foreground font-mono">
+            {visibleHours.map((h, i) =>
+              labelIndices.has(i) ? (
+                <span key={h.hour}>{formatHour(h.hour)}</span>
+              ) : (
+                <span key={h.hour} />
               ),
             )}
           </div>
+        </>
+      )}
 
-          {/* Time labels */}
-          <div className="flex justify-between mt-2 text-xs text-muted-foreground font-mono">
-            <span>6AM</span>
-            <span>9AM</span>
-            <span>12PM</span>
-            <span>3PM</span>
-          </div>
+      {/* Grid overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.02]"
+        style={{
+          backgroundImage:
+            'linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
+        }}
+      />
+    </div>
+  );
+}
 
-          {/* Grid overlay */}
-          <div
-            className="absolute inset-0 pointer-events-none opacity-[0.02]"
-            style={{
-              backgroundImage:
-                'linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)',
-              backgroundSize: '20px 20px',
-            }}
-          />
-        </div>
+function SessionBreakdown({
+  segments,
+  isLoading,
+}: {
+  segments: PlayerSegment[];
+  isLoading: boolean;
+}) {
+  const totalCount = segments.reduce((s, seg) => s + seg.count, 0);
 
-        {/* Session Breakdown Placeholder */}
-        <div className="rounded-lg border border-border/40 bg-card/50 p-4 opacity-60">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-              Session Breakdown
-            </h3>
-            <Badge
-              variant="outline"
-              className="text-[10px] text-muted-foreground"
-            >
-              Placeholder
-            </Badge>
-          </div>
-          <div className="space-y-3">
-            {[
-              {
-                label: 'High Rollers',
-                count: 2,
-                value: '$8,200',
-                color: 'bg-violet-500',
-              },
-              {
-                label: 'Regular Players',
-                count: 3,
-                value: '$3,150',
-                color: 'bg-cyan-500',
-              },
-              {
-                label: 'Casual Players',
-                count: 1,
-                value: '$1,100',
-                color: 'bg-emerald-500',
-              },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center gap-3">
-                <div className={cn('w-2 h-2 rounded-full', item.color)} />
-                <span className="text-sm text-muted-foreground flex-1">
-                  {item.label}
-                </span>
-                <span className="text-sm font-mono text-foreground">
-                  {item.count}
-                </span>
-                <span className="text-sm font-mono text-accent">
-                  {item.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+  return (
+    <div className="rounded-lg border border-border/40 bg-card/50 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+          Session Breakdown
+        </h3>
+        {totalCount > 0 && (
+          <Badge
+            variant="outline"
+            className="text-[10px] border-accent/30 text-accent"
+          >
+            {totalCount} sessions
+          </Badge>
+        )}
       </div>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-6 w-full" />
+          ))}
+        </div>
+      ) : totalCount === 0 ? (
+        <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
+          No closed sessions yet today
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {segments.map((item) => (
+            <div key={item.label} className="flex items-center gap-3">
+              <div className={cn('w-2 h-2 rounded-full', item.color)} />
+              <span className="text-sm text-muted-foreground flex-1">
+                {item.label}
+              </span>
+              <span className="text-sm font-mono text-foreground">
+                {item.count}
+              </span>
+              <span className="text-sm font-mono text-accent">
+                {formatCentsUnsigned(item.theoCents)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
