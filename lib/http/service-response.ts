@@ -100,7 +100,7 @@ export class RouteError extends Error {
  * This is the LAST line of defense — upstream code should use
  * safeErrorDetails() from @/lib/errors/safe-error-details at error creation.
  */
-function safeDetails(details: unknown): unknown {
+export function safeDetails(details: unknown): unknown {
   if (details == null) return undefined;
 
   // Error objects are the primary source of circular refs
@@ -183,11 +183,17 @@ export function errorResponse(
     'error' in error
   ) {
     const serviceResult = error as ServiceHttpResult<never>;
-    // Determine HTTP status from code if not present
+    // Determine HTTP status: prefer explicit status/httpStatus from middleware,
+    // fall back to code-based lookup for standard ResultCodes
     const status =
       'status' in serviceResult && typeof serviceResult.status === 'number'
         ? serviceResult.status
-        : toHttpStatus((serviceResult.code as ResultCode) ?? 'INTERNAL_ERROR');
+        : 'httpStatus' in serviceResult &&
+            typeof serviceResult.httpStatus === 'number'
+          ? serviceResult.httpStatus
+          : toHttpStatus(
+              (serviceResult.code as ResultCode) ?? 'INTERNAL_ERROR',
+            );
 
     // Sanitize details before serialization to prevent cyclic object errors
     const sanitized = {
@@ -203,6 +209,7 @@ export function errorResponse(
       code: error.code,
       status: error.httpStatus,
       error: error.message,
+      // eslint-disable-next-line error-safety/no-unsafe-error-details -- baseResult() applies safeDetails() downstream
       details: error.details,
       retryable: error.retryable,
     });
@@ -216,6 +223,7 @@ export function errorResponse(
       code: error.code,
       status,
       error: error.message,
+      // eslint-disable-next-line error-safety/no-unsafe-error-details -- baseResult() applies safeDetails() downstream
       details: error.details,
     });
     return NextResponse.json(result, { status });

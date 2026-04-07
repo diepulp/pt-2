@@ -71,27 +71,36 @@ export type Database = {
           action: string
           actor_id: string | null
           casino_id: string | null
+          correlation_id: string | null
           created_at: string
           details: Json | null
           domain: string
+          dto_after: Json | null
+          dto_before: Json | null
           id: string
         }
         Insert: {
           action: string
           actor_id?: string | null
           casino_id?: string | null
+          correlation_id?: string | null
           created_at?: string
           details?: Json | null
           domain: string
+          dto_after?: Json | null
+          dto_before?: Json | null
           id?: string
         }
         Update: {
           action?: string
           actor_id?: string | null
           casino_id?: string | null
+          correlation_id?: string | null
           created_at?: string
           details?: Json | null
           domain?: string
+          dto_after?: Json | null
+          dto_before?: Json | null
           id?: string
         }
         Relationships: [
@@ -1426,6 +1435,41 @@ export type Database = {
           },
         ]
       }
+      onboarding_registration: {
+        Row: {
+          company_id: string
+          consumed_at: string | null
+          created_at: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_registration_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pit_cash_observation: {
         Row: {
           amount: number
@@ -2091,6 +2135,7 @@ export type Database = {
           replaced_by_staff_id: string | null
           replacement_coupon_id: string | null
           required_match_wager_amount: number
+          reward_catalog_id: string | null
           status: Database["public"]["Enums"]["promo_coupon_status"]
           validation_number: string
           visit_id: string | null
@@ -2113,6 +2158,7 @@ export type Database = {
           replaced_by_staff_id?: string | null
           replacement_coupon_id?: string | null
           required_match_wager_amount: number
+          reward_catalog_id?: string | null
           status?: Database["public"]["Enums"]["promo_coupon_status"]
           validation_number: string
           visit_id?: string | null
@@ -2135,6 +2181,7 @@ export type Database = {
           replaced_by_staff_id?: string | null
           replacement_coupon_id?: string | null
           required_match_wager_amount?: number
+          reward_catalog_id?: string | null
           status?: Database["public"]["Enums"]["promo_coupon_status"]
           validation_number?: string
           visit_id?: string | null
@@ -2182,6 +2229,13 @@ export type Database = {
             columns: ["replacement_coupon_id"]
             isOneToOne: false
             referencedRelation: "promo_coupon"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_coupon_reward_catalog_id_fkey"
+            columns: ["reward_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "reward_catalog"
             referencedColumns: ["id"]
           },
           {
@@ -5241,6 +5295,7 @@ export type Database = {
           p_idempotency_key: string
           p_player_id?: string
           p_promo_program_id: string
+          p_reward_catalog_id?: string
           p_validation_number: string
           p_visit_id?: string
         }
@@ -5672,6 +5727,13 @@ export type Database = {
       rpc_redeem_loyalty_locally: {
         Args: { p_amount: number; p_player_id: string; p_reason: string }
         Returns: Json
+      }
+      rpc_register_company: {
+        Args: { p_company_name: string; p_legal_name?: string }
+        Returns: {
+          company_id: string
+          registration_id: string
+        }[]
       }
       rpc_replace_promo_coupon: {
         Args: {
@@ -6208,8 +6270,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       sync_staff_jwt_claims: {
         Args: { p_staff_id: string }
         Returns: undefined

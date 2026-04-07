@@ -3,7 +3,11 @@ import { randomUUID } from 'crypto';
 import { runWithCorrelation } from '@/lib/correlation';
 import type { DomainErrorCode } from '@/lib/errors/domain-errors';
 import { getRateLimiter } from '@/lib/errors/rate-limiter';
-import type { ResultCode, ServiceResult } from '@/lib/http/service-response';
+import {
+  safeDetails,
+  type ResultCode,
+  type ServiceResult,
+} from '@/lib/http/service-response';
 import {
   getAuthContext,
   injectRLSContext,
@@ -52,7 +56,7 @@ function finalizeResult<T>(
     return {
       data: value.data,
       error: value.error,
-      details: value.details,
+      details: safeDetails(value.details),
       ok: value.ok ?? true,
       code: resolveResultCode(value.code),
       requestId,
@@ -132,7 +136,7 @@ export async function withServerAction<T>(
         ok: false,
         code: mapped.code as DomainErrorCode,
         error: mapped.message,
-        details: mapped.details,
+        details: safeDetails(mapped.details),
         retryable: mapped.retryable,
         requestId,
         durationMs: Date.now() - startedAt,

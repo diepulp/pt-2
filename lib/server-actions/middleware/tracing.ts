@@ -1,4 +1,4 @@
-import type { ServiceResult } from '@/lib/http/service-response';
+import { safeDetails, type ServiceResult } from '@/lib/http/service-response';
 import { mapDatabaseError } from '@/lib/server-actions/error-map';
 
 import type { Middleware, MiddlewareContext } from './types';
@@ -22,6 +22,7 @@ export function withTracing<T>(): Middleware<T> {
       // Ensure duration is accurate and metadata is complete
       return {
         ...result,
+        details: safeDetails(result?.details),
         requestId: ctx.correlationId,
         durationMs: Date.now() - ctx.startedAt,
         timestamp: new Date().toISOString(),
@@ -33,7 +34,7 @@ export function withTracing<T>(): Middleware<T> {
         ok: false,
         code: mapped.code,
         error: mapped.message,
-        details: mapped.details,
+        details: safeDetails(mapped.details),
         httpStatus: mapped.httpStatus,
         requestId: ctx.correlationId,
         durationMs: Date.now() - ctx.startedAt,

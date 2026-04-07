@@ -67,12 +67,15 @@ function normalizeMessage(
  */
 export function mapDatabaseError(error: unknown): MappedError {
   // Already a domain error - preserve it
+  // Details pass through here but are sanitized at the transport boundary
+  // (tracing.ts, with-server-action-wrapper.ts, errorResponse) via safeDetails()
   if (isDomainError(error)) {
     return {
       code: error.code,
       message: error.message,
       httpStatus: error.httpStatus,
       retryable: error.retryable,
+      // eslint-disable-next-line error-safety/no-unsafe-error-details -- transport boundary applies safeDetails(); double-sanitizing here would mask debugging info
       details: error.details,
     };
   }
@@ -97,6 +100,7 @@ export function mapDatabaseError(error: unknown): MappedError {
         message: normalizeMessage(message, 'Database constraint violated'),
         httpStatus: new DomainError(domainCode).httpStatus,
         retryable: new DomainError(domainCode).retryable,
+        // eslint-disable-next-line error-safety/no-unsafe-error-details -- already sanitized via safeErrorDetails at line 87-90
         details,
       };
     }
@@ -108,6 +112,7 @@ export function mapDatabaseError(error: unknown): MappedError {
         message: 'Record not found',
         httpStatus: 404,
         retryable: false,
+        // eslint-disable-next-line error-safety/no-unsafe-error-details -- already sanitized via safeErrorDetails at line 87-90
         details,
       };
     }
@@ -115,6 +120,7 @@ export function mapDatabaseError(error: unknown): MappedError {
     // Check if it's a result code (legacy support)
     if (isResultCode(code)) {
       const domainError = new DomainError(code, normalizeMessage(message), {
+        // eslint-disable-next-line error-safety/no-unsafe-error-details -- already sanitized via safeErrorDetails at line 87-90
         details,
       });
       return {
@@ -122,6 +128,7 @@ export function mapDatabaseError(error: unknown): MappedError {
         message: domainError.message,
         httpStatus: domainError.httpStatus,
         retryable: domainError.retryable,
+        // eslint-disable-next-line error-safety/no-unsafe-error-details -- pass-through from DomainError constructed with sanitized details above
         details: domainError.details,
       };
     }

@@ -226,32 +226,32 @@ ON CONFLICT (player_id, casino_id) DO NOTHING;
 
 -- Step 2: Update with seed-specific test data (tiers, balances, preferences)
 -- Casino 1 loyalty
-UPDATE player_loyalty SET current_balance = 15000, tier = 'Gold', preferences = '{"comps": true, "email_offers": true}'
+UPDATE player_loyalty SET current_balance = 15000, tier = 'gold', preferences = '{"comps": true, "email_offers": true}'
 WHERE player_id = 'a1000000-0000-0000-0000-000000000001' AND casino_id = 'ca000000-0000-0000-0000-000000000001';
 
-UPDATE player_loyalty SET current_balance = 50000, tier = 'Platinum', preferences = '{"comps": true, "email_offers": true, "host_assigned": true}'
+UPDATE player_loyalty SET current_balance = 50000, tier = 'platinum', preferences = '{"comps": true, "email_offers": true, "host_assigned": true}'
 WHERE player_id = 'a1000000-0000-0000-0000-000000000002' AND casino_id = 'ca000000-0000-0000-0000-000000000001';
 
-UPDATE player_loyalty SET current_balance = 2500, tier = 'Silver', preferences = '{"comps": true}'
+UPDATE player_loyalty SET current_balance = 2500, tier = 'silver', preferences = '{"comps": true}'
 WHERE player_id = 'a1000000-0000-0000-0000-000000000003' AND casino_id = 'ca000000-0000-0000-0000-000000000001';
 
-UPDATE player_loyalty SET current_balance = 500, tier = 'Bronze', preferences = '{}'
+UPDATE player_loyalty SET current_balance = 500, tier = 'bronze', preferences = '{}'
 WHERE player_id = 'a1000000-0000-0000-0000-000000000004' AND casino_id = 'ca000000-0000-0000-0000-000000000001';
 
-UPDATE player_loyalty SET current_balance = 120000, tier = 'Diamond', preferences = '{"comps": true, "email_offers": true, "host_assigned": true, "vip_lounge": true}'
+UPDATE player_loyalty SET current_balance = 120000, tier = 'diamond', preferences = '{"comps": true, "email_offers": true, "host_assigned": true, "vip_lounge": true}'
 WHERE player_id = 'a1000000-0000-0000-0000-000000000005' AND casino_id = 'ca000000-0000-0000-0000-000000000001';
 
-UPDATE player_loyalty SET current_balance = 100, tier = 'Bronze', preferences = '{}'
+UPDATE player_loyalty SET current_balance = 100, tier = 'bronze', preferences = '{}'
 WHERE player_id = 'a1000000-0000-0000-0000-000000000006' AND casino_id = 'ca000000-0000-0000-0000-000000000001';
 
 -- Casino 2 loyalty (cross-property players)
-UPDATE player_loyalty SET current_balance = 8000, tier = 'Gold', preferences = '{"comps": true}'
+UPDATE player_loyalty SET current_balance = 8000, tier = 'gold', preferences = '{"comps": true}'
 WHERE player_id = 'a1000000-0000-0000-0000-000000000001' AND casino_id = 'ca000000-0000-0000-0000-000000000002';
 
-UPDATE player_loyalty SET current_balance = 25000, tier = 'Platinum', preferences = '{"comps": true, "host_assigned": true}'
+UPDATE player_loyalty SET current_balance = 25000, tier = 'platinum', preferences = '{"comps": true, "host_assigned": true}'
 WHERE player_id = 'a1000000-0000-0000-0000-000000000002' AND casino_id = 'ca000000-0000-0000-0000-000000000002';
 
-UPDATE player_loyalty SET current_balance = 75000, tier = 'Diamond', preferences = '{"comps": true, "vip_lounge": true}'
+UPDATE player_loyalty SET current_balance = 75000, tier = 'diamond', preferences = '{"comps": true, "vip_lounge": true}'
 WHERE player_id = 'a1000000-0000-0000-0000-000000000005' AND casino_id = 'ca000000-0000-0000-0000-000000000002';
 
 -- ============================================================================
@@ -309,10 +309,10 @@ FROM player_casino pc
 WHERE pc.casino_id = 'ca000000-0000-0000-0000-000000000003'
 ON CONFLICT (player_id, casino_id) DO NOTHING;
 
-UPDATE player_loyalty SET current_balance = 32000, tier = 'Platinum'
+UPDATE player_loyalty SET current_balance = 32000, tier = 'platinum'
 WHERE player_id = 'a1000000-0000-0000-0000-000000000007' AND casino_id = 'ca000000-0000-0000-0000-000000000003';
 
-UPDATE player_loyalty SET current_balance = 5500, tier = 'Silver'
+UPDATE player_loyalty SET current_balance = 5500, tier = 'silver'
 WHERE player_id = 'a1000000-0000-0000-0000-000000000008' AND casino_id = 'ca000000-0000-0000-0000-000000000003';
 
 -- Rival game settings (needed for table operations)
@@ -1277,6 +1277,93 @@ VALUES
 ON CONFLICT (casino_id) WHERE (is_active = true) DO NOTHING;
 
 -- ============================================================================
+-- 19B. PROMO PROGRAMS (required for entitlement issuance)
+-- ============================================================================
+-- Each casino needs at least one active match_play and one active free_play
+-- program. issueEntitlement() resolves promo_program_id by casino + promo_type.
+-- ============================================================================
+
+INSERT INTO promo_program (id, casino_id, name, promo_type, face_value_amount, required_match_wager_amount, status) VALUES
+  ('ba000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'Match Play - Standard',  'match_play', 2500, 2500, 'active'),
+  ('bb000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 'Free Play - Standard',   'free_play',  1000, 0,    'active'),
+  ('bc000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000002', 'Match Play - Standard',  'match_play', 5000, 5000, 'active'),
+  ('bd000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000002', 'Free Play - Standard',   'free_play',  2500, 0,    'active')
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- 20. REWARD CATALOG (ADR-033 / PRD-052 / PRD-061)
+-- ============================================================================
+-- Pilot reward catalog for each casino. Operators can create more via Admin UI.
+-- Each casino gets: 2 points_comp rewards + 2 entitlement rewards.
+-- Includes price_points, entitlement_tiers, limits, and eligibility records.
+-- ============================================================================
+
+-- Casino 1: Lucky Star Downtown
+INSERT INTO reward_catalog (id, casino_id, code, name, family, kind, is_active, fulfillment, metadata, ui_tags) VALUES
+  ('ae000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'COMP_MEAL',       'Complimentary Meal',     'points_comp',  'food_bev',   true, 'comp_slip', '{"face_value_cents": 2500}'::jsonb, ARRAY['popular']),
+  ('ae000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 'COMP_BEVERAGE',   'Complimentary Beverage', 'points_comp',  'food_bev',   true, 'comp_slip', '{"face_value_cents": 800}'::jsonb,  ARRAY['quick']),
+  ('ae000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000001', 'MATCH_PLAY_25',   'Match Play $25',         'entitlement',  'match_play', true, 'coupon',    '{"face_value_cents": 2500, "instrument_type": "match_play"}'::jsonb, ARRAY['gaming']),
+  ('ae000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000001', 'FREE_PLAY_10',    'Free Play $10',          'entitlement',  'free_play',  true, 'coupon',    '{"face_value_cents": 1000, "instrument_type": "free_play"}'::jsonb,  ARRAY['gaming'])
+ON CONFLICT (casino_id, code) DO NOTHING;
+
+-- Casino 2: Grand Oasis Resort
+INSERT INTO reward_catalog (id, casino_id, code, name, family, kind, is_active, fulfillment, metadata, ui_tags) VALUES
+  ('ae000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', 'COMP_MEAL',       'Complimentary Meal',     'points_comp',  'food_bev',   true, 'comp_slip', '{"face_value_cents": 3000}'::jsonb, ARRAY['popular']),
+  ('ae000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000002', 'COMP_BEVERAGE',   'Complimentary Beverage', 'points_comp',  'food_bev',   true, 'comp_slip', '{"face_value_cents": 1000}'::jsonb, ARRAY['quick']),
+  ('ae000000-0000-0000-0000-000000000007', 'ca000000-0000-0000-0000-000000000002', 'MATCH_PLAY_50',   'Match Play $50',         'entitlement',  'match_play', true, 'coupon',    '{"face_value_cents": 5000, "instrument_type": "match_play"}'::jsonb, ARRAY['gaming']),
+  ('ae000000-0000-0000-0000-000000000008', 'ca000000-0000-0000-0000-000000000002', 'FREE_PLAY_25',    'Free Play $25',          'entitlement',  'free_play',  true, 'coupon',    '{"face_value_cents": 2500, "instrument_type": "free_play"}'::jsonb,  ARRAY['gaming'])
+ON CONFLICT (casino_id, code) DO NOTHING;
+
+-- Price points for points_comp rewards (how many loyalty points each comp costs)
+INSERT INTO reward_price_points (reward_id, casino_id, points_cost, allow_overdraw) VALUES
+  ('ae000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 1250,  false),  -- Meal: 1250 pts
+  ('ae000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 400,   false),  -- Beverage: 400 pts
+  ('ae000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', 1500,  false),  -- Meal: 1500 pts
+  ('ae000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000002', 500,   false)   -- Beverage: 500 pts
+ON CONFLICT (reward_id) DO NOTHING;
+
+-- Entitlement tiers (which player tiers can receive entitlements)
+INSERT INTO reward_entitlement_tier (casino_id, reward_id, tier, benefit) VALUES
+  ('ca000000-0000-0000-0000-000000000001', 'ae000000-0000-0000-0000-000000000003', 'gold',     '{"face_value_cents": 2500, "instrument_type": "match_play"}'::jsonb),
+  ('ca000000-0000-0000-0000-000000000001', 'ae000000-0000-0000-0000-000000000003', 'platinum', '{"face_value_cents": 2500, "instrument_type": "match_play"}'::jsonb),
+  ('ca000000-0000-0000-0000-000000000001', 'ae000000-0000-0000-0000-000000000003', 'diamond',  '{"face_value_cents": 5000, "instrument_type": "match_play"}'::jsonb),
+  ('ca000000-0000-0000-0000-000000000001', 'ae000000-0000-0000-0000-000000000004', 'silver',   '{"face_value_cents": 1000, "instrument_type": "free_play"}'::jsonb),
+  ('ca000000-0000-0000-0000-000000000001', 'ae000000-0000-0000-0000-000000000004', 'gold',     '{"face_value_cents": 1000, "instrument_type": "free_play"}'::jsonb),
+  ('ca000000-0000-0000-0000-000000000001', 'ae000000-0000-0000-0000-000000000004', 'platinum', '{"face_value_cents": 1500, "instrument_type": "free_play"}'::jsonb),
+  ('ca000000-0000-0000-0000-000000000001', 'ae000000-0000-0000-0000-000000000004', 'diamond',  '{"face_value_cents": 2000, "instrument_type": "free_play"}'::jsonb),
+  ('ca000000-0000-0000-0000-000000000002', 'ae000000-0000-0000-0000-000000000007', 'gold',     '{"face_value_cents": 5000, "instrument_type": "match_play"}'::jsonb),
+  ('ca000000-0000-0000-0000-000000000002', 'ae000000-0000-0000-0000-000000000007', 'platinum', '{"face_value_cents": 5000, "instrument_type": "match_play"}'::jsonb),
+  ('ca000000-0000-0000-0000-000000000002', 'ae000000-0000-0000-0000-000000000008', 'silver',   '{"face_value_cents": 2500, "instrument_type": "free_play"}'::jsonb),
+  ('ca000000-0000-0000-0000-000000000002', 'ae000000-0000-0000-0000-000000000008', 'gold',     '{"face_value_cents": 2500, "instrument_type": "free_play"}'::jsonb)
+ON CONFLICT (casino_id, reward_id, tier) DO NOTHING;
+
+-- Reward limits / cadence rules (PRD-061)
+-- Meals: 1 per gaming day, 30min cooldown between issues
+-- Beverages: 3 per visit, no cooldown
+-- Match Play: 1 per gaming day
+-- Free Play: 2 per week
+INSERT INTO reward_limits (casino_id, reward_id, scope, max_issues, cooldown_minutes, requires_note) VALUES
+  ('ca000000-0000-0000-0000-000000000001', 'ae000000-0000-0000-0000-000000000001', 'per_gaming_day', 1, 30,   false),
+  ('ca000000-0000-0000-0000-000000000001', 'ae000000-0000-0000-0000-000000000002', 'per_visit',      3, NULL, false),
+  ('ca000000-0000-0000-0000-000000000001', 'ae000000-0000-0000-0000-000000000003', 'per_gaming_day', 1, NULL, false),
+  ('ca000000-0000-0000-0000-000000000001', 'ae000000-0000-0000-0000-000000000004', 'per_week',       2, NULL, false),
+  ('ca000000-0000-0000-0000-000000000002', 'ae000000-0000-0000-0000-000000000005', 'per_gaming_day', 2, 15,   false),
+  ('ca000000-0000-0000-0000-000000000002', 'ae000000-0000-0000-0000-000000000006', 'per_visit',      5, NULL, false),
+  ('ca000000-0000-0000-0000-000000000002', 'ae000000-0000-0000-0000-000000000007', 'per_gaming_day', 1, NULL, false),
+  ('ca000000-0000-0000-0000-000000000002', 'ae000000-0000-0000-0000-000000000008', 'per_week',       3, NULL, false)
+ON CONFLICT (reward_id, scope) DO NOTHING;
+
+-- Reward eligibility (optional guardrails)
+-- Meals: any enrolled player
+-- Match Play: gold+ tier, min 1000 pts
+-- Free Play: silver+ tier
+INSERT INTO reward_eligibility (casino_id, reward_id, min_tier, min_points_balance) VALUES
+  ('ca000000-0000-0000-0000-000000000001', 'ae000000-0000-0000-0000-000000000003', 'gold',   1000),
+  ('ca000000-0000-0000-0000-000000000001', 'ae000000-0000-0000-0000-000000000004', 'silver', NULL),
+  ('ca000000-0000-0000-0000-000000000002', 'ae000000-0000-0000-0000-000000000007', 'gold',   2000),
+  ('ca000000-0000-0000-0000-000000000002', 'ae000000-0000-0000-0000-000000000008', 'silver', NULL);
+
+-- ============================================================================
 -- SEED COMPLETE
 -- ============================================================================
 --
@@ -1348,4 +1435,10 @@ ON CONFLICT (casino_id) WHERE (is_active = true) DO NOTHING;
 -- - 5 Audit log entries
 -- - 4 MTL entries with 2 audit notes
 -- - 2 Dev auth users (1 per casino, for RLS isolation testing)
+-- - 8 Reward catalog entries (4 per casino: 2 points_comp, 2 entitlement)
+--     - 4 Price points (for points_comp rewards)
+--     - 11 Entitlement tiers (tier→benefit mapping)
+--     - 8 Reward limits / cadence rules (PRD-061)
+--     - 4 Reward eligibility guardrails
+-- - 3 Loyalty valuation policies (1 per casino, cents_per_point=2)
 -- ============================================================================

@@ -1,8 +1,8 @@
 # Error Taxonomy & Resilience Framework
 
 **Status**: MANDATORY (Enforced at edge layer and render layer)
-**Effective**: 2025-11-09 (updated 2026-02-02)
-**Purpose**: Prevent Postgres errors from leaking to UI, implement retry policies, protect hot paths with rate limiting, and handle render-layer errors via error boundaries
+**Effective**: 2025-11-09 | **Last amended**: 2026-04-06
+**Purpose**: Prevent Postgres errors from leaking to UI, guarantee JSON-serializable error payloads, implement retry policies, protect hot paths with rate limiting, and handle render-layer errors via error boundaries
 
 ---
 
@@ -109,15 +109,24 @@ export class DomainError extends Error {
 }
 ```
 
+---
+
 ### INV-ERR-DETAILS: Error Details Must Be JSON-Serializable
 
-**Status**: MANDATORY | **Effective**: 2026-04-06 | **Enforced by**: `safeDetails()` boundary guard + code review
+**Status**: MANDATORY | **Effective**: 2026-04-06 | **Enforced by**: `safeDetails()` boundary guard + ESLint rule `error-safety/no-unsafe-error-details` + code review
+
+#### Incident / Motivation
+
+On 2026-04-06, entitlement reward issuance began crashing with `TypeError: cyclic object value` instead of returning the intended `CATALOG_CONFIG_INVALID` domain error. Root cause: raw Supabase `PostgrestError` objects stored in `DomainError.details` contained circular references through internal client/request/response refs. When `NextResponse.json()` called `JSON.stringify()`, the serialization crashed, masking the actual business error and making debugging impossible for operators.
+
+The initial fix (commit `0af9114`) sanitized error details at the service layer (call sites) but missed the **transport boundary** — the server-action wrappers and several API routes that serialized `result.details` without sanitization. This gap proved that call-site discipline alone is insufficient; the boundary guard must live in the transport wrappers themselves.
+
+See `docs/issues/cyclic-error/fix-gap.md` for the full post-incident analysis.
+
+#### Rule 1: Serializable — no circular references
 
 The `details` field of `DomainError` and `ServiceResult` **MUST** be JSON-serializable. Raw `Error` objects, Supabase client objects, or any value containing circular references **MUST NOT** be stored in `details`.
 
-**Why**: `NextResponse.json()` calls `JSON.stringify()` on the full response envelope. Raw Error objects from Supabase (PostgrestError, FetchError) contain internal circular references through client/request/response refs, causing `TypeError: cyclic object value` (Firefox) or `TypeError: Converting circular structure to JSON` (Chrome/Node). This crash masks the actual business error, making debugging impossible.
-
-**The rule**:
 ```typescript
 // ❌ BANNED — raw Error objects have circular references
 throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
@@ -132,15 +141,43 @@ throw new DomainError('INTERNAL_ERROR', error.message, {
 });
 ```
 
-**Defense in depth** (3 layers):
+#### Rule 2: Safe to expose — no internal leakage
+
+Serializable does not mean safe to expose. A payload that survives `JSON.stringify()` can still leak internal infrastructure details (stack traces, Postgres error codes, connection strings, table names) to the client. The two concerns are distinct:
+
+| Concern | Guard | Responsibility |
+|---------|-------|----------------|
+| **Serializable** (no circular refs) | `safeDetails()` / `safeErrorDetails()` | Prevent `JSON.stringify` crash |
+| **Safe to expose** (no internals) | `mapDatabaseError()` + domain error catalog | Prevent infrastructure leakage to UI |
+
+Service-layer `mapDatabaseError()` functions translate raw Postgres/PostgREST errors into domain codes (`23505` → `UNIQUE_VIOLATION`). The `details` field in client-facing responses should contain only business-relevant context (retry timing, field names, validation messages), never raw database error output.
+
+#### Defense in depth (4 layers)
 
 | Layer | File | Responsibility |
 |-------|------|----------------|
 | Source | Service `mapDatabaseError()` functions | Use `safeErrorDetails()` when wrapping errors |
 | Central | `lib/server-actions/error-map.ts` | Sanitizes all error paths via `safeErrorDetails()` |
-| Boundary | `lib/http/service-response.ts` | `safeDetails()` guard in `baseResult()` catches any remaining cyclic refs |
+| Transport | `tracing.ts`, `with-server-action-wrapper.ts` | `safeDetails()` on every `result.details` before returning |
+| Boundary | `lib/http/service-response.ts` | `safeDetails()` guard in `baseResult()` and `errorResponse()` catches any remaining cyclic refs |
 
 **Canonical utility**: `lib/errors/safe-error-details.ts` — extracts `{ message, name, code, hint, details }` (primitives only) from Error objects.
+
+**Static enforcement**: ESLint rule `error-safety/no-unsafe-error-details` flags any `details:` assignment using a bare variable or member-expression that isn't wrapped in `safeErrorDetails()` / `safeDetails()` or isn't an inline literal object. Suppressions require an `eslint-disable` comment explaining the safety justification.
+
+#### Required test invariant
+
+Every response-envelope code path (route handlers, server actions, middleware) must survive `JSON.stringify()` when `details` originates from a raw caught error. Integration tests that exercise error paths should assert:
+
+```typescript
+// The response must be valid JSON — no cyclic object crash
+const res = await fetch('/api/v1/loyalty/issue', { ... });
+const body = await res.json(); // Must not throw
+expect(body.ok).toBe(false);
+expect(body.code).toBeDefined();
+```
+
+If a new transport path is added (WebSocket, SSE, server action), it must include `safeDetails()` at its serialization boundary before shipping.
 
 ---
 
@@ -192,28 +229,39 @@ const PG_ERROR_CODE_MAP: Record<string, DomainErrorCode> = {
 };
 
 export function mapDatabaseError(error: unknown): MappedError {
-  // Already a domain error - preserve it
+  // Already a domain error — preserve it.
+  // details pass through here but are sanitized at the transport boundary
+  // (tracing.ts, with-server-action-wrapper.ts, errorResponse) via safeDetails().
   if (isDomainError(error)) {
     return {
       code: error.code,
       message: error.message,
       httpStatus: error.httpStatus,
       retryable: error.retryable,
-      details: error.details,
+      details: error.details, // transport boundary applies safeDetails()
     };
   }
 
-  // Map Postgres errors
+  // Map Postgres errors — extract only safe primitives
   if (error && typeof error === 'object') {
     const code = Reflect.get(error, 'code');
+    const rawDetails = Reflect.get(error, 'details');
+    const details =
+      typeof rawDetails === 'string' || typeof rawDetails === 'number'
+        ? rawDetails
+        : safeErrorDetails(rawDetails);
+
     if (typeof code === 'string' && PG_ERROR_CODE_MAP[code]) {
       const domainCode = PG_ERROR_CODE_MAP[code];
-      return new DomainError(domainCode, 'Database constraint violated');
+      return { code: domainCode, message: 'Database constraint violated',
+               httpStatus: 400, retryable: false, details };
     }
   }
 
   // Fallback to INTERNAL_ERROR
-  return new DomainError('INTERNAL_ERROR', 'An unexpected error occurred');
+  return { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred',
+           httpStatus: 500, retryable: false,
+           details: safeErrorDetails(error) };
 }
 ```
 
@@ -624,6 +672,7 @@ await circuitBreaker.execute(async () => {
 
 - [ ] Unit tests for error mapping
 - [ ] Integration tests for retry logic
+- [ ] Error-path integration tests assert `res.json()` succeeds (no cyclic crash)
 - [ ] Load tests for rate limiting
 - [ ] Chaos tests for circuit breaker
 
@@ -725,20 +774,29 @@ Errors that escape the `ServiceResult<T>` pipeline and occur during React render
 
 ---
 
+## Amendment Log
+
+| Date | Change | Trigger |
+|------|--------|---------|
+| 2025-11-09 | Initial framework: domain errors, retry, rate limiting, circuit breaker | Architecture review |
+| 2026-02-02 | Added render-layer error boundaries (ADR-032) | White-screen incidents |
+| 2026-04-06 | **INV-ERR-DETAILS**: serialization safety invariant, `safeErrorDetails()` canonical utility, 4-layer defense-in-depth, ESLint rule `error-safety/no-unsafe-error-details`, Rule 2 (serializable vs safe-to-expose distinction), required test invariant, `mapDatabaseError()` example updated to show sanitized passthrough | Cyclic object value crash during entitlement issuance (`docs/issues/cyclic-error/`) |
+
+---
+
 ## References
 
 - **Domain Errors**: `lib/errors/domain-errors.ts`
+- **Safe Error Details**: `lib/errors/safe-error-details.ts`
 - **Error Mapping**: `lib/server-actions/error-map.ts`
 - **Retry Policy**: `lib/errors/retry-policy.ts`
 - **Rate Limiter**: `lib/errors/rate-limiter.ts`
 - **Server Action Wrapper**: `lib/server-actions/with-server-action-wrapper.ts`
+- **Tracing Middleware**: `lib/server-actions/middleware/tracing.ts`
+- **HTTP Service Response**: `lib/http/service-response.ts`
+- **ESLint Rule**: `.eslint-rules/no-unsafe-error-details.js`
+- **Incident Analysis**: `docs/issues/cyclic-error/fix-gap.md`
 - **SRM Error Taxonomy**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
 - **Error Handling Standard**: `docs/70-governance/ERROR_HANDLING_STANDARD.md`
 - **Error Boundary ADR**: `docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md`
 - **Error Handling Layers ADR**: `docs/80-adrs/ADR-012-error-handling-layers.md`
-
----
-
-**Effective Date**: 2025-11-09 (render-layer section added 2026-02-02)
-**Enforcement**: Mandatory for all edge layer and render layer operations
-**Migration**: Existing services must adopt domain errors in Sprint 2

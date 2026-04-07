@@ -612,6 +612,7 @@ export function toDomainError(error: unknown): DomainError {
   }
 
   return new DomainError('INTERNAL_ERROR', 'An unexpected error occurred', {
+    // eslint-disable-next-line error-safety/no-unsafe-error-details -- typeof guard: non-object branch is always a primitive (string/number/boolean)
     details: typeof error === 'object' ? String(error) : error,
   });
 }

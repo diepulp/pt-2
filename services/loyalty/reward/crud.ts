@@ -525,7 +525,7 @@ export async function updateReward(
 
           // Insert new set if non-null and non-empty
           if (input.limits && input.limits.length > 0) {
-            const { error: insErr } = await supabase
+            const { data: insData, error: insErr } = await supabase
               .from('reward_limits')
               .insert(
                 input.limits.map((l) => ({
@@ -536,8 +536,16 @@ export async function updateReward(
                   cooldown_minutes: l.cooldownMinutes ?? null,
                   requires_note: l.requiresNote ?? false,
                 })),
-              );
+              )
+              .select('id');
             if (insErr) throw mapRewardError(insErr);
+            // Detect RLS silent rejection — admin-only write policy on reward_limits
+            if (!insData || insData.length !== input.limits.length) {
+              throw new DomainError(
+                'FORBIDDEN',
+                'Cannot update reward limits: admin role required',
+              );
+            }
           }
         })(),
       );

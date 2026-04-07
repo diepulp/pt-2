@@ -12,6 +12,7 @@ import noManualDTOInterfaces from './.eslint-rules/no-manual-dto-interfaces.js';
 import noReturnTypeInference from './.eslint-rules/no-return-type-inference.js';
 import noServiceResultReturn from './.eslint-rules/no-service-result-return.js';
 import noTemporalBypass from './.eslint-rules/no-temporal-bypass.js';
+import noUnsafeErrorDetails from './.eslint-rules/no-unsafe-error-details.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -261,6 +262,35 @@ const eslintConfig = [
     },
     rules: {
       'temporal-rules/no-temporal-bypass': 'error',
+    },
+  },
+  // ==========================================================================
+  // INV-ERR-DETAILS: Error details safety enforcement
+  // Prevents raw Error/PostgrestError objects in `details:` assignments that
+  // cause cyclic object value crashes during JSON serialization.
+  // ==========================================================================
+  {
+    files: [
+      'services/**/*.ts',
+      'app/**/*.ts',
+      'lib/**/*.ts',
+    ],
+    ignores: [
+      '**/*.test.ts',
+      '**/*.spec.ts',
+      '**/__tests__/**',
+      '**/__mocks__/**',
+      'lib/errors/safe-error-details.ts',
+    ],
+    plugins: {
+      'error-safety': {
+        rules: {
+          'no-unsafe-error-details': noUnsafeErrorDetails,
+        },
+      },
+    },
+    rules: {
+      'error-safety/no-unsafe-error-details': 'error',
     },
   },
   // Production paths security - Block service client (SEC-001)

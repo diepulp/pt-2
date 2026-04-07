@@ -61,7 +61,7 @@ export async function resolveWindowStart(
         .select('started_at')
         .eq('player_id', playerId)
         .eq('casino_id', casinoId)
-        .eq('status', 'open')
+        .is('ended_at', null)
         .order('started_at', { ascending: false })
         .limit(1)
         .maybeSingle();

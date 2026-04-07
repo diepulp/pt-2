@@ -24,9 +24,10 @@ export function LockScreenProvider() {
   const { isLocked, lock } = useLockScreen();
   const hasHydrated = useLockStore((s) => s.hasHydrated);
 
+  // Idle auto-lock disabled — lock screen is on-demand only
   useIdleDetection({
     onIdle: () => lock('idle'),
-    enabled: hasHydrated && !isLocked,
+    enabled: false,
   });
 
   // Block rendering until sessionStorage state is rehydrated.

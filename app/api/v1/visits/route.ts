@@ -9,7 +9,6 @@
  */
 
 import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
 
 import {
   createRequestContext,
@@ -75,10 +74,7 @@ export async function GET(request: NextRequest) {
     );
 
     if (!result.ok) {
-      // Return the error result directly (it's already a ServiceResult)
-      return NextResponse.json(result, {
-        status: toHttpStatus(result.code as ResultCode),
-      });
+      return errorResponse(ctx, result);
     }
     return successResponse(ctx, result.data);
   } catch (error) {

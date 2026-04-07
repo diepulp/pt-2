@@ -125,7 +125,11 @@ export function EntitlementConfirmPanel({
       </p>
 
       {/* Confirm button */}
-      <Button className="w-full" onClick={onConfirm} disabled={isPending}>
+      <Button
+        className="w-full"
+        onClick={() => onConfirm()}
+        disabled={isPending}
+      >
         {isPending ? 'Issuing...' : 'Confirm Entitlement Issuance'}
       </Button>
     </div>

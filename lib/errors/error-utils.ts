@@ -59,6 +59,7 @@ export function serializeError(error: unknown): SerializableError {
       message: error.message,
       code: error.code,
       status: error.status,
+      // eslint-disable-next-line error-safety/no-unsafe-error-details -- console-logging only; util.inspect handles circular refs
       details: error.details,
       stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
     };
@@ -70,6 +71,7 @@ export function serializeError(error: unknown): SerializableError {
       message: error.message,
       code: error.code,
       status: error.httpStatus,
+      // eslint-disable-next-line error-safety/no-unsafe-error-details -- console-logging only; util.inspect handles circular refs
       details: error.details,
       retryable: error.retryable,
       stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
