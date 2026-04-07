@@ -45,7 +45,7 @@ export function useDropEvents(
         .select('*')
         .eq('table_id', tableId)
         .eq('casino_id', casinoId)
-        .order('created_at', { ascending: false })
+        .order('removed_at', { ascending: false })
         .limit(limit);
 
       if (gamingDay) {
