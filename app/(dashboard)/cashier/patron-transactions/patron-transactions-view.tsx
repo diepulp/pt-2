@@ -25,7 +25,6 @@ import { VoidConfirmationDialog } from '@/components/cashier/void-confirmation-d
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   useCashOutCreate,
   useRecentCashOuts,
@@ -111,13 +110,16 @@ export function PatronTransactionsView() {
             onSubmit={handleCashOut}
           />
         ) : (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Cash-Out Confirmation</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                Select a player with an active visit to create a cash-out.
+          <Card className="border-2 border-dashed border-border/50 bg-muted/20">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <div
+                className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                style={{ fontFamily: 'monospace' }}
+              >
+                Select a Player
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground/70">
+                Search for a player with an active visit to create a cash-out.
               </p>
             </CardContent>
           </Card>
@@ -156,7 +158,28 @@ function RecentCashOutsList({
   onVoid: (txn: FinancialTransactionDTO) => void;
 }) {
   if (isLoading) {
-    return <Skeleton className="h-48 w-full" />;
+    return (
+      <Card className="border-2 border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Recent Cash-Outs
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-16 animate-pulse rounded-lg bg-muted/50"
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   const items = transactions ?? [];
@@ -169,18 +192,28 @@ function RecentCashOutsList({
   );
 
   return (
-    <Card>
+    <Card className="border-2 border-border/50">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Recent Cash-Outs</CardTitle>
+          <CardTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Recent Cash-Outs
+          </CardTitle>
           <Badge variant="secondary">{originals.length}</Badge>
         </div>
       </CardHeader>
       <CardContent>
         {originals.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">
-            No cash-outs recorded today.
-          </p>
+          <div className="flex flex-col items-center justify-center py-8">
+            <div
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              No Cash-Outs Today
+            </div>
+          </div>
         ) : (
           <div className="space-y-2">
             {originals.map((txn) => {
@@ -189,7 +222,11 @@ function RecentCashOutsList({
               return (
                 <div
                   key={txn.id}
-                  className="flex items-center justify-between border border-border rounded-lg p-3"
+                  className={`group relative flex items-center justify-between rounded-lg border-2 p-3 transition-all ${
+                    isVoided
+                      ? 'border-destructive/20 bg-destructive/5'
+                      : 'border-border/30 bg-card/30 hover:border-accent/30'
+                  }`}
                 >
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
@@ -197,22 +234,22 @@ function RecentCashOutsList({
                         cents={txn.amount}
                         className={
                           isVoided
-                            ? 'text-sm font-medium line-through text-muted-foreground'
-                            : 'text-sm font-medium'
+                            ? 'font-mono text-sm font-medium tabular-nums line-through text-muted-foreground'
+                            : 'font-mono text-sm font-medium tabular-nums'
                         }
                       />
                       <Badge
                         variant="outline"
                         className={
                           isVoided
-                            ? 'text-[10px] text-destructive border-destructive/30'
-                            : 'text-[10px] text-emerald-500 border-emerald-500/30'
+                            ? 'bg-red-500/10 text-destructive border-destructive/30'
+                            : 'bg-green-500/10 text-green-400 border-green-500/30'
                         }
                       >
                         {isVoided ? 'Voided' : 'Confirmed'}
                       </Badge>
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground font-mono tabular-nums">
                       {new Date(txn.created_at).toLocaleTimeString()}
                       {txn.external_ref && ` — Ref: ${txn.external_ref}`}
                     </div>
@@ -221,8 +258,8 @@ function RecentCashOutsList({
                   {!isVoided && (
                     <Button
                       size="sm"
-                      variant="ghost"
-                      className="text-xs text-destructive hover:text-destructive"
+                      variant="outline"
+                      className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider text-destructive hover:text-destructive"
                       onClick={() => onVoid(txn)}
                     >
                       Void

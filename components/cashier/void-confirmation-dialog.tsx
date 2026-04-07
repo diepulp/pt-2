@@ -105,7 +105,12 @@ export function VoidConfirmationDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Void Cash-Out</DialogTitle>
+          <DialogTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Void Cash-Out
+          </DialogTitle>
           <DialogDescription>
             Void the cash-out of{' '}
             <AmountDisplay
@@ -121,7 +126,7 @@ export function VoidConfirmationDialog({
           <div className="space-y-1.5">
             <Label
               htmlFor="void-reason"
-              className="text-xs text-muted-foreground"
+              className="text-sm text-muted-foreground"
             >
               Reason Code (required)
             </Label>
@@ -129,7 +134,7 @@ export function VoidConfirmationDialog({
               value={reasonCode}
               onValueChange={(v) => setReasonCode(v as AdjustmentReasonCode)}
             >
-              <SelectTrigger id="void-reason" className="h-9">
+              <SelectTrigger id="void-reason" className="h-9 font-mono">
                 <SelectValue placeholder="Select reason..." />
               </SelectTrigger>
               <SelectContent>
@@ -145,7 +150,7 @@ export function VoidConfirmationDialog({
           <div className="space-y-1.5">
             <Label
               htmlFor="void-note"
-              className="text-xs text-muted-foreground"
+              className="text-sm text-muted-foreground"
             >
               Note (required, min {MIN_NOTE_LENGTH} characters)
             </Label>
@@ -154,7 +159,7 @@ export function VoidConfirmationDialog({
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Explain why this cash-out is being voided..."
-              className="min-h-[80px] text-sm"
+              className="min-h-[80px] text-sm font-mono"
             />
             {note.length > 0 && note.trim().length < MIN_NOTE_LENGTH && (
               <p className="text-xs text-destructive">
@@ -167,7 +172,12 @@ export function VoidConfirmationDialog({
 
         <DialogFooter className="gap-2 sm:gap-0">
           <DialogClose asChild>
-            <Button variant="outline" size="sm" disabled={isPending}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isPending}
+              className="h-8 text-xs font-semibold uppercase tracking-wider"
+            >
               Cancel
             </Button>
           </DialogClose>
@@ -176,6 +186,7 @@ export function VoidConfirmationDialog({
             disabled={!isValid || isPending}
             size="sm"
             variant="destructive"
+            className="h-8 text-xs font-semibold uppercase tracking-wider"
           >
             {isPending ? 'Voiding...' : 'Confirm Void'}
           </Button>

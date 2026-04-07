@@ -35,7 +35,7 @@ export function CashierTabNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex border-b border-border" aria-label="Cashier tabs">
+    <nav className="flex border-b-2 border-border/50" aria-label="Cashier tabs">
       {tabs.map((tab) => {
         const isActive = pathname === tab.href;
         return (
@@ -43,12 +43,13 @@ export function CashierTabNav() {
             key={tab.href}
             href={tab.href}
             className={cn(
-              'px-4 py-2.5 text-sm font-medium transition-colors',
+              'px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors',
               'border-b-2 -mb-px',
               isActive
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30',
+                ? 'border-accent text-accent'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-accent/30',
             )}
+            style={{ fontFamily: 'monospace' }}
           >
             {tab.label}
           </Link>

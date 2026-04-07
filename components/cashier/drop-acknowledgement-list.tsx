@@ -26,18 +26,28 @@ export function DropAcknowledgementList({
   onAcknowledge,
 }: DropAcknowledgementListProps) {
   return (
-    <Card>
+    <Card className="border-2 border-border/50">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Unacknowledged Drops</CardTitle>
+          <CardTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Unacknowledged Drops
+          </CardTitle>
           <Badge variant="secondary">{drops.length}</Badge>
         </div>
       </CardHeader>
       <CardContent>
         {drops.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">
-            No unacknowledged drops for today.
-          </p>
+          <div className="flex flex-col items-center justify-center py-8">
+            <div
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              All Drops Acknowledged
+            </div>
+          </div>
         ) : (
           <div className="space-y-3">
             {drops.map((drop) => (
@@ -70,25 +80,35 @@ function DropItem({
   };
 
   return (
-    <div className="border border-border rounded-lg p-3">
+    <div className="group relative rounded-lg border-2 border-yellow-500/50 bg-yellow-500/5 p-3 transition-all hover:border-yellow-500/70">
+      <div className="absolute right-3 top-3 h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium font-mono">
               Table: {drop.table_id.slice(0, 8)}...
             </span>
-            <Badge variant="outline" className="text-xs">
+            <Badge
+              variant="outline"
+              className="bg-amber-500/10 text-amber-400 border-amber-500/30"
+            >
               Drop
             </Badge>
           </div>
-          <div className="text-xs text-muted-foreground space-y-0.5">
+          <div className="text-xs text-muted-foreground font-mono tabular-nums space-y-0.5">
             <div>Box: {drop.drop_box_id}</div>
             {drop.seal_no && <div>Seal: {drop.seal_no}</div>}
             {drop.gaming_day && <div>Gaming Day: {drop.gaming_day}</div>}
             <div>Removed: {new Date(drop.removed_at).toLocaleTimeString()}</div>
           </div>
         </div>
-        <Button size="sm" onClick={handleAcknowledge} disabled={isPending}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider"
+          onClick={handleAcknowledge}
+          disabled={isPending}
+        >
           {isPending ? 'Stamping...' : 'Received'}
         </Button>
       </div>

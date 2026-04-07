@@ -101,10 +101,13 @@ export function PlayerVisitSearch({ onSelect }: PlayerVisitSearchProps) {
   };
 
   return (
-    <Card>
+    <Card className="border-2 border-border/50">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <User className="h-4 w-4" />
+        <CardTitle
+          className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          <User className="h-4 w-4 text-accent" />
           Player & Visit
         </CardTitle>
       </CardHeader>
@@ -158,10 +161,10 @@ function SearchInput({
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           className={cn(
-            'w-full pl-9 pr-3 py-2 text-sm rounded-md',
-            'border border-input bg-background',
+            'w-full pl-9 pr-3 py-2 text-sm rounded-md font-mono',
+            'border-2 border-border/50 bg-background',
             'placeholder:text-muted-foreground',
-            'focus:outline-none focus:ring-1 focus:ring-ring',
+            'focus:outline-none focus:ring-1 focus:ring-accent',
           )}
         />
         {isSearching && (
@@ -170,7 +173,7 @@ function SearchInput({
       </div>
 
       {showResults && !isSearching && (
-        <div className="border border-border rounded-md max-h-48 overflow-auto">
+        <div className="border-2 border-border/50 rounded-md max-h-48 overflow-auto">
           {results.length === 0 ? (
             <p className="text-sm text-muted-foreground py-3 text-center">
               No players found
@@ -238,8 +241,8 @@ function SelectedPlayerDisplay({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span className="text-sm font-medium">{name}</span>
+          <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+          <span className="text-sm font-medium font-mono">{name}</span>
         </div>
         <Button
           size="sm"
@@ -257,11 +260,11 @@ function SelectedPlayerDisplay({
           Checking active visit...
         </div>
       ) : activeVisit?.has_active_visit && activeVisit.visit ? (
-        <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2">
+        <div className="rounded-md border-2 border-green-500/30 bg-green-500/5 p-2">
           <div className="flex items-center gap-2">
             <Badge
               variant="outline"
-              className="text-[10px] text-emerald-500 border-emerald-500/30"
+              className="bg-green-500/10 text-green-400 border-green-500/30"
             >
               Active Visit
             </Badge>
@@ -272,7 +275,7 @@ function SelectedPlayerDisplay({
           </div>
         </div>
       ) : (
-        <div className="rounded-md border border-destructive/20 bg-destructive/5 p-2">
+        <div className="rounded-md border-2 border-destructive/30 bg-destructive/5 p-2">
           <div className="flex items-center gap-2 text-sm text-destructive">
             <AlertCircle className="h-3.5 w-3.5" />
             No active visit — cash-out requires an active visit

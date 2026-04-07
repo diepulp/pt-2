@@ -37,18 +37,28 @@ interface PendingFillQueueProps {
 
 export function PendingFillQueue({ fills, onConfirm }: PendingFillQueueProps) {
   return (
-    <Card>
+    <Card className="border-2 border-border/50">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Pending Fills</CardTitle>
+          <CardTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Pending Fills
+          </CardTitle>
           <Badge variant="secondary">{fills.length}</Badge>
         </div>
       </CardHeader>
       <CardContent>
         {fills.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">
-            No pending fills for today.
-          </p>
+          <div className="flex flex-col items-center justify-center py-8">
+            <div
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              No Pending Fills
+            </div>
+          </div>
         ) : (
           <div className="space-y-3">
             {fills.map((fill) => (
@@ -100,22 +110,25 @@ function FillItem({
     .join(', ');
 
   return (
-    <div className="border border-border rounded-lg p-3 space-y-2">
+    <div className="rounded-lg border-2 border-accent/30 bg-accent/5 p-3 space-y-2 transition-all hover:border-accent/50">
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium font-mono">
               Table: {fill.table_id.slice(0, 8)}...
             </span>
-            <Badge variant="outline" className="text-xs">
+            <Badge
+              variant="outline"
+              className="bg-blue-500/10 text-blue-400 border-blue-500/30"
+            >
               Fill
             </Badge>
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground font-mono tabular-nums">
             Requested: <AmountDisplay cents={fill.amount_cents} />
             {chipSummary && ` — ${chipSummary}`}
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground font-mono tabular-nums">
             {new Date(fill.created_at).toLocaleTimeString()}
           </div>
         </div>
@@ -123,6 +136,7 @@ function FillItem({
           <Button
             size="sm"
             variant="outline"
+            className="h-7 text-xs font-semibold uppercase tracking-wider"
             onClick={() => setIsExpanded(true)}
           >
             Confirm
@@ -131,11 +145,11 @@ function FillItem({
       </div>
 
       {isExpanded && (
-        <div className="space-y-2 pt-2 border-t border-border">
-          <div className="space-y-1">
+        <div className="space-y-2 pt-2 border-t-2 border-border/30">
+          <div className="space-y-1.5">
             <Label
               htmlFor={`fill-amount-${fill.id}`}
-              className="text-xs text-muted-foreground"
+              className="text-sm text-muted-foreground"
             >
               Confirmed Amount ($)
             </Label>
@@ -146,11 +160,11 @@ function FillItem({
               min="0.01"
               value={confirmedCents}
               onChange={(e) => setConfirmedCents(e.target.value)}
-              className="h-8"
+              className="h-8 font-mono tabular-nums"
             />
           </div>
           {hasDiscrepancy && (
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label
                 htmlFor={`fill-note-${fill.id}`}
                 className="text-xs text-destructive"
@@ -162,7 +176,7 @@ function FillItem({
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Explain the amount difference..."
-                className="min-h-[60px] text-sm"
+                className="min-h-[60px] text-sm font-mono"
               />
             </div>
           )}
@@ -171,6 +185,7 @@ function FillItem({
               size="sm"
               onClick={handleConfirm}
               disabled={isPending || needsNote || amountCents <= 0}
+              className="h-7 text-xs font-semibold uppercase tracking-wider"
             >
               {isPending ? 'Confirming...' : 'Confirm Fill'}
             </Button>
@@ -179,6 +194,7 @@ function FillItem({
               variant="ghost"
               onClick={() => setIsExpanded(false)}
               disabled={isPending}
+              className="h-7 text-xs font-semibold uppercase tracking-wider"
             >
               Cancel
             </Button>
@@ -205,18 +221,28 @@ export function PendingCreditQueue({
   onConfirm,
 }: PendingCreditQueueProps) {
   return (
-    <Card>
+    <Card className="border-2 border-border/50">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Pending Credits</CardTitle>
+          <CardTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Pending Credits
+          </CardTitle>
           <Badge variant="secondary">{credits.length}</Badge>
         </div>
       </CardHeader>
       <CardContent>
         {credits.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">
-            No pending credits for today.
-          </p>
+          <div className="flex flex-col items-center justify-center py-8">
+            <div
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              No Pending Credits
+            </div>
+          </div>
         ) : (
           <div className="space-y-3">
             {credits.map((credit) => (
@@ -272,22 +298,25 @@ function CreditItem({
     .join(', ');
 
   return (
-    <div className="border border-border rounded-lg p-3 space-y-2">
+    <div className="rounded-lg border-2 border-accent/30 bg-accent/5 p-3 space-y-2 transition-all hover:border-accent/50">
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium font-mono">
               Table: {credit.table_id.slice(0, 8)}...
             </span>
-            <Badge variant="outline" className="text-xs">
+            <Badge
+              variant="outline"
+              className="bg-amber-500/10 text-amber-400 border-amber-500/30"
+            >
               Credit
             </Badge>
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground font-mono tabular-nums">
             Requested: <AmountDisplay cents={credit.amount_cents} />
             {chipSummary && ` — ${chipSummary}`}
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground font-mono tabular-nums">
             {new Date(credit.created_at).toLocaleTimeString()}
           </div>
         </div>
@@ -295,6 +324,7 @@ function CreditItem({
           <Button
             size="sm"
             variant="outline"
+            className="h-7 text-xs font-semibold uppercase tracking-wider"
             onClick={() => setIsExpanded(true)}
           >
             Confirm
@@ -303,11 +333,11 @@ function CreditItem({
       </div>
 
       {isExpanded && (
-        <div className="space-y-2 pt-2 border-t border-border">
-          <div className="space-y-1">
+        <div className="space-y-2 pt-2 border-t-2 border-border/30">
+          <div className="space-y-1.5">
             <Label
               htmlFor={`credit-amount-${credit.id}`}
-              className="text-xs text-muted-foreground"
+              className="text-sm text-muted-foreground"
             >
               Confirmed Amount ($)
             </Label>
@@ -318,11 +348,11 @@ function CreditItem({
               min="0.01"
               value={confirmedCents}
               onChange={(e) => setConfirmedCents(e.target.value)}
-              className="h-8"
+              className="h-8 font-mono tabular-nums"
             />
           </div>
           {hasDiscrepancy && (
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label
                 htmlFor={`credit-note-${credit.id}`}
                 className="text-xs text-destructive"
@@ -334,7 +364,7 @@ function CreditItem({
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Explain the amount difference..."
-                className="min-h-[60px] text-sm"
+                className="min-h-[60px] text-sm font-mono"
               />
             </div>
           )}
@@ -343,6 +373,7 @@ function CreditItem({
               size="sm"
               onClick={handleConfirm}
               disabled={isPending || needsNote || amountCents <= 0}
+              className="h-7 text-xs font-semibold uppercase tracking-wider"
             >
               {isPending ? 'Confirming...' : 'Confirm Credit'}
             </Button>
@@ -351,6 +382,7 @@ function CreditItem({
               variant="ghost"
               onClick={() => setIsExpanded(false)}
               disabled={isPending}
+              className="h-7 text-xs font-semibold uppercase tracking-wider"
             >
               Cancel
             </Button>

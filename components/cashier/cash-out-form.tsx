@@ -80,11 +80,19 @@ export function CashOutForm({
 
   return (
     <>
-      <Card>
+      <Card className="border-2 border-accent/50 bg-accent/5">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-base">Cash-Out Confirmation</CardTitle>
-            <Badge variant="outline" className="text-[10px]">
+            <CardTitle
+              className="text-sm font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Cash-Out Confirmation
+            </CardTitle>
+            <Badge
+              variant="outline"
+              className="bg-accent/10 text-accent border-accent/30 font-mono text-[10px]"
+            >
               {visitId.slice(0, 8)}...
             </Badge>
           </div>
@@ -96,7 +104,7 @@ export function CashOutForm({
           <div className="space-y-1.5">
             <Label
               htmlFor="cashout-amount"
-              className="text-xs text-muted-foreground"
+              className="text-sm text-muted-foreground"
             >
               Amount ($)
             </Label>
@@ -109,7 +117,7 @@ export function CashOutForm({
               value={amountDollars}
               onChange={(e) => setAmountDollars(e.target.value)}
               disabled={disabled || isPending}
-              className="h-9"
+              className="h-9 font-mono tabular-nums"
             />
             {isLargeAmount && (
               <div className="flex items-center gap-1.5 text-xs text-amber-500">
@@ -122,11 +130,14 @@ export function CashOutForm({
           <div className="space-y-1.5">
             <Label
               htmlFor="cashout-ref"
-              className="text-xs text-muted-foreground"
+              className="text-sm text-muted-foreground"
             >
               <span className="flex items-center gap-1">
                 <Receipt className="h-3 w-3" />
-                Receipt / Ticket Ref (optional)
+                Receipt / Ticket Ref
+                <span className="ml-1 text-xs text-muted-foreground/50">
+                  optional
+                </span>
               </span>
             </Label>
             <Input
@@ -136,14 +147,14 @@ export function CashOutForm({
               value={externalRef}
               onChange={(e) => setExternalRef(e.target.value)}
               disabled={disabled || isPending}
-              className="h-9"
+              className="h-9 font-mono"
             />
           </div>
 
           <Button
             onClick={handleSubmit}
             disabled={!isValid || disabled || isPending}
-            className="w-full"
+            className="w-full text-xs font-semibold uppercase tracking-wider"
             size="sm"
           >
             {isPending
@@ -157,7 +168,10 @@ export function CashOutForm({
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle
+              className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
               <AlertTriangle className="h-5 w-5 text-amber-500" />
               Confirm Large Cash-Out
             </DialogTitle>
@@ -176,7 +190,11 @@ export function CashOutForm({
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <DialogClose asChild>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs font-semibold uppercase tracking-wider"
+              >
                 Cancel
               </Button>
             </DialogClose>
@@ -185,6 +203,7 @@ export function CashOutForm({
               disabled={isPending}
               size="sm"
               variant="destructive"
+              className="h-8 text-xs font-semibold uppercase tracking-wider"
             >
               {isPending ? 'Processing...' : 'Confirm Cash-Out'}
             </Button>

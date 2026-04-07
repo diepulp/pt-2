@@ -14,7 +14,7 @@ import {
   PendingFillQueue,
 } from '@/components/cashier/pending-fill-credit-queue';
 import { RecentConfirmationsList } from '@/components/cashier/recent-confirmations-list';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   useConfirmCredit,
   useConfirmFill,
@@ -37,9 +37,31 @@ export function OperationalConfirmationsView() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
+      <div className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-2">
+          {[1, 2].map((i) => (
+            <Card key={i} className="border-2 border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle
+                  className="text-sm font-bold uppercase tracking-widest"
+                  style={{ fontFamily: 'monospace' }}
+                >
+                  {i === 1 ? 'Pending Fills' : 'Pending Credits'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {[1, 2].map((j) => (
+                    <div
+                      key={j}
+                      className="h-16 animate-pulse rounded-lg bg-muted/50"
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
