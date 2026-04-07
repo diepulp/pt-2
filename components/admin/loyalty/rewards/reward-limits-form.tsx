@@ -1,5 +1,6 @@
 'use client';
 
+import { Clock, Plus, RotateCcw, Save, X } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
@@ -184,18 +185,28 @@ export function RewardLimitsForm({
   const canAddRow = rows.length < SCOPE_OPTIONS.length;
 
   return (
-    <Card data-testid="reward-limits-form">
-      <CardHeader>
+    <Card
+      className="border-2 border-border/50"
+      data-testid="reward-limits-form"
+    >
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle>Frequency Rules</CardTitle>
+          <CardTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Frequency Rules
+          </CardTitle>
           {!readOnly && (
             <Button
-              size="sm"
               variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider"
               onClick={handleAddRow}
               disabled={!canAddRow || isPending}
               data-testid="add-limit-row-button"
             >
+              <Plus className="h-3 w-3" />
               Add Rule
             </Button>
           )}
@@ -203,15 +214,27 @@ export function RewardLimitsForm({
       </CardHeader>
       <CardContent className="space-y-4">
         {rows.length === 0 ? (
-          <p
-            className="py-4 text-center text-sm text-muted-foreground"
-            data-testid="no-limits-message"
-          >
-            No frequency rules configured.
-            {!readOnly && ' Click "Add Rule" to add one.'}
-          </p>
+          <Card className="border-2 border-dashed border-border/50 bg-muted/20">
+            <CardContent
+              className="flex flex-col items-center justify-center py-8"
+              data-testid="no-limits-message"
+            >
+              <Clock className="mb-2 h-6 w-6 text-muted-foreground/40" />
+              <div
+                className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                style={{ fontFamily: 'monospace' }}
+              >
+                No frequency rules configured
+              </div>
+              {!readOnly && (
+                <p className="mt-1 text-xs text-muted-foreground/60">
+                  Click &quot;Add Rule&quot; to add one.
+                </p>
+              )}
+            </CardContent>
+          </Card>
         ) : (
-          <div className="rounded-md border">
+          <div className="overflow-hidden rounded-lg border-2 border-border/30">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -243,7 +266,7 @@ export function RewardLimitsForm({
                     {/* Scope Select */}
                     <TableCell>
                       {readOnly ? (
-                        <span className="text-sm">
+                        <span className="font-mono text-sm">
                           {
                             SCOPE_OPTIONS.find((s) => s.value === row.scope)
                               ?.label
@@ -257,7 +280,7 @@ export function RewardLimitsForm({
                           }
                         >
                           <SelectTrigger
-                            className="w-[160px]"
+                            className="w-[160px] font-mono"
                             aria-label="Scope"
                             data-testid={`scope-select-${row.key}`}
                           >
@@ -277,7 +300,9 @@ export function RewardLimitsForm({
                     {/* Max Issues */}
                     <TableCell>
                       {readOnly ? (
-                        <span className="text-sm">{row.maxIssues}</span>
+                        <span className="font-mono text-sm tabular-nums">
+                          {row.maxIssues}
+                        </span>
                       ) : (
                         <Input
                           type="number"
@@ -291,7 +316,7 @@ export function RewardLimitsForm({
                               parseInt(e.target.value, 10) || 1,
                             )
                           }
-                          className="w-[80px]"
+                          className="w-[80px] font-mono tabular-nums"
                           aria-label="Max issues"
                           data-testid={`max-issues-input-${row.key}`}
                         />
@@ -301,7 +326,7 @@ export function RewardLimitsForm({
                     {/* Cooldown Minutes */}
                     <TableCell>
                       {readOnly ? (
-                        <span className="text-sm">
+                        <span className="font-mono text-sm tabular-nums">
                           {row.cooldownMinutes ?? '-'}
                         </span>
                       ) : (
@@ -320,7 +345,7 @@ export function RewardLimitsForm({
                                 : null,
                             )
                           }
-                          className="w-[100px]"
+                          className="w-[100px] font-mono tabular-nums"
                           aria-label="Cooldown minutes"
                           data-testid={`cooldown-input-${row.key}`}
                         />
@@ -344,14 +369,15 @@ export function RewardLimitsForm({
                     {!readOnly && (
                       <TableCell>
                         <Button
+                          variant="outline"
                           size="sm"
-                          variant="ghost"
+                          className="h-7 text-xs font-semibold uppercase tracking-wider text-destructive hover:text-destructive"
                           onClick={() => handleRemoveRow(row.key)}
                           disabled={isPending}
                           aria-label={`Remove ${row.scope} rule`}
                           data-testid={`remove-limit-${row.key}`}
                         >
-                          &times;
+                          <X className="h-3 w-3" />
                         </Button>
                       </TableCell>
                     )}
@@ -367,16 +393,23 @@ export function RewardLimitsForm({
           <div className="flex justify-end gap-3 pt-2">
             <Button
               variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider"
               onClick={handleReset}
               disabled={isPending}
             >
+              <RotateCcw className="h-3 w-3" />
               Reset
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider"
               onClick={handleSave}
               disabled={isPending}
               data-testid="save-limits-button"
             >
+              <Save className="h-3 w-3" />
               {isPending ? 'Saving...' : 'Save Rules'}
             </Button>
           </div>

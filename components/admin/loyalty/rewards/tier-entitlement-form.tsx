@@ -1,5 +1,6 @@
 'use client';
 
+import { Layers, Plus, RotateCcw, Save, X } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
@@ -160,32 +161,52 @@ export function TierEntitlementForm({ reward }: TierEntitlementFormProps) {
   const canAddRow = rows.length < TIER_LEVELS.length;
 
   return (
-    <Card data-testid="tier-entitlement-form">
-      <CardHeader>
+    <Card
+      className="border-2 border-border/50"
+      data-testid="tier-entitlement-form"
+    >
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle>Tier Entitlements</CardTitle>
+          <CardTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Tier Entitlements
+          </CardTitle>
           <Button
-            size="sm"
             variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider"
             onClick={handleAddRow}
             disabled={!canAddRow || isPending}
             data-testid="add-tier-row-button"
           >
+            <Plus className="h-3 w-3" />
             Add Tier
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {rows.length === 0 ? (
-          <p
-            className="py-4 text-center text-sm text-muted-foreground"
-            data-testid="no-tiers-message"
-          >
-            No tier entitlements configured. Click &quot;Add Tier&quot; to add
-            one.
-          </p>
+          <Card className="border-2 border-dashed border-border/50 bg-muted/20">
+            <CardContent
+              className="flex flex-col items-center justify-center py-8"
+              data-testid="no-tiers-message"
+            >
+              <Layers className="mb-2 h-6 w-6 text-muted-foreground/40" />
+              <div
+                className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                style={{ fontFamily: 'monospace' }}
+              >
+                No tier entitlements configured
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground/60">
+                Click &quot;Add Tier&quot; to add one.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="rounded-md border">
+          <div className="overflow-hidden rounded-lg border-2 border-border/30">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -208,7 +229,7 @@ export function TierEntitlementForm({ reward }: TierEntitlementFormProps) {
                         }
                       >
                         <SelectTrigger
-                          className="w-[130px]"
+                          className="w-[130px] font-mono"
                           aria-label={`Tier level for row`}
                           data-testid={`tier-select-${row.key}`}
                         >
@@ -240,7 +261,7 @@ export function TierEntitlementForm({ reward }: TierEntitlementFormProps) {
                               parseInt(e.target.value, 10) || 0,
                             )
                           }
-                          className="w-[120px]"
+                          className="w-[120px] font-mono tabular-nums"
                           aria-label="Face value in cents"
                           data-testid={`face-value-input-${row.key}`}
                         />
@@ -250,7 +271,7 @@ export function TierEntitlementForm({ reward }: TierEntitlementFormProps) {
                     {/* Display (dollars) */}
                     <TableCell>
                       <span
-                        className="text-sm text-muted-foreground"
+                        className="font-mono text-sm tabular-nums text-muted-foreground"
                         data-testid={`face-value-display-${row.key}`}
                       >
                         {formatCentsToDollars(row.faceValueCents)}
@@ -270,7 +291,7 @@ export function TierEntitlementForm({ reward }: TierEntitlementFormProps) {
                         }
                       >
                         <SelectTrigger
-                          className="w-[140px]"
+                          className="w-[140px] font-mono"
                           aria-label="Instrument type"
                           data-testid={`instrument-select-${row.key}`}
                         >
@@ -286,14 +307,15 @@ export function TierEntitlementForm({ reward }: TierEntitlementFormProps) {
                     {/* Remove Button */}
                     <TableCell>
                       <Button
+                        variant="outline"
                         size="sm"
-                        variant="ghost"
+                        className="h-7 text-xs font-semibold uppercase tracking-wider text-destructive hover:text-destructive"
                         onClick={() => handleRemoveRow(row.key)}
                         disabled={isPending}
                         aria-label={`Remove ${row.tier} tier`}
                         data-testid={`remove-tier-${row.key}`}
                       >
-                        &times;
+                        <X className="h-3 w-3" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -305,14 +327,25 @@ export function TierEntitlementForm({ reward }: TierEntitlementFormProps) {
 
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-2">
-          <Button variant="outline" onClick={handleReset} disabled={isPending}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider"
+            onClick={handleReset}
+            disabled={isPending}
+          >
+            <RotateCcw className="h-3 w-3" />
             Reset
           </Button>
           <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider"
             onClick={handleSave}
             disabled={isPending}
             data-testid="save-tiers-button"
           >
+            <Save className="h-3 w-3" />
             {isPending ? 'Saving...' : 'Save Tiers'}
           </Button>
         </div>

@@ -1,12 +1,14 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
+import { AlertCircle, Gift, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -40,9 +42,9 @@ const FAMILY_LABELS: Record<RewardFamily, string> = {
   entitlement: 'Entitlement',
 };
 
-const FAMILY_VARIANTS: Record<RewardFamily, 'default' | 'secondary'> = {
-  points_comp: 'default',
-  entitlement: 'secondary',
+const FAMILY_BADGE_CLASSES: Record<RewardFamily, string> = {
+  points_comp: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+  entitlement: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
 };
 
 // === Component Props ===
@@ -109,12 +111,20 @@ export function RewardListClient({ initialData }: RewardListClientProps) {
 
   if (isError) {
     return (
-      <div
-        className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-destructive"
+      <Card
+        className="border-2 border-destructive/50 bg-destructive/5"
         data-testid="reward-list-error"
       >
-        Failed to load rewards. Please try again.
-      </div>
+        <CardContent className="flex items-center gap-3 py-6">
+          <AlertCircle className="h-5 w-5 text-destructive" />
+          <div
+            className="text-xs font-bold uppercase tracking-widest text-destructive"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Failed to load rewards. Please try again.
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -129,7 +139,10 @@ export function RewardListClient({ initialData }: RewardListClientProps) {
           value={familyFilter}
           onValueChange={(v) => setFamilyFilter(v as RewardFamily | 'all')}
         >
-          <SelectTrigger className="w-[180px]" aria-label="Filter by family">
+          <SelectTrigger
+            className="w-[180px] font-mono"
+            aria-label="Filter by family"
+          >
             <SelectValue placeholder="All Families" />
           </SelectTrigger>
           <SelectContent>
@@ -145,7 +158,10 @@ export function RewardListClient({ initialData }: RewardListClientProps) {
             setActiveFilter(v === 'all' ? undefined : v === 'true')
           }
         >
-          <SelectTrigger className="w-[160px]" aria-label="Filter by status">
+          <SelectTrigger
+            className="w-[160px] font-mono"
+            aria-label="Filter by status"
+          >
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
@@ -157,9 +173,13 @@ export function RewardListClient({ initialData }: RewardListClientProps) {
 
         <div className="ml-auto">
           <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider"
             onClick={() => setCreateDialogOpen(true)}
             data-testid="add-reward-button"
           >
+            <Plus className="h-3 w-3" />
             Add Reward
           </Button>
         </div>
@@ -167,18 +187,46 @@ export function RewardListClient({ initialData }: RewardListClientProps) {
 
       {/* Rewards Table */}
       {isLoading ? (
-        <div className="py-8 text-center text-muted-foreground">
-          Loading rewards...
-        </div>
+        <Card className="border-2 border-border/50">
+          <CardHeader className="pb-3">
+            <CardTitle
+              className="text-sm font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Reward Catalog
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-12 animate-pulse rounded-lg bg-muted/50"
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       ) : rewards.length === 0 ? (
-        <div
-          className="py-8 text-center text-muted-foreground"
-          data-testid="reward-list-empty"
-        >
-          No rewards found. Create one to get started.
-        </div>
+        <Card className="border-2 border-dashed border-border/50 bg-muted/20">
+          <CardContent
+            className="flex flex-col items-center justify-center py-12"
+            data-testid="reward-list-empty"
+          >
+            <Gift className="mb-3 h-8 w-8 text-muted-foreground/40" />
+            <div
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              No rewards found
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground/60">
+              Create one to get started.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="rounded-md border">
+        <Card className="border-2 border-border/50">
           <Table>
             <TableHeader>
               <TableRow>
@@ -202,7 +250,10 @@ export function RewardListClient({ initialData }: RewardListClientProps) {
                     {reward.code}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={FAMILY_VARIANTS[reward.family]}>
+                    <Badge
+                      variant="outline"
+                      className={FAMILY_BADGE_CLASSES[reward.family]}
+                    >
                       {FAMILY_LABELS[reward.family]}
                     </Badge>
                   </TableCell>
@@ -221,7 +272,7 @@ export function RewardListClient({ initialData }: RewardListClientProps) {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </Card>
       )}
 
       {/* Create Reward Dialog */}
