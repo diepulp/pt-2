@@ -13,6 +13,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { playerFinancialKeys } from '@/hooks/player-financial/keys';
+import { createBrowserComponentClient } from '@/lib/supabase/client';
 import type {
   AdjustmentReasonCode,
   FinancialTransactionDTO,
@@ -23,6 +24,13 @@ import {
   listFinancialTransactions,
 } from '@/services/player-financial/http';
 // GAP-CASHIN-ADJUSTMENT-MTL-SYNC Fix 4: use canonical hooks key factory
+
+// === Enriched Types ===
+
+/** Cash-out transaction enriched with player display name. */
+export interface CashOutWithPlayer extends FinancialTransactionDTO {
+  player_name: string | null;
+}
 
 // === Cache Key Helper ===
 
@@ -38,20 +46,41 @@ function cashOutsKey(gamingDay?: string) {
 // === Query Hooks ===
 
 /**
- * Fetches recent cash-out transactions for the current gaming day.
+ * Fetches recent cash-out transactions for the current gaming day,
+ * enriched with player names via batch lookup.
  * Filters: source='cage', direction='out'.
  */
 export function useRecentCashOuts(gamingDay?: string) {
   return useQuery({
     queryKey: cashOutsKey(gamingDay),
-    queryFn: async () => {
+    queryFn: async (): Promise<CashOutWithPlayer[]> => {
       const result = await listFinancialTransactions({
         source: 'cage',
         direction: 'out',
         gaming_day: gamingDay,
         limit: 50,
       });
-      return result.items;
+
+      const items = result.items;
+      if (items.length === 0) return [];
+
+      // Batch-fetch player names for all unique player_ids
+      const uniquePlayerIds = [...new Set(items.map((t) => t.player_id))];
+      const supabase = createBrowserComponentClient();
+      const { data: players } = await supabase
+        .from('player')
+        .select('id, first_name, last_name')
+        .in('id', uniquePlayerIds);
+
+      const nameMap = new Map<string, string>();
+      for (const p of players ?? []) {
+        nameMap.set(p.id, `${p.first_name} ${p.last_name}`);
+      }
+
+      return items.map((txn) => ({
+        ...txn,
+        player_name: nameMap.get(txn.player_id) ?? null,
+      }));
     },
   });
 }
@@ -61,6 +90,7 @@ export function useRecentCashOuts(gamingDay?: string) {
 export interface CashOutCreateParams {
   casino_id: string;
   player_id: string;
+  player_name?: string;
   visit_id: string;
   amount_cents: number;
   external_ref?: string;
@@ -87,11 +117,15 @@ export function useCashOutCreate(gamingDay?: string) {
         idempotency_key: crypto.randomUUID(),
         external_ref: params.external_ref,
       }),
-    onSuccess: (newTxn) => {
+    onSuccess: (newTxn, params) => {
       // Append to cache immediately so the list updates without waiting for refetch
-      queryClient.setQueryData<FinancialTransactionDTO[]>(
+      const enriched: CashOutWithPlayer = {
+        ...newTxn,
+        player_name: params.player_name ?? null,
+      };
+      queryClient.setQueryData<CashOutWithPlayer[]>(
         cashOutsKey(gamingDay),
-        (old) => (old ? [newTxn, ...old] : [newTxn]),
+        (old) => (old ? [enriched, ...old] : [enriched]),
       );
     },
     onSettled: () => {
@@ -134,9 +168,9 @@ export function useVoidCashOut(gamingDay?: string) {
       }),
     onMutate: async (params) => {
       await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<FinancialTransactionDTO[]>(key);
+      const previous = queryClient.getQueryData<CashOutWithPlayer[]>(key);
 
-      queryClient.setQueryData<FinancialTransactionDTO[]>(key, (old) =>
+      queryClient.setQueryData<CashOutWithPlayer[]>(key, (old) =>
         old
           ? old.map((txn) =>
               txn.id === params.original_txn_id

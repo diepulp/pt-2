@@ -26,12 +26,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+  type CashOutWithPlayer,
   useCashOutCreate,
   useRecentCashOuts,
   useVoidCashOut,
 } from '@/hooks/cashier/use-patron-transactions';
 import { useAuth } from '@/hooks/use-auth';
-import type { FinancialTransactionDTO } from '@/services/player-financial/dtos';
 
 export function PatronTransactionsView() {
   const { staffId, casinoId } = useAuth();
@@ -40,9 +40,7 @@ export function PatronTransactionsView() {
     null,
   );
 
-  const [voidTarget, setVoidTarget] = useState<FinancialTransactionDTO | null>(
-    null,
-  );
+  const [voidTarget, setVoidTarget] = useState<CashOutWithPlayer | null>(null);
 
   // All hooks share the same gamingDay (undefined = no date filter, current day via API default)
   const recentCashOuts = useRecentCashOuts();
@@ -60,6 +58,7 @@ export function PatronTransactionsView() {
       cashOutCreate.mutate({
         casino_id: casinoId,
         player_id: visitContext.player_id,
+        player_name: visitContext.player_name,
         visit_id: visitContext.visit_id,
         amount_cents: params.amountCents,
         external_ref: params.externalRef,
@@ -153,9 +152,9 @@ function RecentCashOutsList({
   isLoading,
   onVoid,
 }: {
-  transactions: FinancialTransactionDTO[] | undefined;
+  transactions: CashOutWithPlayer[] | undefined;
   isLoading: boolean;
-  onVoid: (txn: FinancialTransactionDTO) => void;
+  onVoid: (txn: CashOutWithPlayer) => void;
 }) {
   if (isLoading) {
     return (
@@ -230,6 +229,9 @@ function RecentCashOutsList({
                 >
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium font-mono">
+                        {txn.player_name ?? 'Unknown'}
+                      </span>
                       <AmountDisplay
                         cents={txn.amount}
                         className={
@@ -250,6 +252,10 @@ function RecentCashOutsList({
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground font-mono tabular-nums">
+                      <span className="text-muted-foreground/60">
+                        {txn.player_id.slice(0, 8)}
+                      </span>
+                      {' — '}
                       {new Date(txn.created_at).toLocaleTimeString()}
                       {txn.external_ref && ` — Ref: ${txn.external_ref}`}
                     </div>
