@@ -100,6 +100,15 @@ export const dashboardKeys = {
   tableSlipAnalytics: (tableId: string, gamingDay: string) =>
     [...ROOT, 'table-slip-analytics', tableId, gamingDay] as const,
 
+  // === Pending Fills/Credits (Exceptions & Approvals Panel) ===
+
+  /**
+   * Pending (unconfirmed) fills and credits for the casino.
+   * Used by the Approvals tab in the Exceptions panel.
+   */
+  pendingFillsCredits: (casinoId: string) =>
+    [...ROOT, 'pending-fills-credits', casinoId] as const,
+
   // === Invalidation Helpers ===
 
   /**

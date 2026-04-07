@@ -29,7 +29,7 @@ export function PitPanelsDashboardLayout({
             <PitPanelsClient casinoId={casinoId} />
           </div>
           <div className="min-h-[280px] rounded-lg border border-border/40 overflow-hidden">
-            <ExceptionsApprovalsPanel />
+            <ExceptionsApprovalsPanel casinoId={casinoId} />
           </div>
           <PendingSection
             title="Shift Ops"
@@ -55,7 +55,7 @@ export function PitPanelsDashboardLayout({
         <ResizablePanelGroup direction="vertical" className="h-full">
           <ResizablePanel defaultSize={50} minSize={25}>
             <div className="h-full border-b border-border/40">
-              <ExceptionsApprovalsPanel />
+              <ExceptionsApprovalsPanel casinoId={casinoId} />
             </div>
           </ResizablePanel>
           <ResizableHandle withHandle />
