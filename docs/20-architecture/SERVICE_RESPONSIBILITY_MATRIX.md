@@ -1,7 +1,7 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.21.0
+nsversion: 4.23.0
 status: CANONICAL
 effective: 2026-02-23
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
@@ -28,7 +28,7 @@ source_of_truth:
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.22.0 (ShiftIntelligenceService — Alert maturity: persistent alerts, acknowledgment, quality)
+> **Version**: 4.23.0 (EmailService — Pilot SMTP email wiring, append-only send attempt log)
 > **Date**: 2026-03-25
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
@@ -55,6 +55,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.23.0 (2026-04-06)** – **EmailService (PRD-062 Pilot SMTP & Email Wiring)**: Registered `EmailService` as pilot-scoped utility service (Operational context). New table: `email_send_attempt` (append-only send log). RLS: Pattern C hybrid SELECT + INSERT only (no UPDATE/DELETE). No RPCs — writes via authenticated Supabase client after `set_rls_context_from_staff()` in server actions. 3 server actions: `sendShiftReportAction`, `retryShiftReportAction`, `dismissFailedAttemptAction`. Infrastructure adapter: `lib/email/` with provider-agnostic interface, Resend implementation. Service: `services/email/` with `createEmailService` factory. See `docs/10-prd/PRD-062-pilot-smtp-email-wiring-v0.md` and `docs/21-exec-spec/EXEC-062-pilot-smtp-email-wiring.md`.
 - **4.22.0 (2026-03-25)** – **ShiftIntelligenceService Alert Maturity (PRD-056)**: Added `shift_alert`, `alert_acknowledgment` to Owns. 2 new RPCs: `rpc_persist_anomaly_alerts` (SECURITY DEFINER), `rpc_acknowledge_alert` (SECURITY DEFINER). 1 new RPC: `rpc_get_alert_quality` (SECURITY INVOKER). 3 new API routes: `POST /api/v1/shift-intelligence/persist-alerts`, `POST /api/v1/shift-intelligence/acknowledge-alert`, `GET /api/v1/shift-intelligence/alerts`. ALTER `table_metric_baseline` add `last_error`. Pattern C RLS + DELETE denial on new tables. RPC-only mutation posture.
 - **4.21.0 (2026-03-23)** – **ShiftIntelligenceService**: Registered `ShiftIntelligenceService` (Operational context) for shift anomaly detection. New table: `table_metric_baseline`. 2 new RPCs: `rpc_compute_rolling_baseline` (SECURITY DEFINER, ADR-024), `rpc_get_anomaly_alerts` (SECURITY INVOKER). 2 API routes: `POST /api/shift-intelligence/compute-baselines`, `GET /api/shift-intelligence/anomaly-alerts`. Dependencies: TableContextService (source metric RPCs), CasinoService (casino_settings), TemporalAuthority (compute_gaming_day). Cross-context reads only; writes confined to owned `table_metric_baseline`.
 - **4.20.0 (2026-03-19)** – **PRD-052 Loyalty Operator Issuance**: Added `reward_catalog`, `reward_price_points`, `reward_entitlement_tier`, `reward_limits`, `reward_eligibility`, `loyalty_earn_config` to LoyaltyService `Owns:` row. Registered `Player360DashboardService` as read-only aggregation service (follows `PlayerTimelineService` precedent). New service methods: `LoyaltyService.issueComp()`, `PromoService.issueEntitlement()`. New DTOs: `IssueCompParams`, `CompIssuanceResult`, `IssueEntitlementParams`, `EntitlementIssuanceResult`, `FulfillmentPayload` (frozen Vector C contract). New Zod schema: `issueRewardSchema`. See `docs/10-prd/PRD-052-loyalty-operator-issuance-v0.md` and `docs/21-exec-spec/EXEC-052-loyalty-operator-issuance.md`.
@@ -128,6 +129,7 @@ Approved JSON blobs (all others require first-class columns):
 | **Compliance**   | MTLService              | mtl_entry, mtl_audit_note                                                                                                  | AML/CTR compliance                                          |
 | **Onboarding**   | PlayerImportService     | import_batch, import_row                                                                                                   | CSV player import & staging ⁵                               |
 | **Analytics**    | Player360DashboardService ⁷ | (read-only aggregation across LoyaltyService + PromoService)                                                          | Player 360 dashboard data aggregation                       |
+| **Operational**  | EmailService ⁸          | email_send_attempt                                                                                                         | Pilot email delivery & send attempt logging                 |
 
 > ¹ `finance_outbox` is **post-MVP** (ADR-016 planned for payment gateway integration). MVP uses synchronous processing only.
 > ² `player_identity` is **planned (MVP)** per ADR-022 v7.1. `player_tax_identity` and scanner integration (`player_identity_scan`) are **deferred post-MVP**.
@@ -136,6 +138,7 @@ Approved JSON blobs (all others require first-class columns):
 > ⁵ PlayerImportService owns staging tables only. Cross-context writes to `player` (PlayerService) and `player_casino` (CasinoService) via `rpc_import_execute` SECURITY DEFINER RPC. See ADR-036.
 > ⁶ `player_exclusion` — Source-of-truth for exclusion/ban/watchlist records (ADR-042). Critical table per ADR-030 D4 (session-var-only writes). Enforcement delegated to downstream consumers. Property-scoped MVP; company-wide deferred.
 > ⁷ `Player360DashboardService` is a read-only aggregation service (follows `PlayerTimelineService` precedent). Owns no tables; reads from LoyaltyService (`loyalty_ledger`, `promo_coupon`) for reward history display. See PRD-052.
+> ⁸ `EmailService` is a pilot-scoped utility service. Owns `email_send_attempt` (append-only send log). May be absorbed into a broader operational context if email scope grows post-pilot. See PRD-062.
 
 ---
 
@@ -875,6 +878,61 @@ These are the only cross-context writes, performed within a SECURITY DEFINER RPC
 | **Reads** | TableContextService | Source metric RPCs (`rpc_shift_table_metrics`, `rpc_shift_cash_obs_table`) |
 | **Reads** | CasinoService      | `casino_settings` config                                        |
 | **Writes** | (own tables only) | `table_metric_baseline`                                         |
+
+---
+
+## EmailService (Operational Context — Pilot)
+
+**Bounded Context**: "How are business emails (shift reports) delivered and tracked?"
+
+| Attribute | Value |
+|-----------|-------|
+| **Owns** | `email_send_attempt` |
+| **Pattern** | B (HTTP boundary via server actions) |
+| **Status** | ✅ IMPLEMENTED (PRD-062, pilot scope) |
+| **PRD** | `docs/10-prd/PRD-062-pilot-smtp-email-wiring-v0.md` |
+| **EXEC** | `docs/21-exec-spec/EXEC-062-pilot-smtp-email-wiring.md` |
+
+### Service Methods
+
+| Method | Description |
+|--------|-------------|
+| `sendShiftReport(input)` | Send shift report email to casino admins, log attempt |
+| `getSendAttempts()` | List all send attempts for casino (RLS-scoped) |
+| `getFailedAttempts()` | List actionable failed attempts |
+| `getSendAttemptById(id)` | Get single attempt by ID |
+
+### Server Actions
+
+| Action | Location | Description |
+|--------|----------|-------------|
+| `sendShiftReportAction` | `app/actions/email/send-shift-report.ts` | Send shift report, log attempt |
+| `retryShiftReportAction` | `app/actions/email/retry-shift-report.ts` | Retry failed attempt (admin) |
+| `dismissFailedAttemptAction` | `app/actions/email/dismiss-failed-attempt.ts` | Dismiss failed attempt (admin) |
+
+### Infrastructure
+
+| Component | Location | Description |
+|-----------|----------|-------------|
+| `EmailProvider` interface | `lib/email/types.ts` | Provider-agnostic send contract |
+| Resend adapter | `lib/email/resend-adapter.ts` | Resend API implementation (contained) |
+| Adapter factory | `lib/email/index.ts` | `createEmailProvider()` |
+
+### RLS Policies
+
+| Policy | Operation | Pattern |
+|--------|-----------|---------|
+| `email_send_attempt_select` | SELECT | Pattern C hybrid (casino-scoped) |
+| `email_send_attempt_insert` | INSERT | Pattern C hybrid (casino-scoped) |
+
+No UPDATE or DELETE policies. Append-only log design.
+
+### Cross-Context Dependencies
+
+| Direction | Service | Via |
+|-----------|---------|-----|
+| **Reads** | CasinoService | `casino` FK on `email_send_attempt` |
+| **Writes** | (own table only) | `email_send_attempt` |
 
 ---
 
