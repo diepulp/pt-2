@@ -103,6 +103,13 @@ function mapDatabaseError(error: {
     );
   }
 
+  if (message.includes('NO_ACTIVE_SESSION') || error.code === 'P0007') {
+    return new DomainError(
+      'NO_ACTIVE_SESSION',
+      'Table has no active session. Open a session before seating players.',
+    );
+  }
+
   // Handle Postgres error codes
   // 23505 = Unique constraint violation
   if (error.code === '23505') {

@@ -1,6 +1,6 @@
 # ADR-031: Financial Amount Convention — Cents Storage, Dollars at Service Boundary
 
-**Status:** Proposed
+**Status:** Acceptedq
 **Date:** 2026-02-02
 **Owner:** Platform / All bounded contexts with financial fields
 **Decision Scope:** Storage format, conversion boundary, formatting API, DTO annotation
