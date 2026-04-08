@@ -461,6 +461,8 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         openModal('rating-slip', { slipId: slipOccupant.slipId });
       }
     } else {
+      // Guard: block new seating when session is not ACTIVE
+      if (selectedTable?.current_session_status !== 'ACTIVE') return;
       // Seat is empty - open new slip modal
       setNewSlipSeatNumber(seatNumber);
       openModal('new-slip', { seatNumber });
@@ -559,6 +561,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
                   tableId={selectedTable.label}
                   gameType={selectedTable.type}
                   tableStatus={selectedTable.status}
+                  sessionStatus={selectedTable.current_session_status}
                   activeSlipsCount={selectedTable.activeSlipsCount}
                   isSelected={true}
                   dealerName={undefined} // TODO: Get dealer name from staff record

@@ -54,7 +54,6 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-toggle-group',
       '@radix-ui/react-tooltip',
       'recharts',
-      'embla-carousel-react',
       'react-day-picker',
     ],
   },

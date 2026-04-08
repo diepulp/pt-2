@@ -69,6 +69,10 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
     // ADR-047 D5: Pit badge derived from session phase only — no tableAvailability axis.
     const badge = derivePitDisplayBadge(sessionStatus);
 
+    // Seats are disabled for new seating when session is not ACTIVE.
+    // Occupied seats remain clickable for slip management.
+    const seatsLocked = sessionStatus !== 'ACTIVE';
+
     // Compact variant: Render thumbnail with metadata overlay
     if (isCompact) {
       return (
@@ -323,13 +327,18 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                 const pos = positions[i];
                 if (!pos) return null;
 
+                // Empty seats are disabled when session isn't ACTIVE
+                const seatDisabled = seatsLocked && !occupant;
+
                 return (
                   <button
                     key={i}
-                    onClick={() => onSeatClick?.(i, occupant)}
+                    onClick={() => !seatDisabled && onSeatClick?.(i, occupant)}
+                    disabled={seatDisabled}
                     className={cn(
                       'group absolute -translate-x-1/2 -translate-y-1/2 focus:outline-hidden',
                       'animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both',
+                      seatDisabled && 'cursor-not-allowed opacity-40',
                     )}
                     style={{
                       left: pos.left,
@@ -337,9 +346,11 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                       animationDelay: `${i * 80}ms`,
                     }}
                     aria-label={
-                      occupant
-                        ? `Seat ${i + 1}, occupied by ${occupant.firstName} ${occupant.lastName}`
-                        : `Seat ${i + 1}, empty`
+                      seatDisabled
+                        ? `Seat ${i + 1}, unavailable — open a session first`
+                        : occupant
+                          ? `Seat ${i + 1}, occupied by ${occupant.firstName} ${occupant.lastName}`
+                          : `Seat ${i + 1}, empty`
                     }
                   >
                     {/* Seat glow effect on hover/occupied */}
@@ -348,7 +359,9 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                         'absolute inset-0 rounded-full blur-md transition-opacity duration-300 pointer-events-none',
                         occupant
                           ? 'bg-accent/40 opacity-100'
-                          : 'bg-accent/20 opacity-0 group-hover:opacity-100',
+                          : seatDisabled
+                            ? 'opacity-0'
+                            : 'bg-accent/20 opacity-0 group-hover:opacity-100',
                       )}
                       style={{ transform: 'scale(1.4)' }}
                     />
@@ -361,8 +374,11 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                         'transition-all duration-300 ease-out',
                         occupant
                           ? 'border-accent/60 bg-accent/20 shadow-[0_0_20px_hsl(var(--accent)/0.3)]'
-                          : 'border-border/40 bg-card/40 shadow-[0_8px_20px_rgba(0,0,0,0.3)]',
-                        'group-hover:scale-110 group-hover:border-accent/50 group-hover:bg-accent/10',
+                          : seatDisabled
+                            ? 'border-border/20 bg-muted/30 shadow-none'
+                            : 'border-border/40 bg-card/40 shadow-[0_8px_20px_rgba(0,0,0,0.3)]',
+                        !seatDisabled &&
+                          'group-hover:scale-110 group-hover:border-accent/50 group-hover:bg-accent/10',
                         'group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background',
                         // Touch-friendly: ensure minimum 44x44px tap target
                         'min-w-[44px] min-h-[44px]',
@@ -374,7 +390,9 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                           'absolute inset-0 grid place-items-center font-semibold transition-all duration-300',
                           occupant
                             ? 'text-accent-foreground text-xs sm:text-sm'
-                            : 'text-muted-foreground text-[10px] sm:text-xs group-hover:text-foreground',
+                            : seatDisabled
+                              ? 'text-muted-foreground/40 text-[10px] sm:text-xs'
+                              : 'text-muted-foreground text-[10px] sm:text-xs group-hover:text-foreground',
                         )}
                         style={{ fontVariantNumeric: 'tabular-nums' }}
                       >
@@ -395,11 +413,13 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                         'shadow-xs',
                         occupant
                           ? 'bg-accent text-accent-foreground'
-                          : 'bg-muted text-muted-foreground border border-border/50',
-                        'group-hover:scale-105',
+                          : seatDisabled
+                            ? 'bg-muted/50 text-muted-foreground/40 border border-border/30'
+                            : 'bg-muted text-muted-foreground border border-border/50',
+                        !seatDisabled && 'group-hover:scale-105',
                       )}
                     >
-                      {occupant ? 'Taken' : 'Open'}
+                      {seatDisabled ? 'Locked' : occupant ? 'Taken' : 'Open'}
                     </span>
 
                     {/* Player name tooltip on hover for occupied seats */}

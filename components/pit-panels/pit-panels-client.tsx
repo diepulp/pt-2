@@ -427,6 +427,8 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         await handleSlipClick(slipOccupant.slipId);
       }
     } else {
+      // Guard: block new seating when session is not ACTIVE
+      if (currentSession?.status !== 'ACTIVE') return;
       // Seat is empty - open new slip modal
       setNewSlipSeatNumber(seatNumber);
       openModal('new-slip', { seatNumber });

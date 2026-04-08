@@ -100,17 +100,17 @@ export function LiftExclusionDialog({
           >
             Lift Exclusion
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             This will deactivate the exclusion. The record is preserved for
             audit.
           </DialogDescription>
         </DialogHeader>
 
         {/* Exclusion summary */}
-        <div className="rounded-lg border-2 border-border/50 bg-card/50 p-3 space-y-1.5">
+        <div className="p-3 rounded-lg border border-border/40 bg-card/50 space-y-1.5">
           <div className="flex items-center gap-1.5">
             <span
-              className="text-xs font-bold capitalize"
+              className="text-xs font-bold uppercase tracking-widest capitalize"
               style={{ fontFamily: 'monospace' }}
             >
               {exclusion.exclusion_type.replace('_', ' ')}
@@ -125,10 +125,7 @@ export function LiftExclusionDialog({
               {exclusion.enforcement.replace('_', ' ')}
             </Badge>
           </div>
-          <div
-            className="text-[10px] text-muted-foreground"
-            style={{ fontFamily: 'monospace' }}
-          >
+          <div className="text-[10px] text-muted-foreground font-mono tabular-nums">
             Since {formatDate(exclusion.effective_from)}
             {exclusion.effective_until && (
               <> &ndash; {formatDate(exclusion.effective_until)}</>
@@ -144,22 +141,33 @@ export function LiftExclusionDialog({
         <Separator />
 
         {/* Lift reason */}
-        <div className="space-y-1.5">
-          <Label
-            htmlFor="lift_reason"
-            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
-            style={{ fontFamily: 'monospace' }}
-          >
-            Reason for Lifting
-          </Label>
-          <Textarea
-            id="lift_reason"
-            placeholder="Why is this exclusion being lifted?"
-            value={liftReason}
-            onChange={(e) => setLiftReason(e.target.value)}
-            rows={3}
-          />
-          {error && <p className="text-xs text-destructive">{error}</p>}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-3.5 w-3.5 text-accent" />
+            <h4
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Lift Reason
+            </h4>
+          </div>
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="lift_reason"
+              className="text-sm text-muted-foreground"
+            >
+              Reason for lifting
+            </Label>
+            <Textarea
+              id="lift_reason"
+              placeholder="Why is this exclusion being lifted?"
+              value={liftReason}
+              onChange={(e) => setLiftReason(e.target.value)}
+              rows={3}
+              className="font-mono"
+            />
+            {error && <p className="text-xs text-destructive">{error}</p>}
+          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
@@ -169,7 +177,7 @@ export function LiftExclusionDialog({
             size="sm"
             className="h-8 text-xs font-semibold uppercase tracking-wider"
             onClick={() => onOpenChange(false)}
-            className="h-9 text-xs font-semibold uppercase tracking-wider"
+            disabled={isPending}
           >
             Cancel
           </Button>
@@ -178,7 +186,6 @@ export function LiftExclusionDialog({
             className="h-8 gap-1.5 text-xs font-semibold uppercase tracking-wider"
             onClick={handleLift}
             disabled={isPending || !liftReason.trim()}
-            className="h-9 text-xs font-semibold uppercase tracking-wider"
           >
             {isPending ? 'Lifting...' : 'Lift Exclusion'}
           </Button>
