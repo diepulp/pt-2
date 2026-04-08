@@ -42,6 +42,7 @@ import { useCurrentTableSession } from '@/hooks/table-context/use-table-session'
 import { toast, useModal, usePitDashboardUI } from '@/hooks/ui';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useStartFromPreviousFlow } from '@/hooks/visit/use-start-from-previous-flow';
 import {
   getErrorMessage,
   logError,
@@ -53,6 +54,7 @@ import {
   findPitIdForTable,
   findPitLabelForTable,
 } from '@/lib/utils/group-tables-by-pit';
+import type { ClosedSlipForGamingDayDTO } from '@/services/rating-slip/dtos';
 import {
   pauseRatingSlip,
   resumeRatingSlip,
@@ -66,6 +68,7 @@ import {
   getOccupiedSeats,
   mapSlipsWithPlayerToOccupants,
 } from '../dashboard/seat-context-menu';
+import { StartFromPreviousModal } from '../player-sessions/start-from-previous-modal';
 
 import { PanelContainer } from './panel-container';
 
@@ -152,6 +155,9 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
       selectedTableId,
       enabled: true,
     });
+
+  // PRD-063: Start From Previous flow orchestration
+  const startFromPreviousFlow = useStartFromPreviousFlow(casinoId);
 
   // Query: Modal data (fetched when modal is open)
   const { data: modalData } = useRatingSlipModalData(
@@ -412,6 +418,14 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     }
   };
 
+  // PRD-063: Handle closed slip click — Start From Previous flow
+  const handleStartFromPrevious = React.useCallback(
+    (slip: ClosedSlipForGamingDayDTO) => {
+      startFromPreviousFlow.handleClosedSlipClick(slip);
+    },
+    [startFromPreviousFlow.handleClosedSlipClick],
+  );
+
   // Handle seat click - open new slip modal or show context menu
   // GAP-ADR-026-UI-SHIPPABLE: Uses entry gate for occupied seats
   const handleSeatClick = async (
@@ -422,9 +436,21 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
 
     if (occupant) {
       // Seat is occupied - use entry gate via handleSlipClick
+      // Non-empty seat click does NOT trigger continuation (RULE-3)
       const slipOccupant = seatOccupants.get(seatNumber);
       if (slipOccupant?.slipId) {
         await handleSlipClick(slipOccupant.slipId);
+      }
+    } else if (startFromPreviousFlow.pendingContinuation && selectedTableId) {
+      // PRD-063: Empty seat click with pending continuation → complete flow
+      const result = await startFromPreviousFlow.completeContinuation(
+        selectedTableId,
+        Number(seatNumber),
+      );
+      if (result) {
+        // Open the new slip modal for the freshly-created slip
+        setSelectedSlip(result.active_slip_id);
+        openModal('rating-slip', { slipId: result.active_slip_id });
       }
     } else {
       // Seat is empty - open new slip modal
@@ -506,6 +532,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     onSeatClick: handleSeatClick,
     onNewSlip: handleNewSlip,
     onSlipClick: handleSlipClick,
+    onStartFromPrevious: handleStartFromPrevious,
     // PRD-059: Reopen activation drawer from session action buttons
     onActivateRequest: () => setActivationDrawerOpen(true),
   };
@@ -564,6 +591,18 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
             tableId={selectedTableId}
           />
         )}
+
+      {/* PRD-063: Start From Previous modal */}
+      <StartFromPreviousModal
+        open={startFromPreviousFlow.isModalOpen}
+        onOpenChange={(open) => {
+          if (!open) startFromPreviousFlow.closeModal();
+        }}
+        player={startFromPreviousFlow.player}
+        recentSessions={startFromPreviousFlow.sessions}
+        isLoading={startFromPreviousFlow.isLoading}
+        onStartFromPrevious={startFromPreviousFlow.handleSelectVisit}
+      />
     </>
   );
 }

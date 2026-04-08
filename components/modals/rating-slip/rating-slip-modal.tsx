@@ -1,6 +1,6 @@
 'use client';
 
-import { Pause, Play, RefreshCw, X } from 'lucide-react';
+import { LogOut, Pause, Play, RefreshCw, X } from 'lucide-react';
 import React, {
   useCallback,
   useEffect,
@@ -12,6 +12,16 @@ import { toast } from 'sonner';
 
 import { CtrBanner } from '@/components/mtl/ctr-banner';
 import { IssueRewardButton } from '@/components/player-360/header/issue-reward-button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,6 +42,7 @@ import {
 import { useRatingSlipModalData } from '@/hooks/rating-slip-modal';
 import { useRatingSlipModal } from '@/hooks/ui/use-rating-slip-modal';
 import { useAuth } from '@/hooks/use-auth';
+import { useEndVisit } from '@/hooks/visit/use-end-visit';
 import type { AdjustmentReasonCode } from '@/services/player-financial/dtos';
 
 import { AdjustmentModal } from './adjustment-modal';
@@ -466,12 +477,58 @@ export function RatingSlipModal({
     });
   }, [modalData?.slip.id, resumeRatingSlip]);
 
+  // === END VISIT STATE (PRD-063) ===
+  const endVisitMutation = useEndVisit();
+  const [endVisitConfirmOpen, setEndVisitConfirmOpen] = React.useState(false);
+
+  const handleEndVisit = useCallback(() => {
+    if (!modalData?.slip.visitId) return;
+
+    const name = modalData.player
+      ? `${modalData.player.firstName} ${modalData.player.lastName}`
+      : 'Guest';
+
+    startTransition(() => {
+      endVisitMutation.mutate(modalData.slip.visitId, {
+        onSuccess: (result) => {
+          if (result.ok) {
+            toast.success(`Visit ended — ${name} checked out`, {
+              description: `${result.closedSlipCount} slip${result.closedSlipCount !== 1 ? 's' : ''} finalized`,
+            });
+            onClose();
+          } else {
+            toast.error(
+              'Could not end visit — slip finalization failed. Visit remains open.',
+              { description: result.error },
+            );
+          }
+          setEndVisitConfirmOpen(false);
+        },
+        onError: (err) => {
+          toast.error('Could not end visit', {
+            description: err.message,
+          });
+          setEndVisitConfirmOpen(false);
+        },
+      });
+    });
+  }, [modalData, endVisitMutation, startTransition, onClose]);
+
+  // Reset end visit confirm when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setEndVisitConfirmOpen(false);
+    }
+  }, [isOpen]);
+
   // Derived state for pause/resume button visibility
   const isPauseResumeLoading =
     pauseRatingSlip.isPending || resumeRatingSlip.isPending;
   const canPause = modalData?.slip.status === 'open';
   const canResume = modalData?.slip.status === 'paused';
   const isPaused = modalData?.slip.status === 'paused';
+  const canEndVisit =
+    modalData?.slip.status === 'open' || modalData?.slip.status === 'paused';
 
   // === EARLY RETURNS (after all hooks) ===
 
@@ -856,6 +913,26 @@ export function RatingSlipModal({
                 </>
               )}
             </Button>
+
+            {/* PRD-063: End Visit — closes all slips and checks out player */}
+            {canEndVisit && (
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-400"
+                onClick={() => setEndVisitConfirmOpen(true)}
+                disabled={isPending || endVisitMutation.isPending}
+              >
+                {endVisitMutation.isPending ? (
+                  'Ending...'
+                ) : (
+                  <>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    End Visit
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -869,6 +946,31 @@ export function RatingSlipModal({
         isPending={createAdjustment.isPending}
         error={adjustmentError}
       />
+
+      {/* PRD-063: End Visit confirmation dialog */}
+      <AlertDialog
+        open={endVisitConfirmOpen}
+        onOpenChange={setEndVisitConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>End Visit?</AlertDialogTitle>
+            <AlertDialogDescription>
+              End {playerName}&apos;s visit? This will close all active slips
+              and check them out.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleEndVisit}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              End Visit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

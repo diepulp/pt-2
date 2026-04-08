@@ -35,7 +35,10 @@ import type { TableSessionDTO } from '@/hooks/table-context/use-table-session';
 import { usePitDashboardUI } from '@/hooks/ui';
 import { useSwipe } from '@/hooks/utilities';
 import { cn } from '@/lib/utils';
-import type { RatingSlipWithPlayerDTO } from '@/services/rating-slip/dtos';
+import type {
+  ClosedSlipForGamingDayDTO,
+  RatingSlipWithPlayerDTO,
+} from '@/services/rating-slip/dtos';
 import type { PanelType } from '@/store/pit-dashboard-store';
 
 import { ActivityPanel } from './activity-panel';
@@ -78,6 +81,8 @@ interface PanelContainerProps {
   onSeatClick: (index: number, occupant: SeatOccupant | null) => void;
   onNewSlip: () => void;
   onSlipClick: (slipId: string) => void;
+  /** PRD-063: Callback for Start From Previous flow */
+  onStartFromPrevious?: (slip: ClosedSlipForGamingDayDTO) => void;
   /** PRD-059: Callback to open activation drawer for OPEN sessions */
   onActivateRequest?: () => void;
 
@@ -119,6 +124,7 @@ export function PanelContainer({
   onSeatClick,
   onNewSlip,
   onSlipClick,
+  onStartFromPrevious,
   onActivateRequest,
   mobileMode = false,
   reviewMode = false,
@@ -312,7 +318,7 @@ export function PanelContainer({
           <ClosedSessionsPanel
             casinoId={casinoId}
             gamingDay={gamingDay?.date ?? null}
-            onStartFromPrevious={onSlipClick}
+            onStartFromPrevious={onStartFromPrevious ?? (() => {})}
           />
         );
       default:
