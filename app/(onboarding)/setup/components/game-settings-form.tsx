@@ -144,7 +144,13 @@ export function GameSettingsForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Game Type */}
         <div className="space-y-2">
-          <Label htmlFor="game_type">Game Category *</Label>
+          <Label
+            htmlFor="game_type"
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Game Category *
+          </Label>
           <Select value={gameType} onValueChange={setGameType} required>
             <SelectTrigger id="game_type">
               <SelectValue placeholder="Select game type" />
@@ -161,7 +167,13 @@ export function GameSettingsForm({
 
         {/* Game Name */}
         <div className="space-y-2">
-          <Label htmlFor="name">Game Name *</Label>
+          <Label
+            htmlFor="name"
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Game Name *
+          </Label>
           <Input
             id="name"
             value={name}
@@ -173,7 +185,13 @@ export function GameSettingsForm({
 
         {/* Game Code */}
         <div className="space-y-2">
-          <Label htmlFor="code">Game Code *</Label>
+          <Label
+            htmlFor="code"
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Game Code *
+          </Label>
           <Input
             id="code"
             value={code}
@@ -191,7 +209,13 @@ export function GameSettingsForm({
 
         {/* Variant Name */}
         <div className="space-y-2">
-          <Label htmlFor="variant_name">Variant</Label>
+          <Label
+            htmlFor="variant_name"
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Variant
+          </Label>
           <Input
             id="variant_name"
             value={variantName}
@@ -202,7 +226,13 @@ export function GameSettingsForm({
 
         {/* Shoe Decks */}
         <div className="space-y-2">
-          <Label htmlFor="shoe_decks">Shoe Decks</Label>
+          <Label
+            htmlFor="shoe_decks"
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Shoe Decks
+          </Label>
           <Select value={shoeDecks} onValueChange={setShoeDecks}>
             <SelectTrigger id="shoe_decks">
               <SelectValue placeholder="None" />
@@ -219,7 +249,13 @@ export function GameSettingsForm({
 
         {/* Deck Profile */}
         <div className="space-y-2">
-          <Label htmlFor="deck_profile">Deck Profile</Label>
+          <Label
+            htmlFor="deck_profile"
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Deck Profile
+          </Label>
           <Select value={deckProfile} onValueChange={setDeckProfile}>
             <SelectTrigger id="deck_profile">
               <SelectValue placeholder="None" />
@@ -236,7 +272,13 @@ export function GameSettingsForm({
 
         {/* House Edge */}
         <div className="space-y-2">
-          <Label htmlFor="house_edge">House Edge (%) *</Label>
+          <Label
+            htmlFor="house_edge"
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            House Edge (%) *
+          </Label>
           <Input
             id="house_edge"
             type="number"
@@ -251,7 +293,13 @@ export function GameSettingsForm({
 
         {/* Rating Edge */}
         <div className="space-y-2">
-          <Label htmlFor="rating_edge_for_comp">Rating Edge (%)</Label>
+          <Label
+            htmlFor="rating_edge_for_comp"
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Rating Edge (%)
+          </Label>
           <Input
             id="rating_edge_for_comp"
             type="number"
@@ -265,7 +313,13 @@ export function GameSettingsForm({
 
         {/* Decisions Per Hour */}
         <div className="space-y-2">
-          <Label htmlFor="decisions_per_hour">Decisions/Hour *</Label>
+          <Label
+            htmlFor="decisions_per_hour"
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Decisions/Hour *
+          </Label>
           <Input
             id="decisions_per_hour"
             type="number"
@@ -278,7 +332,13 @@ export function GameSettingsForm({
 
         {/* Seats */}
         <div className="space-y-2">
-          <Label htmlFor="seats_available">Seats *</Label>
+          <Label
+            htmlFor="seats_available"
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Seats *
+          </Label>
           <Input
             id="seats_available"
             type="number"
@@ -291,7 +351,13 @@ export function GameSettingsForm({
 
         {/* Min Bet */}
         <div className="space-y-2">
-          <Label htmlFor="min_bet">Min Bet ($)</Label>
+          <Label
+            htmlFor="min_bet"
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Min Bet ($)
+          </Label>
           <Input
             id="min_bet"
             type="number"
@@ -303,7 +369,13 @@ export function GameSettingsForm({
 
         {/* Max Bet */}
         <div className="space-y-2">
-          <Label htmlFor="max_bet">Max Bet ($)</Label>
+          <Label
+            htmlFor="max_bet"
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Max Bet ($)
+          </Label>
           <Input
             id="max_bet"
             type="number"
@@ -316,7 +388,13 @@ export function GameSettingsForm({
 
       {/* Notes — full width */}
       <div className="space-y-2">
-        <Label htmlFor="notes">Notes</Label>
+        <Label
+          htmlFor="notes"
+          className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Notes
+        </Label>
         <Textarea
           id="notes"
           value={notes}
@@ -333,12 +411,14 @@ export function GameSettingsForm({
           variant="outline"
           onClick={onCancel}
           disabled={isPending}
+          className="h-9 text-xs font-semibold uppercase tracking-wider"
         >
           Cancel
         </Button>
         <Button
           type="submit"
           disabled={isPending || !gameType || !name || !code}
+          className="h-9 text-xs font-semibold uppercase tracking-wider"
         >
           {isPending
             ? mode === 'create'

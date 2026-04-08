@@ -47,14 +47,17 @@ export function BankModeSelector({ value, onChange }: BankModeSelectorProps) {
             className="text-left"
           >
             <Card
-              className={`cursor-pointer transition-colors ${
+              className={`cursor-pointer border-2 transition-all ${
                 isSelected
-                  ? 'border-primary ring-1 ring-primary'
-                  : 'hover:border-muted-foreground/40'
+                  ? 'border-accent/50 bg-accent/5 ring-1 ring-accent/30'
+                  : 'border-border/50 hover:border-accent/30'
               }`}
             >
               <CardHeader className="p-4">
-                <CardTitle className="text-sm font-medium">
+                <CardTitle
+                  className="text-xs font-bold uppercase tracking-widest"
+                  style={{ fontFamily: 'monospace' }}
+                >
                   {mode.label}
                 </CardTitle>
                 <CardDescription className="text-xs">

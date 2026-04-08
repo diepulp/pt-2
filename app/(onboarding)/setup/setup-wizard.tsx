@@ -371,11 +371,14 @@ export function SetupWizard({
 
   return (
     <div className="space-y-8">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
+      <div className="text-center space-y-2">
+        <h1
+          className="text-sm font-bold uppercase tracking-widest text-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
           Setup Your Casino
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Configure your workspace in a few steps
         </p>
       </div>
@@ -389,8 +392,13 @@ export function SetupWizard({
 
       {/* Server action errors */}
       {error && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
+        <div className="rounded-md border-2 border-destructive/50 bg-destructive/5 p-3">
+          <p
+            className="text-xs font-bold uppercase tracking-widest text-destructive"
+            style={{ fontFamily: 'monospace' }}
+          >
+            {error}
+          </p>
         </div>
       )}
 

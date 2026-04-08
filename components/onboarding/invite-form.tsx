@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Copy } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -67,17 +68,28 @@ export function InviteForm() {
   }
 
   return (
-    <Card>
+    <Card className="border-2 border-border/50">
       <CardHeader>
-        <CardTitle>Create Invite</CardTitle>
+        <CardTitle
+          className="text-sm font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Create Invite
+        </CardTitle>
         <CardDescription>
           Send an invite link to a new team member.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label
+              htmlFor="email"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Email
+            </Label>
             <Input
               id="email"
               name="email"
@@ -88,7 +100,13 @@ export function InviteForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
+            <Label
+              htmlFor="role"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Role
+            </Label>
             <Select name="role" defaultValue="dealer">
               <SelectTrigger>
                 <SelectValue placeholder="Select role" />
@@ -104,7 +122,7 @@ export function InviteForm() {
 
           <Button
             type="submit"
-            className="w-full"
+            className="w-full h-10 text-xs font-semibold uppercase tracking-wider"
             disabled={mutation.isPending}
           >
             {mutation.isPending ? 'Creating...' : 'Create Invite'}
@@ -112,15 +130,26 @@ export function InviteForm() {
         </form>
 
         {inviteLink && (
-          <div className="mt-4 space-y-2">
-            <Label>Invite Link</Label>
+          <div className="mt-5 rounded-md border-2 border-accent/30 bg-accent/5 p-4 space-y-2">
+            <Label
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Invite Link
+            </Label>
             <div className="flex gap-2">
               <Input
                 value={inviteLink}
                 readOnly
                 className="font-mono text-xs"
               />
-              <Button variant="outline" onClick={copyToClipboard}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1.5 text-xs font-semibold uppercase tracking-wider shrink-0"
+                onClick={copyToClipboard}
+              >
+                <Copy className="h-3 w-3" />
                 Copy
               </Button>
             </div>

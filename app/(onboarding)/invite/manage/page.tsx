@@ -20,10 +20,15 @@ export default async function InviteManagePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold">Invite Staff</h1>
-        <p className="mt-2 text-muted-foreground">
+    <div className="space-y-8">
+      <div className="text-center space-y-2">
+        <h1
+          className="text-sm font-bold uppercase tracking-widest text-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Invite Staff
+        </h1>
+        <p className="text-sm text-muted-foreground">
           Create invite links for your team members.
         </p>
       </div>

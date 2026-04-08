@@ -195,9 +195,14 @@ export function StepGameSeed({
   }
 
   return (
-    <Card>
+    <Card className="border-2 border-border/50">
       <CardHeader>
-        <CardTitle>Game Settings</CardTitle>
+        <CardTitle
+          className="text-sm font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Game Settings
+        </CardTitle>
         <CardDescription>
           Select default games for your casino or add custom ones. You can edit
           any game after adding it.
@@ -211,6 +216,7 @@ export function StepGameSeed({
               <Button
                 variant={viewMode === 'configured' ? 'default' : 'outline'}
                 size="sm"
+                className="h-7 text-xs font-semibold uppercase tracking-wider"
                 onClick={() => setViewMode('configured')}
                 disabled={isPending}
               >
@@ -220,6 +226,7 @@ export function StepGameSeed({
                 <Button
                   variant={viewMode === 'catalog' ? 'default' : 'outline'}
                   size="sm"
+                  className="h-7 text-xs font-semibold uppercase tracking-wider"
                   onClick={() => setViewMode('catalog')}
                   disabled={isPending}
                 >
@@ -231,6 +238,7 @@ export function StepGameSeed({
           <Button
             variant="outline"
             size="sm"
+            className="h-7 text-xs font-semibold uppercase tracking-wider"
             onClick={() => {
               setViewMode('configured');
               setFormMode({ type: 'create' });
@@ -240,7 +248,10 @@ export function StepGameSeed({
             Add Custom Game
           </Button>
           {hasGames && (
-            <Badge variant="secondary" className="ml-auto">
+            <Badge
+              variant="outline"
+              className="ml-auto bg-accent/10 text-accent border-accent/30"
+            >
               {games.length} game{games.length !== 1 ? 's' : ''} configured
             </Badge>
           )}
@@ -288,8 +299,13 @@ export function StepGameSeed({
                 {/* Template list grouped by game_type */}
                 {groupedTemplates.map((group) => (
                   <div key={group.gameType}>
-                    <h4 className="mb-2 text-sm font-medium">{group.label}</h4>
-                    <div className="rounded-md border">
+                    <h4
+                      className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                      style={{ fontFamily: 'monospace' }}
+                    >
+                      {group.label}
+                    </h4>
+                    <div className="rounded-md border-2 border-border/50">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -357,12 +373,20 @@ export function StepGameSeed({
               {groupedGames.map((group) => (
                 <div key={group.gameType}>
                   <div className="mb-2 flex items-center gap-2">
-                    <h4 className="text-sm font-medium">{group.label}</h4>
-                    <Badge variant="secondary" className="text-xs">
+                    <h4
+                      className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                      style={{ fontFamily: 'monospace' }}
+                    >
+                      {group.label}
+                    </h4>
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-accent/10 text-accent border-accent/30"
+                    >
                       {group.items.length}
                     </Badge>
                   </div>
-                  <div className="rounded-md border">
+                  <div className="rounded-md border-2 border-border/50">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -449,8 +473,13 @@ export function StepGameSeed({
 
         {/* Create form */}
         {formMode.type === 'create' && (
-          <div className="rounded-md border p-4">
-            <h3 className="mb-3 text-sm font-medium">New Game Setting</h3>
+          <div className="rounded-md border-2 border-accent/30 bg-accent/5 p-4">
+            <h3
+              className="mb-3 text-xs font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              New Game Setting
+            </h3>
             <GameSettingsForm
               mode="create"
               isPending={isPending}
@@ -462,8 +491,11 @@ export function StepGameSeed({
 
         {/* Edit form */}
         {formMode.type === 'edit' && (
-          <div className="rounded-md border p-4">
-            <h3 className="mb-3 text-sm font-medium">
+          <div className="rounded-md border-2 border-border/50 p-4">
+            <h3
+              className="mb-3 text-xs font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
               Edit: {formMode.game.name}
             </h3>
             <GameSettingsForm
@@ -514,10 +546,19 @@ export function StepGameSeed({
 
         {/* Navigation */}
         <div className="flex justify-between">
-          <Button variant="outline" onClick={onBack} disabled={isPending}>
+          <Button
+            variant="outline"
+            onClick={onBack}
+            disabled={isPending}
+            className="h-9 text-xs font-semibold uppercase tracking-wider"
+          >
             Back
           </Button>
-          <Button onClick={onNext} disabled={isPending || !hasGames}>
+          <Button
+            onClick={onNext}
+            disabled={isPending || !hasGames}
+            className="h-9 text-xs font-semibold uppercase tracking-wider"
+          >
             Next
           </Button>
         </div>

@@ -58,7 +58,7 @@ export function TableRowForm({
 
   return (
     <div className="space-y-1">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 rounded-lg border-2 border-border/30 bg-card/30 p-2 transition-all hover:border-accent/30">
         <Input
           value={row.label}
           onChange={(e) => onChange({ ...row, label: e.target.value })}

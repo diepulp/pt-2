@@ -27,9 +27,14 @@ export default async function AcceptInvitePage({
 
   if (!token) {
     return (
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl font-semibold">Invalid Invite Link</h1>
-        <p className="text-muted-foreground">
+      <div className="text-center space-y-3">
+        <h1
+          className="text-sm font-bold uppercase tracking-widest text-destructive"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Invalid Invite Link
+        </h1>
+        <p className="text-sm text-muted-foreground">
           This invite link is missing the token parameter.
         </p>
       </div>

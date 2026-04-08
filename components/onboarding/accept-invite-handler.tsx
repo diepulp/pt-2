@@ -47,9 +47,17 @@ export function AcceptInviteHandler({ token }: AcceptInviteHandlerProps) {
 
   if (mutation.isPending) {
     return (
-      <Card>
-        <CardContent className="py-8 text-center">
-          <p className="text-muted-foreground">Accepting invite...</p>
+      <Card className="border-2 border-border/50">
+        <CardContent className="py-12 text-center">
+          <div className="space-y-3">
+            <div className="mx-auto h-6 w-6 rounded-full border-2 border-accent/50 border-t-accent animate-spin" />
+            <p
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Accepting invite...
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
@@ -60,13 +68,21 @@ export function AcceptInviteHandler({ token }: AcceptInviteHandlerProps) {
 
     if (error.code === 'STAFF_ALREADY_BOUND') {
       return (
-        <Card>
+        <Card className="border-2 border-accent/50 bg-accent/5">
           <CardHeader>
-            <CardTitle>Already a Member</CardTitle>
+            <CardTitle
+              className="text-sm font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Already a Member
+            </CardTitle>
             <CardDescription>You already belong to a casino.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => router.push('/start')} className="w-full">
+            <Button
+              onClick={() => router.push('/start')}
+              className="w-full h-10 text-xs font-semibold uppercase tracking-wider"
+            >
               Go to Dashboard
             </Button>
           </CardContent>
@@ -76,9 +92,14 @@ export function AcceptInviteHandler({ token }: AcceptInviteHandlerProps) {
 
     if (error.code === 'INVITE_EXPIRED') {
       return (
-        <Card>
+        <Card className="border-2 border-destructive/50 bg-destructive/5">
           <CardHeader>
-            <CardTitle>Invite Expired</CardTitle>
+            <CardTitle
+              className="text-sm font-bold uppercase tracking-widest text-destructive"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Invite Expired
+            </CardTitle>
             <CardDescription>
               This invite has expired. Please ask your admin for a new link.
             </CardDescription>
@@ -88,9 +109,14 @@ export function AcceptInviteHandler({ token }: AcceptInviteHandlerProps) {
     }
 
     return (
-      <Card>
+      <Card className="border-2 border-destructive/50 bg-destructive/5">
         <CardHeader>
-          <CardTitle>Invalid Invite</CardTitle>
+          <CardTitle
+            className="text-sm font-bold uppercase tracking-widest text-destructive"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Invalid Invite
+          </CardTitle>
           <CardDescription>
             This invite link is invalid. Please request a new one from your
             admin.
@@ -114,16 +140,28 @@ export function AcceptInviteHandler({ token }: AcceptInviteHandlerProps) {
       };
 
       return (
-        <Card>
+        <Card className="border-2 border-accent/50 bg-accent/5">
           <CardHeader>
-            <CardTitle>Invite Accepted</CardTitle>
+            <CardTitle
+              className="text-sm font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Invite Accepted
+            </CardTitle>
             <CardDescription>Finalizing your session...</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="mb-3 text-sm text-destructive">{refreshError}</p>
+            <div className="mb-3 rounded-md border-2 border-destructive/50 bg-destructive/5 p-3">
+              <p
+                className="text-xs font-bold uppercase tracking-widest text-destructive"
+                style={{ fontFamily: 'monospace' }}
+              >
+                {refreshError}
+              </p>
+            </div>
             <Button
               onClick={handleRetry}
-              className="w-full"
+              className="w-full h-10 text-xs font-semibold uppercase tracking-wider"
               disabled={isRetrying}
             >
               {isRetrying ? 'Retrying...' : 'Go to Dashboard'}
@@ -134,11 +172,17 @@ export function AcceptInviteHandler({ token }: AcceptInviteHandlerProps) {
     }
 
     return (
-      <Card>
-        <CardContent className="py-8 text-center">
-          <p className="text-muted-foreground">
-            Welcome! Redirecting to your dashboard...
-          </p>
+      <Card className="border-2 border-accent/50 bg-accent/5">
+        <CardContent className="py-12 text-center">
+          <div className="space-y-3">
+            <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] mx-auto" />
+            <p
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Welcome! Redirecting to your dashboard...
+            </p>
+          </div>
         </CardContent>
       </Card>
     );

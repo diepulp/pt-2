@@ -60,17 +60,30 @@ function SectionStatus({ issues }: { issues: ValidationIssue[] }) {
   const hasWarnings = issues.some((i) => i.severity === 'warning');
 
   if (hasBlockers) {
-    return <Badge variant="destructive">Needs Fix</Badge>;
+    return (
+      <Badge
+        variant="outline"
+        className="bg-red-500/10 text-red-400 border-red-500/30"
+      >
+        Needs Fix
+      </Badge>
+    );
   }
   if (hasWarnings) {
     return (
-      <Badge variant="secondary" className="border-amber-300 text-amber-600">
+      <Badge
+        variant="outline"
+        className="bg-amber-500/10 text-amber-400 border-amber-500/30"
+      >
         Warning
       </Badge>
     );
   }
   return (
-    <Badge variant="secondary" className="border-green-300 text-green-600">
+    <Badge
+      variant="outline"
+      className="bg-green-500/10 text-green-400 border-green-500/30"
+    >
       Complete
     </Badge>
   );
@@ -162,9 +175,14 @@ export function StepReviewComplete({
   );
 
   return (
-    <Card>
+    <Card className="border-2 border-border/50">
       <CardHeader>
-        <CardTitle>Review & Complete</CardTitle>
+        <CardTitle
+          className="text-sm font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Review & Complete
+        </CardTitle>
         <CardDescription>
           {hasBlockers
             ? `${blockerCount} issue${blockerCount !== 1 ? 's' : ''} to resolve before completing setup`
@@ -174,16 +192,24 @@ export function StepReviewComplete({
       <CardContent className="space-y-6">
         {/* Audit Status Banner */}
         {hasBlockers && (
-          <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-            Some steps have issues that need to be resolved before completing
-            setup.
+          <div className="rounded-md border-2 border-destructive/50 bg-destructive/5 p-3">
+            <p
+              className="text-xs font-bold uppercase tracking-widest text-destructive"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Some steps have issues that need to be resolved before completing
+              setup.
+            </p>
           </div>
         )}
 
         {/* Step 0: Casino Settings */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-medium text-muted-foreground">
+            <h3
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
               Casino Settings
             </h3>
             <SectionStatus issues={issuesByStep.get(0) ?? []} />
@@ -224,10 +250,16 @@ export function StepReviewComplete({
         {/* Step 1: Game Settings */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-medium text-muted-foreground">
+            <h3
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
               Game Settings
             </h3>
-            <Badge variant="secondary">
+            <Badge
+              variant="outline"
+              className="bg-accent/10 text-accent border-accent/30"
+            >
               {games.length} game{games.length !== 1 ? 's' : ''} configured
             </Badge>
             <SectionStatus issues={issuesByStep.get(1) ?? []} />
@@ -259,7 +291,10 @@ export function StepReviewComplete({
         {/* Step 2: Gaming Tables */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-medium text-muted-foreground">
+            <h3
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
               Gaming Tables
             </h3>
             <SectionStatus issues={issuesByStep.get(2) ?? []} />
@@ -306,7 +341,10 @@ export function StepReviewComplete({
         {/* Step 3: Par Targets */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-medium text-muted-foreground">
+            <h3
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
               Par Targets
             </h3>
             <SectionStatus issues={issuesByStep.get(3) ?? []} />
@@ -342,10 +380,19 @@ export function StepReviewComplete({
         <Separator />
 
         <div className="flex justify-between">
-          <Button variant="outline" onClick={onBack} disabled={isPending}>
+          <Button
+            variant="outline"
+            onClick={onBack}
+            disabled={isPending}
+            className="h-9 text-xs font-semibold uppercase tracking-wider"
+          >
             Back
           </Button>
-          <Button onClick={onComplete} disabled={isPending || hasBlockers}>
+          <Button
+            onClick={onComplete}
+            disabled={isPending || hasBlockers}
+            className="h-9 text-xs font-semibold uppercase tracking-wider"
+          >
             {isPending ? 'Completing...' : 'Complete Setup'}
           </Button>
         </div>

@@ -72,9 +72,14 @@ export function StepParTargets({
   }
 
   return (
-    <Card>
+    <Card className="border-2 border-border/50">
       <CardHeader>
-        <CardTitle>Target Bankroll (Par)</CardTitle>
+        <CardTitle
+          className="text-sm font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Target Bankroll (Par)
+        </CardTitle>
         <CardDescription>
           Set the target bankroll for each table. This step is optional — you
           can skip and configure par targets later.
@@ -109,14 +114,28 @@ export function StepParTargets({
         )}
 
         <div className="flex justify-between pt-2">
-          <Button variant="outline" onClick={onBack} disabled={isPending}>
+          <Button
+            variant="outline"
+            onClick={onBack}
+            disabled={isPending}
+            className="h-9 text-xs font-semibold uppercase tracking-wider"
+          >
             Back
           </Button>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={onSkip} disabled={isPending}>
+            <Button
+              variant="ghost"
+              onClick={onSkip}
+              disabled={isPending}
+              className="h-9 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            >
               Skip
             </Button>
-            <Button onClick={handleNext} disabled={isPending}>
+            <Button
+              onClick={handleNext}
+              disabled={isPending}
+              className="h-9 text-xs font-semibold uppercase tracking-wider"
+            >
               {isPending ? 'Saving...' : 'Next'}
             </Button>
           </div>

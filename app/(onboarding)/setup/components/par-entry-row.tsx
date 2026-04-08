@@ -46,12 +46,19 @@ export function ParEntryRow({
       : "Sometimes called the table's need baseline (not live fill need). Used for variance + fill-pressure heuristics in Inventory Count.";
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 rounded-lg border-2 border-border/30 bg-card/30 p-3 transition-all hover:border-accent/30">
       <div className="flex-1 min-w-0">
-        <Label htmlFor={`par-${tableId}`} className="text-sm font-medium">
+        <Label
+          htmlFor={`par-${tableId}`}
+          className="text-sm font-medium"
+          style={{ fontFamily: 'monospace' }}
+        >
           {tableLabel}
         </Label>
-        <p className="text-xs text-muted-foreground capitalize">
+        <p
+          className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
           {gameType.replace('_', ' ')}
           {variantName ? ` (${variantName})` : ''}
         </p>

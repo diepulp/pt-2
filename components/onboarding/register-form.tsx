@@ -38,9 +38,14 @@ export function RegisterForm() {
 
   if (state?.code === 'OK') {
     return (
-      <Card className="border-2 border-border/50">
+      <Card className="border-2 border-accent/50 bg-accent/5">
         <CardHeader>
-          <CardTitle>Company Registered</CardTitle>
+          <CardTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Company Registered
+          </CardTitle>
           <CardDescription>Redirecting to casino setup...</CardDescription>
         </CardHeader>
       </Card>
@@ -50,15 +55,26 @@ export function RegisterForm() {
   return (
     <Card className="border-2 border-border/50">
       <CardHeader>
-        <CardTitle>Company Details</CardTitle>
+        <CardTitle
+          className="text-sm font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Company Details
+        </CardTitle>
         <CardDescription>
           Enter your company information to get started.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={formAction} className="space-y-4">
+        <form action={formAction} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="company_name">Company Name</Label>
+            <Label
+              htmlFor="company_name"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Company Name
+            </Label>
             <Input
               id="company_name"
               name="company_name"
@@ -69,7 +85,13 @@ export function RegisterForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="legal_name">Legal Company Name (optional)</Label>
+            <Label
+              htmlFor="legal_name"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Legal Company Name (optional)
+            </Label>
             <Input
               id="legal_name"
               name="legal_name"
@@ -83,14 +105,23 @@ export function RegisterForm() {
           </div>
 
           {state && state.code !== 'OK' && (
-            <p className="text-sm text-destructive">
-              {state.code === 'REGISTRATION_CONFLICT'
-                ? 'You already have a pending registration.'
-                : (state.error ?? 'Something went wrong. Please try again.')}
-            </p>
+            <div className="rounded-md border-2 border-destructive/50 bg-destructive/5 p-3">
+              <p
+                className="text-xs font-bold uppercase tracking-widest text-destructive"
+                style={{ fontFamily: 'monospace' }}
+              >
+                {state.code === 'REGISTRATION_CONFLICT'
+                  ? 'You already have a pending registration.'
+                  : (state.error ?? 'Something went wrong. Please try again.')}
+              </p>
+            </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={isPending}>
+          <Button
+            type="submit"
+            className="w-full h-10 text-xs font-semibold uppercase tracking-wider"
+            disabled={isPending}
+          >
             {isPending ? 'Registering...' : 'Register Company'}
           </Button>
         </form>

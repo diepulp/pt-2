@@ -70,9 +70,14 @@ export function StepCasinoBasics({
   }
 
   return (
-    <Card>
+    <Card className="border-2 border-border/50">
       <CardHeader>
-        <CardTitle>Casino Basics</CardTitle>
+        <CardTitle
+          className="text-sm font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Casino Basics
+        </CardTitle>
         <CardDescription>
           Set your timezone, gaming day schedule, and bankroll policy.
         </CardDescription>
@@ -80,7 +85,13 @@ export function StepCasinoBasics({
       <CardContent className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="timezone">Timezone</Label>
+            <Label
+              htmlFor="timezone"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Timezone
+            </Label>
             <Select value={timezone} onValueChange={setTimezone}>
               <SelectTrigger id="timezone">
                 <SelectValue placeholder="Select timezone" />
@@ -99,7 +110,13 @@ export function StepCasinoBasics({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="gaming_day_start">Gaming Day Start</Label>
+            <Label
+              htmlFor="gaming_day_start"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Gaming Day Start
+            </Label>
             <Input
               id="gaming_day_start"
               type="time"
@@ -113,7 +130,12 @@ export function StepCasinoBasics({
         </div>
 
         <div className="space-y-2">
-          <Label>Table Bank Mode</Label>
+          <Label
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Table Bank Mode
+          </Label>
           <BankModeSelector value={bankMode} onChange={setBankMode} />
           {!bankMode && (
             <p className="text-xs text-destructive">
@@ -123,7 +145,11 @@ export function StepCasinoBasics({
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={handleNext} disabled={isPending || !bankMode}>
+          <Button
+            onClick={handleNext}
+            disabled={isPending || !bankMode}
+            className="h-9 text-xs font-semibold uppercase tracking-wider"
+          >
             {isPending ? 'Saving...' : 'Next'}
           </Button>
         </div>

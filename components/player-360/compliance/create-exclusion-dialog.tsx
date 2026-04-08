@@ -158,64 +158,28 @@ export function CreateExclusionDialog({
           >
             Add Exclusion
           </DialogTitle>
-          <DialogDescription className="text-sm">
+          <DialogDescription>
             Create a new exclusion record for this player.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
-          {/* ── Classification ── */}
-          <div className="space-y-3">
-            <SectionHeader icon={Shield} label="Classification" />
-
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="exclusion_type"
-                className="text-sm text-muted-foreground"
-              >
-                Type
-              </Label>
-              <Select
-                value={form.watch('exclusion_type') ?? ''}
-                onValueChange={(v) =>
-                  form.setValue(
-                    'exclusion_type',
-                    v as FormValues['exclusion_type'],
-                    {
-                      shouldValidate: true,
-                    },
-                  )
-                }
-              >
-                <SelectTrigger id="exclusion_type" className="font-mono">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {exclusionTypeEnum.options.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {EXCLUSION_TYPE_LABELS[t] ?? t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.exclusion_type && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.exclusion_type.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="enforcement"
-                className="text-sm text-muted-foreground"
-              >
-                Enforcement
-              </Label>
-              <Select
-                value={form.watch('enforcement') ?? ''}
-                onValueChange={(v) =>
-                  form.setValue('enforcement', v as FormValues['enforcement'], {
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          {/* Exclusion Type */}
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="exclusion_type"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Type
+            </Label>
+            <Select
+              value={form.watch('exclusion_type') ?? ''}
+              onValueChange={(v) =>
+                form.setValue(
+                  'exclusion_type',
+                  v as FormValues['exclusion_type'],
+                  {
                     shouldValidate: true,
                   })
                 }
@@ -239,125 +203,138 @@ export function CreateExclusionDialog({
             </div>
           </div>
 
-          <Separator />
-
-          {/* ── Details ── */}
-          <div className="space-y-3">
-            <SectionHeader icon={MessageSquare} label="Details" />
-
-            <div className="space-y-1.5">
-              <Label htmlFor="reason" className="text-sm text-muted-foreground">
-                Reason
-              </Label>
-              <Textarea
-                id="reason"
-                placeholder="Reason for exclusion..."
-                {...form.register('reason')}
-                rows={3}
-                className="font-mono"
-              />
-              {form.formState.errors.reason && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.reason.message}
-                </p>
-              )}
-            </div>
+          {/* Enforcement */}
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="enforcement"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Enforcement
+            </Label>
+            <Select
+              value={form.watch('enforcement') ?? ''}
+              onValueChange={(v) =>
+                form.setValue('enforcement', v as FormValues['enforcement'], {
+                  shouldValidate: true,
+                })
+              }
+            >
+              <SelectTrigger id="enforcement">
+                <SelectValue placeholder="Select enforcement" />
+              </SelectTrigger>
+              <SelectContent>
+                {enforcementEnum.options.map((e) => (
+                  <SelectItem key={e} value={e}>
+                    {ENFORCEMENT_LABELS[e] ?? e}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.enforcement && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.enforcement.message}
+              </p>
+            )}
           </div>
 
-          <Separator />
-
-          {/* ── Schedule ── */}
-          <div className="space-y-3">
-            <SectionHeader icon={CalendarDays} label="Schedule" />
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="effective_from"
-                  className="text-sm text-muted-foreground"
-                >
-                  Effective From
-                </Label>
-                <Input
-                  id="effective_from"
-                  type="date"
-                  {...form.register('effective_from')}
-                  className="font-mono tabular-nums"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="effective_until"
-                  className="text-sm text-muted-foreground"
-                >
-                  Effective Until
-                </Label>
-                <Input
-                  id="effective_until"
-                  type="date"
-                  {...form.register('effective_until')}
-                  className="font-mono tabular-nums"
-                />
-              </div>
-            </div>
+          {/* Reason */}
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="reason"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Reason
+            </Label>
+            <Textarea
+              id="reason"
+              placeholder="Reason for exclusion..."
+              {...form.register('reason')}
+              rows={3}
+            />
+            {form.formState.errors.reason && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.reason.message}
+              </p>
+            )}
+          </div>
 
             <div className="space-y-1.5">
               <Label
-                htmlFor="review_date"
-                className="text-sm text-muted-foreground"
+                htmlFor="effective_from"
+                className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                style={{ fontFamily: 'monospace' }}
               >
-                Review Date
+                Effective From
               </Label>
               <Input
                 id="review_date"
                 type="date"
-                {...form.register('review_date')}
-                className="font-mono tabular-nums"
+                {...form.register('effective_from')}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="effective_until"
+                className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                style={{ fontFamily: 'monospace' }}
+              >
+                Effective Until
+              </Label>
+              <Input
+                id="effective_until"
+                type="date"
+                {...form.register('effective_until')}
               />
             </div>
           </div>
 
-          <Separator />
+          {/* Review Date */}
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="review_date"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Review Date
+            </Label>
+            <Input
+              id="review_date"
+              type="date"
+              {...form.register('review_date')}
+            />
+          </div>
 
-          {/* ── References ── */}
-          <div className="space-y-3">
-            <SectionHeader icon={Link2} label="References" />
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="external_ref"
-                  className="text-sm text-muted-foreground"
-                >
-                  External Ref
-                  <span className="ml-1 text-xs text-muted-foreground/50">
-                    optional
-                  </span>
-                </Label>
-                <Input
-                  id="external_ref"
-                  placeholder="Optional"
-                  {...form.register('external_ref')}
-                  className="font-mono"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="jurisdiction"
-                  className="text-sm text-muted-foreground"
-                >
-                  Jurisdiction
-                  <span className="ml-1 text-xs text-muted-foreground/50">
-                    optional
-                  </span>
-                </Label>
-                <Input
-                  id="jurisdiction"
-                  placeholder="Optional"
-                  {...form.register('jurisdiction')}
-                  className="font-mono"
-                />
-              </div>
+          {/* Optional fields */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="external_ref"
+                className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                style={{ fontFamily: 'monospace' }}
+              >
+                External Ref
+              </Label>
+              <Input
+                id="external_ref"
+                placeholder="Optional"
+                {...form.register('external_ref')}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="jurisdiction"
+                className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                style={{ fontFamily: 'monospace' }}
+              >
+                Jurisdiction
+              </Label>
+              <Input
+                id="jurisdiction"
+                placeholder="Optional"
+                {...form.register('jurisdiction')}
+              />
             </div>
           </div>
 
@@ -369,15 +346,14 @@ export function CreateExclusionDialog({
               size="sm"
               className="h-8 text-xs font-semibold uppercase tracking-wider"
               onClick={() => onOpenChange(false)}
-              disabled={isPending}
+              className="h-9 text-xs font-semibold uppercase tracking-wider"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              size="sm"
-              className="h-8 gap-1.5 text-xs font-semibold uppercase tracking-wider"
               disabled={isPending}
+              className="h-9 text-xs font-semibold uppercase tracking-wider"
             >
               {isPending ? 'Creating...' : 'Create Exclusion'}
             </Button>

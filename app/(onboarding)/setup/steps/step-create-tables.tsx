@@ -210,9 +210,14 @@ export function StepCreateTables({
   })();
 
   return (
-    <Card>
+    <Card className="border-2 border-border/50">
       <CardHeader>
-        <CardTitle>Create Tables</CardTitle>
+        <CardTitle
+          className="text-sm font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Create Tables
+        </CardTitle>
         <CardDescription>
           Add your gaming tables. Labels must be unique within your casino.
         </CardDescription>
@@ -261,6 +266,7 @@ export function StepCreateTables({
             type="button"
             variant="outline"
             size="sm"
+            className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider"
             onClick={addRow}
             disabled={isPending}
           >
@@ -270,20 +276,27 @@ export function StepCreateTables({
             type="button"
             variant="outline"
             size="sm"
+            className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider"
             onClick={generateFromGames}
             disabled={isPending || gameSettings.length === 0}
           >
-            Generate from games
+            Generate from Games
           </Button>
         </div>
 
         <div className="flex justify-between pt-2">
-          <Button variant="outline" onClick={onBack} disabled={isPending}>
+          <Button
+            variant="outline"
+            onClick={onBack}
+            disabled={isPending}
+            className="h-9 text-xs font-semibold uppercase tracking-wider"
+          >
             Back
           </Button>
           <Button
             onClick={handleNext}
             disabled={isPending || !hasValidRows || hasBlockers}
+            className="h-9 text-xs font-semibold uppercase tracking-wider"
           >
             {isPending ? 'Saving tables...' : 'Next'}
           </Button>

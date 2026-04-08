@@ -41,7 +41,7 @@ const STATUS_BORDER: Record<string, string> = {
   blocked: 'border-red-500/30 bg-red-500/5',
   alert: 'border-amber-500/30 bg-amber-500/5',
   watchlist: 'border-blue-500/30 bg-blue-500/5',
-  clear: 'border-border/40 bg-card/50',
+  clear: 'border-border/50 bg-card/50',
 };
 
 const STATUS_ICON: Record<string, typeof Ban> = {
@@ -74,14 +74,17 @@ export function ExclusionTile({ playerId, className }: ExclusionTileProps) {
     return (
       <div
         className={cn(
-          'p-3 rounded-lg border border-border/40 bg-card/50',
+          'rounded-lg border-2 border-border/50 bg-card/50 p-3',
           className,
         )}
       >
         <div className="flex items-center gap-2 mb-2">
-          <div className="h-3 w-20 bg-muted rounded motion-safe:animate-pulse" />
+          <div className="h-3 w-20 bg-muted rounded animate-pulse" />
         </div>
-        <div className="h-4 w-32 bg-muted rounded motion-safe:animate-pulse" />
+        <div className="space-y-1.5">
+          <div className="h-12 bg-muted/50 rounded-lg animate-pulse" />
+          <div className="h-12 bg-muted/50 rounded-lg animate-pulse" />
+        </div>
       </div>
     );
   }
@@ -92,7 +95,7 @@ export function ExclusionTile({ playerId, className }: ExclusionTileProps) {
     <>
       <div
         className={cn(
-          'p-3 rounded-lg border',
+          'rounded-lg border-2 p-3',
           STATUS_BORDER[status] ?? STATUS_BORDER.clear,
           className,
         )}
@@ -106,7 +109,10 @@ export function ExclusionTile({ playerId, className }: ExclusionTileProps) {
                 status === 'clear' ? 'text-muted-foreground' : '',
               )}
             />
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <span
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
               Exclusions
             </span>
             {status !== 'clear' && (
@@ -128,9 +134,9 @@ export function ExclusionTile({ playerId, className }: ExclusionTileProps) {
           </div>
           {canCreate && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="h-6 px-2 text-xs gap-1"
+              className="h-6 gap-1 px-2 text-[10px] font-semibold uppercase tracking-wider"
               onClick={() => setCreateOpen(true)}
             >
               <Plus className="h-3 w-3" />
@@ -152,7 +158,12 @@ export function ExclusionTile({ playerId, className }: ExclusionTileProps) {
             ))}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">No active exclusions</p>
+          <p
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50"
+            style={{ fontFamily: 'monospace' }}
+          >
+            No active exclusions
+          </p>
         )}
       </div>
 
@@ -198,10 +209,13 @@ function ExclusionRow({
     });
 
   return (
-    <div className="flex items-start gap-2 p-2 rounded-lg border border-border/30 bg-card/30">
+    <div className="flex items-start gap-2 rounded-lg border-2 border-border/30 bg-card/30 p-2 transition-all hover:border-accent/30">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5">
-          <span className="text-xs font-medium capitalize">
+          <span
+            className="text-xs font-bold capitalize"
+            style={{ fontFamily: 'monospace' }}
+          >
             {exclusion.exclusion_type.replace('_', ' ')}
           </span>
           <Badge
@@ -214,7 +228,10 @@ function ExclusionRow({
             {exclusion.enforcement.replace('_', ' ')}
           </Badge>
         </div>
-        <div className="text-[10px] text-muted-foreground">
+        <div
+          className="text-[10px] text-muted-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
           {formatDate(exclusion.effective_from)}
           {exclusion.effective_until && (
             <> &ndash; {formatDate(exclusion.effective_until)}</>
@@ -228,9 +245,9 @@ function ExclusionRow({
       </div>
       {canLift && (
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground shrink-0"
+          className="h-6 shrink-0 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
           onClick={onLift}
         >
           Lift

@@ -83,9 +83,14 @@ export function BootstrapForm() {
     };
 
     return (
-      <Card>
+      <Card className="border-2 border-accent/50 bg-accent/5">
         <CardHeader>
-          <CardTitle>Casino Created</CardTitle>
+          <CardTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Casino Created
+          </CardTitle>
           <CardDescription>
             {refreshError
               ? 'Finalizing your session...'
@@ -94,11 +99,18 @@ export function BootstrapForm() {
         </CardHeader>
         <CardContent>
           {refreshError && (
-            <p className="mb-3 text-sm text-destructive">{refreshError}</p>
+            <div className="mb-3 rounded-md border-2 border-destructive/50 bg-destructive/5 p-3">
+              <p
+                className="text-xs font-bold uppercase tracking-widest text-destructive"
+                style={{ fontFamily: 'monospace' }}
+              >
+                {refreshError}
+              </p>
+            </div>
           )}
           <Button
             onClick={handleRetry}
-            className="w-full"
+            className="w-full h-10 text-xs font-semibold uppercase tracking-wider"
             disabled={isRetrying}
           >
             {isRetrying ? 'Retrying...' : 'Go to Dashboard'}
@@ -109,17 +121,28 @@ export function BootstrapForm() {
   }
 
   return (
-    <Card>
+    <Card className="border-2 border-border/50">
       <CardHeader>
-        <CardTitle>Casino Details</CardTitle>
+        <CardTitle
+          className="text-sm font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Casino Details
+        </CardTitle>
         <CardDescription>
           Enter your casino information to get started.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={formAction} className="space-y-4">
+        <form action={formAction} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="casino_name">Casino Name</Label>
+            <Label
+              htmlFor="casino_name"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Casino Name
+            </Label>
             <Input
               id="casino_name"
               name="casino_name"
@@ -130,7 +153,13 @@ export function BootstrapForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="timezone">Timezone</Label>
+            <Label
+              htmlFor="timezone"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Timezone
+            </Label>
             <Select name="timezone" defaultValue="America/Los_Angeles">
               <SelectTrigger>
                 <SelectValue placeholder="Select timezone" />
@@ -149,7 +178,13 @@ export function BootstrapForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="gaming_day_start">Gaming Day Start</Label>
+            <Label
+              htmlFor="gaming_day_start"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Gaming Day Start
+            </Label>
             <Input
               id="gaming_day_start"
               name="gaming_day_start"
@@ -159,14 +194,23 @@ export function BootstrapForm() {
           </div>
 
           {state && state.code !== 'OK' && (
-            <p className="text-sm text-destructive">
-              {state.code === 'STAFF_ALREADY_BOUND'
-                ? 'You already have an active casino.'
-                : 'Something went wrong. Please try again.'}
-            </p>
+            <div className="rounded-md border-2 border-destructive/50 bg-destructive/5 p-3">
+              <p
+                className="text-xs font-bold uppercase tracking-widest text-destructive"
+                style={{ fontFamily: 'monospace' }}
+              >
+                {state.code === 'STAFF_ALREADY_BOUND'
+                  ? 'You already have an active casino.'
+                  : 'Something went wrong. Please try again.'}
+              </p>
+            </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={isPending}>
+          <Button
+            type="submit"
+            className="w-full h-10 text-xs font-semibold uppercase tracking-wider"
+            disabled={isPending}
+          >
             {isPending ? 'Creating...' : 'Create Casino'}
           </Button>
         </form>
