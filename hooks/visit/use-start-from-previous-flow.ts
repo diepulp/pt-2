@@ -105,8 +105,11 @@ export function useStartFromPreviousFlow(casinoId: string) {
           .map(toSessionData);
 
         setSessions(eligible);
-      } catch {
-        toast.error('Failed to load recent sessions');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        toast.error('Failed to load recent sessions', {
+          description: msg,
+        });
         setSessions([]);
       } finally {
         setIsLoading(false);
