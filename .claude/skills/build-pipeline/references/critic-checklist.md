@@ -45,6 +45,20 @@ Automated checks against `context/*.context.md` files:
 - [ ] E2E workstream gate is `e2e-write-path`
 - [ ] Read-only PRDs may omit E2E workstream (no false positive)
 
+### Intake Traceability (when FIB-S present)
+
+- [ ] `fib_h` and `fib_s` fields present in YAML frontmatter
+- [ ] Every workstream has a `traces_to` field citing at least one FIB-S element (`CAP:name`, `OUT-N`, `RULE-N`, loop step ID) or `infrastructure`
+- [ ] Every capability in `zachman.how.capabilities` is referenced by at least one workstream
+- [ ] No workstream introduces operator-visible surfaces absent from `zachman.where.surfaces`
+- [ ] No workstream introduces public API endpoints absent from `zachman.where.surfaces`
+- [ ] No workstream introduces workflow side-paths absent from `containment.loop`
+- [ ] No workstream introduces domain DTOs or persisted shapes that alter scope beyond `zachman.what.entities`
+- [ ] Every `severity: "hard"` rule from `zachman.why.business_rules` appears in at least one workstream's acceptance criteria
+- [ ] Every item in `governance.open_questions_allowed_at_scaffold` is either resolved via a `decisions` record or carried forward in the EXEC risks section — none silently absent
+- [ ] Resolved open questions have `decision_id`, `resolves_open_question`, `decision_statement`, `rationale`, `impact_on_scope`
+- [ ] Any decision with `impact_on_scope: amendment_required` blocks pipeline until FIB is amended
+
 ### Consistency Checks
 
 - [ ] No DELETE + "soft delete via status" contradiction
