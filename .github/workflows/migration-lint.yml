@@ -46,16 +46,25 @@ jobs:
             RPC_COUNT=$(grep -icE 'CREATE\s+OR\s+REPLACE\s+FUNCTION\s+rpc_' "$FILE" || true)
 
             if [ "$RPC_COUNT" -gt 0 ]; then
-              # RPC function(s) found - verify set_rls_context call exists
-              CONTEXT_CALL=$(grep -icE 'PERFORM\s+set_rls_context(_from_staff)?\s*\(' "$FILE" || true)
+              # RPC function(s) found - verify canonical context call exists
+              # Only set_rls_context_from_staff or set_rls_context_internal are valid (ADR-024)
+              # Bare set_rls_context() is DROPPED and must not be used
+              CONTEXT_CALL=$(grep -icE 'PERFORM\s+set_rls_context_(from_staff|internal)\s*\(' "$FILE" || true)
+              # Count lines with bare set_rls_context( excluding _from_staff and _internal
+              DEPRECATED_CALL=$(grep -P 'PERFORM\s+set_rls_context\s*\(' "$FILE" | grep -vcP 'set_rls_context_(from_staff|internal)' || echo 0)
 
               if [ "$CONTEXT_CALL" -eq 0 ]; then
                 echo "❌ VIOLATION: $FILE"
-                echo "   Found $RPC_COUNT RPC function(s) but NO set_rls_context call"
+                echo "   Found $RPC_COUNT RPC function(s) but NO context injection call"
+                echo ""
+                VIOLATIONS_FOUND=$((VIOLATIONS_FOUND + 1))
+              elif [ "$DEPRECATED_CALL" -gt 0 ]; then
+                echo "❌ VIOLATION: $FILE"
+                echo "   Uses DROPPED set_rls_context() — must use set_rls_context_from_staff() or set_rls_context_internal()"
                 echo ""
                 VIOLATIONS_FOUND=$((VIOLATIONS_FOUND + 1))
               else
-                echo "✅ $FILE: $RPC_COUNT RPC function(s) with set_rls_context"
+                echo "✅ $FILE: $RPC_COUNT RPC function(s) with canonical context injection"
               fi
             fi
           done
@@ -67,36 +76,30 @@ jobs:
             echo "❌ PR BLOCKED: $VIOLATIONS_FOUND migration(s) violate RPC self-injection rule"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo ""
-            echo "REQUIRED PATTERN (ADR-015 Phase 1A):"
+            echo "REQUIRED PATTERN (ADR-024):"
             echo "────────────────────────────────────────────────────────────"
-            echo "CREATE OR REPLACE FUNCTION rpc_your_function("
-            echo "  p_casino_id uuid,"
-            echo "  ..."
-            echo ") ..."
+            echo "CREATE OR REPLACE FUNCTION rpc_your_function(...)"
+            echo "  RETURNS ... LANGUAGE plpgsql SECURITY DEFINER"
+            echo "  SET search_path = ''"
+            echo "AS \$\$"
             echo "BEGIN"
-            echo "  -- Extract staff role for self-injection"
-            echo "  v_context_staff_role := COALESCE("
-            echo "    NULLIF(current_setting('app.staff_role', true), ''),"
-            echo "    (auth.jwt() -> 'app_metadata' ->> 'staff_role')::text"
-            echo "  );"
-            echo ""
-            echo "  -- Self-inject context (REQUIRED)"
-            echo "  PERFORM set_rls_context("
-            echo "    COALESCE("
-            echo "      NULLIF(current_setting('app.actor_id', true), '')::uuid,"
-            echo "      (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid"
-            echo "    ),"
-            echo "    p_casino_id,"
-            echo "    v_context_staff_role"
-            echo "  );"
-            echo "  ..."
+            echo "  -- Derive context from JWT (REQUIRED — ADR-024)"
+            echo "  PERFORM set_rls_context_from_staff(gen_random_uuid()::text);"
+            echo "  -- ... function body ..."
             echo "END;"
+            echo "\$\$;"
+            echo ""
+            echo "VALID context functions (pick one):"
+            echo "  • set_rls_context_from_staff(p_correlation_id) — derives from JWT staff_id"
+            echo "  • set_rls_context_internal(p_actor_id, p_casino_id, p_staff_role, p_correlation_id)"
+            echo ""
+            echo "DROPPED (do NOT use):"
+            echo "  • set_rls_context() — removed per ADR-024"
             echo "────────────────────────────────────────────────────────────"
             echo ""
             echo "REFERENCE:"
-            echo "  • PRD-015: ADR-015 Phase 1A Remediation"
-            echo "  • ISSUE-5FE4A689: RPC self-injection systematic gap"
-            echo "  • See: supabase/migrations/*_prd015_*_self_injection.sql"
+            echo "  • ADR-024: Authoritative context derivation"
+            echo "  • ADR-015: Connection pooling strategy"
             echo ""
             echo "WHY REQUIRED:"
             echo "  • Supabase transaction pooling reuses connections"
