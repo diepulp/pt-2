@@ -26,6 +26,7 @@
     "pyright-lsp@claude-plugins-official": true,
     "skill-creator@claude-plugins-official": true,
     "superpowers@superpowers-dev": true,
-    "code-review@claude-plugins-official": true
+    "code-review@claude-plugins-official": true,
+    "vercel@claude-plugins-official": true
   }
 }
