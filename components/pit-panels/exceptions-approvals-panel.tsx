@@ -15,32 +15,59 @@ import * as React from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  useExceptionsData,
+  type AlertItem,
+  type ApprovalItem,
+  type FlagItem,
+} from '@/hooks/dashboard/use-exceptions-data';
 import { cn } from '@/lib/utils';
+
+// === Formatters ===
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+function formatDollars(cents: number): string {
+  const dollars = Math.abs(cents / 100);
+  return `$${dollars.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+// === Component ===
+
+interface ExceptionsApprovalsPanelProps {
+  casinoId: string;
+}
 
 /**
  * Exceptions & Approvals Panel
  *
  * Tabbed interface for monitoring casino pit alerts, pending approvals,
- * and flagged items requiring attention. Command-center aesthetic with
- * urgent visual cues and data-dense information display.
+ * and flagged items. Wired to live data via useExceptionsData.
+ *
+ * - Alerts: cash obs spike alerts + missing snapshot flags
+ * - Approvals: pending fills/credits awaiting cashier confirmation
+ * - Flags: tables with no telemetry coverage
  */
-export function ExceptionsApprovalsPanel() {
+export function ExceptionsApprovalsPanel({
+  casinoId,
+}: ExceptionsApprovalsPanelProps) {
   const [activeTab, setActiveTab] = React.useState('alerts');
-
-  // Mock notification counts - will be wired to real data
-  const notifications = {
-    alerts: 3,
-    approvals: 2,
-    flags: 1,
-  };
+  const { alerts, approvals, flags, isLoading } = useExceptionsData(casinoId);
 
   const tabs = [
     {
       id: 'alerts',
       label: 'Alerts',
       icon: Bell,
-      count: notifications.alerts,
+      count: alerts.length,
       color: 'text-amber-400',
       bgColor: 'bg-amber-500/10',
       borderColor: 'border-amber-500/30',
@@ -49,7 +76,7 @@ export function ExceptionsApprovalsPanel() {
       id: 'approvals',
       label: 'Approvals',
       icon: CheckCircle2,
-      count: notifications.approvals,
+      count: approvals.length,
       color: 'text-accent',
       bgColor: 'bg-accent/10',
       borderColor: 'border-accent/30',
@@ -58,12 +85,14 @@ export function ExceptionsApprovalsPanel() {
       id: 'flags',
       label: 'Flags',
       icon: Flag,
-      count: notifications.flags,
+      count: flags.length,
       color: 'text-rose-400',
       bgColor: 'bg-rose-500/10',
       borderColor: 'border-rose-500/30',
     },
   ];
+
+  const totalCount = alerts.length + approvals.length + flags.length;
 
   return (
     <section className="flex h-full flex-col bg-card/30">
@@ -75,13 +104,10 @@ export function ExceptionsApprovalsPanel() {
             Exceptions & Approvals
           </h3>
           <p className="text-[10px] font-mono text-muted-foreground/70">
-            {notifications.alerts +
-              notifications.approvals +
-              notifications.flags}{' '}
-            items pending
+            {isLoading ? 'Loading...' : `${totalCount} items pending`}
           </p>
         </div>
-        <StatusPulse />
+        {alerts.length > 0 && <StatusPulse />}
       </div>
 
       {/* Tabs */}
@@ -128,21 +154,23 @@ export function ExceptionsApprovalsPanel() {
         {/* Tab Content */}
         <div className="min-h-0 flex-1">
           <TabsContent value="alerts" className="mt-0 h-full">
-            <AlertsTab />
+            <AlertsTab alerts={alerts} isLoading={isLoading} />
           </TabsContent>
 
           <TabsContent value="approvals" className="mt-0 h-full">
-            <ApprovalsTab />
+            <ApprovalsTab approvals={approvals} isLoading={isLoading} />
           </TabsContent>
 
           <TabsContent value="flags" className="mt-0 h-full">
-            <FlagsTab />
+            <FlagsTab flags={flags} isLoading={isLoading} />
           </TabsContent>
         </div>
       </Tabs>
     </section>
   );
 }
+
+// === Shared Sub-Components ===
 
 function StatusPulse() {
   return (
@@ -166,67 +194,56 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ALERTS TAB
-// ─────────────────────────────────────────────────────────────────────────────
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="mt-4 rounded-lg border border-dashed border-border/40 bg-muted/20 p-4 text-center">
+      <AlertTriangle className="mx-auto h-5 w-5 text-muted-foreground/40" />
+      <p className="mt-2 text-[11px] text-muted-foreground/60">{message}</p>
+    </div>
+  );
+}
 
-function AlertsTab() {
-  const mockAlerts = [
-    {
-      id: '1',
-      type: 'drop' as const,
-      title: 'Overdue Drop Pull',
-      description: 'BJ-03 drop scheduled 2 hours ago',
-      time: '14:30',
-      severity: 'high' as const,
-    },
-    {
-      id: '2',
-      type: 'transaction' as const,
-      title: 'High-Value Transaction',
-      description: 'BJ-01 • $5,000 buy-in flagged',
-      time: '15:45',
-      severity: 'medium' as const,
-    },
-    {
-      id: '3',
-      type: 'compliance' as const,
-      title: 'Compliance Warning',
-      description: 'CTR threshold approaching on Table 7',
-      time: '16:02',
-      severity: 'low' as const,
-    },
-  ];
+function TabSkeleton() {
+  return (
+    <div className="space-y-2 px-3 pt-3">
+      {[1, 2, 3].map((i) => (
+        <Skeleton key={i} className="h-16 w-full rounded-lg" />
+      ))}
+    </div>
+  );
+}
+
+// === Alerts Tab ===
+
+function AlertsTab({
+  alerts,
+  isLoading,
+}: {
+  alerts: AlertItem[];
+  isLoading: boolean;
+}) {
+  if (isLoading) return <TabSkeleton />;
 
   return (
     <ScrollArea className="h-full">
       <div className="space-y-1 px-3 pb-3">
-        <SectionLabel>Pending Alerts</SectionLabel>
-        {mockAlerts.map((alert) => (
-          <AlertCard key={alert.id} {...alert} />
-        ))}
+        <SectionLabel>
+          {alerts.length > 0 ? 'Pending Alerts' : 'Alerts'}
+        </SectionLabel>
+        {alerts.length === 0 ? (
+          <EmptyState message="No active alerts this shift." />
+        ) : (
+          alerts.map((alert) => <AlertCard key={alert.id} alert={alert} />)
+        )}
       </div>
     </ScrollArea>
   );
 }
 
-function AlertCard({
-  type,
-  title,
-  description,
-  time,
-  severity,
-}: {
-  type: 'drop' | 'transaction' | 'compliance';
-  title: string;
-  description: string;
-  time: string;
-  severity: 'high' | 'medium' | 'low';
-}) {
+function AlertCard({ alert }: { alert: AlertItem }) {
   const icons = {
-    drop: Clock,
-    transaction: DollarSign,
-    compliance: ShieldAlert,
+    spike: DollarSign,
+    snapshot: Clock,
   };
 
   const severityStyles = {
@@ -250,8 +267,8 @@ function AlertCard({
     },
   };
 
-  const Icon = icons[type];
-  const styles = severityStyles[severity];
+  const Icon = icons[alert.type];
+  const styles = severityStyles[alert.severity];
 
   return (
     <button
@@ -286,14 +303,16 @@ function AlertCard({
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <span className={cn('text-xs font-medium', styles.text)}>
-            {title}
+            {alert.title}
           </span>
-          <span className="font-mono text-[10px] tabular-nums text-muted-foreground/60">
-            {time}
-          </span>
+          {alert.time && (
+            <span className="font-mono text-[10px] tabular-nums text-muted-foreground/60">
+              {formatTime(alert.time)}
+            </span>
+          )}
         </div>
         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-          {description}
+          {alert.description}
         </p>
       </div>
 
@@ -308,61 +327,43 @@ function AlertCard({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// APPROVALS TAB
-// ─────────────────────────────────────────────────────────────────────────────
+// === Approvals Tab ===
 
-function ApprovalsTab() {
-  const mockApprovals = [
-    {
-      id: '1',
-      type: 'fill' as const,
-      title: 'Fill Slip Approval',
-      description: 'BJ-05 • $2,500 chip fill requested',
-      requester: 'J. Martinez',
-      time: '15:22',
-    },
-    {
-      id: '2',
-      type: 'buyin' as const,
-      title: 'High-Value Buy-In',
-      description: 'Roulette 2 • $10,000 cash transaction',
-      requester: 'S. Chen',
-      time: '16:08',
-    },
-  ];
+function ApprovalsTab({
+  approvals,
+  isLoading,
+}: {
+  approvals: ApprovalItem[];
+  isLoading: boolean;
+}) {
+  if (isLoading) return <TabSkeleton />;
 
   return (
     <ScrollArea className="h-full">
       <div className="space-y-1 px-3 pb-3">
-        <SectionLabel>Awaiting Approval</SectionLabel>
-        {mockApprovals.map((approval) => (
-          <ApprovalCard key={approval.id} {...approval} />
-        ))}
+        <SectionLabel>
+          {approvals.length > 0 ? 'Awaiting Confirmation' : 'Approvals'}
+        </SectionLabel>
+        {approvals.length === 0 ? (
+          <EmptyState message="No pending fills or credits." />
+        ) : (
+          approvals.map((item) => (
+            <ApprovalCard key={item.id} approval={item} />
+          ))
+        )}
       </div>
     </ScrollArea>
   );
 }
 
-function ApprovalCard({
-  type,
-  title,
-  description,
-  requester,
-  time,
-}: {
-  type: 'fill' | 'buyin';
-  title: string;
-  description: string;
-  requester: string;
-  time: string;
-}) {
+function ApprovalCard({ approval }: { approval: ApprovalItem }) {
   const icons = {
     fill: TableProperties,
-    buyin: DollarSign,
+    credit: DollarSign,
   };
 
-  const Icon = icons[type];
+  const Icon = icons[approval.type];
+  const label = approval.type === 'fill' ? 'Chip Fill' : 'Chip Credit';
 
   return (
     <button
@@ -379,18 +380,19 @@ function ApprovalCard({
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-medium text-foreground">{title}</span>
+          <span className="text-xs font-medium text-foreground">{label}</span>
           <span className="font-mono text-[10px] tabular-nums text-muted-foreground/60">
-            {time}
+            {formatTime(approval.createdAt)}
           </span>
         </div>
         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-          {description}
+          {approval.tableName} &bull; {formatDollars(approval.amountCents)}{' '}
+          {approval.type === 'fill' ? 'fill' : 'credit'} requested
         </p>
         <div className="mt-1.5 flex items-center gap-1.5">
           <Users className="h-3 w-3 text-muted-foreground/50" />
           <span className="text-[10px] text-muted-foreground/70">
-            {requester}
+            Pending cashier confirmation
           </span>
         </div>
       </div>
@@ -411,36 +413,35 @@ function ApprovalCard({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FLAGS TAB
-// ─────────────────────────────────────────────────────────────────────────────
+// === Flags Tab ===
 
-function FlagsTab() {
-  const mockFlags = [
-    {
-      id: '1',
-      type: 'open_slips' as const,
-      title: 'Open Slips on Closed Table',
-      description: 'BJ-02 has 2 unresolved rating slips',
-      count: 2,
-      time: '14:00',
-    },
-  ];
+function FlagsTab({
+  flags,
+  isLoading,
+}: {
+  flags: FlagItem[];
+  isLoading: boolean;
+}) {
+  if (isLoading) return <TabSkeleton />;
 
   return (
     <ScrollArea className="h-full">
       <div className="space-y-1 px-3 pb-3">
-        <SectionLabel>Flagged Items</SectionLabel>
-        {mockFlags.map((flag) => (
-          <FlagCard key={flag.id} {...flag} />
-        ))}
+        <SectionLabel>
+          {flags.length > 0 ? 'Flagged Items' : 'Flags'}
+        </SectionLabel>
+        {flags.length === 0 ? (
+          <EmptyState message="No flagged tables this shift." />
+        ) : (
+          flags.map((flag) => <FlagCard key={flag.id} flag={flag} />)
+        )}
 
-        {/* Empty state hint */}
-        {mockFlags.length === 1 && (
+        {flags.length > 0 && (
           <div className="mt-4 rounded-lg border border-dashed border-border/40 bg-muted/20 p-4 text-center">
-            <AlertTriangle className="mx-auto h-5 w-5 text-muted-foreground/40" />
+            <ShieldAlert className="mx-auto h-5 w-5 text-muted-foreground/40" />
             <p className="mt-2 text-[11px] text-muted-foreground/60">
-              Flags are auto-generated when tables have unresolved issues.
+              Flags are auto-generated from shift metrics and telemetry
+              coverage.
             </p>
           </div>
         )}
@@ -449,18 +450,7 @@ function FlagsTab() {
   );
 }
 
-function FlagCard({
-  title,
-  description,
-  count,
-  time,
-}: {
-  type: 'open_slips' | 'attention';
-  title: string;
-  description: string;
-  count: number;
-  time: string;
-}) {
+function FlagCard({ flag }: { flag: FlagItem }) {
   return (
     <button
       className={cn(
@@ -476,23 +466,14 @@ function FlagCard({
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-medium text-rose-400">{title}</span>
-          <span className="font-mono text-[10px] tabular-nums text-muted-foreground/60">
-            {time}
+          <span className="text-xs font-medium text-rose-400">
+            {flag.title}
           </span>
         </div>
         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-          {description}
+          {flag.description}
         </p>
       </div>
-
-      {/* Count badge */}
-      <Badge
-        variant="secondary"
-        className="border border-rose-500/30 bg-rose-500/20 px-1.5 py-0 text-[10px] font-bold text-rose-400"
-      >
-        {count}
-      </Badge>
 
       {/* Hover accent */}
       <div className="absolute bottom-0 left-0 top-0 w-0.5 rounded-full bg-rose-500 opacity-0 transition-opacity group-hover:opacity-100" />

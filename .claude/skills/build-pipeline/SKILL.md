@@ -24,6 +24,8 @@ description: Orchestrate specification-to-production implementation with phased 
 | PRD file path | `docs/10-prd/PRD-022-feature.md` | Direct path |
 | EXEC-SPEC ID | `EXEC-003` | `docs/21-exec-spec/EXEC-003*.md` |
 | EXEC-SPEC path | `docs/21-exec-spec/EXEC-003-csv-import.md` | Direct path |
+| FIB-H (prose) | `docs/issues/gaps/.../FIB-XXX.md` | Direct path — human scope authority |
+| FIB-S (structured) | `docs/issues/gaps/.../FIB-XXX.structured.json` | Direct path — machine traceability authority |
 | Investigation doc | `docs/issues/perf/INVESTIGATION.md` | Direct path |
 | Issue spec | `docs/issues/ISSUE-XXX.md` | Direct path |
 | Any spec path | `docs/20-architecture/specs/ADR-029/EXEC-SPEC.md` | Direct path |
@@ -40,7 +42,8 @@ description: Orchestrate specification-to-production implementation with phased 
 | `references/checkpoint-format.md` | Checkpoint schema and state management |
 | `references/critic-checklist.md` | EXECUTION-SPEC quality validation criteria |
 | `references/da-team-protocol.md` | **DA team protocol: prompt templates, two-phase review, synthesis-lead** |
-| `scripts/validate-execution-spec.py` | Validate EXECUTION-SPEC (structural + governance) |
+| `references/intake-traceability-protocol.md` | **FIB-S enforcement: capability inventory, anti-invention audit, open-question handling** |
+| `scripts/validate-execution-spec.py` | Validate EXECUTION-SPEC (structural + governance + intake traceability) |
 | `devils-advocate` skill | Adversarial EXEC-SPEC review (Stage 4) |
 
 ---
@@ -56,6 +59,7 @@ If argument == "--resume":
 If argument matches PRD-XXX:
   -> resolve to docs/10-prd/PRD-XXX*.md
   -> run GOV-010 prerequisite check
+  -> resolve FIB chain (see Intake Authority Chain)
 
 If argument matches EXEC-###:
   -> resolve to docs/21-exec-spec/EXEC-###*.md
@@ -64,7 +68,112 @@ If argument matches EXEC-###:
 If argument is a file path:
   -> use directly
   -> run GOV-010 check if it's a PRD
+  -> resolve FIB chain if PRD (see Intake Authority Chain)
 ```
+
+---
+
+## Intake Authority Chain
+
+When a PRD references a Feature Intake Brief (FIB), the pipeline enforces a strict authority chain. The FIB defines what may exist, the PRD constrains requirements to that boundary, and the EXEC-SPEC constrains implementation to all three.
+
+```
+FIB-H (prose)         → human scope authority (frozen after approval)
+FIB-S (structured)    → machine-readable scope/completeness authority
+PRD                   → product requirements constrained by both
+EXEC-SPEC             → implementation plan constrained by all three
+```
+
+### FIB Resolution
+
+When a PRD is the build input, check its frontmatter for `intake_ref` and `structured_ref`:
+
+```yaml
+# PRD frontmatter fields that link to FIB
+intake_ref: docs/issues/gaps/.../FIB-XXX.md          # FIB-H
+structured_ref: docs/issues/gaps/.../FIB-XXX.structured.json  # FIB-S
+```
+
+**Admission rules:**
+
+- **New PRDs** (created after this policy): `structured_ref` is **required**. If missing, the pipeline **fails admission** with:
+  ```
+  [FIB-S MISSING] PRD-{ID} has intake_ref but no structured_ref.
+  ─────────────────────────────────────────────────────────────────
+  New PRDs must reference a FIB-S structured artifact for intake
+  traceability. Generate FIB-S from the intake brief, then add
+  structured_ref to the PRD frontmatter.
+  ─────────────────────────────────────────────────────────────────
+  ```
+- **Legacy PRDs** (no `intake_ref` at all): warn and proceed — no FIB chain, PRD-only authority.
+- **Transitional PRDs** (`intake_ref` exists, `structured_ref` missing): warn with recommendation to generate FIB-S before building.
+
+If both are present:
+1. Verify both files exist
+2. Load FIB-S into pipeline context — this is the **traceability authority** for EXEC generation
+3. Record in checkpoint: `fib_h_ref`, `fib_s_ref`, `fib_s_loaded: true`
+
+### Anti-Invention Policy
+
+When FIB-S is present, the following constraints bind every downstream stage. The reason this matters most at EXEC stage: implementation plans are where "small" conveniences get introduced — an extra modal, a fallback endpoint, a silent DTO expansion, a helpful admin override, a temporary bypass. Each looks reasonable individually. Collectively they erode the intake boundary. The FIB-S is the machine-readable fence that catches these.
+
+**EXEC-SPEC must not:**
+- Add new operator-visible surfaces not in `zachman.where.surfaces`
+- Add new public API endpoints not in `zachman.where.surfaces`
+- Add new workflow side-paths not in `containment.loop`
+- Add new operator outcomes not in `traceability.outcomes`
+- Add new capabilities not in `zachman.how.capabilities`
+- Add new domain DTOs or persisted shapes that alter scope semantics beyond what `zachman.what.entities` declares
+- Relax hard rules from `zachman.why.business_rules` where `severity: "hard"`
+- Relax invariants from `zachman.why.invariants`
+
+**EXEC-SPEC may:**
+- Introduce internal helper types, adapter DTOs, or mapper utilities that do not change capability, surface, or workflow scope
+- Refine implementation details (file paths, executor selection, phase ordering)
+- Add standard infrastructure workstreams (tests, migrations, type generation)
+- Resolve open questions **if explicitly recorded as decisions** (see Open-Question Resolution below)
+
+### Workstream Traceability Requirement
+
+Every EXEC workstream must trace to at least one of:
+- `zachman.how.capabilities` — which capability does this workstream implement?
+- `zachman.why.business_rules` — which rule does this workstream enforce?
+- `traceability.outcomes` — which outcome does this workstream serve?
+- `containment.loop` — which loop step(s) does this workstream realize?
+
+This turns the policy from "don't invent" into "prove why this work item exists." A workstream that cannot cite at least one FIB-S element is either:
+1. A standard infrastructure workstream (tests, type generation, migrations) — acceptable, cite `infrastructure` as the trace
+2. An invention that the intake does not authorize — flag for review
+
+The EXEC-SPEC YAML should include a `traces_to` field per workstream when FIB-S is present:
+```yaml
+WS1:
+  name: End Visit UI Wiring
+  traces_to: [CAP:end_visit_from_rating_slip_modal, OUT-1, RULE-1, END-2, END-3]
+  # ...
+```
+
+### Open-Question Resolution Protocol
+
+Open questions from `governance.open_questions_allowed_at_scaffold` may be resolved at EXEC stage, but only with explicit decision records. Each resolution must include:
+
+```yaml
+# Illustrative format only — the example decision content is not a
+# recommended domain ruling. Actual decisions require domain review.
+decisions:
+  - decision_id: DEC-001
+    resolves_open_question: "OQ-2"
+    decision_statement: "The pending-continuation toast dismisses on Escape key press and after 30 seconds of inactivity, using the existing toast auto-dismiss pattern."
+    rationale: "Existing toast infrastructure already supports timeout and keyboard dismiss. No new UI component is needed, satisfying RULE-7."
+    impact_on_scope: none  # none | amendment_required
+```
+
+- `impact_on_scope: none` — the decision stays within intake boundaries, no amendment needed
+- `impact_on_scope: amendment_required` — the decision expands scope; pipeline **blocks** until the FIB is amended and the PRD updated
+
+Open questions that are **not** resolved at EXEC stage must appear in the EXEC-SPEC's risks section as carried-forward items. They must not silently disappear into hand-wavy task descriptions.
+
+See `references/intake-traceability-protocol.md` for the full enforcement protocol.
 
 ---
 
@@ -122,9 +231,17 @@ Before any generation, load context files for validation:
 references/architecture.context.md  # SRM ownership, DTO patterns, bounded context rules
 references/governance.context.md    # Service template, migration standards, test locations
 references/quality.context.md       # Test strategy, coverage targets, quality gates
+FIB-S (if resolved)                 # Intake traceability authority (capabilities, rules, surfaces, open questions)
 ```
 
 These files contain deterministic rules that MUST be validated against during spec generation.
+
+When FIB-S is loaded, the EXEC generator uses it for:
+- **Capability inventory** — workstreams map to declared capabilities, not invented ones
+- **Rule and invariant enforcement** — hard constraints stay visible at implementation planning time
+- **Surface and touchpoint mapping** — EXEC does not quietly add new surfaces, APIs, or side-paths
+- **Open-question handling** — unresolved items are either explicitly resolved as decisions or carried forward visibly
+- **Traceability checks** — each work item traces back to capability, rule, outcome, and loop step
 
 ### Stage 1: Architectural Scaffolding
 
@@ -149,7 +266,30 @@ These files contain deterministic rules that MUST be validated against during sp
 
 6. Merge expert refinements into final EXECUTION-SPEC
 
-7. **Write-Path Classification (E2E Mandate):**
+7. **Intake Traceability Audit (FIB-S gate, when loaded):**
+
+   If FIB-S was loaded in Stage 0, run the traceability audit before proceeding:
+
+   a. **Workstream coverage** — every workstream has a `traces_to` field citing at least one FIB-S element (capability, rule, outcome, or loop step). Infrastructure workstreams cite `infrastructure`.
+   b. **Capability coverage** — every capability in `zachman.how.capabilities` is referenced by at least one workstream. Report uncovered capabilities.
+   c. **Anti-invention scan** — no workstream introduces operator-visible surfaces, public API endpoints, or workflow side-paths absent from `zachman.where.surfaces` or `containment.loop`.
+   d. **Open-question disposition** — every item in `governance.open_questions_allowed_at_scaffold` is either resolved via a `decisions` record or carried forward in the EXEC-SPEC risks section. None may be silently absent.
+   e. **Hard rule visibility** — every `severity: "hard"` rule in `zachman.why.business_rules` appears in at least one workstream's acceptance criteria or constraints.
+
+   ```
+   [INTAKE TRACEABILITY] EXEC-{ID} vs FIB-S {FIB-ID}
+   ─────────────────────────────────────────────────────
+   Workstream coverage:    {covered}/{total} capabilities
+   Anti-invention:         {clean|N violations}
+   Open questions:         {resolved}/{carried}/{missing}
+   Hard rule visibility:   {covered}/{total} rules
+   ─────────────────────────────────────────────────────
+   {If violations: list each with workstream ID and FIB-S element}
+   ```
+
+   Violations block progression to DA review. The EXEC must be revised to either remove the invention or request an intake amendment.
+
+8. **Write-Path Classification (E2E Mandate):**
 
    Scan the PRD and assembled EXEC-SPEC for write-path indicators. A PRD "ships writes"
    if any workstream involves `INSERT`, `UPDATE`, `DELETE`, server actions (`withServerAction`),

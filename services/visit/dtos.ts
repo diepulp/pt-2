@@ -397,3 +397,31 @@ export interface StartFromPreviousResponse {
   /** Visit start timestamp */
   started_at: string;
 }
+
+// === PRD-063: End Visit Orchestration DTOs ===
+
+/**
+ * Result of the End Visit compound workflow.
+ * Discriminated union: success (visit closed) vs failure (slip close failed).
+ *
+ * RULE-2: Visit stays open if any slip close fails (fail-fast).
+ *
+ * @see PRD-063 Visit Lifecycle Operator Workflow
+ */
+export type EndVisitResult =
+  | {
+      ok: true;
+      /** The closed visit */
+      visit: VisitDTO;
+      /** Number of slips that were closed during this operation */
+      closedSlipCount: number;
+    }
+  | {
+      ok: false;
+      /** The slip ID that failed to close */
+      failedSlipId: string;
+      /** Error message from the failed close */
+      error: string;
+      /** Number of slips successfully closed before the failure */
+      closedSlipCount: number;
+    };

@@ -13,18 +13,18 @@ import type { ClosedSlipForGamingDayDTO } from '@/services/rating-slip/dtos';
 interface ClosedSessionsPanelProps {
   casinoId: string;
   gamingDay: string | null;
-  onStartFromPrevious: (slipId: string) => void;
+  onStartFromPrevious: (slip: ClosedSlipForGamingDayDTO) => void;
 }
 
 /**
- * Closed Sessions Panel - "Start From Previous" functionality
+ * Closed Slips Panel - "Start From Previous" functionality
  * Displays closed terminal rating slips for the current gaming day.
  * Allows operators to start a new visit from any closed session.
  *
  * ISSUE-SFP-001 Fix: Uses infinite query with keyset pagination.
  * Only displays terminal slips (excludes intermediate move slips).
  *
- * @see PRD-020 Closed Sessions Panel
+ * @see PRD-020 Closed Slips Panel
  * @see EXEC-SPEC-START-FROM-PREVIOUS-FIX.md
  */
 export function ClosedSessionsPanel({
@@ -81,7 +81,7 @@ export function ClosedSessionsPanel({
             </div>
             <div>
               <h2 className="text-lg font-semibold tracking-tight">
-                Closed Sessions
+                Closed Slips
               </h2>
               <p className="text-sm text-muted-foreground">Loading...</p>
             </div>
@@ -105,7 +105,7 @@ export function ClosedSessionsPanel({
     return (
       <div className="flex flex-col h-full items-center justify-center p-8">
         <div className="text-sm font-medium text-destructive">
-          Failed to load closed sessions
+          Failed to load closed slips
         </div>
         <p className="text-xs text-muted-foreground mt-1">
           {error instanceof Error ? error.message : 'Unknown error'}
@@ -124,7 +124,7 @@ export function ClosedSessionsPanel({
           </div>
           <div>
             <h2 className="text-lg font-semibold tracking-tight">
-              Closed Sessions
+              Closed Slips
             </h2>
             <p className="text-sm text-muted-foreground">
               Gaming Day: {gamingDay ?? 'Loading...'}
@@ -132,13 +132,13 @@ export function ClosedSessionsPanel({
           </div>
         </div>
 
-        {/* Session count badge */}
+        {/* Slip count badge */}
         <Badge variant="secondary" className="text-xs font-mono">
-          {closedSlips.length} session{closedSlips.length !== 1 ? 's' : ''}
+          {closedSlips.length} slip{closedSlips.length !== 1 ? 's' : ''}
         </Badge>
       </div>
 
-      {/* Session List */}
+      {/* Slip List */}
       <ScrollArea className="flex-1">
         <div className="p-4">
           {closedSlips.length > 0 ? (
@@ -147,7 +147,7 @@ export function ClosedSessionsPanel({
                 <ClosedSlipRow
                   key={slip.id}
                   slip={slip}
-                  onStartFromPrevious={() => onStartFromPrevious(slip.id)}
+                  onStartFromPrevious={() => onStartFromPrevious(slip)}
                   formatDuration={formatDuration}
                   formatTime={formatTime}
                   formatDollars={formatDollarsLocal}
@@ -182,10 +182,10 @@ export function ClosedSessionsPanel({
                 <Clock className="h-8 w-8 text-muted-foreground/50" />
               </div>
               <p className="text-sm font-medium text-muted-foreground">
-                No closed sessions today
+                No closed slips today
               </p>
               <p className="text-xs text-muted-foreground/60 mt-1">
-                Closed sessions will appear here once players check out
+                Closed slips will appear here once players check out
               </p>
             </div>
           )}
@@ -200,7 +200,7 @@ export function ClosedSessionsPanel({
               <div className="text-lg font-mono font-bold text-foreground">
                 {closedSlips.length}
               </div>
-              <div className="text-xs text-muted-foreground/60">Sessions</div>
+              <div className="text-xs text-muted-foreground/60">Slips</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-mono font-bold text-emerald-400">

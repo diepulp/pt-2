@@ -10,6 +10,8 @@
  */
 
 export { useActiveVisit } from './use-active-visit';
+export { useEndVisit } from './use-end-visit';
+export { useStartFromPreviousFlow } from './use-start-from-previous-flow';
 export { useCloseVisit, useStartVisit } from './use-visit-mutations';
 export { useVisit, useVisits } from './use-visits';
 
@@ -17,6 +19,7 @@ export { useVisit, useVisits } from './use-visits';
 export type {
   ActiveVisitDTO,
   CloseVisitDTO,
+  EndVisitResult,
   VisitDTO,
   VisitListFilters,
   VisitWithPlayerDTO,

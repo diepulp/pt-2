@@ -111,6 +111,24 @@ BEGIN
   END IF;
 
   -- =====================================================================
+  -- PRD-057 + PRD-059: SESSION-GATED SEATING
+  -- Enforce invariant: no player seated without an active table session.
+  -- OPEN sessions excluded (no attestation — gameplay forbidden).
+  -- RUNDOWN allowed per ADR-028 D6.2.1 (play continues during rundown).
+  -- ADR-018: casino_id filter required in SECURITY DEFINER.
+  -- =====================================================================
+  IF NOT EXISTS (
+    SELECT 1 FROM table_session
+    WHERE gaming_table_id = p_table_id
+      AND casino_id = v_casino_id
+      AND status IN ('ACTIVE', 'RUNDOWN')
+  ) THEN
+    RAISE EXCEPTION 'NO_ACTIVE_SESSION'
+      USING ERRCODE = 'P0007',
+            HINT = 'Table has no active session. Open and activate a session before seating players.';
+  END IF;
+
+  -- =====================================================================
   -- BUILD POLICY_SNAPSHOT (ISSUE-752833A6, ADR-019 D2)
   -- =====================================================================
   SELECT gs.house_edge, gs.decisions_per_hour, gs.points_conversion_rate, gs.point_multiplier
@@ -180,6 +198,7 @@ COMMENT ON FUNCTION rpc_start_rating_slip(UUID, UUID, TEXT, JSONB) IS
   'ADR-019 D2: policy_snapshot.loyalty from game_settings. '
   'ADR-014: accrual_kind from visit_kind. '
   'GAP-EXCL-ENFORCE-001: exclusion guard (hard_block rejected). '
+  'PRD-057+059: session-gated seating — rejects NO_ACTIVE_SESSION (P0007). '
   'v2: adds rounding_policy=floor to snapshot (pilot decision D3).';
 
 REVOKE ALL ON FUNCTION rpc_start_rating_slip(UUID, UUID, TEXT, JSONB) FROM PUBLIC, anon;
@@ -426,6 +445,23 @@ BEGIN
   END IF;
 
   -- =======================================================================
+  -- PRD-057 + PRD-059: SESSION-GATED MOVE
+  -- Destination table must have an ACTIVE or RUNDOWN session.
+  -- OPEN sessions excluded (no attestation — gameplay forbidden).
+  -- ADR-018: casino_id filter required in SECURITY DEFINER.
+  -- =======================================================================
+  IF NOT EXISTS (
+    SELECT 1 FROM table_session
+    WHERE gaming_table_id = p_new_table_id
+      AND casino_id = v_casino_id
+      AND status IN ('ACTIVE', 'RUNDOWN')
+  ) THEN
+    RAISE EXCEPTION 'NO_ACTIVE_SESSION'
+      USING ERRCODE = 'P0007',
+            HINT = 'Destination table has no active session. Open and activate a session before moving players.';
+  END IF;
+
+  -- =======================================================================
   -- 2. VALIDATE DESTINATION SEAT (Range validation)
   -- =======================================================================
   IF p_new_seat_number IS NOT NULL THEN
@@ -636,7 +672,8 @@ $$;
 
 COMMENT ON FUNCTION rpc_move_player(uuid, uuid, text, numeric) IS
   'ADR-024 P2 compliant. ADR-039 D3: materializes computed_theo_cents. '
-  'GAP-EXCL-ENFORCE-001: exclusion guard (hard_block rejected).';
+  'GAP-EXCL-ENFORCE-001: exclusion guard (hard_block rejected). '
+  'PRD-057+059: session-gated move — rejects NO_ACTIVE_SESSION (P0007) on destination.';
 
 REVOKE ALL ON FUNCTION public.rpc_move_player(uuid, uuid, text, numeric) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.rpc_move_player(uuid, uuid, text, numeric) TO authenticated;

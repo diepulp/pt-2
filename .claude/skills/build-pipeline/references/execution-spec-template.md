@@ -20,6 +20,10 @@ prd_title: "Service/Feature Name"
 service: PrimaryServiceName
 mvp_phase: 1  # 0=Horizontal, 1=Core, 2=Session, 3=Rewards
 
+# Intake Authority Chain (required for new PRDs with FIB-S)
+fib_h: docs/issues/gaps/.../FIB-XXX.md                    # human scope authority
+fib_s: docs/issues/gaps/.../FIB-XXX.structured.json        # machine traceability authority
+
 # Workstream Definitions
 # Executor Types: "skill" (Skill tool) or "task-agent" (Task tool with subagent_type)
 workstreams:
@@ -28,6 +32,7 @@ workstreams:
     description: Migration, RLS policies, type generation
     executor: backend-service-builder  # Skill name
     executor_type: skill
+    traces_to: [CAP:capability_name, OUT-N, RULE-N]  # FIB-S traceability (required when fib_s present)
     depends_on: []
     outputs:
       - supabase/migrations/YYYYMMDDHHMMSS_description.sql
@@ -129,6 +134,16 @@ external_dependencies:
   - prd: PRD-000
     service: CasinoService
     required_for: "Temporal authority (gaming day computation)"
+
+# Open-Question Decisions (when FIB-S present)
+# Resolved questions from governance.open_questions_allowed_at_scaffold.
+# Format is illustrative — actual decisions require domain review.
+decisions: []
+  # - decision_id: DEC-001
+  #   resolves_open_question: "OQ-1"
+  #   decision_statement: "..."
+  #   rationale: "..."
+  #   impact_on_scope: none  # none | amendment_required
 
 # Risks and Mitigations
 risks:
@@ -249,6 +264,9 @@ Reference relevant SRM sections, ADRs, or architectural decisions.
 | `execution_phases` | array | Ordered list of execution phases |
 | `gates` | object | Validation gate definitions |
 | `external_dependencies` | array | Dependencies on other PRDs |
+| `fib_h` | string | Path to FIB-H prose intake (required for new PRDs with FIB) |
+| `fib_s` | string | Path to FIB-S structured JSON intake (required for new PRDs with FIB) |
+| `decisions` | array | Open-question resolutions (see Intake Authority Chain) |
 | `risks` | array | Identified risks and mitigations |
 
 ### Workstream Fields
@@ -262,6 +280,7 @@ Reference relevant SRM sections, ADRs, or architectural decisions.
 | `depends_on` | array | Workstream IDs that must complete first |
 | `outputs` | array | Expected file outputs (glob patterns OK) |
 | `gate` | string | Validation gate to run after completion |
+| `traces_to` | array | FIB-S traceability refs (CAP:name, OUT-N, RULE-N, loop step IDs, or `infrastructure`) |
 | `estimated_complexity` | string | low/medium/high |
 
 ### Execution Phase Fields

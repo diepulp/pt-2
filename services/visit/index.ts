@@ -30,11 +30,13 @@ import type {
   ActiveVisitDTO,
   CloseVisitDTO,
   CreateGhostGamingVisitDTO,
+  EndVisitResult,
   StartVisitResultDTO,
   VisitDTO,
   VisitListFilters,
   VisitWithPlayerDTO,
 } from './dtos';
+import { endVisit as endVisitOrchestration } from './end-visit';
 
 // Re-export DTOs, keys, and HTTP fetchers for consumers
 export * from './dtos';
@@ -134,6 +136,17 @@ export interface VisitServiceInterface {
    */
   convertRewardToGaming(visitId: string): Promise<VisitDTO>;
 
+  // === PRD-063: End Visit Orchestration ===
+
+  /**
+   * End a visit by closing all open/paused rating slips then closing the visit.
+   * Fail-fast: visit stays open if any slip close fails (RULE-2).
+   *
+   * @param visitId - Visit UUID to end
+   * @see PRD-063 Visit Lifecycle Operator Workflow
+   */
+  endVisit(visitId: string): Promise<EndVisitResult>;
+
   // === PRD-017: Visit Continuation (WS7) ===
 
   /**
@@ -201,6 +214,9 @@ export function createVisitService(
     startVisit: (playerId, casinoId) =>
       crud.startVisit(supabase, playerId, casinoId),
     closeVisit: (visitId, input) => crud.closeVisit(supabase, visitId, input),
+
+    // PRD-063: End Visit orchestration
+    endVisit: (visitId) => endVisitOrchestration(supabase, visitId),
 
     // Typed visit creation (EXEC-VSE-001 WS-3)
     createRewardVisit: (playerId, casinoId) =>

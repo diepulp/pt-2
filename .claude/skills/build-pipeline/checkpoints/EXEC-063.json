@@ -1,0 +1,37 @@
+{
+  "id": "EXEC-063",
+  "prd": "PRD-063",
+  "prd_title": "Visit Lifecycle Operator Workflow",
+  "spec_path": "docs/21-exec-spec/EXEC-063-visit-lifecycle-operator-workflow.md",
+  "status": "complete",
+  "created_at": "2026-04-07T00:00:00Z",
+  "completed_at": "2026-04-07T23:59:59Z",
+  "gov010_check": "passed",
+  "fib_h_ref": "docs/issues/gaps/visit-lifecycle-gap/FIB-VISIT-LIFECYCLE.md",
+  "fib_s_ref": "docs/issues/gaps/visit-lifecycle-gap/FIB-VISIT-LIFECYCLE.structured.json",
+  "fib_s_loaded": true,
+  "write_path_classification": "detected",
+  "intake_traceability": {
+    "capability_coverage": "7/7",
+    "anti_invention": "clean",
+    "open_questions": "3 resolved / 0 carried / 0 missing",
+    "hard_rule_visibility": "7/7"
+  },
+  "decisions": ["DEC-001", "DEC-002", "DEC-003"],
+  "current_phase": 3,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS_E2E"],
+  "pending_workstreams": [],
+  "gates_passed": {
+    "phase_1": { "type-check": "pass" },
+    "phase_2": { "type-check": "pass", "lint": "pass" },
+    "phase_3": { "test-pass": "pass" },
+    "dod": { "type-check": "pass", "lint": "pass", "test-pass": "pass" }
+  },
+  "adversarial_review": {
+    "magnitude_score": 8,
+    "magnitude_tier": "self_certified",
+    "tier_override": "user",
+    "tier_override_reason": "User skipped DA review — wiring/integration PRD with no new migrations, RLS, or RPCs",
+    "verdict": "skipped"
+  }
+}

@@ -1,0 +1,656 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-VISIT-LIFECYCLE v0.2",
+    "status": "draft",
+    "feature_id": "FIB-VISIT-LIFECYCLE",
+    "feature_name": "Visit Lifecycle Operator Workflow",
+    "priority": "P1",
+    "decision_horizon": "post exclusion enforcement; pilot-scoped",
+    "owner": "diepulp",
+    "opened_on": "2026-04-07"
+  },
+  "intent": {
+    "operator_problem": "Pit bosses cannot formally end a patron visit during the gaming day. Visits persist until rollover or exclusion auto-close, inflating active-player counts, leaving an open-ended compliance record, and blocking coherent session continuation. Separately, the already-built Start From Previous workflow dead-ends in production because closed slip clicks open a read-only slip viewer instead of the continuation modal. The Closed Sessions panel also mislabels closed rating slips as sessions, confusing slip-level and visit-level lifecycle objects.",
+    "pilot_fit": "This feature belongs in the current slice because exclusion enforcement and session-gated hardening made the visit lifecycle gap visible. The underlying hooks, APIs, RPCs, and modal components largely exist, but End Visit is not purely wiring; it is a compound operator workflow requiring explicit ordering, failure handling, and compliance-safe outcomes. Start From Previous wiring repair and terminology cleanup are included as adjacent pilot repairs so the resulting closed state is not incoherent.",
+    "success_outcomes": [
+      "Pit boss can end a patron visit from the rating slip modal.",
+      "Ending a visit finalizes all open or paused slips through rpc_close_rating_slip rather than raw status mutation.",
+      "Visit is not marked closed if any required slip finalization fails.",
+      "No orphaned open slips remain after operator-initiated visit close.",
+      "Closed Slips panel is labeled with slip or segment terminology rather than session terminology.",
+      "Clicking a closed rated slip opens StartFromPreviousModal instead of the read-only rating slip viewer.",
+      "Start From Previous creates a new visit and a new rating slip; it never reopens a closed slip or visit.",
+      "Continuation eligibility rules are explicit rather than inferred."
+    ],
+    "explicit_exclusions": [
+      "SeatContextMenu integration",
+      "Visit-level grouping in the Closed Slips panel",
+      "Dedicated table or seat picker for Start From Previous",
+      "Changes to rpc_close_rating_slip behavior",
+      "Changes to gaming day rollover behavior",
+      "Loyalty accrual logic changes beyond invoking existing close behavior",
+      "Additional role-based authorization for End Visit in this pilot slice"
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Add End Visit to the seat right-click context menu",
+        "why_considered": "Natural ergonomic fit and previously identified as a candidate surface",
+        "why_rejected_now": "Production table layout does not currently render SeatContextMenu; wiring it would expand scope beyond the pilot slice"
+      },
+      {
+        "idea": "Close only the visit and leave slips as-is",
+        "why_considered": "Simpler implementation",
+        "why_rejected_now": "Would leave orphaned open slips and break compliance-safe close behavior"
+      },
+      {
+        "idea": "Use raw UPDATE to close slips instead of RPC calls",
+        "why_considered": "Single-step implementation shortcut",
+        "why_rejected_now": "Bypasses theo computation, pause handling, constraints, and audit logging"
+      },
+      {
+        "idea": "Build a dedicated table or seat picker for Start From Previous",
+        "why_considered": "Potentially cleaner UX",
+        "why_rejected_now": "Existing seat-click flow is sufficient for MVP and a new picker would introduce unnecessary UI and state complexity"
+      },
+      {
+        "idea": "Show visits instead of slips in the Closed Slips panel",
+        "why_considered": "Fixes semantic mismatch at the data layer",
+        "why_rejected_now": "Requires new API or RPC work; relabeling is the pilot-bounded correction"
+      },
+      {
+        "idea": "Reopen a closed slip instead of creating a new one",
+        "why_considered": "Simpler continuation model",
+        "why_rejected_now": "Violates temporal integrity and sealed audit history"
+      }
+    ]
+  },
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "visit",
+          "kind": "aggregate",
+          "description": "Patron floor-presence session for a gaming day; source of record for visit lifecycle",
+          "stateful": true,
+          "system_of_record": "Supabase/Postgres",
+          "fields_hint": [
+            "id",
+            "player_id",
+            "ended_at",
+            "visit_group_id",
+            "gaming_day"
+          ]
+        },
+        {
+          "name": "rating_slip",
+          "kind": "aggregate",
+          "description": "Table-segment telemetry record within a visit; closed through RPC-bound compliance logic",
+          "stateful": true,
+          "system_of_record": "Supabase/Postgres",
+          "fields_hint": [
+            "id",
+            "visit_id",
+            "status",
+            "policy_snapshot",
+            "computed_theo_cents",
+            "previous_slip_id"
+          ]
+        },
+        {
+          "name": "closed_slip_row",
+          "kind": "view",
+          "description": "Dashboard-facing row representing a closed rating slip shown in the Closed Slips panel",
+          "stateful": false,
+          "system_of_record": "API DTO",
+          "fields_hint": [
+            "slip_id",
+            "player_id",
+            "player_name",
+            "table_name",
+            "ended_at"
+          ]
+        },
+        {
+          "name": "recent_session_summary",
+          "kind": "view",
+          "description": "Visit-level aggregate returned for Start From Previous selection",
+          "stateful": false,
+          "system_of_record": "API DTO",
+          "fields_hint": [
+            "visit_id",
+            "ended_at",
+            "buy_in_total",
+            "cash_out_total",
+            "net_total",
+            "points",
+            "duration",
+            "segment_count"
+          ]
+        },
+        {
+          "name": "policy_snapshot",
+          "kind": "artifact",
+          "description": "Immutable close and accrual policy snapshot captured on slip creation and used for compliant close calculation",
+          "stateful": false,
+          "system_of_record": "rating_slip.policy_snapshot",
+          "fields_hint": [
+            "game_settings-derived fields",
+            "theo inputs",
+            "accrual inputs"
+          ]
+        },
+        {
+          "name": "pending_continuation_context",
+          "kind": "artifact",
+          "description": "Transient UI state storing the selected closed visit and awaiting empty-seat placement",
+          "stateful": true,
+          "system_of_record": "client UI state",
+          "fields_hint": [
+            "player_id",
+            "source_visit_id",
+            "selected_table_id",
+            "selected_seat_number"
+          ]
+        }
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "name": "end_visit_from_rating_slip_modal",
+          "verb": "close",
+          "description": "Operator initiates visit closure from the active rating slip modal",
+          "served_outcomes": ["OUT-1", "OUT-2", "OUT-3"],
+          "loop_steps": ["END-1", "END-2", "END-3", "END-4", "END-5", "END-6"]
+        },
+        {
+          "name": "finalize_open_slips_for_visit",
+          "verb": "close",
+          "description": "System finalizes all open or paused slips for a visit through rpc_close_rating_slip",
+          "served_outcomes": ["OUT-2", "OUT-3", "OUT-4"],
+          "loop_steps": ["END-4"]
+        },
+        {
+          "name": "close_visit_record",
+          "verb": "close",
+          "description": "System marks the visit ended only after required slip finalization succeeds",
+          "served_outcomes": ["OUT-1", "OUT-3"],
+          "loop_steps": ["END-5"]
+        },
+        {
+          "name": "relabel_closed_slips_surface",
+          "verb": "update",
+          "description": "System copy uses slip or segment terminology rather than session terminology for closed slip rows",
+          "served_outcomes": ["OUT-5"],
+          "loop_steps": ["SUP-1"]
+        },
+        {
+          "name": "open_start_from_previous_modal",
+          "verb": "read",
+          "description": "Closed rated slip click opens the continuation modal instead of the read-only slip viewer",
+          "served_outcomes": ["OUT-6"],
+          "loop_steps": ["SFP-1", "SFP-2", "SFP-3", "SFP-4"]
+        },
+        {
+          "name": "continue_visit_from_history",
+          "verb": "create",
+          "description": "System creates a new visit and a new rating slip from a selected historical closed visit",
+          "served_outcomes": ["OUT-7", "OUT-8"],
+          "loop_steps": ["SFP-5", "SFP-6", "SFP-7", "SFP-8"]
+        },
+        {
+          "name": "enforce_continuation_eligibility",
+          "verb": "read",
+          "description": "System applies explicit rules determining which recent visits may be resumed",
+          "served_outcomes": ["OUT-8"],
+          "loop_steps": ["SFP-3", "SFP-4"]
+        }
+      ]
+    },
+    "where": {
+      "primary_surface": "Pit terminal",
+      "surfaces": [
+        {
+          "name": "rating slip modal",
+          "kind": "modal"
+        },
+        {
+          "name": "Closed Slips panel",
+          "kind": "dashboard"
+        },
+        {
+          "name": "StartFromPreviousModal",
+          "kind": "modal"
+        },
+        {
+          "name": "PATCH /api/v1/visits/[visitId]/close",
+          "kind": "api"
+        },
+        {
+          "name": "POST /api/v1/visits/start-from-previous",
+          "kind": "api"
+        },
+        {
+          "name": "GET /api/v1/players/[playerId]/recent-sessions",
+          "kind": "api"
+        },
+        {
+          "name": "rpc_close_rating_slip",
+          "kind": "rpc"
+        },
+        {
+          "name": "rpc_start_rating_slip",
+          "kind": "rpc"
+        }
+      ],
+      "touchpoints": {
+        "inbound": [
+          {
+            "name": "occupied seat click",
+            "type": "user_action"
+          },
+          {
+            "name": "End Visit confirmation",
+            "type": "user_action"
+          },
+          {
+            "name": "closed rated slip click",
+            "type": "user_action"
+          },
+          {
+            "name": "closed visit selection in StartFromPreviousModal",
+            "type": "user_action"
+          },
+          {
+            "name": "empty seat click for placement",
+            "type": "user_action"
+          }
+        ],
+        "outbound": [
+          {
+            "name": "audit log write per closed slip",
+            "type": "event"
+          },
+          {
+            "name": "dashboard stats refresh",
+            "type": "event"
+          },
+          {
+            "name": "toast confirmation or failure message",
+            "type": "notification"
+          },
+          {
+            "name": "new rating slip modal open",
+            "type": "event"
+          }
+        ]
+      },
+      "bounded_contexts": [
+        "visit",
+        "rating_slip",
+        "dashboard UI",
+        "player session history"
+      ]
+    },
+    "who": {
+      "primary_actor": "pit_boss",
+      "actors": [
+        {
+          "role": "pit_boss",
+          "permissions": [
+            "open rating slip modal",
+            "perform End Visit",
+            "open Start From Previous flow",
+            "place continued player into empty seat"
+          ],
+          "restrictions": [
+            "Pilot accepts current modal-level authorization posture; no additional End Visit role gate is added in this slice"
+          ]
+        },
+        {
+          "role": "floor_supervisor",
+          "permissions": [
+            "same operational actions as pit_boss where current UI already allows them"
+          ],
+          "restrictions": [
+            "No new special override path is introduced by this feature"
+          ]
+        }
+      ],
+      "ownership": {
+        "business_owner": "diepulp",
+        "domain_owner": "Visit Management"
+      }
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "name": "patron_departs_floor",
+          "source": "user",
+          "preconditions": [
+            "visit exists",
+            "operator can open the active rating slip modal"
+          ]
+        },
+        {
+          "name": "operator_confirms_end_visit",
+          "source": "user",
+          "preconditions": [
+            "active or paused slip(s) exist for the visit",
+            "required close preconditions are satisfied or explicitly handled"
+          ]
+        },
+        {
+          "name": "returning_patron_requires_continuation",
+          "source": "user",
+          "preconditions": [
+            "closed slip row exists for player context entry",
+            "eligible recent closed visit exists or can be determined"
+          ]
+        },
+        {
+          "name": "operator_selects_empty_seat_for_continuation",
+          "source": "user",
+          "preconditions": [
+            "pending continuation context exists",
+            "destination seat is empty",
+            "exclusion gates pass"
+          ]
+        }
+      ],
+      "lifecycle_events": [
+        "visit_closed_by_operator",
+        "slip_closed_by_rpc",
+        "continuation_modal_opened",
+        "new_visit_created_from_history",
+        "new_rating_slip_created_from_history",
+        "continuation_blocked_due_to_ineligibility",
+        "visit_close_blocked_due_to_slip_finalization_failure"
+      ],
+      "timing_constraints": [
+        "End Visit occurs mid-shift during active gaming day operations",
+        "Visit must not be marked closed before required slip finalization succeeds",
+        "Continuation placement occurs after selection of a closed visit and before creation of the new slip"
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "statement": "Operator-initiated visit closure must finalize all open or paused slips through rpc_close_rating_slip rather than raw status mutation.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-2",
+          "statement": "Visit must not be marked closed if any required slip-finalization step fails.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-3",
+          "statement": "Closed slip rows are context entry points only; they are not the objects being reopened or resumed.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-4",
+          "statement": "Start From Previous creates a new visit and a new rating slip and never reopens a closed visit or slip.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-5",
+          "statement": "User-facing copy must use slip or segment language for closed slip rows and visit or session language for continuation candidates.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-6",
+          "statement": "Continuation eligibility rules must be explicit rather than inferred from whichever recent session happens to appear.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-7",
+          "statement": "Pilot does not add new UI surfaces or redesign authorization posture beyond the existing modal-enabled workflow.",
+          "severity": "soft"
+        }
+      ],
+      "invariants": [
+        "No orphaned open slips remain after successful operator-initiated visit close.",
+        "Closed slips remain immutable and are not reopened.",
+        "Theo for operator-closed slips is computed from policy_snapshot rather than forced to zero.",
+        "Compliance chain remains intact across operator close and continuation.",
+        "Scope expansion requires amendment rather than downstream invention."
+      ],
+      "decision_notes": [
+        "Feature spine is operator-attested visit closure for the current lifecycle posture.",
+        "Closed Slips terminology cleanup, Start From Previous wiring, and continuation eligibility rules are adjacent repairs necessary to avoid incoherent closed-state UX.",
+        "Bulk close RPC is not required for MVP if failure semantics are explicitly defined and safe."
+      ]
+    }
+  },
+  "containment": {
+    "loop": [
+      {
+        "id": "END-1",
+        "actor": "pit_boss",
+        "action": "identifies departing patron and opens active rating slip modal from occupied seat",
+        "system_response": "shows active slip context"
+      },
+      {
+        "id": "END-2",
+        "actor": "pit_boss",
+        "action": "clicks End Visit",
+        "system_response": "shows confirmation dialog"
+      },
+      {
+        "id": "END-3",
+        "actor": "pit_boss",
+        "action": "confirms End Visit",
+        "system_response": "begins compliant close workflow"
+      },
+      {
+        "id": "END-4",
+        "actor": "system",
+        "action": "closes all open or paused slips for the visit via rpc_close_rating_slip",
+        "system_response": "finalizes slip-level theo, pause state, and audit trail"
+      },
+      {
+        "id": "END-5",
+        "actor": "system",
+        "action": "marks visit ended through existing close endpoint",
+        "system_response": "visit is closed only if required slip finalization succeeds"
+      },
+      {
+        "id": "END-6",
+        "actor": "system",
+        "action": "refreshes dashboard state",
+        "system_response": "seat frees up, closed slips appear, toast communicates outcome"
+      },
+      {
+        "id": "SFP-1",
+        "actor": "pit_boss",
+        "action": "opens Closed Slips panel and identifies a closed rated slip",
+        "system_response": "slip row is available as player/context entry point"
+      },
+      {
+        "id": "SFP-2",
+        "actor": "pit_boss",
+        "action": "clicks closed rated slip",
+        "system_response": "system resolves player context instead of opening read-only slip viewer"
+      },
+      {
+        "id": "SFP-3",
+        "actor": "system",
+        "action": "fetches recent visit-level sessions for the player",
+        "system_response": "StartFromPreviousModal opens with eligible historical visits"
+      },
+      {
+        "id": "SFP-4",
+        "actor": "pit_boss",
+        "action": "selects the closed visit to continue",
+        "system_response": "pending continuation context is stored"
+      },
+      {
+        "id": "SFP-5",
+        "actor": "system",
+        "action": "prompts operator to select an empty seat",
+        "system_response": "toast indicates pending placement action"
+      },
+      {
+        "id": "SFP-6",
+        "actor": "pit_boss",
+        "action": "clicks empty seat on destination table",
+        "system_response": "system validates continuation context and destination"
+      },
+      {
+        "id": "SFP-7",
+        "actor": "system",
+        "action": "calls start-from-previous endpoint and rpc_start_rating_slip",
+        "system_response": "creates new visit and new rating slip if gates pass"
+      },
+      {
+        "id": "SFP-8",
+        "actor": "system",
+        "action": "opens fresh rating slip modal",
+        "system_response": "patron is back in play with preserved history chain"
+      },
+      {
+        "id": "SUP-1",
+        "actor": "system",
+        "action": "updates closed-surface copy to slip-consistent terminology",
+        "system_response": "panel and continuation language remain semantically consistent"
+      }
+    ],
+    "frozen": true,
+    "expansion_requires_amendment": true
+  },
+  "dependencies": {
+    "required_existing": [
+      "GAP-EXCL-ENFORCE-001 Layer 1 exclusion checks in rpc_start_rating_slip",
+      "rpc_close_rating_slip existing compliant close behavior",
+      "PATCH /api/v1/visits/[visitId]/close",
+      "POST /api/v1/visits/start-from-previous",
+      "GET /api/v1/players/[playerId]/recent-sessions",
+      "StartFromPreviousModal and StartFromPreviousPanel existing implementation",
+      "useCloseVisit hook",
+      "occupied-seat click opening the rating slip modal"
+    ],
+    "missing_dependencies": [
+      "Potential schema/API addition if recent session eligibility requires closure reason distinctions not currently present in RecentSessionsDTO"
+    ],
+    "assumptions": [
+      "Every slip eligible for operator-initiated close contains or can supply the minimum rating inputs required by rpc_close_rating_slip to compute compliant theo from policy_snapshot.",
+      "Sequential rpc_close_rating_slip orchestration is acceptable for MVP only if safe failure semantics are explicitly defined and partial compliance state is prevented or recoverably surfaced.",
+      "Recent-session data can be made sufficient to distinguish continuation-eligible visits from merely historical closed visits.",
+      "Pilot can rely on existing UI patterns rather than introducing bespoke components for missing-rating or pending-continuation handling."
+    ]
+  },
+  "traceability": {
+    "outcomes": [
+      {
+        "id": "OUT-1",
+        "statement": "Operator can end a patron visit from the rating slip modal."
+      },
+      {
+        "id": "OUT-2",
+        "statement": "Operator-initiated close uses compliant slip-finalization behavior."
+      },
+      {
+        "id": "OUT-3",
+        "statement": "Visit close cannot succeed with incomplete required slip finalization."
+      },
+      {
+        "id": "OUT-4",
+        "statement": "No orphaned open slips remain after successful End Visit."
+      },
+      {
+        "id": "OUT-5",
+        "statement": "Closed-surface terminology reflects slips rather than sessions."
+      },
+      {
+        "id": "OUT-6",
+        "statement": "Closed rated slip click opens StartFromPreviousModal."
+      },
+      {
+        "id": "OUT-7",
+        "statement": "Continuation creates a new visit and a new rating slip."
+      },
+      {
+        "id": "OUT-8",
+        "statement": "Continuation eligibility is explicit and compliance-safe."
+      }
+    ],
+    "capability_to_outcome": [
+      {
+        "capability": "end_visit_from_rating_slip_modal",
+        "outcomes": ["OUT-1", "OUT-2", "OUT-3"]
+      },
+      {
+        "capability": "finalize_open_slips_for_visit",
+        "outcomes": ["OUT-2", "OUT-3", "OUT-4"]
+      },
+      {
+        "capability": "close_visit_record",
+        "outcomes": ["OUT-1", "OUT-3"]
+      },
+      {
+        "capability": "relabel_closed_slips_surface",
+        "outcomes": ["OUT-5"]
+      },
+      {
+        "capability": "open_start_from_previous_modal",
+        "outcomes": ["OUT-6"]
+      },
+      {
+        "capability": "continue_visit_from_history",
+        "outcomes": ["OUT-7", "OUT-8"]
+      },
+      {
+        "capability": "enforce_continuation_eligibility",
+        "outcomes": ["OUT-8"]
+      }
+    ],
+    "rule_to_loop_step": [
+      {
+        "rule_id": "RULE-1",
+        "loop_steps": ["END-4"]
+      },
+      {
+        "rule_id": "RULE-2",
+        "loop_steps": ["END-4", "END-5"]
+      },
+      {
+        "rule_id": "RULE-3",
+        "loop_steps": ["SFP-1", "SFP-2", "SFP-3"]
+      },
+      {
+        "rule_id": "RULE-4",
+        "loop_steps": ["SFP-7", "SFP-8"]
+      },
+      {
+        "rule_id": "RULE-5",
+        "loop_steps": ["SUP-1", "SFP-1", "SFP-3"]
+      },
+      {
+        "rule_id": "RULE-6",
+        "loop_steps": ["SFP-3", "SFP-4"]
+      },
+      {
+        "rule_id": "RULE-7",
+        "loop_steps": ["END-2", "SFP-5"]
+      }
+    ]
+  },
+  "governance": {
+    "scope_authority": {
+      "artifact": "Feature Intake Brief",
+      "version": "v0.2",
+      "frozen": true
+    },
+    "open_questions_allowed_at_scaffold": [
+      "Whether minimum rating inputs, including average_bet where applicable, must be present before End Visit may finalize a slip",
+      "Whether the pending-continuation toast should expose cancel behavior or timeout under existing UI patterns",
+      "Whether continuation eligibility can remain within current RecentSessionsDTO shape or requires a schema addition for closure reason or similar state"
+    ],
+    "downstream_expansion_allowed_without_amendment": false
+  }
+}
