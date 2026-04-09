@@ -9,11 +9,10 @@
  * Tests that the loyalty_outbox table schema matches the INSERT contract used
  * by the three promo RPCs after restoration via migration 20260206005335.
  *
- * AUTH: Mode C (ADR-024) — setupClient (service-role) for fixture creation and
- * all operations. This suite tests SECURITY DEFINER bypass patterns (table
- * ownership, RLS bypass via postgres role). Direct INSERT tests remain on
- * setupClient because the RPCs themselves run as postgres (SECURITY DEFINER).
- * Auth user created for ADR-024 consistency only.
+ * AUTH: Mode C (ADR-024) — setupClient (service-role) for fixture creation,
+ * pitBossClient (authenticated anon) via createModeCSession for ADR-024
+ * consistency. Direct INSERT tests remain on setupClient because the RPCs
+ * themselves run as postgres (SECURITY DEFINER bypass pattern).
  *
  * NOTE: The promo RPCs have a pre-existing bug where they reference audit_log
  * columns (dto_after, dto_before, correlation_id) that don't exist. Since
@@ -31,6 +30,7 @@ import { randomUUID } from 'crypto';
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+import { createModeCSession } from '@/lib/testing/create-mode-c-session';
 import type { Database } from '@/types/database.types';
 
 // ============================================================================
@@ -48,7 +48,7 @@ const TEST_PREFIX = 'test-poc-mc'; // promo-outbox-contract Mode C
 
 interface TestFixture {
   casinoId: string;
-  authUserId: string;
+  staffId: string;
   cleanup: () => Promise<void>;
 }
 
@@ -64,6 +64,8 @@ const RUN_INTEGRATION =
   'loyalty_outbox promo RPC contract (PRD-028)',
   () => {
     let setupClient: SupabaseClient<Database>;
+    let pitBossClient: SupabaseClient<Database>;
+    let authCleanup: (() => Promise<void>) | undefined;
     let fixture: TestFixture;
 
     beforeAll(async () => {
@@ -78,11 +80,27 @@ const RUN_INTEGRATION =
         auth: { autoRefreshToken: false, persistSession: false },
       });
 
-      // Phase 2: Create shared test fixtures + Mode C auth user
+      // Phase 2: Create shared test fixtures (company, casino, staff)
       fixture = await createTestFixture(setupClient);
+
+      // Phase 3: Mode C auth ceremony (ADR-024)
+      const session = await createModeCSession(setupClient, {
+        staffId: fixture.staffId,
+        casinoId: fixture.casinoId,
+        staffRole: 'pit_boss',
+      });
+      pitBossClient = session.client;
+      authCleanup = session.cleanup;
+
+      // Link auth user to staff record
+      await setupClient
+        .from('staff')
+        .update({ user_id: session.userId })
+        .eq('id', fixture.staffId);
     }, 15_000);
 
     afterAll(async () => {
+      await authCleanup?.();
       if (fixture?.cleanup) {
         await fixture.cleanup();
       }
@@ -293,7 +311,7 @@ async function createTestFixture(
     throw new Error(`Failed to create casino: ${casinoError?.message}`);
   }
 
-  // Create staff actor for Mode C consistency (ADR-024)
+  // Create staff actor for Mode C (ADR-024) — user_id linked after auth ceremony in beforeAll
   const { data: actor, error: actorError } = await setupClient
     .from('staff')
     .insert({
@@ -312,41 +330,12 @@ async function createTestFixture(
     throw new Error(`Failed to create actor: ${actorError?.message}`);
   }
 
-  // Create auth user for Mode C consistency (ADR-024)
-  const testEmail = `${TEST_PREFIX}-auth-${Date.now()}@test.local`;
-  const { data: authData, error: authError } =
-    await setupClient.auth.admin.createUser({
-      email: testEmail,
-      password: 'TestPassword123!',
-      email_confirm: true,
-      app_metadata: {
-        casino_id: casino.id,
-        staff_id: actor.id,
-        staff_role: 'pit_boss',
-      },
-    });
-
-  if (authError || !authData.user) {
-    throw new Error(`Failed to create auth user: ${authError?.message}`);
-  }
-
-  // Link staff to auth user
-  await setupClient
-    .from('staff')
-    .update({ user_id: authData.user.id })
-    .eq('id', actor.id);
-
-  const authUserId = authData.user.id;
-
   const cleanup = async () => {
     // Clean outbox rows
     await setupClient
       .from('loyalty_outbox')
       .delete()
       .eq('casino_id', casino.id);
-
-    // Clean auth user
-    await setupClient.auth.admin.deleteUser(authUserId);
 
     // Clean staff
     await setupClient.from('staff').delete().eq('id', actor.id);
@@ -360,7 +349,7 @@ async function createTestFixture(
 
   return {
     casinoId: casino.id,
-    authUserId,
+    staffId: actor.id,
     cleanup,
   };
 }

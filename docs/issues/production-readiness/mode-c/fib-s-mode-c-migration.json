@@ -1,0 +1,239 @@
+{
+  "artifact": {
+    "type": "FIB-S",
+    "version": "1.0",
+    "paired_human_artifact": "fib-h-mode-c-migration.md",
+    "intended_consumer": "exec-spec generation pipeline"
+  },
+  "feature_identity": {
+    "feature_name": "Mode C migration for remaining service-role integration tests",
+    "project": "Casino Player Tracker (PT-2)",
+    "scope_class": "pilot-bounded internal hardening slice",
+    "problem_type": "testing posture migration",
+    "source_context": ["context-synthesis.md"],
+    "canonical_policy_refs": [
+      "ADR-024",
+      "ADR-044",
+      "TESTING_GOVERNANCE_STANDARD.md",
+      "CONTEXT-ROLLOUT-TEMPLATE.md"
+    ]
+  },
+  "zachman": {
+    "what": {
+      "entities": [
+        "integration tests",
+        "authenticated anon client (via createModeCSession helper)",
+        "service_role fixture client (caller-owned, domain-specific)",
+        "JWT claims carrying staff identity",
+        "server-side context derivation via set_rls_context_from_staff()",
+        "RLS policies",
+        "grants",
+        "target RPC seams"
+      ],
+      "artifacts": [
+        "FIB-H",
+        "FIB-S",
+        "lib/testing/create-mode-c-session.ts (auth-only ceremony helper, Phase B prerequisite)",
+        "future EXEC spec",
+        "blocker log / issue record"
+      ],
+      "in_scope_targets": [
+        "remaining service-role business-logic integration tests",
+        "transitive auth-path coverage for rpc_get_visit_loyalty_summary and rpc_get_visit_last_segment via Mode C tests of parent RPCs (rpc_get_player_recent_sessions, rpc_get_player_last_session_context)"
+      ],
+      "out_of_scope_targets": [
+        "Phase A mechanical compliance work (directives, gates, scripts) — treat as prerequisite",
+        "direct PostgREST tests of internal SQL composition RPCs with no TypeScript callers",
+        "broad CI redesign",
+        "parallelized multi-context Supabase orchestration",
+        "test framework replacement",
+        "production auth redesign",
+        "unrelated product repairs except blocker capture"
+      ]
+    },
+    "how": {
+      "workflow": [
+        "Select one bounded context or infra surface",
+        "Apply Phase A prerequisites if missing",
+        "Rewrite business-logic tests from service-role path to authenticated Mode C path",
+        "Retain service-role only for fixtures/setup/teardown",
+        "Execute against real Supabase",
+        "Classify failures",
+        "Record blockers without weakening assertions",
+        "Close slice or mark formally blocked"
+      ],
+      "acceptance_invariants": [
+        "No service_role for business-logic execution",
+        "Fixture-only service_role use remains allowed — machine-verifiable: service_role client only in beforeAll/afterAll/setup*/cleanup*/create*Fixture scopes",
+        "Assertions are not weakened to force green",
+        "Auth-path, RLS, and grant failures become observable",
+        "Per-context execution remains serialized in Phase B",
+        "Skip ratio gate: if >20% of a context's tests are skipped due to non-auth blockers, context migration is BLOCKED not complete",
+        "SUPABASE_URL must resolve to 127.0.0.1 or localhost before Phase B execution"
+      ],
+      "failure_classification": [
+        "auth_or_rls_regression",
+        "fixture_or_setup_defect",
+        "unrelated_product_defect"
+      ]
+    },
+    "where": {
+      "execution_environment": {
+        "supabase_runtime": "real running Supabase instance required for Phase B",
+        "parallelism_policy": "sequential per context",
+        "collision_risk": "shared fixture namespace and mutable database state"
+      },
+      "touch_surfaces": [
+        "context-specific integration test files",
+        "test helper surfaces",
+        "root test infrastructure surfaces where upstream pattern leverage exists"
+      ],
+      "canonical_file_list": "canonical-file-list.md — 17 Phase B targets (9 service-role-biz, 3 legacy-context, 3 mixed, 2 assess-first), 19 already Mode C, 25 misnamed non-integration tests"
+    },
+    "who": {
+      "actors": [
+        {
+          "role": "engineer",
+          "responsibility": "migrate one bounded slice to Mode C"
+        },
+        {
+          "role": "reviewer",
+          "responsibility": "validate conformance to posture and exclusions"
+        },
+        {
+          "role": "ci",
+          "responsibility": "run the migrated slice and surface failures"
+        }
+      ],
+      "ownership_model": {
+        "slice_owner": "engineering",
+        "governance_owner": "architecture/testing governance"
+      }
+    },
+    "when": {
+      "phase_order": [
+        "Phase A before Phase B where prerequisite posture is missing",
+        "one context at a time for Phase B",
+        "record blockers immediately when discovered"
+      ],
+      "completion_event": "targeted context or infra slice reaches acceptance criteria or is formally blocked"
+    },
+    "why": {
+      "operator_problem": "service-role business-logic tests can pass while real authenticated paths are broken",
+      "pilot_value": [
+        "exposes RLS and grant defects",
+        "raises trustworthiness of integration tests",
+        "converts hidden auth-path failures into visible failures",
+        "supports bounded hardening without product-surface churn"
+      ],
+      "anti_goals": [
+        "do not turn this into general testing modernization",
+        "do not accept counterfeit green tests"
+      ]
+    }
+  },
+  "containment_loop": {
+    "entry_condition": "target slice still executes business logic through service_role or lacks direct auth-path coverage at known seams",
+    "loop_steps": [
+      "identify slice",
+      "apply prerequisites",
+      "rewrite to Mode C",
+      "run against Supabase",
+      "classify failures",
+      "log blockers if needed",
+      "close or escalate per expansion rule"
+    ],
+    "exit_condition": "acceptance criteria met or blocker formally recorded"
+  },
+  "required_outcomes": [
+    "business-logic execution path migrated to Mode C",
+    "service_role confined to fixtures only (machine-verifiable: service_role client only in beforeAll/afterAll/setup*/cleanup* scopes)",
+    "known uncovered RPC seams (rpc_get_visit_loyalty_summary, rpc_get_visit_last_segment) exercised transitively via Mode C tests of parent RPCs",
+    "blockers recorded with class and owning context",
+    "artifact set stable enough for EXEC spec generation",
+    "canonical file list produced with exact file paths, current auth mode, target auth mode, and estimated complexity per file"
+  ],
+  "explicit_exclusions": [
+    "Phase A mechanical compliance work (directives, gates, scripts) — prerequisite not migration scope",
+    "direct PostgREST tests of internal SQL composition RPCs with no TypeScript callers",
+    "CI redesign",
+    "framework replacement",
+    "production auth changes",
+    "broad unrelated refactors",
+    "assertion weakening"
+  ],
+  "adjacent_rejected_ideas": [
+    {
+      "idea": "leave green service-role tests unchanged",
+      "reason": "preserves false confidence"
+    },
+    {
+      "idea": "migrate all contexts in one sweep",
+      "reason": "shared-state collisions and reduced debuggability"
+    },
+    {
+      "idea": "treat infra surfaces as separate from the migration contract",
+      "reason": "helper and root surfaces may be upstream leverage points"
+    },
+    {
+      "idea": "promote existing getTestAuthenticatedClient() (auth + domain fixtures bundled) to shared location",
+      "reason": "30 existing Mode C tests prove fixture shapes diverge per context — bundling auth + fixtures creates coupling where fixture schema changes break all importers simultaneously. Auth ceremony is the only truly duplicated piece (~20 lines)."
+    },
+    {
+      "idea": "keep auth setup inline everywhere with no shared helper",
+      "reason": "the auth ceremony is mechanical and identical across all tests — a thin helper eliminates the one piece that is genuinely duplicated without forcing fixture opinions"
+    }
+  ],
+  "dependencies": {
+    "hard_dependencies": [
+      "auth-only ceremony helper (lib/testing/create-mode-c-session.ts) — zero domain fixtures, caller-provided identity claims, static Bearer token, local-only safety assertion. Must be implemented and merged before Phase B. See FIB-H Section N.",
+      "running local Supabase instance (SUPABASE_URL must be 127.0.0.1 or localhost)",
+      "blocker logging path",
+      "existing governance that defines Mode C as canonical"
+    ],
+    "assumptions": [
+      "current context synthesis is materially correct",
+      "Phase A precedes Phase B where needed",
+      "Phase B must be serialized per context"
+    ]
+  },
+  "traceability": {
+    "source_assertions": [
+      {
+        "claim": "Mode C uses authenticated anon client for business logic and service-role only for fixtures",
+        "source": "context-synthesis.md"
+      },
+      {
+        "claim": "Phase A is mechanical and Phase B requires running Supabase",
+        "source": "context-synthesis.md"
+      },
+      {
+        "claim": "Phase B should proceed one context at a time due to collisions",
+        "source": "context-synthesis.md"
+      },
+      {
+        "claim": "rpc_get_visit_loyalty_summary and rpc_get_visit_last_segment are uncovered seams — DA review corrected: these are internal SQL composition functions with zero TypeScript callers, exercised transitively via parent RPCs",
+        "source": "context-synthesis.md, DA review 2026-04-09"
+      }
+    ]
+  },
+  "exec_pipeline_handoff": {
+    "ready": true,
+    "recommended_exec_notes": [
+      "produce exact canonical file list before generating tasks — no approximate counts",
+      "separate scope counts into target files, touch files, and infra surfaces",
+      "treat estimates as Phase B rewrite-only baseline excluding Phase A and defect tail",
+      "preserve serialized per-context execution in plan structure",
+      "surface parent RPCs (rpc_get_player_recent_sessions, rpc_get_player_last_session_context) as transitive coverage targets, not the internal child RPCs",
+      "implement auth-only ceremony helper (lib/testing/create-mode-c-session.ts) as first EXEC task — zero domain fixtures, static Bearer, local-only safety — must merge before any Phase B context work"
+    ]
+  },
+  "governance": {
+    "scope_authority": "bounded Mode C migration only",
+    "expansion_trigger_rule": [
+      "helper or infra bottleneck proves systemic",
+      "blocker volume reveals systemic auth/RLS flaw",
+      "governance promotes Mode C conformance to mandatory gated policy"
+    ]
+  }
+}

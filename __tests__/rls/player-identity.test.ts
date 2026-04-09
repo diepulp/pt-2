@@ -20,9 +20,11 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import { injectRLSContext } from '../../lib/supabase/rls-context';
-import type { RLSContext } from '../../lib/supabase/rls-context';
-import type { Database } from '../../types/database.types';
+import {
+  createModeCSession,
+  ModeCSessionResult,
+} from '@/lib/testing/create-mode-c-session';
+import type { Database } from '@/types/database.types';
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -36,12 +38,21 @@ const describeIntegration =
     : describe.skip;
 
 describeIntegration('player-identity RLS Policies (ADR-022)', () => {
-  let serviceClient: SupabaseClient<Database>;
+  // Mode C (ADR-024): Service-role client for fixture setup/teardown only.
+  // Authenticated Mode C clients for all business-logic / RLS-tested calls.
+  let setupClient: SupabaseClient<Database>;
   let pitBossClient1: SupabaseClient<Database>;
   let adminClient1: SupabaseClient<Database>;
   let cashierClient1: SupabaseClient<Database>;
   let dealerClient1: SupabaseClient<Database>;
   let pitBossClient2: SupabaseClient<Database>;
+
+  // Mode C session handles (for auth cleanup)
+  let pitBoss1Session: ModeCSessionResult;
+  let admin1Session: ModeCSessionResult;
+  let cashier1Session: ModeCSessionResult;
+  let dealer1Session: ModeCSessionResult;
+  let pitBoss2Session: ModeCSessionResult;
 
   let company1Id: string;
   let company2Id: string;
@@ -52,63 +63,23 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
   let cashier1Id: string;
   let dealer1Id: string;
   let pitBoss2Id: string;
-  let user1Id: string;
-  let user2Id: string;
-  let user3Id: string;
-  let user4Id: string;
-  let user5Id: string;
   let player1Id: string;
   let player2Id: string;
   let identityId: string;
 
   beforeAll(async () => {
-    serviceClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
-
-    // Create test users for authentication
-    const { data: user1 } = await serviceClient.auth.admin.createUser({
-      email: `test-pit-boss-1-${Date.now()}@example.com`,
-      password: 'test-password',
-      email_confirm: true,
-    });
-    user1Id = user1!.user.id;
-
-    const { data: user2 } = await serviceClient.auth.admin.createUser({
-      email: `test-admin-1-${Date.now()}@example.com`,
-      password: 'test-password',
-      email_confirm: true,
-    });
-    user2Id = user2!.user.id;
-
-    const { data: user3 } = await serviceClient.auth.admin.createUser({
-      email: `test-cashier-1-${Date.now()}@example.com`,
-      password: 'test-password',
-      email_confirm: true,
-    });
-    user3Id = user3!.user.id;
-
-    const { data: user4 } = await serviceClient.auth.admin.createUser({
-      email: `test-dealer-1-${Date.now()}@example.com`,
-      password: 'test-password',
-      email_confirm: true,
-    });
-    user4Id = user4!.user.id;
-
-    const { data: user5 } = await serviceClient.auth.admin.createUser({
-      email: `test-pit-boss-2-${Date.now()}@example.com`,
-      password: 'test-password',
-      email_confirm: true,
-    });
-    user5Id = user5!.user.id;
+    // Service-role client for fixture setup only (Mode C — ADR-024)
+    setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
     // Create test companies (ADR-043: company before casino)
-    const { data: co1 } = await serviceClient
+    const { data: co1 } = await setupClient
       .from('company')
       .insert({ name: 'Test Company 1' })
       .select('id')
       .single();
     company1Id = co1!.id;
 
-    const { data: co2 } = await serviceClient
+    const { data: co2 } = await setupClient
       .from('company')
       .insert({ name: 'Test Company 2' })
       .select('id')
@@ -116,25 +87,24 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
     company2Id = co2!.id;
 
     // Create test casinos
-    const { data: c1 } = await serviceClient
+    const { data: c1 } = await setupClient
       .from('casino')
       .insert({ name: 'Test Casino 1', company_id: company1Id })
       .select('id')
       .single();
     casino1Id = c1!.id;
 
-    const { data: c2 } = await serviceClient
+    const { data: c2 } = await setupClient
       .from('casino')
       .insert({ name: 'Test Casino 2', company_id: company2Id })
       .select('id')
       .single();
     casino2Id = c2!.id;
 
-    // Create test staff for each role
-    const { data: pb1 } = await serviceClient
+    // Create test staff (without user_id initially — linked after Mode C auth)
+    const { data: pb1 } = await setupClient
       .from('staff')
       .insert({
-        user_id: user1Id,
         casino_id: casino1Id,
         role: 'pit_boss',
         first_name: 'Pit',
@@ -145,10 +115,9 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
       .single();
     pitBoss1Id = pb1!.id;
 
-    const { data: a1 } = await serviceClient
+    const { data: a1 } = await setupClient
       .from('staff')
       .insert({
-        user_id: user2Id,
         casino_id: casino1Id,
         role: 'admin',
         first_name: 'Admin',
@@ -159,10 +128,9 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
       .single();
     admin1Id = a1!.id;
 
-    const { data: ca1 } = await serviceClient
+    const { data: ca1 } = await setupClient
       .from('staff')
       .insert({
-        user_id: user3Id,
         casino_id: casino1Id,
         role: 'cashier',
         first_name: 'Cashier',
@@ -173,10 +141,9 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
       .single();
     cashier1Id = ca1!.id;
 
-    const { data: d1 } = await serviceClient
+    const { data: d1 } = await setupClient
       .from('staff')
       .insert({
-        user_id: user4Id,
         casino_id: casino1Id,
         role: 'dealer',
         first_name: 'Dealer',
@@ -187,10 +154,9 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
       .single();
     dealer1Id = d1!.id;
 
-    const { data: pb2 } = await serviceClient
+    const { data: pb2 } = await setupClient
       .from('staff')
       .insert({
-        user_id: user5Id,
         casino_id: casino2Id,
         role: 'pit_boss',
         first_name: 'Pit',
@@ -201,46 +167,68 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
       .single();
     pitBoss2Id = pb2!.id;
 
-    // Create authenticated clients with JWT claims
-    pitBossClient1 = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    adminClient1 = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    cashierClient1 = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    dealerClient1 = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    pitBossClient2 = createClient<Database>(supabaseUrl, supabaseServiceKey);
-
-    // Inject RLS context for each client
-    await injectRLSContext(pitBossClient1, {
-      actorId: pitBoss1Id,
+    // Mode C auth ceremony (ADR-024) — authenticated anon clients with JWT claims
+    pitBoss1Session = await createModeCSession(setupClient, {
+      staffId: pitBoss1Id,
       casinoId: casino1Id,
       staffRole: 'pit_boss',
     });
+    pitBossClient1 = pitBoss1Session.client;
 
-    await injectRLSContext(adminClient1, {
-      actorId: admin1Id,
+    admin1Session = await createModeCSession(setupClient, {
+      staffId: admin1Id,
       casinoId: casino1Id,
       staffRole: 'admin',
     });
+    adminClient1 = admin1Session.client;
 
-    await injectRLSContext(cashierClient1, {
-      actorId: cashier1Id,
+    cashier1Session = await createModeCSession(setupClient, {
+      staffId: cashier1Id,
       casinoId: casino1Id,
       staffRole: 'cashier',
     });
+    cashierClient1 = cashier1Session.client;
 
-    await injectRLSContext(dealerClient1, {
-      actorId: dealer1Id,
+    dealer1Session = await createModeCSession(setupClient, {
+      staffId: dealer1Id,
       casinoId: casino1Id,
       staffRole: 'dealer',
     });
+    dealerClient1 = dealer1Session.client;
 
-    await injectRLSContext(pitBossClient2, {
-      actorId: pitBoss2Id,
+    pitBoss2Session = await createModeCSession(setupClient, {
+      staffId: pitBoss2Id,
       casinoId: casino2Id,
       staffRole: 'pit_boss',
     });
+    pitBossClient2 = pitBoss2Session.client;
+
+    // Link auth users to staff records
+    // chk_staff_role_user_id: pit_boss/admin require user_id IS NOT NULL
+    // cashier/dealer: constraint dropped by seed, linking user_id still works
+    await setupClient
+      .from('staff')
+      .update({ user_id: pitBoss1Session.userId })
+      .eq('id', pitBoss1Id);
+    await setupClient
+      .from('staff')
+      .update({ user_id: admin1Session.userId })
+      .eq('id', admin1Id);
+    await setupClient
+      .from('staff')
+      .update({ user_id: cashier1Session.userId })
+      .eq('id', cashier1Id);
+    await setupClient
+      .from('staff')
+      .update({ user_id: dealer1Session.userId })
+      .eq('id', dealer1Id);
+    await setupClient
+      .from('staff')
+      .update({ user_id: pitBoss2Session.userId })
+      .eq('id', pitBoss2Id);
 
     // Create test players
-    const { data: p1 } = await serviceClient
+    const { data: p1 } = await setupClient
       .from('player')
       .insert({
         first_name: 'John',
@@ -251,7 +239,7 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
       .single();
     player1Id = p1!.id;
 
-    const { data: p2 } = await serviceClient
+    const { data: p2 } = await setupClient
       .from('player')
       .insert({
         first_name: 'Jane',
@@ -263,7 +251,7 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
     player2Id = p2!.id;
 
     // Create enrollment for player1 at casino1
-    await serviceClient.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: player1Id,
       casino_id: casino1Id,
       status: 'active',
@@ -271,7 +259,7 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
     });
 
     // Create enrollment for player2 at casino2
-    await serviceClient.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: player2Id,
       casino_id: casino2Id,
       status: 'active',
@@ -280,42 +268,38 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
   });
 
   afterAll(async () => {
-    // Cleanup test data
-    await serviceClient
+    // Cleanup test data (reverse order of creation)
+    await setupClient
       .from('player_identity')
       .delete()
       .eq('casino_id', casino1Id);
-    await serviceClient
+    await setupClient
       .from('player_identity')
       .delete()
       .eq('casino_id', casino2Id);
-    await serviceClient
-      .from('player_casino')
-      .delete()
-      .eq('casino_id', casino1Id);
-    await serviceClient
-      .from('player_casino')
-      .delete()
-      .eq('casino_id', casino2Id);
-    await serviceClient.from('player').delete().eq('id', player1Id);
-    await serviceClient.from('player').delete().eq('id', player2Id);
-    await serviceClient.from('staff').delete().eq('casino_id', casino1Id);
-    await serviceClient.from('staff').delete().eq('casino_id', casino2Id);
-    await serviceClient.from('casino').delete().eq('id', casino1Id);
-    await serviceClient.from('casino').delete().eq('id', casino2Id);
-    await serviceClient.from('company').delete().eq('id', company1Id);
-    await serviceClient.from('company').delete().eq('id', company2Id);
-    await serviceClient.auth.admin.deleteUser(user1Id);
-    await serviceClient.auth.admin.deleteUser(user2Id);
-    await serviceClient.auth.admin.deleteUser(user3Id);
-    await serviceClient.auth.admin.deleteUser(user4Id);
-    await serviceClient.auth.admin.deleteUser(user5Id);
+    await setupClient.from('player_casino').delete().eq('casino_id', casino1Id);
+    await setupClient.from('player_casino').delete().eq('casino_id', casino2Id);
+    await setupClient.from('player').delete().eq('id', player1Id);
+    await setupClient.from('player').delete().eq('id', player2Id);
+    await setupClient.from('staff').delete().eq('casino_id', casino1Id);
+    await setupClient.from('staff').delete().eq('casino_id', casino2Id);
+    await setupClient.from('casino').delete().eq('id', casino1Id);
+    await setupClient.from('casino').delete().eq('id', casino2Id);
+    await setupClient.from('company').delete().eq('id', company1Id);
+    await setupClient.from('company').delete().eq('id', company2Id);
+
+    // Auth cleanup (Mode C)
+    await pitBoss1Session?.cleanup();
+    await admin1Session?.cleanup();
+    await cashier1Session?.cleanup();
+    await dealer1Session?.cleanup();
+    await pitBoss2Session?.cleanup();
   });
 
   describe('B1. Role Matrix (DOD-022)', () => {
     it('pit_boss can read player_identity', async () => {
       // Setup: Create identity as service client
-      const { data: identity } = await serviceClient
+      const { data: identity } = await setupClient
         .from('player_identity')
         .insert({
           casino_id: casino1Id,
@@ -434,7 +418,7 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
 
     it('enrolled_by must match current actor for player_casino INSERT', async () => {
       // Create a new player for this test
-      const { data: newPlayer } = await serviceClient
+      const { data: newPlayer } = await setupClient
         .from('player')
         .insert({ first_name: 'Test', last_name: 'Actor' })
         .select('id')
@@ -451,7 +435,7 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
       expect(error?.code).toBe('42501'); // RLS WITH CHECK violation
 
       // Cleanup
-      await serviceClient.from('player').delete().eq('id', newPlayer!.id);
+      await setupClient.from('player').delete().eq('id', newPlayer!.id);
     });
 
     it('updated_by auto-populated on UPDATE', async () => {
@@ -460,7 +444,7 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
         .update({ height: '6-01' })
         .eq('id', identityId);
 
-      const { data } = await serviceClient
+      const { data } = await setupClient
         .from('player_identity')
         .select('updated_by')
         .eq('id', identityId)
@@ -473,7 +457,7 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
   describe('B3. Casino Isolation (DOD-022)', () => {
     it('cannot read other casino identities', async () => {
       // Create identity in casino2
-      const { data: c2Identity } = await serviceClient
+      const { data: c2Identity } = await setupClient
         .from('player_identity')
         .insert({
           casino_id: casino2Id,
@@ -585,8 +569,8 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
   });
 
   describe('E. Connection Pooling (ADR-015)', () => {
-    it('RLS works with session context injection', async () => {
-      // Context already injected in beforeAll
+    it('RLS works with Mode C authenticated session', async () => {
+      // Mode C JWT claims stamped in beforeAll via createModeCSession
       const { data, error } = await pitBossClient1
         .from('player_identity')
         .select('*')
@@ -604,8 +588,8 @@ describeIntegration('player-identity RLS Policies (ADR-022)', () => {
         supabaseServiceKey,
       );
 
-      // Set JWT claims in app_metadata
-      await serviceClient.auth.admin.updateUserById(user1Id, {
+      // Set JWT claims in app_metadata (use Mode C session userId)
+      await setupClient.auth.admin.updateUserById(pitBoss1Session.userId, {
         app_metadata: {
           casino_id: casino1Id,
           staff_role: 'pit_boss',

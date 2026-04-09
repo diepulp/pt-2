@@ -25,6 +25,7 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+import { createModeCSession } from '@/lib/testing/create-mode-c-session';
 import type { Database } from '@/types/database.types';
 
 // === Test Environment Setup ===
@@ -182,15 +183,34 @@ describeIntegration('ADR-024 Security Grant Verification', () => {
 // ===========================================================================
 
 describeIntegration('ADR-024 RLS Context Integration Tests', () => {
-  let supabase: SupabaseClient<Database>;
+  let setupClient: SupabaseClient<Database>;
+  let pitBossClient: SupabaseClient<Database>;
+  let authCleanup: (() => Promise<void>) | undefined;
   let scenario: TestScenario;
 
   beforeAll(async () => {
-    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    scenario = await createTestScenario(supabase);
+    // Service role for fixture setup + Category A ops-lane RPC tests
+    setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
+    scenario = await createTestScenario(setupClient);
+
+    // Mode C auth session for Category B business-query tests (ADR-024)
+    const session = await createModeCSession(setupClient, {
+      staffId: scenario.staffAId,
+      casinoId: scenario.casinoAId,
+      staffRole: 'pit_boss',
+    });
+    pitBossClient = session.client;
+    authCleanup = session.cleanup;
+
+    // Link auth user to staff record so set_rls_context_from_staff can resolve
+    await setupClient
+      .from('staff')
+      .update({ user_id: session.userId })
+      .eq('id', scenario.staffAId);
   });
 
   afterAll(async () => {
+    await authCleanup?.();
     if (scenario?.cleanup) {
       await scenario.cleanup();
     }
@@ -200,13 +220,14 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
   // Spoofed Context Rejection Tests
   // ===========================================================================
 
+  // Category A: Testing ops-lane RPC directly — stays on setupClient
   describe('Spoofed Context Rejection', () => {
     it('poisoned session vars are overwritten by set_rls_context_from_staff', async () => {
       // This test verifies that even if malicious code tries to pre-set
       // app.casino_id, the function overwrites it with authoritative value
 
       // First, try to poison the session context
-      const { error: poisonError } = await supabase.rpc(
+      const { error: poisonError } = await setupClient.rpc(
         'exec_sql' as never,
         {
           query: `
@@ -218,7 +239,7 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
 
       // Now call set_rls_context_from_staff (via service role calling as if authenticated)
       // The function should overwrite any pre-existing values
-      const { error: contextError } = await supabase.rpc(
+      const { error: contextError } = await setupClient.rpc(
         'set_rls_context_internal',
         {
           p_actor_id: scenario.staffAId,
@@ -239,11 +260,14 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
       // The key point is: RLS policies use current_setting('app.casino_id')
       // Only our SECURITY DEFINER functions should set this value
 
-      const { data, error } = await supabase.rpc('set_rls_context_internal', {
-        p_actor_id: scenario.staffAId,
-        p_casino_id: scenario.casinoBId, // Wrong casino - staff A is in casino A
-        p_staff_role: 'pit_boss',
-      });
+      const { data, error } = await setupClient.rpc(
+        'set_rls_context_internal',
+        {
+          p_actor_id: scenario.staffAId,
+          p_casino_id: scenario.casinoBId, // Wrong casino - staff A is in casino A
+          p_staff_role: 'pit_boss',
+        },
+      );
 
       // Should fail because staff A is not in casino B
       expect(error).not.toBeNull();
@@ -255,10 +279,11 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
   // Cross-Tenant Isolation Tests
   // ===========================================================================
 
+  // Category A: Testing ops-lane RPC directly — stays on setupClient
   describe('Cross-Tenant Isolation', () => {
     it('Casino A user cannot set context for Casino B', async () => {
       // Staff A (casino A) tries to set context with casino B
-      const { error } = await supabase.rpc('set_rls_context_internal', {
+      const { error } = await setupClient.rpc('set_rls_context_internal', {
         p_actor_id: scenario.staffAId,
         p_casino_id: scenario.casinoBId,
         p_staff_role: 'pit_boss',
@@ -271,7 +296,7 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
 
     it('Casino B user cannot set context for Casino A', async () => {
       // Staff B (casino B) tries to set context with casino A
-      const { error } = await supabase.rpc('set_rls_context_internal', {
+      const { error } = await setupClient.rpc('set_rls_context_internal', {
         p_actor_id: scenario.staffBId,
         p_casino_id: scenario.casinoAId,
         p_staff_role: 'pit_boss',
@@ -283,20 +308,26 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
 
     it('Staff can only set context for their own casino', async () => {
       // Staff A sets context for casino A - should succeed
-      const { error: errorA } = await supabase.rpc('set_rls_context_internal', {
-        p_actor_id: scenario.staffAId,
-        p_casino_id: scenario.casinoAId,
-        p_staff_role: 'pit_boss',
-      });
+      const { error: errorA } = await setupClient.rpc(
+        'set_rls_context_internal',
+        {
+          p_actor_id: scenario.staffAId,
+          p_casino_id: scenario.casinoAId,
+          p_staff_role: 'pit_boss',
+        },
+      );
 
       expect(errorA).toBeNull();
 
       // Staff B sets context for casino B - should succeed
-      const { error: errorB } = await supabase.rpc('set_rls_context_internal', {
-        p_actor_id: scenario.staffBId,
-        p_casino_id: scenario.casinoBId,
-        p_staff_role: 'admin',
-      });
+      const { error: errorB } = await setupClient.rpc(
+        'set_rls_context_internal',
+        {
+          p_actor_id: scenario.staffBId,
+          p_casino_id: scenario.casinoBId,
+          p_staff_role: 'admin',
+        },
+      );
 
       expect(errorB).toBeNull();
     });
@@ -306,36 +337,46 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
   // Transaction Pooling Safety Tests
   // ===========================================================================
 
+  // Category A: Testing ops-lane RPC directly — stays on setupClient
   describe('Transaction Pooling Safety', () => {
     it('context does not leak across sequential calls', async () => {
       // First call: set context for casino A
-      const { error: error1 } = await supabase.rpc('set_rls_context_internal', {
-        p_actor_id: scenario.staffAId,
-        p_casino_id: scenario.casinoAId,
-        p_staff_role: 'pit_boss',
-        p_correlation_id: 'txn-1',
-      });
+      const { error: error1 } = await setupClient.rpc(
+        'set_rls_context_internal',
+        {
+          p_actor_id: scenario.staffAId,
+          p_casino_id: scenario.casinoAId,
+          p_staff_role: 'pit_boss',
+          p_correlation_id: 'txn-1',
+        },
+      );
 
       expect(error1).toBeNull();
 
       // Second call: set context for casino B (different connection from pool)
-      const { error: error2 } = await supabase.rpc('set_rls_context_internal', {
-        p_actor_id: scenario.staffBId,
-        p_casino_id: scenario.casinoBId,
-        p_staff_role: 'admin',
-        p_correlation_id: 'txn-2',
-      });
+      const { error: error2 } = await setupClient.rpc(
+        'set_rls_context_internal',
+        {
+          p_actor_id: scenario.staffBId,
+          p_casino_id: scenario.casinoBId,
+          p_staff_role: 'admin',
+          p_correlation_id: 'txn-2',
+        },
+      );
 
       expect(error2).toBeNull();
 
       // Third call: verify casino B context doesn't affect casino A query
       // (In a real scenario, this would be an RLS-filtered query)
-      const { error: error3 } = await supabase.rpc('set_rls_context_internal', {
-        p_actor_id: scenario.staffAId,
-        p_casino_id: scenario.casinoAId,
-        p_staff_role: 'pit_boss',
-        p_correlation_id: 'txn-3',
-      });
+      const { error: error3 } = await setupClient.rpc(
+        'set_rls_context_internal',
+        {
+          p_actor_id: scenario.staffAId,
+          p_casino_id: scenario.casinoAId,
+          p_staff_role: 'pit_boss',
+          p_correlation_id: 'txn-3',
+        },
+      );
 
       expect(error3).toBeNull();
     });
@@ -345,7 +386,7 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
       // Context should not persist beyond the transaction
 
       // Set context in one call
-      await supabase.rpc('set_rls_context_internal', {
+      await setupClient.rpc('set_rls_context_internal', {
         p_actor_id: scenario.staffAId,
         p_casino_id: scenario.casinoAId,
         p_staff_role: 'pit_boss',
@@ -354,7 +395,7 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
       // In a new call/transaction, context should be fresh
       // This is verified by the fact that consecutive calls with different
       // parameters succeed without cross-contamination
-      const { error } = await supabase.rpc('set_rls_context_internal', {
+      const { error } = await setupClient.rpc('set_rls_context_internal', {
         p_actor_id: scenario.staffBId,
         p_casino_id: scenario.casinoBId,
         p_staff_role: 'admin',
@@ -366,19 +407,19 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
     it('parallel requests do not share context', async () => {
       // Fire multiple requests in parallel
       const results = await Promise.all([
-        supabase.rpc('set_rls_context_internal', {
+        setupClient.rpc('set_rls_context_internal', {
           p_actor_id: scenario.staffAId,
           p_casino_id: scenario.casinoAId,
           p_staff_role: 'pit_boss',
           p_correlation_id: 'parallel-1',
         }),
-        supabase.rpc('set_rls_context_internal', {
+        setupClient.rpc('set_rls_context_internal', {
           p_actor_id: scenario.staffBId,
           p_casino_id: scenario.casinoBId,
           p_staff_role: 'admin',
           p_correlation_id: 'parallel-2',
         }),
-        supabase.rpc('set_rls_context_internal', {
+        setupClient.rpc('set_rls_context_internal', {
           p_actor_id: scenario.staffAId,
           p_casino_id: scenario.casinoAId,
           p_staff_role: 'pit_boss',
@@ -397,9 +438,10 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
   // Staff Validation Tests
   // ===========================================================================
 
+  // Category A: Testing ops-lane RPC directly — stays on setupClient
   describe('Staff Validation', () => {
     it('inactive staff is blocked', async () => {
-      const { error } = await supabase.rpc('set_rls_context_internal', {
+      const { error } = await setupClient.rpc('set_rls_context_internal', {
         p_actor_id: scenario.inactiveStaffId,
         p_casino_id: scenario.casinoAId,
         p_staff_role: 'pit_boss',
@@ -413,7 +455,7 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
     it('non-existent staff is blocked', async () => {
       const fakeStaffId = '00000000-0000-0000-0000-000000000000';
 
-      const { error } = await supabase.rpc('set_rls_context_internal', {
+      const { error } = await setupClient.rpc('set_rls_context_internal', {
         p_actor_id: fakeStaffId,
         p_casino_id: scenario.casinoAId,
         p_staff_role: 'pit_boss',
@@ -429,9 +471,10 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
   // ===========================================================================
 
   describe('Deterministic Staff Lookup (INV-6)', () => {
+    // Category B: Business read query — uses pitBossClient (Mode C)
     it('staff.user_id unique index exists', async () => {
       // Verify the unique index was created
-      const { data, error } = await supabase
+      const { data, error } = await pitBossClient
         .from('staff')
         .select('id, user_id')
         .eq('casino_id', scenario.casinoAId)
@@ -442,9 +485,10 @@ describeIntegration('ADR-024 RLS Context Integration Tests', () => {
       expect(error).toBeNull();
     });
 
+    // Category A: DB constraint test — needs setupClient to bypass RLS
     it('duplicate user_id is prevented', async () => {
       // Try to insert staff with duplicate user_id
-      const { error } = await supabase.from('staff').insert({
+      const { error } = await setupClient.from('staff').insert({
         first_name: 'Duplicate',
         last_name: 'User',
         role: 'pit_boss',

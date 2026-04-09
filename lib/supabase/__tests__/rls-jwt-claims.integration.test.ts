@@ -7,6 +7,13 @@
  * Verifies that staff creation/updates automatically sync claims to auth.users.app_metadata
  * and that database triggers maintain synchronization.
  *
+ * MODE C ASSESSMENT (ADR-024):
+ * This file is intentionally Category A (ops-lane) — ALL tests exercise admin-level
+ * operations: auth.admin.createUser/getUserById, syncUserRLSClaims, clearUserRLSClaims,
+ * createStaff/updateStaff via service-role, and database trigger verification.
+ * No business-logic queries exist that would benefit from Mode C migration.
+ * The setupClient (service-role) is the correct auth posture for this entire file.
+ *
  * PREREQUISITES:
  * - Migration 20251210001858_adr015_backfill_jwt_claims.sql must be applied
  * - NEXT_PUBLIC_SUPABASE_URL environment variable set
@@ -43,7 +50,8 @@ const RUN_INTEGRATION =
 (RUN_INTEGRATION ? describe : describe.skip)(
   'JWT Claims Integration (ADR-015 Phase 2)',
   () => {
-    let serviceClient: SupabaseClient<Database>;
+    // setupClient: service-role for all tests (Category A ops-lane — see file header)
+    let setupClient: SupabaseClient<Database>;
     let testCompany1Id: string;
     let testCompany2Id: string;
     let testCasinoId: string;
@@ -56,11 +64,11 @@ const RUN_INTEGRATION =
     let testStaffId3: string;
 
     beforeAll(async () => {
-      // Use service role client for setup (bypasses RLS)
-      serviceClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
+      // Service-role for all tests (Category A ops-lane — admin auth + trigger verification)
+      setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
       // Create test companies (ADR-043: company_id NOT NULL on casino)
-      const { data: company1 } = await serviceClient
+      const { data: company1 } = await setupClient
         .from('company')
         .insert({ name: 'JWT Claims Test Company 1' })
         .select()
@@ -68,7 +76,7 @@ const RUN_INTEGRATION =
       if (!company1) throw new Error('Failed to create test company 1');
       testCompany1Id = company1.id;
 
-      const { data: company2 } = await serviceClient
+      const { data: company2 } = await setupClient
         .from('company')
         .insert({ name: 'JWT Claims Test Company 2' })
         .select()
@@ -77,7 +85,7 @@ const RUN_INTEGRATION =
       testCompany2Id = company2.id;
 
       // Create test casino
-      const { data: casino, error: casinoError } = await serviceClient
+      const { data: casino, error: casinoError } = await setupClient
         .from('casino')
         .insert({
           name: 'JWT Claims Test Casino',
@@ -91,7 +99,7 @@ const RUN_INTEGRATION =
       testCasinoId = casino.id;
 
       // Create second test casino for casino_id change tests
-      const { data: casino2, error: casino2Error } = await serviceClient
+      const { data: casino2, error: casino2Error } = await setupClient
         .from('casino')
         .insert({
           name: 'JWT Claims Test Casino 2',
@@ -105,7 +113,7 @@ const RUN_INTEGRATION =
       testCasino2Id = casino2.id;
 
       // Create casino settings
-      await serviceClient.from('casino_settings').insert([
+      await setupClient.from('casino_settings').insert([
         {
           casino_id: testCasinoId,
           gaming_day_start_time: '06:00:00',
@@ -124,7 +132,7 @@ const RUN_INTEGRATION =
 
       // Create test users for authenticated staff
       const { data: authUser1, error: authError1 } =
-        await serviceClient.auth.admin.createUser({
+        await setupClient.auth.admin.createUser({
           email: 'test-jwt-claims-1@example.com',
           password: 'test-password-12345',
           email_confirm: true,
@@ -133,7 +141,7 @@ const RUN_INTEGRATION =
       if (authError1) {
         // If user already exists, try to get them
         const { data: existingUsers } =
-          await serviceClient.auth.admin.listUsers();
+          await setupClient.auth.admin.listUsers();
         const users = existingUsers?.users ?? [];
         const existing = users.find(
           (u) => u.email === 'test-jwt-claims-1@example.com',
@@ -148,7 +156,7 @@ const RUN_INTEGRATION =
       }
 
       const { data: authUser2, error: authError2 } =
-        await serviceClient.auth.admin.createUser({
+        await setupClient.auth.admin.createUser({
           email: 'test-jwt-claims-2@example.com',
           password: 'test-password-12345',
           email_confirm: true,
@@ -156,7 +164,7 @@ const RUN_INTEGRATION =
 
       if (authError2) {
         const { data: existingUsers } =
-          await serviceClient.auth.admin.listUsers();
+          await setupClient.auth.admin.listUsers();
         const users = existingUsers?.users ?? [];
         const existing = users.find(
           (u) => u.email === 'test-jwt-claims-2@example.com',
@@ -171,7 +179,7 @@ const RUN_INTEGRATION =
       }
 
       const { data: authUser3, error: authError3 } =
-        await serviceClient.auth.admin.createUser({
+        await setupClient.auth.admin.createUser({
           email: 'test-jwt-claims-3@example.com',
           password: 'test-password-12345',
           email_confirm: true,
@@ -179,7 +187,7 @@ const RUN_INTEGRATION =
 
       if (authError3) {
         const { data: existingUsers } =
-          await serviceClient.auth.admin.listUsers();
+          await setupClient.auth.admin.listUsers();
         const users = existingUsers?.users ?? [];
         const existing = users.find(
           (u) => u.email === 'test-jwt-claims-3@example.com',
@@ -197,48 +205,48 @@ const RUN_INTEGRATION =
     afterAll(async () => {
       // Clean up test data (in reverse order of creation)
       if (testStaffId1) {
-        await serviceClient.from('staff').delete().eq('id', testStaffId1);
+        await setupClient.from('staff').delete().eq('id', testStaffId1);
       }
       if (testStaffId2) {
-        await serviceClient.from('staff').delete().eq('id', testStaffId2);
+        await setupClient.from('staff').delete().eq('id', testStaffId2);
       }
       if (testStaffId3) {
-        await serviceClient.from('staff').delete().eq('id', testStaffId3);
+        await setupClient.from('staff').delete().eq('id', testStaffId3);
       }
 
       if (testCasinoId) {
-        await serviceClient
+        await setupClient
           .from('casino_settings')
           .delete()
           .eq('casino_id', testCasinoId);
-        await serviceClient.from('casino').delete().eq('id', testCasinoId);
+        await setupClient.from('casino').delete().eq('id', testCasinoId);
       }
 
       if (testCasino2Id) {
-        await serviceClient
+        await setupClient
           .from('casino_settings')
           .delete()
           .eq('casino_id', testCasino2Id);
-        await serviceClient.from('casino').delete().eq('id', testCasino2Id);
+        await setupClient.from('casino').delete().eq('id', testCasino2Id);
       }
 
       // Clean up test companies (after casinos are deleted)
       if (testCompany1Id) {
-        await serviceClient.from('company').delete().eq('id', testCompany1Id);
+        await setupClient.from('company').delete().eq('id', testCompany1Id);
       }
       if (testCompany2Id) {
-        await serviceClient.from('company').delete().eq('id', testCompany2Id);
+        await setupClient.from('company').delete().eq('id', testCompany2Id);
       }
 
       // Clean up test users
       if (testUserId1) {
-        await serviceClient.auth.admin.deleteUser(testUserId1);
+        await setupClient.auth.admin.deleteUser(testUserId1);
       }
       if (testUserId2) {
-        await serviceClient.auth.admin.deleteUser(testUserId2);
+        await setupClient.auth.admin.deleteUser(testUserId2);
       }
       if (testUserId3) {
-        await serviceClient.auth.admin.deleteUser(testUserId3);
+        await setupClient.auth.admin.deleteUser(testUserId3);
       }
     });
 
@@ -252,7 +260,7 @@ const RUN_INTEGRATION =
         const correlationId = 'test-jwt-create-001';
 
         // Create staff via service layer
-        const staff = await createStaff(serviceClient, {
+        const staff = await createStaff(setupClient, {
           first_name: 'Test',
           last_name: 'PitBoss',
           role: 'pit_boss',
@@ -266,7 +274,7 @@ const RUN_INTEGRATION =
 
         // Verify JWT claims were set
         const { data: userData, error: userError } =
-          await serviceClient.auth.admin.getUserById(testUserId1);
+          await setupClient.auth.admin.getUserById(testUserId1);
 
         expect(userError).toBeNull();
         expect(userData?.user?.app_metadata).toBeDefined();
@@ -282,7 +290,7 @@ const RUN_INTEGRATION =
         const correlationId = 'test-jwt-create-002';
 
         // Create admin staff via service layer
-        const staff = await createStaff(serviceClient, {
+        const staff = await createStaff(setupClient, {
           first_name: 'Test',
           last_name: 'Admin',
           role: 'admin',
@@ -296,7 +304,7 @@ const RUN_INTEGRATION =
 
         // Verify JWT claims were set
         const { data: userData, error: userError } =
-          await serviceClient.auth.admin.getUserById(testUserId2);
+          await setupClient.auth.admin.getUserById(testUserId2);
 
         expect(userError).toBeNull();
         expect(userData?.user?.app_metadata).toBeDefined();
@@ -312,7 +320,7 @@ const RUN_INTEGRATION =
         const correlationId = 'test-jwt-create-003';
 
         // Create dealer without user_id
-        const { data: dealerStaff, error: dealerError } = await serviceClient
+        const { data: dealerStaff, error: dealerError } = await setupClient
           .from('staff')
           .insert({
             first_name: 'Test',
@@ -329,7 +337,7 @@ const RUN_INTEGRATION =
         expect(dealerStaff).toBeDefined();
 
         // Clean up
-        await serviceClient.from('staff').delete().eq('id', dealerStaff!.id);
+        await setupClient.from('staff').delete().eq('id', dealerStaff!.id);
 
         // No user to verify JWT claims for, as expected
       });
@@ -337,7 +345,7 @@ const RUN_INTEGRATION =
       it('should have correct claims structure', async () => {
         // Verify the structure matches RLSClaims interface
         const { data: userData } =
-          await serviceClient.auth.admin.getUserById(testUserId1);
+          await setupClient.auth.admin.getUserById(testUserId1);
 
         const appMetadata = userData?.user?.app_metadata;
 
@@ -372,11 +380,11 @@ const RUN_INTEGRATION =
 
         // Verify initial state
         const { data: userDataBefore } =
-          await serviceClient.auth.admin.getUserById(testUserId1);
+          await setupClient.auth.admin.getUserById(testUserId1);
         expect(userDataBefore?.user?.app_metadata?.staff_role).toBe('pit_boss');
 
         // Update staff role via service layer
-        const updatedStaff = await updateStaff(serviceClient, testStaffId1, {
+        const updatedStaff = await updateStaff(setupClient, testStaffId1, {
           role: 'admin',
         });
 
@@ -384,7 +392,7 @@ const RUN_INTEGRATION =
 
         // Verify JWT claims were updated
         const { data: userDataAfter } =
-          await serviceClient.auth.admin.getUserById(testUserId1);
+          await setupClient.auth.admin.getUserById(testUserId1);
 
         const appMetadata = userDataAfter?.user?.app_metadata;
         expect(appMetadata?.staff_role).toBe('admin');
@@ -399,13 +407,13 @@ const RUN_INTEGRATION =
 
         // Verify initial state
         const { data: userDataBefore } =
-          await serviceClient.auth.admin.getUserById(testUserId2);
+          await setupClient.auth.admin.getUserById(testUserId2);
         expect(userDataBefore?.user?.app_metadata?.casino_id).toBe(
           testCasinoId,
         );
 
         // Update staff casino_id via service layer
-        const updatedStaff = await updateStaff(serviceClient, testStaffId2, {
+        const updatedStaff = await updateStaff(setupClient, testStaffId2, {
           casino_id: testCasino2Id,
         });
 
@@ -413,7 +421,7 @@ const RUN_INTEGRATION =
 
         // Verify JWT claims were updated
         const { data: userDataAfter } =
-          await serviceClient.auth.admin.getUserById(testUserId2);
+          await setupClient.auth.admin.getUserById(testUserId2);
 
         const appMetadata = userDataAfter?.user?.app_metadata;
         expect(appMetadata?.casino_id).toBe(testCasino2Id);
@@ -428,11 +436,11 @@ const RUN_INTEGRATION =
 
         // Get current JWT claims
         const { data: userDataBefore } =
-          await serviceClient.auth.admin.getUserById(testUserId1);
+          await setupClient.auth.admin.getUserById(testUserId1);
         const claimsBefore = userDataBefore?.user?.app_metadata;
 
         // Update non-RLS fields (first_name, last_name, email)
-        await updateStaff(serviceClient, testStaffId1, {
+        await updateStaff(setupClient, testStaffId1, {
           first_name: 'Updated',
           last_name: 'Name',
           email: 'updated@example.com',
@@ -440,7 +448,7 @@ const RUN_INTEGRATION =
 
         // Verify JWT claims unchanged
         const { data: userDataAfter } =
-          await serviceClient.auth.admin.getUserById(testUserId1);
+          await setupClient.auth.admin.getUserById(testUserId1);
         const claimsAfter = userDataAfter?.user?.app_metadata;
 
         expect(claimsAfter?.casino_id).toBe(claimsBefore?.casino_id);
@@ -453,7 +461,7 @@ const RUN_INTEGRATION =
         const correlationId = 'test-jwt-update-004';
 
         // Update both role and casino_id
-        const updatedStaff = await updateStaff(serviceClient, testStaffId1, {
+        const updatedStaff = await updateStaff(setupClient, testStaffId1, {
           role: 'pit_boss',
           casino_id: testCasino2Id,
         });
@@ -463,7 +471,7 @@ const RUN_INTEGRATION =
 
         // Verify JWT claims were updated
         const { data: userData } =
-          await serviceClient.auth.admin.getUserById(testUserId1);
+          await setupClient.auth.admin.getUserById(testUserId1);
 
         const appMetadata = userData?.user?.app_metadata;
         expect(appMetadata?.staff_role).toBe('pit_boss');
@@ -484,7 +492,7 @@ const RUN_INTEGRATION =
 
         // First, create a staff member with user_id and verify claims are set
         const { data: tempUser, error: createUserError } =
-          await serviceClient.auth.admin.createUser({
+          await setupClient.auth.admin.createUser({
             email: testEmail,
             password: 'test-password-12345',
             email_confirm: true,
@@ -499,7 +507,7 @@ const RUN_INTEGRATION =
         const tempUserId = tempUser.user.id;
 
         // Create staff with user_id
-        const { data: staff, error: createError } = await serviceClient
+        const { data: staff, error: createError } = await setupClient
           .from('staff')
           .insert({
             first_name: 'Clear',
@@ -520,7 +528,7 @@ const RUN_INTEGRATION =
 
         // Verify JWT claims were initially set
         const { data: userDataBefore } =
-          await serviceClient.auth.admin.getUserById(tempUserId);
+          await setupClient.auth.admin.getUserById(tempUserId);
 
         const claimsBefore = userDataBefore?.user?.app_metadata;
 
@@ -533,14 +541,14 @@ const RUN_INTEGRATION =
           });
 
           const { data: refreshedData } =
-            await serviceClient.auth.admin.getUserById(tempUserId);
+            await setupClient.auth.admin.getUserById(tempUserId);
           expect(refreshedData?.user?.app_metadata?.casino_id).toBe(
             testCasinoId,
           );
         }
 
         // Now clear the user_id (disassociate staff from auth user)
-        const { error: updateError } = await serviceClient
+        const { error: updateError } = await setupClient
           .from('staff')
           .update({ user_id: null })
           .eq('id', staff!.id);
@@ -557,7 +565,7 @@ const RUN_INTEGRATION =
         await clearUserRLSClaims(tempUserId);
 
         const { data: userDataAfter } =
-          await serviceClient.auth.admin.getUserById(tempUserId);
+          await setupClient.auth.admin.getUserById(tempUserId);
 
         const claimsAfter = userDataAfter?.user?.app_metadata;
 
@@ -568,8 +576,8 @@ const RUN_INTEGRATION =
         expect(claimsAfter?.staff_id).toBeFalsy();
 
         // Clean up
-        await serviceClient.from('staff').delete().eq('id', staff!.id);
-        await serviceClient.auth.admin.deleteUser(tempUserId);
+        await setupClient.from('staff').delete().eq('id', staff!.id);
+        await setupClient.auth.admin.deleteUser(tempUserId);
       });
 
       it('should not clear JWT claims when staff is deleted but user_id remains valid', async () => {
@@ -579,7 +587,7 @@ const RUN_INTEGRATION =
         // This test verifies that deleting a staff record doesn't automatically
         // clear JWT claims (must be done explicitly via clearUserRLSClaims)
 
-        const { data: tempUser } = await serviceClient.auth.admin.createUser({
+        const { data: tempUser } = await setupClient.auth.admin.createUser({
           email: 'test-jwt-delete-staff@example.com',
           password: 'test-password-12345',
           email_confirm: true,
@@ -592,7 +600,7 @@ const RUN_INTEGRATION =
         const tempUserId = tempUser.user.id;
 
         // Create and sync claims
-        const { data: staff } = await serviceClient
+        const { data: staff } = await setupClient
           .from('staff')
           .insert({
             first_name: 'Delete',
@@ -616,23 +624,23 @@ const RUN_INTEGRATION =
 
         // Verify claims are set
         const { data: userDataBefore } =
-          await serviceClient.auth.admin.getUserById(tempUserId);
+          await setupClient.auth.admin.getUserById(tempUserId);
         expect(userDataBefore?.user?.app_metadata?.casino_id).toBe(
           testCasinoId,
         );
 
         // Delete staff record
-        await serviceClient.from('staff').delete().eq('id', staff!.id);
+        await setupClient.from('staff').delete().eq('id', staff!.id);
 
         // Claims should still exist (deletion doesn't trigger clear)
         const { data: userDataAfter } =
-          await serviceClient.auth.admin.getUserById(tempUserId);
+          await setupClient.auth.admin.getUserById(tempUserId);
 
         // Claims remain (must be explicitly cleared)
         expect(userDataAfter?.user?.app_metadata?.casino_id).toBe(testCasinoId);
 
         // Clean up
-        await serviceClient.auth.admin.deleteUser(tempUserId);
+        await setupClient.auth.admin.deleteUser(tempUserId);
       });
     });
 
@@ -646,7 +654,7 @@ const RUN_INTEGRATION =
         const correlationId = 'test-jwt-trigger-001';
 
         // Insert staff directly via Supabase client (bypassing service layer)
-        const { data: rawStaff, error: insertError } = await serviceClient
+        const { data: rawStaff, error: insertError } = await setupClient
           .from('staff')
           .insert({
             first_name: 'Trigger',
@@ -669,7 +677,7 @@ const RUN_INTEGRATION =
 
         // Verify trigger automatically synced JWT claims
         const { data: userData } =
-          await serviceClient.auth.admin.getUserById(testUserId3);
+          await setupClient.auth.admin.getUserById(testUserId3);
 
         const appMetadata = userData?.user?.app_metadata;
 
@@ -688,7 +696,7 @@ const RUN_INTEGRATION =
 
           // Re-fetch after manual sync
           const { data: refreshedUserData } =
-            await serviceClient.auth.admin.getUserById(testUserId3);
+            await setupClient.auth.admin.getUserById(testUserId3);
           const refreshedMetadata = refreshedUserData?.user?.app_metadata;
 
           expect(refreshedMetadata?.casino_id).toBe(testCasinoId);
@@ -706,7 +714,7 @@ const RUN_INTEGRATION =
         const correlationId = 'test-jwt-trigger-002';
 
         // Update staff role directly via SQL (bypassing service layer)
-        const { data: updatedStaff, error: updateError } = await serviceClient
+        const { data: updatedStaff, error: updateError } = await setupClient
           .from('staff')
           .update({ role: 'admin' })
           .eq('id', testStaffId3)
@@ -721,7 +729,7 @@ const RUN_INTEGRATION =
 
         // Verify trigger automatically updated JWT claims
         const { data: userData } =
-          await serviceClient.auth.admin.getUserById(testUserId3);
+          await setupClient.auth.admin.getUserById(testUserId3);
 
         const appMetadata = userData?.user?.app_metadata;
 
@@ -737,7 +745,7 @@ const RUN_INTEGRATION =
           });
 
           const { data: refreshedUserData } =
-            await serviceClient.auth.admin.getUserById(testUserId3);
+            await setupClient.auth.admin.getUserById(testUserId3);
           const refreshedMetadata = refreshedUserData?.user?.app_metadata;
 
           expect(refreshedMetadata?.staff_role).toBe('admin');
@@ -755,7 +763,7 @@ const RUN_INTEGRATION =
         const correlationId = 'test-jwt-trigger-003';
 
         // Update staff casino_id directly via SQL
-        const { data: updatedStaff, error: updateError } = await serviceClient
+        const { data: updatedStaff, error: updateError } = await setupClient
           .from('staff')
           .update({ casino_id: testCasino2Id })
           .eq('id', testStaffId3)
@@ -770,7 +778,7 @@ const RUN_INTEGRATION =
 
         // Verify trigger automatically updated JWT claims
         const { data: userData } =
-          await serviceClient.auth.admin.getUserById(testUserId3);
+          await setupClient.auth.admin.getUserById(testUserId3);
 
         const appMetadata = userData?.user?.app_metadata;
 
@@ -786,7 +794,7 @@ const RUN_INTEGRATION =
           });
 
           const { data: refreshedUserData } =
-            await serviceClient.auth.admin.getUserById(testUserId3);
+            await setupClient.auth.admin.getUserById(testUserId3);
           const refreshedMetadata = refreshedUserData?.user?.app_metadata;
 
           expect(refreshedMetadata?.casino_id).toBe(testCasino2Id);
@@ -805,11 +813,11 @@ const RUN_INTEGRATION =
 
         // Get current JWT claims
         const { data: userDataBefore } =
-          await serviceClient.auth.admin.getUserById(testUserId3);
+          await setupClient.auth.admin.getUserById(testUserId3);
         const claimsBefore = userDataBefore?.user?.app_metadata;
 
         // Update non-trigger fields
-        await serviceClient
+        await setupClient
           .from('staff')
           .update({
             first_name: 'TriggerUpdated',
@@ -819,7 +827,7 @@ const RUN_INTEGRATION =
 
         // Verify JWT claims unchanged (trigger should not have fired)
         const { data: userDataAfter } =
-          await serviceClient.auth.admin.getUserById(testUserId3);
+          await setupClient.auth.admin.getUserById(testUserId3);
         const claimsAfter = userDataAfter?.user?.app_metadata;
 
         expect(claimsAfter?.casino_id).toBe(claimsBefore?.casino_id);
@@ -893,13 +901,13 @@ const RUN_INTEGRATION =
 
         // Verify user1 has casino2 claims (from previous test updates)
         const { data: user1Data } =
-          await serviceClient.auth.admin.getUserById(testUserId1);
+          await setupClient.auth.admin.getUserById(testUserId1);
         const user1CasinoId = user1Data?.user?.app_metadata?.casino_id;
         expect(user1CasinoId).toBe(testCasino2Id);
 
         // Verify user2 has casino2 claims (from previous test updates)
         const { data: user2Data } =
-          await serviceClient.auth.admin.getUserById(testUserId2);
+          await setupClient.auth.admin.getUserById(testUserId2);
         const user2CasinoId = user2Data?.user?.app_metadata?.casino_id;
         expect(user2CasinoId).toBe(testCasino2Id);
 
@@ -932,7 +940,7 @@ const RUN_INTEGRATION =
 
         // Verify claims were set
         const { data: userData } =
-          await serviceClient.auth.admin.getUserById(testUserId1);
+          await setupClient.auth.admin.getUserById(testUserId1);
 
         const appMetadata = userData?.user?.app_metadata;
         expect(appMetadata?.casino_id).toBe(testCasinoId);
@@ -953,7 +961,7 @@ const RUN_INTEGRATION =
 
         // Verify initial state
         const { data: userDataBefore } =
-          await serviceClient.auth.admin.getUserById(testUserId2);
+          await setupClient.auth.admin.getUserById(testUserId2);
         expect(userDataBefore?.user?.app_metadata?.staff_role).toBe('pit_boss');
 
         // Overwrite with new claims
@@ -965,7 +973,7 @@ const RUN_INTEGRATION =
 
         // Verify claims were updated
         const { data: userDataAfter } =
-          await serviceClient.auth.admin.getUserById(testUserId2);
+          await setupClient.auth.admin.getUserById(testUserId2);
 
         const appMetadata = userDataAfter?.user?.app_metadata;
         expect(appMetadata?.casino_id).toBe(testCasino2Id);

@@ -23,7 +23,10 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import { injectRLSContext } from '@/lib/supabase/rls-context';
+import {
+  createModeCSession,
+  ModeCSessionResult,
+} from '@/lib/testing/create-mode-c-session';
 import type { PlayerIdentityInput } from '@/services/player/dtos';
 import {
   upsertIdentity,
@@ -46,38 +49,27 @@ const describeIntegration =
     : describe.skip;
 
 describeIntegration('player-identity Integration Tests (ADR-022)', () => {
-  let serviceClient: SupabaseClient<Database>;
+  // Mode C (ADR-024): Service-role client for fixture setup/teardown only.
+  // Authenticated Mode C clients for all business-logic calls.
+  let setupClient: SupabaseClient<Database>;
   let pitBossClient: SupabaseClient<Database>;
   let adminClient: SupabaseClient<Database>;
+
+  let pitBossSession: ModeCSessionResult;
+  let adminSession: ModeCSessionResult;
 
   let companyId: string;
   let casinoId: string;
   let pitBossId: string;
   let adminId: string;
-  let userId1: string;
-  let userId2: string;
   let playerId: string;
 
   beforeAll(async () => {
-    serviceClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
-
-    // Create test users
-    const { data: user1 } = await serviceClient.auth.admin.createUser({
-      email: `test-pit-boss-${Date.now()}@example.com`,
-      password: 'test-password',
-      email_confirm: true,
-    });
-    userId1 = user1!.user.id;
-
-    const { data: user2 } = await serviceClient.auth.admin.createUser({
-      email: `test-admin-${Date.now()}@example.com`,
-      password: 'test-password',
-      email_confirm: true,
-    });
-    userId2 = user2!.user.id;
+    // Service-role client for fixture setup only (Mode C — ADR-024)
+    setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
     // Create test company (ADR-043: company before casino)
-    const { data: company } = await serviceClient
+    const { data: company } = await setupClient
       .from('company')
       .insert({ name: 'Test Company' })
       .select('id')
@@ -85,18 +77,17 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
     companyId = company!.id;
 
     // Create test casino
-    const { data: casino } = await serviceClient
+    const { data: casino } = await setupClient
       .from('casino')
       .insert({ name: 'Test Casino', company_id: companyId })
       .select('id')
       .single();
     casinoId = casino!.id;
 
-    // Create test staff
-    const { data: pitBoss } = await serviceClient
+    // Create test staff (without user_id initially — linked after Mode C auth)
+    const { data: pitBoss } = await setupClient
       .from('staff')
       .insert({
-        user_id: userId1,
         casino_id: casinoId,
         role: 'pit_boss',
         first_name: 'Pit',
@@ -107,10 +98,9 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
       .single();
     pitBossId = pitBoss!.id;
 
-    const { data: admin } = await serviceClient
+    const { data: admin } = await setupClient
       .from('staff')
       .insert({
-        user_id: userId2,
         casino_id: casinoId,
         role: 'admin',
         first_name: 'Admin',
@@ -121,24 +111,33 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
       .single();
     adminId = admin!.id;
 
-    // Create authenticated clients with RLS context
-    pitBossClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    adminClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
-
-    await injectRLSContext(pitBossClient, {
-      actorId: pitBossId,
+    // Mode C auth ceremony (ADR-024) — authenticated anon clients with JWT claims
+    pitBossSession = await createModeCSession(setupClient, {
+      staffId: pitBossId,
       casinoId,
       staffRole: 'pit_boss',
     });
+    pitBossClient = pitBossSession.client;
 
-    await injectRLSContext(adminClient, {
-      actorId: adminId,
+    adminSession = await createModeCSession(setupClient, {
+      staffId: adminId,
       casinoId,
       staffRole: 'admin',
     });
+    adminClient = adminSession.client;
+
+    // Link auth users to staff records (chk_staff_role_user_id requires user_id for pit_boss/admin)
+    await setupClient
+      .from('staff')
+      .update({ user_id: pitBossSession.userId })
+      .eq('id', pitBossId);
+    await setupClient
+      .from('staff')
+      .update({ user_id: adminSession.userId })
+      .eq('id', adminId);
 
     // Create test player
-    const { data: player } = await serviceClient
+    const { data: player } = await setupClient
       .from('player')
       .insert({
         first_name: 'John',
@@ -150,7 +149,7 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
     playerId = player!.id;
 
     // Enroll player in casino
-    await serviceClient.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: playerId,
       casino_id: casinoId,
       status: 'active',
@@ -159,21 +158,20 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
   });
 
   afterAll(async () => {
-    // Cleanup test data
-    await serviceClient
+    // Cleanup test data (reverse order of creation)
+    await setupClient
       .from('player_identity')
       .delete()
       .eq('casino_id', casinoId);
-    await serviceClient
-      .from('player_casino')
-      .delete()
-      .eq('casino_id', casinoId);
-    await serviceClient.from('player').delete().eq('id', playerId);
-    await serviceClient.from('staff').delete().eq('casino_id', casinoId);
-    await serviceClient.from('casino').delete().eq('id', casinoId);
-    await serviceClient.from('company').delete().eq('id', companyId);
-    await serviceClient.auth.admin.deleteUser(userId1);
-    await serviceClient.auth.admin.deleteUser(userId2);
+    await setupClient.from('player_casino').delete().eq('casino_id', casinoId);
+    await setupClient.from('player').delete().eq('id', playerId);
+    await setupClient.from('staff').delete().eq('casino_id', casinoId);
+    await setupClient.from('casino').delete().eq('id', casinoId);
+    await setupClient.from('company').delete().eq('id', companyId);
+
+    // Auth cleanup (Mode C)
+    await pitBossSession?.cleanup();
+    await adminSession?.cleanup();
   });
 
   describe('C1. Document Hash Functions', () => {
@@ -312,7 +310,7 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
 
     it('creates identity without document number (optional)', async () => {
       // Create second player for this test
-      const { data: player2 } = await serviceClient
+      const { data: player2 } = await setupClient
         .from('player')
         .insert({
           first_name: 'Jane',
@@ -322,7 +320,7 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
         .select('id')
         .single();
 
-      await serviceClient.from('player_casino').insert({
+      await setupClient.from('player_casino').insert({
         player_id: player2!.id,
         casino_id: casinoId,
         status: 'active',
@@ -347,20 +345,17 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
       expect(identity.gender).toBe('f');
 
       // Cleanup
-      await serviceClient
-        .from('player_identity')
-        .delete()
-        .eq('id', identity.id);
-      await serviceClient
+      await setupClient.from('player_identity').delete().eq('id', identity.id);
+      await setupClient
         .from('player_casino')
         .delete()
         .eq('player_id', player2!.id);
-      await serviceClient.from('player').delete().eq('id', player2!.id);
+      await setupClient.from('player').delete().eq('id', player2!.id);
     });
 
     it('throws PLAYER_NOT_FOUND when enrollment missing (FK violation)', async () => {
       // Create player without enrollment
-      const { data: player3 } = await serviceClient
+      const { data: player3 } = await setupClient
         .from('player')
         .insert({
           first_name: 'Bob',
@@ -380,14 +375,14 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
       ).rejects.toThrow('Player must be enrolled before adding identity');
 
       // Cleanup
-      await serviceClient.from('player').delete().eq('id', player3!.id);
+      await setupClient.from('player').delete().eq('id', player3!.id);
     });
   });
 
   describe('C3. Document Hash Uniqueness Constraint', () => {
     it('prevents duplicate document numbers in same casino', async () => {
       // Create second player
-      const { data: player2 } = await serviceClient
+      const { data: player2 } = await setupClient
         .from('player')
         .insert({
           first_name: 'Jane',
@@ -397,7 +392,7 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
         .select('id')
         .single();
 
-      await serviceClient.from('player_casino').insert({
+      await setupClient.from('player_casino').insert({
         player_id: player2!.id,
         casino_id: casinoId,
         status: 'active',
@@ -431,11 +426,11 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
       ).rejects.toThrow('Document number already registered in this casino');
 
       // Cleanup
-      await serviceClient
+      await setupClient
         .from('player_casino')
         .delete()
         .eq('player_id', player2!.id);
-      await serviceClient.from('player').delete().eq('id', player2!.id);
+      await setupClient.from('player').delete().eq('id', player2!.id);
     });
   });
 
@@ -462,19 +457,19 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
 
     it('prevents casino_id modification', async () => {
       // Create second company and casino (ADR-043)
-      const { data: company2 } = await serviceClient
+      const { data: company2 } = await setupClient
         .from('company')
         .insert({ name: 'Second Company' })
         .select('id')
         .single();
 
-      const { data: casino2 } = await serviceClient
+      const { data: casino2 } = await setupClient
         .from('casino')
         .insert({ name: 'Second Casino', company_id: company2!.id })
         .select('id')
         .single();
 
-      const { error } = await serviceClient
+      const { error } = await setupClient
         .from('player_identity')
         .update({ casino_id: casino2!.id })
         .eq('id', identityId);
@@ -484,13 +479,13 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
       expect(error?.message).toContain('casino_id is immutable');
 
       // Cleanup
-      await serviceClient.from('casino').delete().eq('id', casino2!.id);
-      await serviceClient.from('company').delete().eq('id', company2!.id);
+      await setupClient.from('casino').delete().eq('id', casino2!.id);
+      await setupClient.from('company').delete().eq('id', company2!.id);
     });
 
     it('prevents player_id modification', async () => {
       // Create second player
-      const { data: player2 } = await serviceClient
+      const { data: player2 } = await setupClient
         .from('player')
         .insert({
           first_name: 'Other',
@@ -500,7 +495,7 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
         .select('id')
         .single();
 
-      const { error } = await serviceClient
+      const { error } = await setupClient
         .from('player_identity')
         .update({ player_id: player2!.id })
         .eq('id', identityId);
@@ -510,11 +505,11 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
       expect(error?.message).toContain('player_id is immutable');
 
       // Cleanup
-      await serviceClient.from('player').delete().eq('id', player2!.id);
+      await setupClient.from('player').delete().eq('id', player2!.id);
     });
 
     it('prevents created_by modification', async () => {
-      const { error } = await serviceClient
+      const { error } = await setupClient
         .from('player_identity')
         .update({ created_by: adminId })
         .eq('id', identityId);
@@ -525,7 +520,7 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
     });
 
     it('allows mutable field updates', async () => {
-      const { data, error } = await serviceClient
+      const { data, error } = await setupClient
         .from('player_identity')
         .update({ eye_color: 'green', height: '6-02' })
         .eq('id', identityId)
@@ -560,7 +555,7 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Update via service client to bypass service layer
-      const { data } = await serviceClient
+      const { data } = await setupClient
         .from('player_identity')
         .update({ eye_color: 'blue' })
         .eq('id', identity.id)
@@ -598,7 +593,7 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
         .eq('id', identity.id);
 
       // Verify updated_by changed to admin
-      const { data } = await serviceClient
+      const { data } = await setupClient
         .from('player_identity')
         .select('updated_by')
         .eq('id', identity.id)
@@ -659,7 +654,7 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
 
     it('returns null when identity not found', async () => {
       // Create player without identity
-      const { data: player2 } = await serviceClient
+      const { data: player2 } = await setupClient
         .from('player')
         .insert({
           first_name: 'No',
@@ -669,7 +664,7 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
         .select('id')
         .single();
 
-      await serviceClient.from('player_casino').insert({
+      await setupClient.from('player_casino').insert({
         player_id: player2!.id,
         casino_id: casinoId,
         status: 'active',
@@ -681,11 +676,11 @@ describeIntegration('player-identity Integration Tests (ADR-022)', () => {
       expect(identity).toBeNull();
 
       // Cleanup
-      await serviceClient
+      await setupClient
         .from('player_casino')
         .delete()
         .eq('player_id', player2!.id);
-      await serviceClient.from('player').delete().eq('id', player2!.id);
+      await setupClient.from('player').delete().eq('id', player2!.id);
     });
   });
 

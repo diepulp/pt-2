@@ -25,6 +25,10 @@ import {
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import {
+  createModeCSession,
+  ModeCSessionResult,
+} from '@/lib/testing/create-mode-c-session';
 import type { Database } from '@/types/database.types';
 
 import { createVisitService, VisitServiceInterface } from '../index';
@@ -44,8 +48,11 @@ interface TestFixture {
 }
 
 describe('Visit Continuation - Integration Tests (PRD-017)', () => {
-  let supabase: SupabaseClient<Database>;
+  let setupClient: SupabaseClient<Database>;
+  let pitBossClient: SupabaseClient<Database>;
   let service: VisitServiceInterface;
+  let authCleanup1: () => Promise<void>;
+  let authCleanup2: () => Promise<void>;
 
   // Shared test resources
   let testCompany1Id: string;
@@ -63,12 +70,11 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
   let fixtureCounter = 0;
 
   beforeAll(async () => {
-    // Use service role client for setup (bypasses RLS)
-    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    service = createVisitService(supabase);
+    // Service role for fixture setup only (Mode C — ADR-024)
+    setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
     // Create test companies (ADR-043: company before casino)
-    const { data: company1 } = await supabase
+    const { data: company1 } = await setupClient
       .from('company')
       .insert({ name: `${TEST_PREFIX} Company 1` })
       .select()
@@ -76,7 +82,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
     if (!company1) throw new Error('Failed to create test company 1');
     testCompany1Id = company1.id;
 
-    const { data: company2 } = await supabase
+    const { data: company2 } = await setupClient
       .from('company')
       .insert({ name: `${TEST_PREFIX} Company 2` })
       .select()
@@ -85,7 +91,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
     testCompany2Id = company2.id;
 
     // Create test casinos
-    const { data: casino1 } = await supabase
+    const { data: casino1 } = await setupClient
       .from('casino')
       .insert({
         name: `${TEST_PREFIX} Casino 1`,
@@ -96,7 +102,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       .single();
     testCasino1Id = casino1!.id;
 
-    const { data: casino2 } = await supabase
+    const { data: casino2 } = await setupClient
       .from('casino')
       .insert({
         name: `${TEST_PREFIX} Casino 2`,
@@ -108,7 +114,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
     testCasino2Id = casino2!.id;
 
     // Create casino settings (required for compute_gaming_day)
-    await supabase.from('casino_settings').insert([
+    await setupClient.from('casino_settings').insert([
       {
         casino_id: testCasino1Id,
         gaming_day_start_time: '06:00:00',
@@ -126,7 +132,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
     ]);
 
     // Create gaming tables
-    const { data: table1 } = await supabase
+    const { data: table1 } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: testCasino1Id,
@@ -139,7 +145,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       .single();
     testTable1Id = table1!.id;
 
-    const { data: table2 } = await supabase
+    const { data: table2 } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: testCasino1Id,
@@ -152,7 +158,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       .single();
     testTable2Id = table2!.id;
 
-    const { data: table3 } = await supabase
+    const { data: table3 } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: testCasino2Id,
@@ -166,7 +172,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
     testTable3Id = table3!.id;
 
     // Create test actors (staff)
-    const { data: actor1 } = await supabase
+    const { data: actor1 } = await setupClient
       .from('staff')
       .insert({
         casino_id: testCasino1Id,
@@ -181,7 +187,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       .single();
     testActor1Id = actor1!.id;
 
-    const { data: actor2 } = await supabase
+    const { data: actor2 } = await setupClient
       .from('staff')
       .insert({
         casino_id: testCasino2Id,
@@ -195,6 +201,33 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       .select()
       .single();
     testActor2Id = actor2!.id;
+
+    // Mode C auth setup (ADR-024) — authenticated anon clients with JWT claims
+    const session1 = await createModeCSession(setupClient, {
+      staffId: testActor1Id,
+      casinoId: testCasino1Id,
+      staffRole: 'pit_boss',
+    });
+    pitBossClient = session1.client;
+    authCleanup1 = session1.cleanup;
+    await setupClient
+      .from('staff')
+      .update({ user_id: session1.userId })
+      .eq('id', testActor1Id);
+
+    const session2 = await createModeCSession(setupClient, {
+      staffId: testActor2Id,
+      casinoId: testCasino2Id,
+      staffRole: 'pit_boss',
+    });
+    authCleanup2 = session2.cleanup;
+    await setupClient
+      .from('staff')
+      .update({ user_id: session2.userId })
+      .eq('id', testActor2Id);
+
+    // Wire service to authenticated client (Mode C)
+    service = createVisitService(pitBossClient);
   });
 
   afterAll(async () => {
@@ -202,46 +235,55 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
     for (const fixture of allFixtures) {
       // Delete rating slips
       for (const slipId of fixture.slipIds) {
-        await supabase.from('rating_slip').delete().eq('id', slipId);
+        await setupClient.from('rating_slip').delete().eq('id', slipId);
       }
 
       // Delete visits
       for (const visitId of fixture.visitIds) {
-        await supabase.from('rating_slip').delete().eq('visit_id', visitId);
-        await supabase.from('visit').delete().eq('id', visitId);
+        await setupClient.from('rating_slip').delete().eq('visit_id', visitId);
+        await setupClient.from('visit').delete().eq('id', visitId);
       }
 
       // Delete player
       if (fixture.playerId) {
-        await supabase
+        await setupClient
           .from('player_casino')
           .delete()
           .eq('player_id', fixture.playerId);
-        await supabase
+        await setupClient
           .from('player_loyalty')
           .delete()
           .eq('player_id', fixture.playerId);
-        await supabase.from('player').delete().eq('id', fixture.playerId);
+        await setupClient.from('player').delete().eq('id', fixture.playerId);
       }
     }
 
     // Delete test resources
-    await supabase.from('staff').delete().eq('casino_id', testCasino1Id);
-    await supabase.from('staff').delete().eq('casino_id', testCasino2Id);
-    await supabase.from('gaming_table').delete().eq('casino_id', testCasino1Id);
-    await supabase.from('gaming_table').delete().eq('casino_id', testCasino2Id);
-    await supabase
+    await setupClient.from('staff').delete().eq('casino_id', testCasino1Id);
+    await setupClient.from('staff').delete().eq('casino_id', testCasino2Id);
+    await setupClient
+      .from('gaming_table')
+      .delete()
+      .eq('casino_id', testCasino1Id);
+    await setupClient
+      .from('gaming_table')
+      .delete()
+      .eq('casino_id', testCasino2Id);
+    await setupClient
       .from('casino_settings')
       .delete()
       .eq('casino_id', testCasino1Id);
-    await supabase
+    await setupClient
       .from('casino_settings')
       .delete()
       .eq('casino_id', testCasino2Id);
-    await supabase.from('casino').delete().eq('id', testCasino1Id);
-    await supabase.from('casino').delete().eq('id', testCasino2Id);
-    await supabase.from('company').delete().eq('id', testCompany1Id);
-    await supabase.from('company').delete().eq('id', testCompany2Id);
+    await setupClient.from('casino').delete().eq('id', testCasino1Id);
+    await setupClient.from('casino').delete().eq('id', testCasino2Id);
+    await setupClient.from('company').delete().eq('id', testCompany1Id);
+    await setupClient.from('company').delete().eq('id', testCompany2Id);
+    // Auth cleanup (Mode C)
+    await authCleanup1?.();
+    await authCleanup2?.();
   }, 30000);
 
   // Helper: Create isolated test fixture
@@ -250,7 +292,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
   ): Promise<TestFixture> {
     fixtureCounter++;
 
-    const { data: player } = await supabase
+    const { data: player } = await setupClient
       .from('player')
       .insert({
         first_name: 'Test',
@@ -260,7 +302,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       .select()
       .single();
 
-    await supabase.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: player!.id,
       casino_id: casinoId,
       status: 'active',
@@ -276,6 +318,68 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
     return fixture;
   }
 
+  // Fixture helpers — service-role RPC wrappers (machine-verifiable rule: FIB-H §F.4)
+  async function setupStartSlip(
+    visitId: string,
+    tableId: string,
+    seat: string,
+    gameSettings: Record<string, unknown> = {},
+  ) {
+    const { data, error } = await setupClient.rpc('rpc_start_rating_slip', {
+      p_visit_id: visitId,
+      p_table_id: tableId,
+      p_seat_number: seat,
+      p_game_settings: gameSettings,
+    });
+    if (error) throw error;
+    return data!;
+  }
+
+  async function setupCloseSlip(slipId: string, averageBet?: number) {
+    const params: Record<string, unknown> = { p_rating_slip_id: slipId };
+    if (averageBet !== undefined) params.p_average_bet = averageBet;
+    const { error } = await setupClient.rpc('rpc_close_rating_slip', params);
+    if (error) throw error;
+  }
+
+  async function setupCreateVisit(
+    playerId: string | null,
+    casinoId: string,
+    overrides: Partial<{
+      started_at: string;
+      ended_at: string | null;
+      visit_group_id: string;
+      visit_kind: string;
+    }> = {},
+  ) {
+    const { data, error } = await setupClient
+      .from('visit')
+      .insert({
+        player_id: playerId,
+        casino_id: casinoId,
+        visit_kind:
+          (overrides.visit_kind as 'gaming_identified_rated') ??
+          'gaming_identified_rated',
+        started_at: overrides.started_at,
+        ended_at: overrides.ended_at ?? null,
+        visit_group_id: overrides.visit_group_id,
+      })
+      .select()
+      .single();
+    return { data: data!, error };
+  }
+
+  async function setupUpdateVisit(
+    visitId: string,
+    updates: Record<string, unknown>,
+  ) {
+    const { error } = await setupClient
+      .from('visit')
+      .update(updates)
+      .eq('id', visitId);
+    if (error) throw error;
+  }
+
   // ===========================================================================
   // 1. visit_group_id Trigger Tests
   // ===========================================================================
@@ -285,21 +389,15 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const fixture = await createTestFixture();
 
       // Create visit without explicit visit_group_id
-      const { data: visit } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
-          // visit_group_id is NULL (not provided)
-        })
-        .select()
-        .single();
+      const { data: visit } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+      );
 
-      fixture.visitIds.push(visit!.id);
+      fixture.visitIds.push(visit.id);
 
       // Trigger should set visit_group_id = id
-      expect(visit!.visit_group_id).toBe(visit!.id);
+      expect(visit.visit_group_id).toBe(visit.id);
     });
 
     it('preserves visit_group_id when explicitly provided', async () => {
@@ -308,22 +406,19 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const explicitGroupId = 'custom-group-id-123';
 
       // Create visit with explicit visit_group_id
-      const { data: visit, error } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: visit, error } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           visit_group_id: explicitGroupId,
-        })
-        .select()
-        .single();
+        },
+      );
 
       // Trigger should NOT override explicit value
       expect(error).toBeNull();
-      expect(visit!.visit_group_id).toBe(explicitGroupId);
+      expect(visit.visit_group_id).toBe(explicitGroupId);
 
-      fixture.visitIds.push(visit!.id);
+      fixture.visitIds.push(visit.id);
     });
   });
 
@@ -335,49 +430,40 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
     it('allows one open visit per player', async () => {
       const fixture = await createTestFixture();
 
-      const { data: visit1, error: error1 } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
-          ended_at: null, // Open visit
-        })
-        .select()
-        .single();
+      const { data: visit1, error: error1 } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
+          ended_at: null,
+        },
+      );
 
       expect(error1).toBeNull();
-      expect(visit1!.ended_at).toBeNull();
-      fixture.visitIds.push(visit1!.id);
+      expect(visit1.ended_at).toBeNull();
+      fixture.visitIds.push(visit1.id);
     });
 
     it('rejects second open visit for same player (constraint violation)', async () => {
       const fixture = await createTestFixture();
 
       // Create first open visit
-      const { data: visit1 } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: visit1 } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: null,
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(visit1!.id);
+        },
+      );
+      fixture.visitIds.push(visit1.id);
 
       // Attempt to create second open visit
-      const { error: error2 } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { error: error2 } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: null,
-        })
-        .select()
-        .single();
+        },
+      );
 
       // Should fail with unique violation
       expect(error2).not.toBeNull();
@@ -389,107 +475,88 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const fixture2 = await createTestFixture();
 
       // Create open visit for player 1
-      const { data: visit1, error: error1 } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture1.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: visit1, error: error1 } = await setupCreateVisit(
+        fixture1.playerId,
+        testCasino1Id,
+        {
           ended_at: null,
-        })
-        .select()
-        .single();
-      fixture1.visitIds.push(visit1!.id);
+        },
+      );
+      fixture1.visitIds.push(visit1.id);
 
       // Create open visit for player 2
-      const { data: visit2, error: error2 } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture2.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: visit2, error: error2 } = await setupCreateVisit(
+        fixture2.playerId,
+        testCasino1Id,
+        {
           ended_at: null,
-        })
-        .select()
-        .single();
-      fixture2.visitIds.push(visit2!.id);
+        },
+      );
+      fixture2.visitIds.push(visit2.id);
 
       // Both should succeed
       expect(error1).toBeNull();
       expect(error2).toBeNull();
-      expect(visit1!.player_id).not.toBe(visit2!.player_id);
+      expect(visit1.player_id).not.toBe(visit2.player_id);
     });
 
     it('allows ghost visits (player_id NULL) to coexist', async () => {
       // Create multiple ghost visits (no player_id)
-      const { data: ghost1, error: error1 } = await supabase
-        .from('visit')
-        .insert({
-          player_id: null,
-          casino_id: testCasino1Id,
+      const { data: ghost1, error: error1 } = await setupCreateVisit(
+        null,
+        testCasino1Id,
+        {
           visit_kind: 'gaming_ghost_unrated',
           ended_at: null,
-        })
-        .select()
-        .single();
+        },
+      );
 
-      const { data: ghost2, error: error2 } = await supabase
-        .from('visit')
-        .insert({
-          player_id: null,
-          casino_id: testCasino1Id,
+      const { data: ghost2, error: error2 } = await setupCreateVisit(
+        null,
+        testCasino1Id,
+        {
           visit_kind: 'gaming_ghost_unrated',
           ended_at: null,
-        })
-        .select()
-        .single();
+        },
+      );
 
       // Both should succeed (partial unique index excludes NULL player_id)
       expect(error1).toBeNull();
       expect(error2).toBeNull();
 
       // Cleanup
-      await supabase.from('visit').delete().eq('id', ghost1!.id);
-      await supabase.from('visit').delete().eq('id', ghost2!.id);
+      await setupClient.from('visit').delete().eq('id', ghost1!.id);
+      await setupClient.from('visit').delete().eq('id', ghost2!.id);
     });
 
     it('allows new open visit after previous is closed', async () => {
       const fixture = await createTestFixture();
 
       // Create and close first visit
-      const { data: visit1 } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: visit1 } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: null,
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(visit1!.id);
+        },
+      );
+      fixture.visitIds.push(visit1.id);
 
-      await supabase
-        .from('visit')
-        .update({ ended_at: new Date().toISOString() })
-        .eq('id', visit1!.id);
+      await setupUpdateVisit(visit1.id, { ended_at: new Date().toISOString() });
 
       // Create new open visit
-      const { data: visit2, error: error2 } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: visit2, error: error2 } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: null,
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(visit2!.id);
+        },
+      );
+      fixture.visitIds.push(visit2.id);
 
       // Should succeed
       expect(error2).toBeNull();
-      expect(visit2!.ended_at).toBeNull();
+      expect(visit2.ended_at).toBeNull();
     });
   });
 
@@ -503,34 +570,24 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
 
       // Create 3 closed visits
       for (let i = 0; i < 3; i++) {
-        const { data: visit } = await supabase
-          .from('visit')
-          .insert({
-            player_id: fixture.playerId,
-            casino_id: testCasino1Id,
-            visit_kind: 'gaming_identified_rated',
+        const { data: visit } = await setupCreateVisit(
+          fixture.playerId,
+          testCasino1Id,
+          {
             started_at: new Date(Date.now() - (3 - i) * 3600000).toISOString(),
             ended_at: new Date(
               Date.now() - (3 - i) * 3600000 + 7200000,
             ).toISOString(),
-          })
-          .select()
-          .single();
-        fixture.visitIds.push(visit!.id);
+          },
+        );
+        fixture.visitIds.push(visit.id);
 
         // Create a rating slip for each visit to have segments
-        const { data: slip } = await supabase.rpc('rpc_start_rating_slip', {
-          p_visit_id: visit!.id,
-          p_table_id: testTable1Id,
-          p_seat_number: '1',
-          p_game_settings: {},
-        });
-        fixture.slipIds.push(slip!.id);
+        const slip = await setupStartSlip(visit.id, testTable1Id, '1');
+        fixture.slipIds.push(slip.id);
 
         // Close the slip
-        await supabase.rpc('rpc_close_rating_slip', {
-          p_rating_slip_id: slip!.id,
-        });
+        await setupCloseSlip(slip.id);
       }
 
       const result = await service.getPlayerRecentSessions(
@@ -549,20 +606,17 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
 
       // Create 5 closed visits
       for (let i = 0; i < 5; i++) {
-        const { data: visit } = await supabase
-          .from('visit')
-          .insert({
-            player_id: fixture.playerId,
-            casino_id: testCasino1Id,
-            visit_kind: 'gaming_identified_rated',
+        const { data: visit } = await setupCreateVisit(
+          fixture.playerId,
+          testCasino1Id,
+          {
             started_at: new Date(Date.now() - (5 - i) * 3600000).toISOString(),
             ended_at: new Date(
               Date.now() - (5 - i) * 3600000 + 3600000,
             ).toISOString(),
-          })
-          .select()
-          .single();
-        fixture.visitIds.push(visit!.id);
+          },
+        );
+        fixture.visitIds.push(visit.id);
       }
 
       // Get first page
@@ -591,34 +645,28 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
 
       // Create 2 closed visits
       for (let i = 0; i < 2; i++) {
-        const { data: visit } = await supabase
-          .from('visit')
-          .insert({
-            player_id: fixture.playerId,
-            casino_id: testCasino1Id,
-            visit_kind: 'gaming_identified_rated',
+        const { data: visit } = await setupCreateVisit(
+          fixture.playerId,
+          testCasino1Id,
+          {
             started_at: new Date(Date.now() - (3 - i) * 3600000).toISOString(),
             ended_at: new Date(
               Date.now() - (3 - i) * 3600000 + 3600000,
             ).toISOString(),
-          })
-          .select()
-          .single();
-        fixture.visitIds.push(visit!.id);
+          },
+        );
+        fixture.visitIds.push(visit.id);
       }
 
       // Create 1 open visit
-      const { data: openVisit } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: openVisit } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: null,
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(openVisit!.id);
+        },
+      );
+      fixture.visitIds.push(openVisit.id);
 
       const result = await service.getPlayerRecentSessions(
         testCasino1Id,
@@ -631,33 +679,25 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
 
       // Open visit returned separately
       expect(result.open_visit).not.toBeNull();
-      expect(result.open_visit!.visit_id).toBe(openVisit!.id);
+      expect(result.open_visit!.visit_id).toBe(openVisit.id);
     });
 
     it('returns open_visit separately', async () => {
       const fixture = await createTestFixture();
 
       // Create open visit only (no closed sessions)
-      const { data: openVisit } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: openVisit } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: null,
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(openVisit!.id);
+        },
+      );
+      fixture.visitIds.push(openVisit.id);
 
       // Create a rating slip for the open visit
-      const { data: slip } = await supabase.rpc('rpc_start_rating_slip', {
-        p_visit_id: openVisit!.id,
-        p_table_id: testTable1Id,
-        p_seat_number: '1',
-        p_game_settings: {},
-      });
-      fixture.slipIds.push(slip!.id);
+      const slip = await setupStartSlip(openVisit.id, testTable1Id, '1');
+      fixture.slipIds.push(slip.id);
 
       const result = await service.getPlayerRecentSessions(
         testCasino1Id,
@@ -674,17 +714,14 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const fixture = await createTestFixture(testCasino1Id);
 
       // Create visit in casino 1
-      const { data: visit } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: visit } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(visit!.id);
+        },
+      );
+      fixture.visitIds.push(visit.id);
 
       // Query from casino 2 context (RLS should block)
       // Note: Service role bypasses RLS, so we test the RPC filter instead
@@ -708,58 +745,40 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const fixture = await createTestFixture();
 
       // Create 2 closed visits
-      const { data: visit1 } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: visit1 } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           started_at: new Date(Date.now() - 7200000).toISOString(),
           ended_at: new Date(Date.now() - 3600000).toISOString(),
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(visit1!.id);
+        },
+      );
+      fixture.visitIds.push(visit1.id);
 
-      const { data: slip1 } = await supabase.rpc('rpc_start_rating_slip', {
-        p_visit_id: visit1!.id,
-        p_table_id: testTable1Id,
-        p_seat_number: '3',
-        p_game_settings: { min_bet: 25 },
+      const slip1 = await setupStartSlip(visit1.id, testTable1Id, '3', {
+        min_bet: 25,
       });
-      fixture.slipIds.push(slip1!.id);
+      fixture.slipIds.push(slip1.id);
 
-      await supabase.rpc('rpc_close_rating_slip', {
-        p_rating_slip_id: slip1!.id,
-        p_average_bet: 50.0,
-      });
+      await setupCloseSlip(slip1.id, 50.0);
 
       // Create more recent visit
-      const { data: visit2 } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: visit2 } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           started_at: new Date(Date.now() - 1800000).toISOString(),
           ended_at: new Date(Date.now() - 900000).toISOString(),
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(visit2!.id);
+        },
+      );
+      fixture.visitIds.push(visit2.id);
 
-      const { data: slip2 } = await supabase.rpc('rpc_start_rating_slip', {
-        p_visit_id: visit2!.id,
-        p_table_id: testTable2Id,
-        p_seat_number: '5',
-        p_game_settings: { min_bet: 50 },
+      const slip2 = await setupStartSlip(visit2.id, testTable2Id, '5', {
+        min_bet: 50,
       });
-      fixture.slipIds.push(slip2!.id);
+      fixture.slipIds.push(slip2.id);
 
-      await supabase.rpc('rpc_close_rating_slip', {
-        p_rating_slip_id: slip2!.id,
-        p_average_bet: 75.0,
-      });
+      await setupCloseSlip(slip2.id, 75.0);
 
       const result = await service.getPlayerLastSessionContext(
         testCasino1Id,
@@ -768,7 +787,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
 
       // Should return most recent (visit2)
       expect(result).not.toBeNull();
-      expect(result!.visit_id).toBe(visit2!.id);
+      expect(result!.visit_id).toBe(visit2.id);
       expect(result!.last_table_id).toBe(testTable2Id);
       expect(result!.last_seat_number).toBe(5);
       expect(result!.last_average_bet).toBe(75.0);
@@ -789,29 +808,19 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const fixture = await createTestFixture(testCasino1Id);
 
       // Create visit in casino 1
-      const { data: visit } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: visit } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(visit!.id);
+        },
+      );
+      fixture.visitIds.push(visit.id);
 
-      const { data: slip } = await supabase.rpc('rpc_start_rating_slip', {
-        p_visit_id: visit!.id,
-        p_table_id: testTable1Id,
-        p_seat_number: '1',
-        p_game_settings: {},
-      });
-      fixture.slipIds.push(slip!.id);
+      const slip = await setupStartSlip(visit.id, testTable1Id, '1');
+      fixture.slipIds.push(slip.id);
 
-      await supabase.rpc('rpc_close_rating_slip', {
-        p_rating_slip_id: slip!.id,
-      });
+      await setupCloseSlip(slip.id);
 
       // Query from casino 2 (should return null due to RPC filter)
       const result = await service.getPlayerLastSessionContext(
@@ -832,29 +841,24 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const fixture = await createTestFixture();
 
       // Create and close source visit
-      const { data: sourceVisit } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: sourceVisit } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(sourceVisit!.id);
+        },
+      );
+      fixture.visitIds.push(sourceVisit.id);
 
-      const { data: sourceSlip } = await supabase.rpc('rpc_start_rating_slip', {
-        p_visit_id: sourceVisit!.id,
-        p_table_id: testTable1Id,
-        p_seat_number: '2',
-        p_game_settings: { min_bet: 25 },
-      });
-      fixture.slipIds.push(sourceSlip!.id);
+      const sourceSlip = await setupStartSlip(
+        sourceVisit.id,
+        testTable1Id,
+        '2',
+        { min_bet: 25 },
+      );
+      fixture.slipIds.push(sourceSlip.id);
 
-      await supabase.rpc('rpc_close_rating_slip', {
-        p_rating_slip_id: sourceSlip!.id,
-      });
+      await setupCloseSlip(sourceSlip.id);
 
       // Start from previous
       const result = await service.startFromPrevious(
@@ -862,7 +866,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
         testActor1Id,
         {
           player_id: fixture.playerId,
-          source_visit_id: sourceVisit!.id,
+          source_visit_id: sourceVisit.id,
           destination_table_id: testTable2Id,
           destination_seat_number: 3,
         },
@@ -872,16 +876,16 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.slipIds.push(result.active_slip_id);
 
       // Verify new visit has correct visit_group_id
-      expect(result.visit_group_id).toBe(sourceVisit!.visit_group_id);
+      expect(result.visit_group_id).toBe(sourceVisit.visit_group_id);
 
       // Verify new visit exists
-      const { data: newVisit } = await supabase
+      const { data: newVisit } = await setupClient
         .from('visit')
         .select('*')
         .eq('id', result.visit_id)
         .single();
 
-      expect(newVisit!.visit_group_id).toBe(sourceVisit!.visit_group_id);
+      expect(newVisit!.visit_group_id).toBe(sourceVisit.visit_group_id);
       expect(newVisit!.player_id).toBe(fixture.playerId);
       expect(newVisit!.ended_at).toBeNull();
     });
@@ -890,36 +894,30 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const fixture = await createTestFixture();
 
       // Create closed source visit
-      const { data: sourceVisit } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: sourceVisit } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(sourceVisit!.id);
+        },
+      );
+      fixture.visitIds.push(sourceVisit.id);
 
       // Create open visit for same player
-      const { data: openVisit } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: openVisit } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: null,
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(openVisit!.id);
+        },
+      );
+      fixture.visitIds.push(openVisit.id);
 
       // Attempt to start from previous (should fail)
       await expect(
         service.startFromPrevious(testCasino1Id, testActor1Id, {
           player_id: fixture.playerId,
-          source_visit_id: sourceVisit!.id,
+          source_visit_id: sourceVisit.id,
           destination_table_id: testTable2Id,
           destination_seat_number: 4,
         }),
@@ -930,23 +928,20 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const fixture = await createTestFixture();
 
       // Create open source visit
-      const { data: sourceVisit } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: sourceVisit } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: null, // Still open
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(sourceVisit!.id);
+        },
+      );
+      fixture.visitIds.push(sourceVisit.id);
 
       // Attempt to start from previous
       await expect(
         service.startFromPrevious(testCasino1Id, testActor1Id, {
           player_id: fixture.playerId,
-          source_visit_id: sourceVisit!.id,
+          source_visit_id: sourceVisit.id,
           destination_table_id: testTable2Id,
           destination_seat_number: 5,
         }),
@@ -958,23 +953,20 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const fixture2 = await createTestFixture();
 
       // Create closed visit for player 1
-      const { data: visit1 } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture1.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: visit1 } = await setupCreateVisit(
+        fixture1.playerId,
+        testCasino1Id,
+        {
           ended_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      fixture1.visitIds.push(visit1!.id);
+        },
+      );
+      fixture1.visitIds.push(visit1.id);
 
       // Attempt to start from previous with player 2
       await expect(
         service.startFromPrevious(testCasino1Id, testActor1Id, {
           player_id: fixture2.playerId, // Different player
-          source_visit_id: visit1!.id,
+          source_visit_id: visit1.id,
           destination_table_id: testTable2Id,
           destination_seat_number: 6,
         }),
@@ -985,23 +977,20 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const fixture = await createTestFixture(testCasino1Id);
 
       // Create visit in casino 1
-      const { data: visit } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: visit } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(visit!.id);
+        },
+      );
+      fixture.visitIds.push(visit.id);
 
       // Attempt to start from casino 2 context
       await expect(
         service.startFromPrevious(testCasino2Id, testActor2Id, {
           player_id: fixture.playerId,
-          source_visit_id: visit!.id,
+          source_visit_id: visit.id,
           destination_table_id: testTable3Id,
           destination_seat_number: 1,
         }),
@@ -1012,20 +1001,17 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const fixture = await createTestFixture();
 
       // Create closed source visit
-      const { data: sourceVisit } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: sourceVisit } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(sourceVisit!.id);
+        },
+      );
+      fixture.visitIds.push(sourceVisit.id);
 
       // Set table to inactive
-      await supabase
+      await setupClient
         .from('gaming_table')
         .update({ status: 'inactive' })
         .eq('id', testTable2Id);
@@ -1034,14 +1020,14 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       await expect(
         service.startFromPrevious(testCasino1Id, testActor1Id, {
           player_id: fixture.playerId,
-          source_visit_id: sourceVisit!.id,
+          source_visit_id: sourceVisit.id,
           destination_table_id: testTable2Id,
           destination_seat_number: 7,
         }),
       ).rejects.toThrow('not available');
 
       // Restore table status
-      await supabase
+      await setupClient
         .from('gaming_table')
         .update({ status: 'active' })
         .eq('id', testTable2Id);
@@ -1052,47 +1038,33 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const fixture2 = await createTestFixture();
 
       // Create closed source visit for player 1
-      const { data: sourceVisit } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture1.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
-          ended_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      fixture1.visitIds.push(sourceVisit!.id);
-
-      // Create open visit for player 2 and occupy seat
-      const { data: visit2 } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture2.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
-          ended_at: null,
-        })
-        .select()
-        .single();
-      fixture2.visitIds.push(visit2!.id);
-
-      const { data: occupiedSlip } = await supabase.rpc(
-        'rpc_start_rating_slip',
+      const { data: sourceVisit } = await setupCreateVisit(
+        fixture1.playerId,
+        testCasino1Id,
         {
-          p_visit_id: visit2!.id,
-          p_table_id: testTable2Id,
-          p_seat_number: '8',
-          p_game_settings: {},
+          ended_at: new Date().toISOString(),
         },
       );
-      fixture2.slipIds.push(occupiedSlip!.id);
+      fixture1.visitIds.push(sourceVisit.id);
+
+      // Create open visit for player 2 and occupy seat
+      const { data: visit2 } = await setupCreateVisit(
+        fixture2.playerId,
+        testCasino1Id,
+        {
+          ended_at: null,
+        },
+      );
+      fixture2.visitIds.push(visit2.id);
+
+      const occupiedSlip = await setupStartSlip(visit2.id, testTable2Id, '8');
+      fixture2.slipIds.push(occupiedSlip.id);
 
       // Attempt to start from previous at occupied seat
       await expect(
         service.startFromPrevious(testCasino1Id, testActor1Id, {
           player_id: fixture1.playerId,
-          source_visit_id: sourceVisit!.id,
+          source_visit_id: sourceVisit.id,
           destination_table_id: testTable2Id,
           destination_seat_number: 8, // Occupied
         }),
@@ -1109,29 +1081,24 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const fixture = await createTestFixture();
 
       // Create closed source visit with old game settings
-      const { data: sourceVisit } = await supabase
-        .from('visit')
-        .insert({
-          player_id: fixture.playerId,
-          casino_id: testCasino1Id,
-          visit_kind: 'gaming_identified_rated',
+      const { data: sourceVisit } = await setupCreateVisit(
+        fixture.playerId,
+        testCasino1Id,
+        {
           ended_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      fixture.visitIds.push(sourceVisit!.id);
+        },
+      );
+      fixture.visitIds.push(sourceVisit.id);
 
-      const { data: sourceSlip } = await supabase.rpc('rpc_start_rating_slip', {
-        p_visit_id: sourceVisit!.id,
-        p_table_id: testTable1Id,
-        p_seat_number: '1',
-        p_game_settings: { min_bet: 10, max_bet: 100 }, // Old settings
-      });
-      fixture.slipIds.push(sourceSlip!.id);
+      const sourceSlip = await setupStartSlip(
+        sourceVisit.id,
+        testTable1Id,
+        '1',
+        { min_bet: 10, max_bet: 100 },
+      ); // Old settings
+      fixture.slipIds.push(sourceSlip.id);
 
-      await supabase.rpc('rpc_close_rating_slip', {
-        p_rating_slip_id: sourceSlip!.id,
-      });
+      await setupCloseSlip(sourceSlip.id);
 
       // Start from previous with NEW game settings
       const result = await service.startFromPrevious(
@@ -1139,7 +1106,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
         testActor1Id,
         {
           player_id: fixture.playerId,
-          source_visit_id: sourceVisit!.id,
+          source_visit_id: sourceVisit.id,
           destination_table_id: testTable2Id,
           destination_seat_number: 2,
           game_settings_override: { min_bet: 25, max_bet: 500 }, // New settings
@@ -1150,7 +1117,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.slipIds.push(result.active_slip_id);
 
       // Verify new slip has NEW game settings (policy snapshot from CURRENT table)
-      const { data: newSlip } = await supabase
+      const { data: newSlip } = await setupClient
         .from('rating_slip')
         .select('game_settings')
         .eq('id', result.active_slip_id)

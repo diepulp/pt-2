@@ -5,19 +5,21 @@
  *
  * Two test categories:
  * 1. Service layer happy-path: createReward, updateReward, toggleRewardActive, getReward
- *    with nested child records — uses Supabase service-role client.
+ *    with nested child records — uses Mode C authenticated client (ADR-024).
  * 2. Schema validation rejection: Tests tightened enums (tier, fulfillment, benefit)
  *    via safeParse directly — no database needed.
  *
  * @testEnvironment node
  * @see PRD-LOYALTY-ADMIN-CATALOG
  * @see ADR-033 Loyalty Reward Domain Model
+ * @see ADR-024 Authoritative context derivation
  * @see ADR-044 Testing Governance
  */
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+import { createModeCSession } from '@/lib/testing/create-mode-c-session';
 import type { Database } from '@/types/database.types';
 
 import type { RewardCatalogDTO, RewardDetailDTO } from '../dtos';
@@ -35,62 +37,18 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const TEST_PREFIX = 'test-rcint'; // reward-catalog integration
 
 // ============================================================================
-// Test Fixture
-// ============================================================================
-
-interface TestFixture {
-  casinoId: string;
-  service: RewardService;
-  supabase: SupabaseClient<Database>;
-  cleanup: () => Promise<void>;
-}
-
-async function createTestFixture(): Promise<TestFixture> {
-  const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
-  // Create a casino for test isolation
-  const { data: casino, error: casinoError } = await supabase
-    .from('casino')
-    .insert({ name: `${TEST_PREFIX} Casino ${Date.now()}`, status: 'active' })
-    .select()
-    .single();
-
-  if (casinoError || !casino) {
-    throw new Error(`Failed to create test casino: ${casinoError?.message}`);
-  }
-
-  const service = createRewardService(supabase);
-
-  const cleanup = async () => {
-    // Delete child records first (FK constraints)
-    await supabase
-      .from('reward_eligibility')
-      .delete()
-      .eq('casino_id', casino.id);
-    await supabase.from('reward_limits').delete().eq('casino_id', casino.id);
-    await supabase
-      .from('reward_entitlement_tier')
-      .delete()
-      .eq('casino_id', casino.id);
-    await supabase
-      .from('reward_price_points')
-      .delete()
-      .eq('casino_id', casino.id);
-    await supabase.from('reward_catalog').delete().eq('casino_id', casino.id);
-    await supabase.from('casino').delete().eq('id', casino.id);
-  };
-
-  return { casinoId: casino.id, service, supabase, cleanup };
-}
-
-// ============================================================================
 // Service Layer Integration Tests
 // ============================================================================
 
 describe('Reward Catalog Integration (service layer + schema validation)', () => {
-  let fixture: TestFixture;
+  let setupClient: SupabaseClient<Database>;
+  let pitBossClient: SupabaseClient<Database>;
+  let authCleanup: (() => Promise<void>) | undefined;
+
+  let testCompanyId: string;
+  let testCasinoId: string;
+  let testActorId: string;
+  let service: RewardService;
 
   beforeAll(async () => {
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -98,13 +56,101 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
         'Missing env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY',
       );
     }
-    fixture = await createTestFixture();
-  }, 15_000);
+
+    // Service-role client for setup only (bypasses RLS)
+    setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    // Create test company (ADR-043: company before casino)
+    const { data: company } = await setupClient
+      .from('company')
+      .insert({ name: `${TEST_PREFIX} Company ${Date.now()}` })
+      .select()
+      .single();
+    if (!company) throw new Error('Failed to create test company');
+    testCompanyId = company.id;
+
+    // Create a casino for test isolation
+    const { data: casino, error: casinoError } = await setupClient
+      .from('casino')
+      .insert({
+        name: `${TEST_PREFIX} Casino ${Date.now()}`,
+        status: 'active',
+        company_id: testCompanyId,
+      })
+      .select()
+      .single();
+
+    if (casinoError || !casino) {
+      throw new Error(`Failed to create test casino: ${casinoError?.message}`);
+    }
+    testCasinoId = casino.id;
+
+    // Create test staff (pit_boss)
+    const testEmail = `${TEST_PREFIX.toLowerCase()}-${Date.now()}@test.com`;
+    const { data: actor } = await setupClient
+      .from('staff')
+      .insert({
+        casino_id: testCasinoId,
+        employee_id: `${TEST_PREFIX}-PB-${Date.now()}`,
+        first_name: 'Test',
+        last_name: 'PitBoss',
+        email: testEmail,
+        role: 'pit_boss',
+        status: 'active',
+      })
+      .select()
+      .single();
+    if (!actor) throw new Error('Failed to create test staff');
+    testActorId = actor.id;
+
+    // Mode C auth ceremony (ADR-024): creates auth user, stamps JWT claims, returns authenticated client
+    const session = await createModeCSession(setupClient, {
+      staffId: testActorId,
+      casinoId: testCasinoId,
+      staffRole: 'pit_boss',
+    });
+    pitBossClient = session.client;
+    authCleanup = session.cleanup;
+
+    // Link auth user to staff record
+    await setupClient
+      .from('staff')
+      .update({ user_id: session.userId })
+      .eq('id', testActorId);
+
+    // Wire service to Mode C authenticated client (not service-role)
+    service = createRewardService(pitBossClient);
+  }, 30_000);
 
   afterAll(async () => {
-    if (fixture?.cleanup) {
-      await fixture.cleanup();
-    }
+    // Delete child records first (FK constraints) — use setupClient (service-role) for cleanup
+    await setupClient
+      .from('reward_eligibility')
+      .delete()
+      .eq('casino_id', testCasinoId);
+    await setupClient
+      .from('reward_limits')
+      .delete()
+      .eq('casino_id', testCasinoId);
+    await setupClient
+      .from('reward_entitlement_tier')
+      .delete()
+      .eq('casino_id', testCasinoId);
+    await setupClient
+      .from('reward_price_points')
+      .delete()
+      .eq('casino_id', testCasinoId);
+    await setupClient
+      .from('reward_catalog')
+      .delete()
+      .eq('casino_id', testCasinoId);
+    await setupClient.from('staff').delete().eq('casino_id', testCasinoId);
+    await setupClient.from('casino').delete().eq('id', testCasinoId);
+    await setupClient.from('company').delete().eq('id', testCompanyId);
+    // Clean up Mode C auth user
+    await authCleanup?.();
   }, 15_000);
 
   // ==========================================================================
@@ -112,8 +158,8 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
   // ==========================================================================
   it('creates a points_comp reward with valid pricePoints and returns RewardCatalogDTO', async () => {
     const code = `${TEST_PREFIX}_PC_${Date.now()}`;
-    const result: RewardCatalogDTO = await fixture.service.createReward({
-      casinoId: fixture.casinoId,
+    const result: RewardCatalogDTO = await service.createReward({
+      casinoId: testCasinoId,
       code,
       family: 'points_comp',
       kind: 'meal',
@@ -124,7 +170,7 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
 
     expect(result).toBeDefined();
     expect(result.id).toBeDefined();
-    expect(result.casinoId).toBe(fixture.casinoId);
+    expect(result.casinoId).toBe(testCasinoId);
     expect(result.code).toBe(code);
     expect(result.family).toBe('points_comp');
     expect(result.kind).toBe('meal');
@@ -139,8 +185,8 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
   // ==========================================================================
   it('creates an entitlement reward with valid tier entries and returns RewardCatalogDTO', async () => {
     const code = `${TEST_PREFIX}_ENT_${Date.now()}`;
-    const result: RewardCatalogDTO = await fixture.service.createReward({
-      casinoId: fixture.casinoId,
+    const result: RewardCatalogDTO = await service.createReward({
+      casinoId: testCasinoId,
       code,
       family: 'entitlement',
       kind: 'match_play',
@@ -163,9 +209,7 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
     expect(result.kind).toBe('match_play');
 
     // Verify child records via getReward
-    const detail: RewardDetailDTO | null = await fixture.service.getReward(
-      result.id,
-    );
+    const detail: RewardDetailDTO | null = await service.getReward(result.id);
     expect(detail).not.toBeNull();
     expect(detail!.entitlementTiers).toHaveLength(2);
     expect(detail!.entitlementTiers.map((t) => t.tier).sort()).toEqual([
@@ -179,8 +223,8 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
   // ==========================================================================
   it('creates a points_comp reward without pricePoints (optional per cross-field policy)', async () => {
     const code = `${TEST_PREFIX}_NOPP_${Date.now()}`;
-    const result: RewardCatalogDTO = await fixture.service.createReward({
-      casinoId: fixture.casinoId,
+    const result: RewardCatalogDTO = await service.createReward({
+      casinoId: testCasinoId,
       code,
       family: 'points_comp',
       kind: 'beverage',
@@ -192,7 +236,7 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
     expect(result.family).toBe('points_comp');
 
     // Verify no price points child record
-    const detail = await fixture.service.getReward(result.id);
+    const detail = await service.getReward(result.id);
     expect(detail).not.toBeNull();
     expect(detail!.pricePoints).toBeNull();
   });
@@ -203,15 +247,15 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
   it('updates reward name and kind and returns updated DTO', async () => {
     // Create a reward to update
     const code = `${TEST_PREFIX}_UPD_${Date.now()}`;
-    const created = await fixture.service.createReward({
-      casinoId: fixture.casinoId,
+    const created = await service.createReward({
+      casinoId: testCasinoId,
       code,
       family: 'points_comp',
       kind: 'meal',
       name: 'Original Name',
     });
 
-    const updated: RewardCatalogDTO = await fixture.service.updateReward({
+    const updated: RewardCatalogDTO = await service.updateReward({
       id: created.id,
       name: 'Updated Name',
       kind: 'beverage',
@@ -229,8 +273,8 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
   // ==========================================================================
   it('updates reward with nested pricePoints and getReward returns updated child record', async () => {
     const code = `${TEST_PREFIX}_NESTEDPP_${Date.now()}`;
-    const created = await fixture.service.createReward({
-      casinoId: fixture.casinoId,
+    const created = await service.createReward({
+      casinoId: testCasinoId,
       code,
       family: 'points_comp',
       kind: 'meal',
@@ -239,12 +283,12 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
     });
 
     // Update with new price points
-    await fixture.service.updateReward({
+    await service.updateReward({
       id: created.id,
       pricePoints: { pointsCost: 500, allowOverdraw: true },
     });
 
-    const detail = await fixture.service.getReward(created.id);
+    const detail = await service.getReward(created.id);
     expect(detail).not.toBeNull();
     expect(detail!.pricePoints).not.toBeNull();
     expect(detail!.pricePoints!.pointsCost).toBe(500);
@@ -256,8 +300,8 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
   // ==========================================================================
   it('updates reward with nested entitlementTiers and getReward returns new set', async () => {
     const code = `${TEST_PREFIX}_NESTEDTIER_${Date.now()}`;
-    const created = await fixture.service.createReward({
-      casinoId: fixture.casinoId,
+    const created = await service.createReward({
+      casinoId: testCasinoId,
       code,
       family: 'entitlement',
       kind: 'free_play',
@@ -271,7 +315,7 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
     });
 
     // Replace tiers with a new set
-    await fixture.service.updateReward({
+    await service.updateReward({
       id: created.id,
       entitlementTiers: [
         {
@@ -285,7 +329,7 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
       ],
     });
 
-    const detail = await fixture.service.getReward(created.id);
+    const detail = await service.getReward(created.id);
     expect(detail).not.toBeNull();
     expect(detail!.entitlementTiers).toHaveLength(2);
     const tierNames = detail!.entitlementTiers.map((t) => t.tier).sort();
@@ -297,8 +341,8 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
   // ==========================================================================
   it('toggles reward active/inactive and returns DTO with toggled is_active', async () => {
     const code = `${TEST_PREFIX}_TOGGLE_${Date.now()}`;
-    const created = await fixture.service.createReward({
-      casinoId: fixture.casinoId,
+    const created = await service.createReward({
+      casinoId: testCasinoId,
       code,
       family: 'points_comp',
       kind: 'meal',
@@ -308,18 +352,12 @@ describe('Reward Catalog Integration (service layer + schema validation)', () =>
     expect(created.isActive).toBe(true);
 
     // Toggle to inactive
-    const deactivated = await fixture.service.toggleRewardActive(
-      created.id,
-      false,
-    );
+    const deactivated = await service.toggleRewardActive(created.id, false);
     expect(deactivated.isActive).toBe(false);
     expect(deactivated.id).toBe(created.id);
 
     // Toggle back to active
-    const reactivated = await fixture.service.toggleRewardActive(
-      created.id,
-      true,
-    );
+    const reactivated = await service.toggleRewardActive(created.id, true);
     expect(reactivated.isActive).toBe(true);
   });
 

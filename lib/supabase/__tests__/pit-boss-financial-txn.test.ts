@@ -6,10 +6,17 @@
  * Tests that pit_boss role constraints are correctly enforced for financial transactions
  * as specified in SEC-005 v1.2.0 and implemented in PRD-015 WS1.
  *
+ * Auth model: ADR-024 Mode C — authenticated anon clients carry JWT with staff_id
+ * in app_metadata; rpc_create_financial_txn calls set_rls_context_from_staff() internally.
+ *
+ * - setupClient (service-role): fixture creation / teardown only (Category A ops lane)
+ * - pitBossClient / cashierClient (Mode C): business RPC calls (Category B)
+ *
  * PREREQUISITES:
  * - Migration 20251221173711_prd015_ws1_financial_rpc_self_injection.sql must be applied
  * - NEXT_PUBLIC_SUPABASE_URL environment variable set
  * - SUPABASE_SERVICE_ROLE_KEY environment variable set
+ * - NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable set
  *
  * SEC-005 v1.2.0 Constraints:
  * - pit_boss can create buy-ins (direction='in')
@@ -26,6 +33,10 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 // eslint-disable-next-line no-restricted-imports -- Integration test requires direct Supabase client
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  createModeCSession,
+  ModeCSessionResult,
+} from '../../../lib/testing/create-mode-c-session';
 import type { Database } from '../../../types/database.types';
 
 // Test environment setup
@@ -39,37 +50,26 @@ const RUN_INTEGRATION =
 (RUN_INTEGRATION ? describe : describe.skip)(
   'Pit Boss Financial Transaction Constraints (PRD-015 WS5)',
   () => {
-    let supabase: SupabaseClient<Database>;
+    // setupClient: service-role for fixture creation / teardown (Category A ops lane)
+    let setupClient: SupabaseClient<Database>;
+    // Mode C authenticated clients for business RPC calls (Category B)
+    let pitBossClient: SupabaseClient<Database>;
+    let cashierClient: SupabaseClient<Database>;
+    let pitBossSession: ModeCSessionResult;
+    let cashierSession: ModeCSessionResult;
+
     let testCompanyId: string;
     let testCasinoId: string;
     let testPitBossStaffId: string;
     let testCashierStaffId: string;
-    let testPitBossUserId: string;
-    let testCashierUserId: string;
     let testPlayerId: string;
     let testVisitId: string;
 
     beforeAll(async () => {
-      supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
-
-      // Create test users
-      const pitBossUser = await supabase.auth.admin.createUser({
-        email: 'pit-boss-financial@example.com',
-        password: 'test-password-12345',
-        email_confirm: true,
-      });
-
-      const cashierUser = await supabase.auth.admin.createUser({
-        email: 'cashier-financial@example.com',
-        password: 'test-password-12345',
-        email_confirm: true,
-      });
-
-      testPitBossUserId = pitBossUser.data?.user?.id || '';
-      testCashierUserId = cashierUser.data?.user?.id || '';
+      setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
       // Create test company (ADR-043: company_id NOT NULL on casino)
-      const { data: company } = await supabase
+      const { data: company } = await setupClient
         .from('company')
         .insert({ name: 'Financial Test Company' })
         .select()
@@ -78,7 +78,7 @@ const RUN_INTEGRATION =
       testCompanyId = company.id;
 
       // Create test casino
-      const { data: casino } = await supabase
+      const { data: casino } = await setupClient
         .from('casino')
         .insert({
           name: 'Financial Test Casino',
@@ -91,7 +91,7 @@ const RUN_INTEGRATION =
       testCasinoId = casino!.id;
 
       // Create casino settings
-      await supabase.from('casino_settings').insert({
+      await setupClient.from('casino_settings').insert({
         casino_id: testCasinoId,
         gaming_day_start_time: '06:00:00',
         timezone: 'America/Los_Angeles',
@@ -99,12 +99,11 @@ const RUN_INTEGRATION =
         ctr_threshold: 10000,
       });
 
-      // Create test staff (pit_boss and cashier)
-      const pitBossStaff = await supabase
+      // Create test staff (pit_boss and cashier) — service-role for fixture setup
+      const pitBossStaff = await setupClient
         .from('staff')
         .insert({
           casino_id: testCasinoId,
-          user_id: testPitBossUserId,
           employee_id: 'PB-001',
           first_name: 'Test',
           last_name: 'PitBoss',
@@ -114,11 +113,10 @@ const RUN_INTEGRATION =
         .select()
         .single();
 
-      const cashierStaff = await supabase
+      const cashierStaff = await setupClient
         .from('staff')
         .insert({
           casino_id: testCasinoId,
-          user_id: testCashierUserId,
           employee_id: 'CSH-001',
           first_name: 'Test',
           last_name: 'Cashier',
@@ -131,8 +129,33 @@ const RUN_INTEGRATION =
       testPitBossStaffId = pitBossStaff.data!.id;
       testCashierStaffId = cashierStaff.data!.id;
 
+      // Mode C: create authenticated sessions for pit boss and cashier (ADR-024)
+      pitBossSession = await createModeCSession(setupClient, {
+        staffId: testPitBossStaffId,
+        casinoId: testCasinoId,
+        staffRole: 'pit_boss',
+      });
+      pitBossClient = pitBossSession.client;
+
+      cashierSession = await createModeCSession(setupClient, {
+        staffId: testCashierStaffId,
+        casinoId: testCasinoId,
+        staffRole: 'cashier',
+      });
+      cashierClient = cashierSession.client;
+
+      // Bind auth users to staff records
+      await setupClient
+        .from('staff')
+        .update({ user_id: pitBossSession.userId })
+        .eq('id', testPitBossStaffId);
+      await setupClient
+        .from('staff')
+        .update({ user_id: cashierSession.userId })
+        .eq('id', testCashierStaffId);
+
       // Create test player
-      const { data: player } = await supabase
+      const { data: player } = await setupClient
         .from('player')
         .insert({
           first_name: 'Financial',
@@ -144,14 +167,14 @@ const RUN_INTEGRATION =
       testPlayerId = player!.id;
 
       // Enroll player at casino
-      await supabase.from('player_casino').insert({
+      await setupClient.from('player_casino').insert({
         player_id: testPlayerId,
         casino_id: testCasinoId,
         status: 'active',
       });
 
       // Create test visit
-      const { data: visit } = await supabase
+      const { data: visit } = await setupClient
         .from('visit')
         .insert({
           casino_id: testCasinoId,
@@ -165,36 +188,33 @@ const RUN_INTEGRATION =
 
     afterAll(async () => {
       // Clean up in reverse dependency order
-      await supabase
+      await setupClient
         .from('player_financial_transaction')
         .delete()
         .eq('casino_id', testCasinoId);
-      await supabase.from('visit').delete().eq('id', testVisitId);
-      await supabase
+      await setupClient.from('visit').delete().eq('id', testVisitId);
+      await setupClient
         .from('player_casino')
         .delete()
         .eq('player_id', testPlayerId);
-      await supabase.from('player').delete().eq('id', testPlayerId);
-      await supabase
+      await setupClient.from('player').delete().eq('id', testPlayerId);
+      await setupClient
         .from('staff')
         .delete()
         .in('id', [testPitBossStaffId, testCashierStaffId]);
-      await supabase
+      await setupClient
         .from('casino_settings')
         .delete()
         .eq('casino_id', testCasinoId);
-      await supabase.from('casino').delete().eq('id', testCasinoId);
+      await setupClient.from('casino').delete().eq('id', testCasinoId);
 
       // Clean up test company (after casino is deleted)
       if (testCompanyId) {
-        await supabase.from('company').delete().eq('id', testCompanyId);
+        await setupClient.from('company').delete().eq('id', testCompanyId);
       }
 
-      // Clean up users
-      await Promise.all([
-        supabase.auth.admin.deleteUser(testPitBossUserId),
-        supabase.auth.admin.deleteUser(testCashierUserId),
-      ]);
+      // Clean up Mode C auth users
+      await Promise.all([pitBossSession?.cleanup(), cashierSession?.cleanup()]);
     });
 
     // ===========================================================================
@@ -203,15 +223,18 @@ const RUN_INTEGRATION =
 
     describe('Pit Boss Buy-In (Allowed Transactions)', () => {
       it('should allow pit_boss to create buy-in with cash', async () => {
-        const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-          p_player_id: testPlayerId,
-          p_visit_id: testVisitId,
-          p_amount: 500.0,
-          p_direction: 'in',
-          p_source: 'table',
+        const { data, error } = await pitBossClient.rpc(
+          'rpc_create_financial_txn',
+          {
+            p_player_id: testPlayerId,
+            p_visit_id: testVisitId,
+            p_amount: 500.0,
+            p_direction: 'in',
+            p_source: 'table',
 
-          p_tender_type: 'cash',
-        });
+            p_tender_type: 'cash',
+          },
+        );
 
         expect(error).toBeNull();
         expect(data).toBeTruthy();
@@ -222,15 +245,18 @@ const RUN_INTEGRATION =
       });
 
       it('should allow pit_boss to create buy-in with chips', async () => {
-        const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-          p_player_id: testPlayerId,
-          p_visit_id: testVisitId,
-          p_amount: 1000.0,
-          p_direction: 'in',
-          p_source: 'table',
+        const { data, error } = await pitBossClient.rpc(
+          'rpc_create_financial_txn',
+          {
+            p_player_id: testPlayerId,
+            p_visit_id: testVisitId,
+            p_amount: 1000.0,
+            p_direction: 'in',
+            p_source: 'table',
 
-          p_tender_type: 'chips',
-        });
+            p_tender_type: 'chips',
+          },
+        );
 
         expect(error).toBeNull();
         expect(data).toBeTruthy();
@@ -253,7 +279,7 @@ const RUN_INTEGRATION =
 
         const results = await Promise.all(
           buyInRequests.map((params) =>
-            supabase.rpc('rpc_create_financial_txn', params),
+            pitBossClient.rpc('rpc_create_financial_txn', params),
           ),
         );
 
@@ -273,15 +299,18 @@ const RUN_INTEGRATION =
 
     describe('Pit Boss Cash-Out (Forbidden Transactions)', () => {
       it('should reject pit_boss attempt to create cash-out', async () => {
-        const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-          p_player_id: testPlayerId,
-          p_visit_id: testVisitId,
-          p_amount: 500.0,
-          p_direction: 'out',
-          p_source: 'table',
+        const { data, error } = await pitBossClient.rpc(
+          'rpc_create_financial_txn',
+          {
+            p_player_id: testPlayerId,
+            p_visit_id: testVisitId,
+            p_amount: 500.0,
+            p_direction: 'out',
+            p_source: 'table',
 
-          p_tender_type: 'cash',
-        });
+            p_tender_type: 'cash',
+          },
+        );
 
         expect(error).not.toBeNull();
         expect(error?.message).toMatch(
@@ -291,15 +320,18 @@ const RUN_INTEGRATION =
       });
 
       it('should reject pit_boss attempt to create chip cash-out', async () => {
-        const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-          p_player_id: testPlayerId,
-          p_visit_id: testVisitId,
-          p_amount: 1000.0,
-          p_direction: 'out',
-          p_source: 'table',
+        const { data, error } = await pitBossClient.rpc(
+          'rpc_create_financial_txn',
+          {
+            p_player_id: testPlayerId,
+            p_visit_id: testVisitId,
+            p_amount: 1000.0,
+            p_direction: 'out',
+            p_source: 'table',
 
-          p_tender_type: 'chips',
-        });
+            p_tender_type: 'chips',
+          },
+        );
 
         expect(error).not.toBeNull();
         expect(error?.message).toMatch(
@@ -315,15 +347,18 @@ const RUN_INTEGRATION =
 
     describe('Pit Boss Marker Transactions (Forbidden)', () => {
       it('should reject pit_boss attempt to create marker transaction', async () => {
-        const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-          p_player_id: testPlayerId,
-          p_visit_id: testVisitId,
-          p_amount: 5000.0,
-          p_direction: 'in',
-          p_source: 'table',
+        const { data, error } = await pitBossClient.rpc(
+          'rpc_create_financial_txn',
+          {
+            p_player_id: testPlayerId,
+            p_visit_id: testVisitId,
+            p_amount: 5000.0,
+            p_direction: 'in',
+            p_source: 'table',
 
-          p_tender_type: 'marker',
-        });
+            p_tender_type: 'marker',
+          },
+        );
 
         expect(error).not.toBeNull();
         expect(error?.message).toMatch(
@@ -333,15 +368,18 @@ const RUN_INTEGRATION =
       });
 
       it('should reject pit_boss attempt to create check transaction', async () => {
-        const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-          p_player_id: testPlayerId,
-          p_visit_id: testVisitId,
-          p_amount: 2000.0,
-          p_direction: 'in',
-          p_source: 'table',
+        const { data, error } = await pitBossClient.rpc(
+          'rpc_create_financial_txn',
+          {
+            p_player_id: testPlayerId,
+            p_visit_id: testVisitId,
+            p_amount: 2000.0,
+            p_direction: 'in',
+            p_source: 'table',
 
-          p_tender_type: 'check',
-        });
+            p_tender_type: 'check',
+          },
+        );
 
         expect(error).not.toBeNull();
         expect(error?.message).toMatch(
@@ -357,15 +395,18 @@ const RUN_INTEGRATION =
 
     describe('Cashier Transactions (Baseline Comparison)', () => {
       it('should allow cashier to create cash-out (for comparison)', async () => {
-        const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-          p_player_id: testPlayerId,
-          p_visit_id: testVisitId,
-          p_amount: 500.0,
-          p_direction: 'out',
-          p_source: 'cage',
+        const { data, error } = await cashierClient.rpc(
+          'rpc_create_financial_txn',
+          {
+            p_player_id: testPlayerId,
+            p_visit_id: testVisitId,
+            p_amount: 500.0,
+            p_direction: 'out',
+            p_source: 'cage',
 
-          p_tender_type: 'cash',
-        });
+            p_tender_type: 'cash',
+          },
+        );
 
         expect(error).toBeNull();
         expect(data).toBeTruthy();
@@ -374,15 +415,18 @@ const RUN_INTEGRATION =
       });
 
       it('should allow cashier to create marker transaction (for comparison)', async () => {
-        const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-          p_player_id: testPlayerId,
-          p_visit_id: testVisitId,
-          p_amount: 5000.0,
-          p_direction: 'in',
-          p_source: 'cage',
+        const { data, error } = await cashierClient.rpc(
+          'rpc_create_financial_txn',
+          {
+            p_player_id: testPlayerId,
+            p_visit_id: testVisitId,
+            p_amount: 5000.0,
+            p_direction: 'in',
+            p_source: 'cage',
 
-          p_tender_type: 'marker',
-        });
+            p_tender_type: 'marker',
+          },
+        );
 
         expect(error).toBeNull();
         expect(data).toBeTruthy();
@@ -431,7 +475,7 @@ const RUN_INTEGRATION =
 
         const results = await Promise.all(
           allRequests.map(async ({ valid, params }) => {
-            const result = await supabase.rpc(
+            const result = await pitBossClient.rpc(
               'rpc_create_financial_txn',
               params,
             );
@@ -457,21 +501,17 @@ const RUN_INTEGRATION =
 
       it('should maintain pit_boss context isolation across concurrent transactions', async () => {
         // Create second pit boss for cross-contamination test
-        const { data: user2 } = await supabase.auth.admin.createUser({
-          email: 'pit-boss-2-financial@example.com',
-          password: 'test-password-12345',
-          email_confirm: true,
-        });
+        // Fixtures via setupClient (Category A), RPC via Mode C (Category B)
 
         // Create company for casino2 (ADR-043: company_id NOT NULL on casino)
-        const { data: company2 } = await supabase
+        const { data: company2 } = await setupClient
           .from('company')
           .insert({ name: 'Financial Test Company 2' })
           .select()
           .single();
         if (!company2) throw new Error('Failed to create test company 2');
 
-        const { data: casino2 } = await supabase
+        const { data: casino2 } = await setupClient
           .from('casino')
           .insert({
             name: 'Financial Test Casino 2',
@@ -481,7 +521,7 @@ const RUN_INTEGRATION =
           .select()
           .single();
 
-        await supabase.from('casino_settings').insert({
+        await setupClient.from('casino_settings').insert({
           casino_id: casino2!.id,
           gaming_day_start_time: '06:00:00',
           timezone: 'America/Los_Angeles',
@@ -489,11 +529,10 @@ const RUN_INTEGRATION =
           ctr_threshold: 10000,
         });
 
-        const { data: staff2 } = await supabase
+        const { data: staff2 } = await setupClient
           .from('staff')
           .insert({
             casino_id: casino2!.id,
-            user_id: user2!.user!.id,
             employee_id: 'PB-002',
             first_name: 'Test2',
             last_name: 'PitBoss2',
@@ -503,19 +542,32 @@ const RUN_INTEGRATION =
           .select()
           .single();
 
-        const { data: player2 } = await supabase
+        // Mode C session for pit boss 2 (ADR-024)
+        const pitBoss2Session = await createModeCSession(setupClient, {
+          staffId: staff2!.id,
+          casinoId: casino2!.id,
+          staffRole: 'pit_boss',
+        });
+
+        // Bind auth user to staff record
+        await setupClient
+          .from('staff')
+          .update({ user_id: pitBoss2Session.userId })
+          .eq('id', staff2!.id);
+
+        const { data: player2 } = await setupClient
           .from('player')
           .insert({ first_name: 'Player2', last_name: 'Test' })
           .select()
           .single();
 
-        await supabase.from('player_casino').insert({
+        await setupClient.from('player_casino').insert({
           player_id: player2!.id,
           casino_id: casino2!.id,
           status: 'active',
         });
 
-        const { data: visit2 } = await supabase
+        const { data: visit2 } = await setupClient
           .from('visit')
           .insert({
             casino_id: casino2!.id,
@@ -525,9 +577,9 @@ const RUN_INTEGRATION =
           .single();
 
         try {
-          // Execute concurrent transactions from both pit bosses
+          // Execute concurrent transactions from both pit bosses (Mode C)
           const [result1, result2] = await Promise.all([
-            supabase.rpc('rpc_create_financial_txn', {
+            pitBossClient.rpc('rpc_create_financial_txn', {
               p_player_id: testPlayerId,
               p_visit_id: testVisitId,
               p_amount: 100.0,
@@ -536,7 +588,7 @@ const RUN_INTEGRATION =
 
               p_tender_type: 'cash',
             }),
-            supabase.rpc('rpc_create_financial_txn', {
+            pitBoss2Session.client.rpc('rpc_create_financial_txn', {
               p_player_id: player2!.id,
               p_visit_id: visit2!.id,
               p_amount: 200.0,
@@ -554,25 +606,25 @@ const RUN_INTEGRATION =
           expect(result1.data?.created_by_staff_id).toBe(testPitBossStaffId);
           expect(result2.data?.created_by_staff_id).toBe(staff2!.id);
         } finally {
-          // Cleanup
-          await supabase
+          // Cleanup domain fixtures (setupClient) then auth (Mode C cleanup)
+          await setupClient
             .from('player_financial_transaction')
             .delete()
             .eq('casino_id', casino2!.id);
-          await supabase.from('visit').delete().eq('id', visit2!.id);
-          await supabase
+          await setupClient.from('visit').delete().eq('id', visit2!.id);
+          await setupClient
             .from('player_casino')
             .delete()
             .eq('player_id', player2!.id);
-          await supabase.from('player').delete().eq('id', player2!.id);
-          await supabase.from('staff').delete().eq('id', staff2!.id);
-          await supabase
+          await setupClient.from('player').delete().eq('id', player2!.id);
+          await setupClient.from('staff').delete().eq('id', staff2!.id);
+          await setupClient
             .from('casino_settings')
             .delete()
             .eq('casino_id', casino2!.id);
-          await supabase.from('casino').delete().eq('id', casino2!.id);
-          await supabase.from('company').delete().eq('id', company2!.id);
-          await supabase.auth.admin.deleteUser(user2!.user!.id);
+          await setupClient.from('casino').delete().eq('id', casino2!.id);
+          await setupClient.from('company').delete().eq('id', company2!.id);
+          await pitBoss2Session.cleanup();
         }
       });
     });
@@ -583,7 +635,7 @@ const RUN_INTEGRATION =
 
     describe('Error Message Clarity', () => {
       it('should provide clear error message for direction constraint', async () => {
-        const { error } = await supabase.rpc('rpc_create_financial_txn', {
+        const { error } = await pitBossClient.rpc('rpc_create_financial_txn', {
           p_player_id: testPlayerId,
           p_visit_id: testVisitId,
           p_amount: 500.0,
@@ -600,7 +652,7 @@ const RUN_INTEGRATION =
       });
 
       it('should provide clear error message for tender_type constraint', async () => {
-        const { error } = await supabase.rpc('rpc_create_financial_txn', {
+        const { error } = await pitBossClient.rpc('rpc_create_financial_txn', {
           p_player_id: testPlayerId,
           p_visit_id: testVisitId,
           p_amount: 5000.0,

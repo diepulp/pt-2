@@ -17,6 +17,7 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+import { createModeCSession } from '@/lib/testing/create-mode-c-session';
 import type { Database } from '../../../types/database.types';
 
 // Test environment setup
@@ -34,14 +35,15 @@ interface TestFixture {
 }
 
 describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
-  let supabase: SupabaseClient<Database>;
+  let setupClient: SupabaseClient<Database>;
+  let pitBossClient: SupabaseClient<Database>;
+  let authCleanup: (() => Promise<void>) | undefined;
 
   // Shared test resources
   let testCompanyId: string;
   let testCasinoId: string;
   let testTableId: string;
   let testActorId: string;
-  let testActorUserId: string;
 
   // Track all created fixtures for cleanup
   const allFixtures: TestFixture[] = [];
@@ -49,10 +51,10 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
 
   beforeAll(async () => {
     // Use service role client for setup (bypasses RLS)
-    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
+    setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
     // Create test company (ADR-043: company before casino)
-    const { data: company } = await supabase
+    const { data: company } = await setupClient
       .from('company')
       .insert({ name: `${TEST_PREFIX} Company` })
       .select()
@@ -61,7 +63,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
     testCompanyId = company.id;
 
     // Create test casino
-    const { data: casino } = await supabase
+    const { data: casino } = await setupClient
       .from('casino')
       .insert({
         name: `${TEST_PREFIX} Casino`,
@@ -74,7 +76,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
 
     // Create casino settings (required for compute_gaming_day)
     // Use a gaming day start time of 06:00 America/Los_Angeles
-    await supabase.from('casino_settings').insert({
+    await setupClient.from('casino_settings').insert({
       casino_id: testCasinoId,
       gaming_day_start_time: '06:00:00',
       timezone: 'America/Los_Angeles',
@@ -83,7 +85,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
     });
 
     // Create gaming table
-    const { data: table } = await supabase
+    const { data: table } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: testCasinoId,
@@ -96,21 +98,12 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       .single();
     testTableId = table!.id;
 
-    // Create test auth user
+    // Create test actor (staff) — user_id linked after Mode C session
     const testEmail = `${TEST_PREFIX.toLowerCase()}@test.com`;
-    const { data: authData } = await supabase.auth.admin.createUser({
-      email: testEmail,
-      password: 'TestPassword123!',
-      email_confirm: true,
-    });
-    testActorUserId = authData.user!.id;
-
-    // Create test actor (staff)
-    const { data: actor } = await supabase
+    const { data: actor } = await setupClient
       .from('staff')
       .insert({
         casino_id: testCasinoId,
-        user_id: testActorUserId,
         employee_id: `${TEST_PREFIX}-A1`,
         first_name: 'Test',
         last_name: 'Actor',
@@ -121,6 +114,21 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       .select()
       .single();
     testActorId = actor!.id;
+
+    // Mode C auth ceremony (ADR-024): creates auth user, stamps JWT claims, returns authenticated client
+    const session = await createModeCSession(setupClient, {
+      staffId: testActorId,
+      casinoId: testCasinoId,
+      staffRole: 'pit_boss',
+    });
+    pitBossClient = session.client;
+    authCleanup = session.cleanup;
+
+    // Link auth user to staff record
+    await setupClient
+      .from('staff')
+      .update({ user_id: session.userId })
+      .eq('id', testActorId);
   }, 30000);
 
   afterAll(async () => {
@@ -128,49 +136,50 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
     for (const fixture of allFixtures) {
       // Delete rating slips
       for (const slipId of fixture.slipIds) {
-        await supabase.from('rating_slip').delete().eq('id', slipId);
+        await setupClient.from('rating_slip').delete().eq('id', slipId);
       }
 
       // Delete visits
       for (const visitId of fixture.visitIds) {
-        await supabase.from('rating_slip').delete().eq('visit_id', visitId);
-        await supabase.from('visit').delete().eq('id', visitId);
+        await setupClient.from('rating_slip').delete().eq('visit_id', visitId);
+        await setupClient.from('visit').delete().eq('id', visitId);
       }
 
       // Delete player
       if (fixture.playerId) {
-        await supabase
+        await setupClient
           .from('player_casino')
           .delete()
           .eq('player_id', fixture.playerId);
-        await supabase
+        await setupClient
           .from('player_loyalty')
           .delete()
           .eq('player_id', fixture.playerId);
-        await supabase.from('player').delete().eq('id', fixture.playerId);
+        await setupClient.from('player').delete().eq('id', fixture.playerId);
       }
     }
 
     // Delete test resources
-    await supabase.from('staff').delete().eq('casino_id', testCasinoId);
-    await supabase.from('gaming_table').delete().eq('casino_id', testCasinoId);
-    await supabase
+    await setupClient.from('staff').delete().eq('casino_id', testCasinoId);
+    await setupClient
+      .from('gaming_table')
+      .delete()
+      .eq('casino_id', testCasinoId);
+    await setupClient
       .from('casino_settings')
       .delete()
       .eq('casino_id', testCasinoId);
-    await supabase.from('casino').delete().eq('id', testCasinoId);
-    await supabase.from('company').delete().eq('id', testCompanyId);
-    // Delete auth user
-    if (testActorUserId) {
-      await supabase.auth.admin.deleteUser(testActorUserId);
-    }
+    await setupClient.from('casino').delete().eq('id', testCasinoId);
+    await setupClient.from('company').delete().eq('id', testCompanyId);
+    // Clean up Mode C auth user
+    await authCleanup?.();
   }, 30000);
 
   // Helper: Create isolated test fixture
   async function createTestFixture(): Promise<TestFixture> {
     fixtureCounter++;
 
-    const { data: player } = await supabase
+    const { data: player } = await setupClient
       .from('player')
       .insert({
         first_name: 'Test',
@@ -180,7 +189,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       .select()
       .single();
 
-    await supabase.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: player!.id,
       casino_id: testCasinoId,
       status: 'active',
@@ -206,7 +215,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
     const visitId = crypto.randomUUID();
     const groupId = options.visitGroupId ?? visitId;
 
-    return supabase
+    return setupClient
       .from('visit')
       .insert({
         id: visitId,
@@ -228,7 +237,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
   }) {
     const visitId = crypto.randomUUID();
 
-    return supabase
+    return setupClient
       .from('visit')
       .insert({
         id: visitId,
@@ -241,6 +250,15 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       })
       .select()
       .single();
+  }
+
+  // Helper: Compute gaming day via utility RPC (setup-level, not business logic)
+  async function setupComputeGamingDay(timestamp: string): Promise<string> {
+    const { data } = await setupClient.rpc('compute_gaming_day', {
+      p_casino_id: testCasinoId,
+      p_timestamp: timestamp,
+    });
+    return data as string;
   }
 
   // ===========================================================================
@@ -289,14 +307,9 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       const fixture = await createTestFixture();
 
       // Get current gaming day for this casino
-      const { data: gamingDayResult } = await supabase.rpc(
-        'compute_gaming_day',
-        {
-          p_casino_id: testCasinoId,
-          p_timestamp: new Date().toISOString(),
-        },
+      const currentGamingDay = await setupComputeGamingDay(
+        new Date().toISOString(),
       );
-      const currentGamingDay = gamingDayResult as string;
 
       const { data: visit1, error: error1 } = await createVisit({
         playerId: fixture.playerId,
@@ -313,14 +326,9 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       const fixture = await createTestFixture();
 
       // Get current gaming day
-      const { data: gamingDayResult } = await supabase.rpc(
-        'compute_gaming_day',
-        {
-          p_casino_id: testCasinoId,
-          p_timestamp: new Date().toISOString(),
-        },
+      const currentGamingDay = await setupComputeGamingDay(
+        new Date().toISOString(),
       );
-      const currentGamingDay = gamingDayResult as string;
 
       // Create first open visit
       const { data: visit1 } = await createVisit({
@@ -377,14 +385,9 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       const fixture = await createTestFixture();
 
       // Get current gaming day
-      const { data: gamingDayResult } = await supabase.rpc(
-        'compute_gaming_day',
-        {
-          p_casino_id: testCasinoId,
-          p_timestamp: new Date().toISOString(),
-        },
+      const currentGamingDay = await setupComputeGamingDay(
+        new Date().toISOString(),
       );
-      const currentGamingDay = gamingDayResult as string;
 
       // Create and close first visit
       const { data: visit1 } = await createVisit({
@@ -395,7 +398,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       fixture.visitIds.push(visit1!.id);
 
       // Close the first visit
-      await supabase
+      await setupClient
         .from('visit')
         .update({ ended_at: new Date().toISOString() })
         .eq('id', visit1!.id);
@@ -419,21 +422,21 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
   // ===========================================================================
 
   describe('rpc_start_or_resume_visit', () => {
-    // Note: These tests require authenticated context which is complex to set up
-    // with the service role client. We test the core SQL logic via direct inserts
-    // and validate the RPC signature exists.
+    // Mode C (ADR-024): pitBossClient carries JWT with stamped identity claims.
+    // The RPC is SECURITY DEFINER and calls set_rls_context_from_staff() to
+    // derive context from the JWT — no spoofable parameters.
 
-    it('RPC function exists and has correct signature', async () => {
-      // Verify the RPC exists by attempting to call it
-      // Service role bypasses auth but still needs RLS context set
-      const { error } = await supabase.rpc('rpc_start_or_resume_visit', {
+    it('RPC function exists and is callable via Mode C authenticated client', async () => {
+      // Call via pitBossClient — the RPC will derive context from JWT claims.
+      // A non-existent player_id should produce a domain error, not UNAUTHORIZED.
+      const { error } = await pitBossClient.rpc('rpc_start_or_resume_visit', {
         p_player_id: '00000000-0000-0000-0000-000000000000',
       });
 
-      // We expect an error (UNAUTHORIZED) because we don't have proper context,
-      // but the RPC should exist and be callable
+      // RPC should be callable (auth context is valid) but fail on business logic
+      // (non-existent player). The error should NOT be UNAUTHORIZED.
       expect(error).not.toBeNull();
-      expect(error!.message).toContain('UNAUTHORIZED');
+      expect(error!.message).not.toContain('UNAUTHORIZED');
     });
   });
 
@@ -471,7 +474,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
 
       // Create visit with self-referencing visit_group_id
       const visitId = crypto.randomUUID();
-      const { data: visit } = await supabase
+      const { data: visit } = await setupClient
         .from('visit')
         .insert({
           id: visitId,
@@ -511,7 +514,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       fixture.visitIds.push(staleVisit!.id);
 
       // Create a rating slip on the stale visit
-      const { data: slip } = await supabase
+      const { data: slip } = await setupClient
         .from('rating_slip')
         .insert({
           visit_id: staleVisit!.id,
@@ -528,7 +531,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       expect(slip!.status).toBe('open');
 
       // Close the slip (simulating rollover behavior)
-      const { data: closedSlip, error } = await supabase
+      const { data: closedSlip, error } = await setupClient
         .from('rating_slip')
         .update({
           status: 'closed',
@@ -553,14 +556,9 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       const fixture = await createTestFixture();
 
       // Get current gaming day
-      const { data: gamingDayResult } = await supabase.rpc(
-        'compute_gaming_day',
-        {
-          p_casino_id: testCasinoId,
-          p_timestamp: new Date().toISOString(),
-        },
+      const currentGamingDay = await setupComputeGamingDay(
+        new Date().toISOString(),
       );
-      const currentGamingDay = gamingDayResult as string;
 
       // Create visit
       const { data: visit } = await createVisit({
@@ -571,7 +569,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       fixture.visitIds.push(visit!.id);
 
       // Create a financial transaction
-      const { data: txn, error } = await supabase
+      const { data: txn, error } = await setupClient
         .from('player_financial_transaction')
         .insert({
           casino_id: testCasinoId,
@@ -594,7 +592,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       expect(txn!.gaming_day).toBe(currentGamingDay);
 
       // Cleanup
-      await supabase
+      await setupClient
         .from('player_financial_transaction')
         .delete()
         .eq('id', txn!.id);
@@ -623,8 +621,8 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       expect(error2).toBeNull();
 
       // Cleanup
-      if (ghost1) await supabase.from('visit').delete().eq('id', ghost1.id);
-      if (ghost2) await supabase.from('visit').delete().eq('id', ghost2.id);
+      if (ghost1) await setupClient.from('visit').delete().eq('id', ghost1.id);
+      if (ghost2) await setupClient.from('visit').delete().eq('id', ghost2.id);
     });
   });
 });

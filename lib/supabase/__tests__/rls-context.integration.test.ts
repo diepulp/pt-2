@@ -32,6 +32,10 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 // eslint-disable-next-line no-restricted-imports -- Integration test requires direct Supabase client
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  createModeCSession,
+  ModeCSessionResult,
+} from '../../../lib/testing/create-mode-c-session';
 import type { Database } from '../../../types/database.types';
 import { injectRLSContext } from '../rls-context';
 
@@ -70,9 +74,11 @@ const RUN_INTEGRATION =
   () => {
     // setupClient uses service-role for fixture management (bypasses RLS)
     let setupClient: SupabaseClient<Database>;
-    // Mode C authenticated anon clients for business query tests
+    // Mode C authenticated anon clients for business query tests (Category B)
     let authedClient1: SupabaseClient<Database>;
     let authedClient2: SupabaseClient<Database>;
+    let modeC1: ModeCSessionResult;
+    let modeC2: ModeCSessionResult;
 
     let testCompany1Id: string;
     let testCompany2Id: string;
@@ -80,39 +86,12 @@ const RUN_INTEGRATION =
     let testCasino2Id: string;
     let testStaff1Id: string;
     let testStaff2Id: string;
-    let testUserId1: string;
-    let testUserId2: string;
-
-    const testEmail1 = `test-rls-t3-pit_boss-${Date.now()}@example.com`;
-    const testEmail2 = `test-rls-t3-pit_boss-${Date.now() + 1}@example.com`;
-    const testPassword = 'test-password-12345';
 
     beforeAll(async () => {
       // === FIXTURE SETUP (service-role) ===
       setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
-      // 1. Create auth users WITHOUT staff_id (two-phase ADR-024 setup)
-      const { data: authUser1, error: authError1 } =
-        await setupClient.auth.admin.createUser({
-          email: testEmail1,
-          password: testPassword,
-          email_confirm: true,
-          app_metadata: { staff_role: 'pit_boss' },
-        });
-      if (authError1) throw authError1;
-      testUserId1 = authUser1.user.id;
-
-      const { data: authUser2, error: authError2 } =
-        await setupClient.auth.admin.createUser({
-          email: testEmail2,
-          password: testPassword,
-          email_confirm: true,
-          app_metadata: { staff_role: 'pit_boss' },
-        });
-      if (authError2) throw authError2;
-      testUserId2 = authUser2.user.id;
-
-      // 2. Create test companies (ADR-043: company before casino)
+      // 1. Create test companies (ADR-043: company before casino)
       const { data: company1, error: company1Error } = await setupClient
         .from('company')
         .insert({ name: 'RLS Integration Test Company 1' })
@@ -129,7 +108,7 @@ const RUN_INTEGRATION =
       if (company2Error) throw company2Error;
       testCompany2Id = company2.id;
 
-      // 3. Create test casinos
+      // 2. Create test casinos
       const { data: casino1, error: casino1Error } = await setupClient
         .from('casino')
         .insert({
@@ -154,7 +133,7 @@ const RUN_INTEGRATION =
       if (casino2Error) throw casino2Error;
       testCasino2Id = casino2.id;
 
-      // 4. Create casino settings
+      // 3. Create casino settings
       await setupClient.from('casino_settings').insert([
         {
           casino_id: testCasino1Id,
@@ -172,12 +151,11 @@ const RUN_INTEGRATION =
         },
       ]);
 
-      // 5. Create staff records bound to auth users
+      // 4. Create staff records (without user_id — set after Mode C session)
       const { data: staff1, error: staff1Error } = await setupClient
         .from('staff')
         .insert({
           casino_id: testCasino1Id,
-          user_id: testUserId1,
           employee_id: 'RLS-TEST-001',
           first_name: 'Test',
           last_name: 'Staff1',
@@ -193,7 +171,6 @@ const RUN_INTEGRATION =
         .from('staff')
         .insert({
           casino_id: testCasino2Id,
-          user_id: testUserId2,
           employee_id: 'RLS-TEST-002',
           first_name: 'Test',
           last_name: 'Staff2',
@@ -205,62 +182,30 @@ const RUN_INTEGRATION =
       if (staff2Error) throw staff2Error;
       testStaff2Id = staff2.id;
 
-      // 6. Stamp staff_id into app_metadata (ADR-024 two-phase)
-      await setupClient.auth.admin.updateUserById(testUserId1, {
-        app_metadata: {
-          staff_id: testStaff1Id,
-          casino_id: testCasino1Id,
-          staff_role: 'pit_boss',
-        },
+      // 5. Create Mode C authenticated sessions (ADR-024)
+      modeC1 = await createModeCSession(setupClient, {
+        staffId: testStaff1Id,
+        casinoId: testCasino1Id,
+        staffRole: 'pit_boss',
       });
-      await setupClient.auth.admin.updateUserById(testUserId2, {
-        app_metadata: {
-          staff_id: testStaff2Id,
-          casino_id: testCasino2Id,
-          staff_role: 'pit_boss',
-        },
-      });
+      authedClient1 = modeC1.client;
 
-      // 7. Sign in via throwaway clients to get JWTs
-      const throwaway1 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-        auth: { autoRefreshToken: false, persistSession: false },
+      modeC2 = await createModeCSession(setupClient, {
+        staffId: testStaff2Id,
+        casinoId: testCasino2Id,
+        staffRole: 'pit_boss',
       });
-      const { data: session1, error: signIn1Error } =
-        await throwaway1.auth.signInWithPassword({
-          email: testEmail1,
-          password: testPassword,
-        });
-      if (signIn1Error || !session1.session)
-        throw signIn1Error ?? new Error('Sign-in 1 returned no session');
+      authedClient2 = modeC2.client;
 
-      const throwaway2 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-        auth: { autoRefreshToken: false, persistSession: false },
-      });
-      const { data: session2, error: signIn2Error } =
-        await throwaway2.auth.signInWithPassword({
-          email: testEmail2,
-          password: testPassword,
-        });
-      if (signIn2Error || !session2.session)
-        throw signIn2Error ?? new Error('Sign-in 2 returned no session');
-
-      // 8. Create Mode C authenticated anon clients (ADR-024)
-      authedClient1 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-        global: {
-          headers: {
-            Authorization: `Bearer ${session1.session.access_token}`,
-          },
-        },
-        auth: { autoRefreshToken: false, persistSession: false },
-      });
-      authedClient2 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-        global: {
-          headers: {
-            Authorization: `Bearer ${session2.session.access_token}`,
-          },
-        },
-        auth: { autoRefreshToken: false, persistSession: false },
-      });
+      // 6. Bind auth users to staff records
+      await setupClient
+        .from('staff')
+        .update({ user_id: modeC1.userId })
+        .eq('id', testStaff1Id);
+      await setupClient
+        .from('staff')
+        .update({ user_id: modeC2.userId })
+        .eq('id', testStaff2Id);
     });
 
     afterAll(async () => {
@@ -280,13 +225,8 @@ const RUN_INTEGRATION =
       await setupClient.from('company').delete().eq('id', testCompany1Id);
       await setupClient.from('company').delete().eq('id', testCompany2Id);
 
-      // Clean up test users
-      if (testUserId1) {
-        await setupClient.auth.admin.deleteUser(testUserId1);
-      }
-      if (testUserId2) {
-        await setupClient.auth.admin.deleteUser(testUserId2);
-      }
+      // Clean up Mode C auth users
+      await Promise.all([modeC1?.cleanup(), modeC2?.cleanup()]);
     });
 
     // ===========================================================================

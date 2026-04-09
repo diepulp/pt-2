@@ -13,9 +13,9 @@
  * 4. Theo and points calculation accuracy
  *
  * AUTH: Mode C (ADR-024) — setupClient (service-role) for fixture creation,
- * authenticated anon client reserved for RPC operations if needed.
+ * pitBossClient (authenticated anon) for service/RPC operations.
  * This suite uses direct SQL for simulation so most operations remain on
- * setupClient. The auth user + staff are created for ADR-024 consistency.
+ * setupClient. Auth ceremony via createModeCSession helper (ADR-024).
  *
  * @see ISSUE-47B1DFF1 Loyalty accrual never called on rating slip close
  * @see ADR-024 RLS Context Self-Injection Remediation
@@ -35,6 +35,7 @@ import {
 } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+import { createModeCSession } from '@/lib/testing/create-mode-c-session';
 import type { Database } from '@/types/database.types';
 
 // ============================================================================
@@ -43,8 +44,6 @@ import type { Database } from '@/types/database.types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
 const TEST_PREFIX = 'test-lac-mc'; // loyalty-accrual-lifecycle Mode C
 
 // Policy values used in calculations (must match fixture setup)
@@ -126,7 +125,8 @@ const RUN_INTEGRATION =
   'Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)',
   () => {
     let setupClient: SupabaseClient<Database>;
-    let supabase: SupabaseClient<Database>;
+    let pitBossClient: SupabaseClient<Database>;
+    let authCleanup: (() => Promise<void>) | undefined;
     let fixture: TestFixture;
     let playerCounter = 0;
 
@@ -140,75 +140,28 @@ const RUN_INTEGRATION =
       // Phase 1: Service-role client for fixture setup
       setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
-      // Phase 2-6: Create fixtures and Mode C auth user
+      // Phase 2-6: Create fixtures
       fixture = await createTestFixture(setupClient);
 
-      // Phase 7: Create authenticated anon client (Mode C ADR-024)
-      const signInClient = createClient<Database>(
-        supabaseUrl,
-        supabaseServiceKey,
-        {
-          auth: { autoRefreshToken: false, persistSession: false },
-        },
-      );
-      const testEmail = `${TEST_PREFIX}-actor-${Date.now()}@test.local`;
-      const testPassword = 'TestPassword123!';
-
-      const { data: authData, error: authError } =
-        await setupClient.auth.admin.createUser({
-          email: testEmail,
-          password: testPassword,
-          email_confirm: true,
-          app_metadata: {
-            casino_id: fixture.casinoId,
-            staff_role: 'pit_boss',
-          },
-        });
-
-      if (authError || !authData.user) {
-        throw new Error(`Failed to create auth user: ${authError?.message}`);
-      }
-
-      fixture.authUserId = authData.user.id;
-
-      // Stamp staff_id back to auth user (two-phase ADR-024)
-      await setupClient.auth.admin.updateUserById(authData.user.id, {
-        app_metadata: {
-          casino_id: fixture.casinoId,
-          staff_id: fixture.actorId,
-          staff_role: 'pit_boss',
-        },
+      // Phase 7: Mode C auth ceremony via shared helper (ADR-024)
+      const session = await createModeCSession(setupClient, {
+        staffId: fixture.actorId,
+        casinoId: fixture.casinoId,
+        staffRole: 'pit_boss',
       });
+      pitBossClient = session.client;
+      authCleanup = session.cleanup;
+      fixture.authUserId = session.userId;
 
-      // Link staff to auth user
+      // Link staff to auth user (two-phase ADR-024)
       await setupClient
         .from('staff')
-        .update({ user_id: authData.user.id })
+        .update({ user_id: session.userId })
         .eq('id', fixture.actorId);
-
-      // Sign in to get JWT
-      const { data: signInData, error: signInError } =
-        await signInClient.auth.signInWithPassword({
-          email: testEmail,
-          password: testPassword,
-        });
-
-      if (signInError || !signInData.session) {
-        throw new Error(`Failed to sign in: ${signInError?.message}`);
-      }
-
-      // Create authenticated anon client with JWT
-      supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-        global: {
-          headers: {
-            Authorization: `Bearer ${signInData.session.access_token}`,
-          },
-        },
-        auth: { autoRefreshToken: false, persistSession: false },
-      });
     }, 30_000);
 
     afterAll(async () => {
+      await authCleanup?.();
       if (fixture?.cleanup) {
         await fixture.cleanup();
       }
@@ -851,10 +804,7 @@ async function createTestFixture(
       .eq('casino_id', casino.id);
     await setupClient.from('player_casino').delete().eq('casino_id', casino.id);
     await setupClient.from('player').delete().like('last_name', 'Test%');
-    // Delete auth user if created
-    if (fixture?.authUserId) {
-      await setupClient.auth.admin.deleteUser(fixture.authUserId);
-    }
+    // Auth user cleanup is handled by authCleanup in afterAll
     await setupClient.from('staff').delete().eq('id', actor.id);
     await setupClient.from('game_settings').delete().eq('casino_id', casino.id);
     await setupClient.from('gaming_table').delete().eq('id', table.id);

@@ -3,16 +3,14 @@
  *
  * Tests promo coupon inventory queries via the PromoService layer.
  *
- * These tests use a Supabase service-role client to:
- * 1. Create a promo program and issue coupons (setup fixture)
- * 2. Verify getCouponInventory returns correct status breakdowns
+ * Mode C (ADR-024): Service-role client for fixture setup only.
+ * Service under test is wired to an authenticated anon client (pitBossClient)
+ * carrying JWT claims derived from createModeCSession.
+ *
+ * 1. Create a promo program and issue coupons (setup fixture via setupClient)
+ * 2. Verify getCouponInventory returns correct status breakdowns (via pitBossClient)
  * 3. Verify empty inventory for programs with no coupons
  * 4. Verify program-filtered inventory
- *
- * NOTE: Coupon issuance uses the rpc_issue_promo_coupon RPC which requires
- * a staff context. In service-role mode, RPCs bypass RLS but still need
- * the staff context injection function. If the RPC requires active staff,
- * tests fall back to direct table inserts as a pragmatic alternative.
  *
  * @testEnvironment node
  * @see PRD-LOYALTY-ADMIN-CATALOG
@@ -25,6 +23,7 @@ import { randomUUID } from 'crypto';
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+import { createModeCSession } from '@/lib/testing/create-mode-c-session';
 import type { Database } from '@/types/database.types';
 
 import type { CouponInventoryOutput } from '../dtos';
@@ -48,13 +47,15 @@ interface TestFixture {
   casinoId: string;
   staffId: string;
   service: PromoService;
-  supabase: SupabaseClient<Database>;
+  setupClient: SupabaseClient<Database>;
+  pitBossClient: SupabaseClient<Database>;
   programWithCoupons: {
     id: string;
     issuedCouponIds: string[];
     voidedCouponIds: string[];
   };
   programWithNoCoupons: { id: string };
+  authCleanup: () => Promise<void>;
   cleanup: () => Promise<void>;
 }
 
@@ -63,13 +64,13 @@ interface TestFixture {
  * Returns the auth user_id (UUID) needed as staff reference.
  */
 async function createTestStaff(
-  supabase: SupabaseClient<Database>,
+  setupClient: SupabaseClient<Database>,
   casinoId: string,
 ): Promise<string> {
   const staffId = randomUUID();
 
   // Insert a staff row directly (service-role bypasses RLS)
-  const { error } = await supabase.from('staff').insert({
+  const { error } = await setupClient.from('staff').insert({
     id: staffId,
     casino_id: casinoId,
     display_name: `${TEST_PREFIX} Staff`,
@@ -85,14 +86,30 @@ async function createTestStaff(
 }
 
 async function createTestFixture(): Promise<TestFixture> {
-  const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+  // Service-role client for fixture setup only (Mode C — ADR-024)
+  const setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
+  // Create company (ADR-043: company before casino)
+  const { data: company, error: companyError } = await setupClient
+    .from('company')
+    .insert({ name: `${TEST_PREFIX} Company ${Date.now()}` })
+    .select()
+    .single();
+
+  if (companyError || !company) {
+    throw new Error(`Failed to create test company: ${companyError?.message}`);
+  }
+
   // Create casino
-  const { data: casino, error: casinoError } = await supabase
+  const { data: casino, error: casinoError } = await setupClient
     .from('casino')
-    .insert({ name: `${TEST_PREFIX} Casino ${Date.now()}`, status: 'active' })
+    .insert({
+      name: `${TEST_PREFIX} Casino ${Date.now()}`,
+      status: 'active',
+      company_id: company.id,
+    })
     .select()
     .single();
 
@@ -103,12 +120,27 @@ async function createTestFixture(): Promise<TestFixture> {
   const casinoId = casino.id;
 
   // Create test staff
-  const staffId = await createTestStaff(supabase, casinoId);
+  const staffId = await createTestStaff(setupClient, casinoId);
 
-  const service = createPromoService(supabase);
+  // Mode C auth setup (ADR-024) — authenticated anon client with JWT claims
+  const session = await createModeCSession(setupClient, {
+    staffId,
+    casinoId,
+    staffRole: 'pit_boss',
+  });
+  const pitBossClient = session.client;
+
+  // Link auth user to staff row
+  await setupClient
+    .from('staff')
+    .update({ user_id: session.userId })
+    .eq('id', staffId);
+
+  // Wire service to authenticated client (Mode C)
+  const service = createPromoService(pitBossClient);
 
   // Create program with coupons
-  const { data: program1, error: p1Err } = await supabase
+  const { data: program1, error: p1Err } = await setupClient
     .from('promo_program')
     .insert({
       casino_id: casinoId,
@@ -127,7 +159,7 @@ async function createTestFixture(): Promise<TestFixture> {
   }
 
   // Create program with no coupons
-  const { data: program2, error: p2Err } = await supabase
+  const { data: program2, error: p2Err } = await setupClient
     .from('promo_program')
     .insert({
       casino_id: casinoId,
@@ -145,14 +177,14 @@ async function createTestFixture(): Promise<TestFixture> {
     throw new Error(`Failed to create empty program: ${p2Err?.message}`);
   }
 
-  // Insert coupons directly (avoids RPC staff context complexity in service-role mode)
+  // Insert coupons directly (avoids RPC staff context complexity)
   const issuedCouponIds: string[] = [];
   const voidedCouponIds: string[] = [];
 
   // Insert 3 issued coupons
   for (let i = 0; i < 3; i++) {
     const couponId = randomUUID();
-    const { error: insErr } = await supabase.from('promo_coupon').insert({
+    const { error: insErr } = await setupClient.from('promo_coupon').insert({
       id: couponId,
       casino_id: casinoId,
       promo_program_id: program1.id,
@@ -173,7 +205,7 @@ async function createTestFixture(): Promise<TestFixture> {
   // Insert 2 voided coupons
   for (let i = 0; i < 2; i++) {
     const couponId = randomUUID();
-    const { error: insErr } = await supabase.from('promo_coupon').insert({
+    const { error: insErr } = await setupClient.from('promo_coupon').insert({
       id: couponId,
       casino_id: casinoId,
       promo_program_id: program1.id,
@@ -194,24 +226,27 @@ async function createTestFixture(): Promise<TestFixture> {
   }
 
   const cleanup = async () => {
-    // Delete coupons, programs, staff, casino
-    await supabase.from('promo_coupon').delete().eq('casino_id', casinoId);
-    await supabase.from('promo_program').delete().eq('casino_id', casinoId);
-    await supabase.from('staff').delete().eq('id', staffId);
-    await supabase.from('casino').delete().eq('id', casinoId);
+    // Delete coupons, programs, staff, casino, company (reverse dependency order)
+    await setupClient.from('promo_coupon').delete().eq('casino_id', casinoId);
+    await setupClient.from('promo_program').delete().eq('casino_id', casinoId);
+    await setupClient.from('staff').delete().eq('id', staffId);
+    await setupClient.from('casino').delete().eq('id', casinoId);
+    await setupClient.from('company').delete().eq('id', company.id);
   };
 
   return {
     casinoId,
     staffId,
     service,
-    supabase,
+    setupClient,
+    pitBossClient,
     programWithCoupons: {
       id: program1.id,
       issuedCouponIds,
       voidedCouponIds,
     },
     programWithNoCoupons: { id: program2.id },
+    authCleanup: session.cleanup,
     cleanup,
   };
 }
@@ -236,6 +271,8 @@ describe('Promo Inventory Integration (service layer)', () => {
     if (fixture?.cleanup) {
       await fixture.cleanup();
     }
+    // Auth cleanup (Mode C)
+    await fixture?.authCleanup?.();
   }, 15_000);
 
   // ==========================================================================

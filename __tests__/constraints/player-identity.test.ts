@@ -8,6 +8,13 @@
  * - Unique constraints
  * - Check constraints (gender)
  *
+ * MODE C ASSESSMENT (ADR-024):
+ * Category A — Intentionally service-role. These tests exercise pure PostgreSQL
+ * constraints (FK, UNIQUE, CHECK, NOT NULL) that operate below the RLS layer.
+ * Service-role bypass is required to test constraint behavior independently of
+ * auth policies. RLS-level access control is covered separately in
+ * __tests__/rls/player-identity.test.ts.
+ *
  * PREREQUISITES:
  * - Migrations 20251225120000-20251225120006 must be applied
  * - Local Supabase running: `npx supabase start`
@@ -36,7 +43,7 @@ const describeIntegration =
     : describe.skip;
 
 describeIntegration('player-identity Database Constraints (ADR-022)', () => {
-  let serviceClient: SupabaseClient<Database>;
+  let setupClient: SupabaseClient<Database>;
 
   let companyId: string;
   let casinoId: string;
@@ -45,10 +52,10 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
   let playerId: string;
 
   beforeAll(async () => {
-    serviceClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
+    setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
     // Create test user
-    const { data: user } = await serviceClient.auth.admin.createUser({
+    const { data: user } = await setupClient.auth.admin.createUser({
       email: `test-constraints-${Date.now()}@example.com`,
       password: 'test-password',
       email_confirm: true,
@@ -56,7 +63,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
     userId = user!.user.id;
 
     // Create test company (ADR-043: company before casino)
-    const { data: company } = await serviceClient
+    const { data: company } = await setupClient
       .from('company')
       .insert({ name: 'Constraint Test Company' })
       .select('id')
@@ -64,7 +71,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
     companyId = company!.id;
 
     // Create test casino
-    const { data: casino } = await serviceClient
+    const { data: casino } = await setupClient
       .from('casino')
       .insert({ name: 'Constraint Test Casino', company_id: companyId })
       .select('id')
@@ -72,7 +79,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
     casinoId = casino!.id;
 
     // Create test staff
-    const { data: staff } = await serviceClient
+    const { data: staff } = await setupClient
       .from('staff')
       .insert({
         user_id: userId,
@@ -87,7 +94,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
     staffId = staff!.id;
 
     // Create test player
-    const { data: player } = await serviceClient
+    const { data: player } = await setupClient
       .from('player')
       .insert({
         first_name: 'Constraint',
@@ -99,7 +106,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
     playerId = player!.id;
 
     // Enroll player
-    await serviceClient.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: playerId,
       casino_id: casinoId,
       status: 'active',
@@ -109,25 +116,22 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
 
   afterAll(async () => {
     // Cleanup test data
-    await serviceClient
+    await setupClient
       .from('player_identity')
       .delete()
       .eq('casino_id', casinoId);
-    await serviceClient
-      .from('player_casino')
-      .delete()
-      .eq('casino_id', casinoId);
-    await serviceClient.from('player').delete().eq('id', playerId);
-    await serviceClient.from('staff').delete().eq('casino_id', casinoId);
-    await serviceClient.from('casino').delete().eq('id', casinoId);
-    await serviceClient.from('company').delete().eq('id', companyId);
-    await serviceClient.auth.admin.deleteUser(userId);
+    await setupClient.from('player_casino').delete().eq('casino_id', casinoId);
+    await setupClient.from('player').delete().eq('id', playerId);
+    await setupClient.from('staff').delete().eq('casino_id', casinoId);
+    await setupClient.from('casino').delete().eq('id', casinoId);
+    await setupClient.from('company').delete().eq('id', companyId);
+    await setupClient.auth.admin.deleteUser(userId);
   });
 
   describe('A1. Foreign Key Constraints', () => {
     it('FK: (casino_id, player_id) must exist in player_casino', async () => {
       // Create player without enrollment
-      const { data: unenrolledPlayer } = await serviceClient
+      const { data: unenrolledPlayer } = await setupClient
         .from('player')
         .insert({
           first_name: 'Unenrolled',
@@ -138,7 +142,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         .single();
 
       // Try to create identity without enrollment
-      const { error } = await serviceClient.from('player_identity').insert({
+      const { error } = await setupClient.from('player_identity').insert({
         casino_id: casinoId,
         player_id: unenrolledPlayer!.id,
         created_by: staffId,
@@ -149,14 +153,11 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
       expect(error?.message).toContain('fk_player_identity_enrollment');
 
       // Cleanup
-      await serviceClient
-        .from('player')
-        .delete()
-        .eq('id', unenrolledPlayer!.id);
+      await setupClient.from('player').delete().eq('id', unenrolledPlayer!.id);
     });
 
     it('FK: casino_id must exist in casino table', async () => {
-      const { error } = await serviceClient.from('player_identity').insert({
+      const { error } = await setupClient.from('player_identity').insert({
         casino_id: '00000000-0000-0000-0000-000000000000',
         player_id: playerId,
         created_by: staffId,
@@ -168,7 +169,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
     });
 
     it('FK: player_id must exist in player table', async () => {
-      const { error } = await serviceClient.from('player_identity').insert({
+      const { error } = await setupClient.from('player_identity').insert({
         casino_id: casinoId,
         player_id: '00000000-0000-0000-0000-000000000000',
         created_by: staffId,
@@ -180,7 +181,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
     });
 
     it('FK: created_by must exist in staff table', async () => {
-      const { error } = await serviceClient.from('player_identity').insert({
+      const { error } = await setupClient.from('player_identity').insert({
         casino_id: casinoId,
         player_id: playerId,
         created_by: '00000000-0000-0000-0000-000000000000',
@@ -193,7 +194,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
 
     it('FK: updated_by must exist in staff table when set', async () => {
       // Create identity
-      const { data: identity } = await serviceClient
+      const { data: identity } = await setupClient
         .from('player_identity')
         .insert({
           casino_id: casinoId,
@@ -204,7 +205,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         .single();
 
       // Try to update with invalid updated_by
-      const { error } = await serviceClient
+      const { error } = await setupClient
         .from('player_identity')
         .update({ updated_by: '00000000-0000-0000-0000-000000000000' })
         .eq('id', identity!.id);
@@ -214,15 +215,12 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
       expect(error?.message).toContain('player_identity_updated_by_fkey');
 
       // Cleanup
-      await serviceClient
-        .from('player_identity')
-        .delete()
-        .eq('id', identity!.id);
+      await setupClient.from('player_identity').delete().eq('id', identity!.id);
     });
 
     it('FK: verified_by must exist in staff table when set', async () => {
       // Create identity
-      const { data: identity } = await serviceClient
+      const { data: identity } = await setupClient
         .from('player_identity')
         .insert({
           casino_id: casinoId,
@@ -233,7 +231,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         .single();
 
       // Try to update with invalid verified_by
-      const { error } = await serviceClient
+      const { error } = await setupClient
         .from('player_identity')
         .update({
           verified_by: '00000000-0000-0000-0000-000000000000',
@@ -246,17 +244,14 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
       expect(error?.message).toContain('player_identity_verified_by_fkey');
 
       // Cleanup
-      await serviceClient
-        .from('player_identity')
-        .delete()
-        .eq('id', identity!.id);
+      await setupClient.from('player_identity').delete().eq('id', identity!.id);
     });
   });
 
   describe('A2. Unique Constraints', () => {
     it('UNIQUE: (casino_id, player_id) prevents duplicate enrollments', async () => {
       // Create first identity
-      const { data: identity1 } = await serviceClient
+      const { data: identity1 } = await setupClient
         .from('player_identity')
         .insert({
           casino_id: casinoId,
@@ -268,7 +263,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         .single();
 
       // Try to create second identity for same player in same casino
-      const { error } = await serviceClient.from('player_identity').insert({
+      const { error } = await setupClient.from('player_identity').insert({
         casino_id: casinoId,
         player_id: playerId,
         created_by: staffId,
@@ -280,7 +275,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
       expect(error?.message).toContain('player_identity_pkey');
 
       // Cleanup
-      await serviceClient
+      await setupClient
         .from('player_identity')
         .delete()
         .eq('id', identity1!.id);
@@ -288,7 +283,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
 
     it('UNIQUE: (casino_id, document_number_hash) prevents duplicate documents', async () => {
       // Create second player
-      const { data: player2 } = await serviceClient
+      const { data: player2 } = await setupClient
         .from('player')
         .insert({
           first_name: 'Second',
@@ -298,7 +293,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         .select('id')
         .single();
 
-      await serviceClient.from('player_casino').insert({
+      await setupClient.from('player_casino').insert({
         player_id: player2!.id,
         casino_id: casinoId,
         status: 'active',
@@ -308,7 +303,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
       const documentHash = computeDocumentHash('D1234567');
 
       // Create first identity with document hash
-      const { data: identity1 } = await serviceClient
+      const { data: identity1 } = await setupClient
         .from('player_identity')
         .insert({
           casino_id: casinoId,
@@ -321,7 +316,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         .single();
 
       // Try to create second identity with same document hash
-      const { error } = await serviceClient.from('player_identity').insert({
+      const { error } = await setupClient.from('player_identity').insert({
         casino_id: casinoId,
         player_id: player2!.id,
         created_by: staffId,
@@ -334,20 +329,20 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
       expect(error?.message).toContain('ux_player_identity_doc_hash');
 
       // Cleanup
-      await serviceClient
+      await setupClient
         .from('player_identity')
         .delete()
         .eq('id', identity1!.id);
-      await serviceClient
+      await setupClient
         .from('player_casino')
         .delete()
         .eq('player_id', player2!.id);
-      await serviceClient.from('player').delete().eq('id', player2!.id);
+      await setupClient.from('player').delete().eq('id', player2!.id);
     });
 
     it('UNIQUE: document_hash constraint allows NULL (multiple players without documents)', async () => {
       // Create two players without documents
-      const { data: player2 } = await serviceClient
+      const { data: player2 } = await setupClient
         .from('player')
         .insert({
           first_name: 'NoDoc',
@@ -357,7 +352,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         .select('id')
         .single();
 
-      const { data: player3 } = await serviceClient
+      const { data: player3 } = await setupClient
         .from('player')
         .insert({
           first_name: 'NoDoc',
@@ -367,7 +362,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         .select('id')
         .single();
 
-      await serviceClient.from('player_casino').insert([
+      await setupClient.from('player_casino').insert([
         {
           player_id: player2!.id,
           casino_id: casinoId,
@@ -383,7 +378,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
       ]);
 
       // Create identities with NULL document_number_hash
-      const { data: identity1, error: error1 } = await serviceClient
+      const { data: identity1, error: error1 } = await setupClient
         .from('player_identity')
         .insert({
           casino_id: casinoId,
@@ -394,7 +389,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         .select()
         .single();
 
-      const { data: identity2, error: error2 } = await serviceClient
+      const { data: identity2, error: error2 } = await setupClient
         .from('player_identity')
         .insert({
           casino_id: casinoId,
@@ -412,24 +407,24 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
       expect(identity2).toBeDefined();
 
       // Cleanup
-      await serviceClient
+      await setupClient
         .from('player_identity')
         .delete()
         .eq('id', identity1!.id);
-      await serviceClient
+      await setupClient
         .from('player_identity')
         .delete()
         .eq('id', identity2!.id);
-      await serviceClient
+      await setupClient
         .from('player_casino')
         .delete()
         .eq('player_id', player2!.id);
-      await serviceClient
+      await setupClient
         .from('player_casino')
         .delete()
         .eq('player_id', player3!.id);
-      await serviceClient.from('player').delete().eq('id', player2!.id);
-      await serviceClient.from('player').delete().eq('id', player3!.id);
+      await setupClient.from('player').delete().eq('id', player2!.id);
+      await setupClient.from('player').delete().eq('id', player3!.id);
     });
   });
 
@@ -439,7 +434,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
       const validGenders = ['m', 'f', 'x'];
 
       for (const gender of validGenders) {
-        const { data: player } = await serviceClient
+        const { data: player } = await setupClient
           .from('player')
           .insert({
             first_name: 'Gender',
@@ -449,14 +444,14 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
           .select('id')
           .single();
 
-        await serviceClient.from('player_casino').insert({
+        await setupClient.from('player_casino').insert({
           player_id: player!.id,
           casino_id: casinoId,
           status: 'active',
           enrolled_by: staffId,
         });
 
-        const { data, error } = await serviceClient
+        const { data, error } = await setupClient
           .from('player_identity')
           .insert({
             casino_id: casinoId,
@@ -471,12 +466,12 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         expect(data?.gender).toBe(gender);
 
         // Cleanup
-        await serviceClient.from('player_identity').delete().eq('id', data!.id);
-        await serviceClient
+        await setupClient.from('player_identity').delete().eq('id', data!.id);
+        await setupClient
           .from('player_casino')
           .delete()
           .eq('player_id', player!.id);
-        await serviceClient.from('player').delete().eq('id', player!.id);
+        await setupClient.from('player').delete().eq('id', player!.id);
       }
     });
 
@@ -484,7 +479,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
       const invalidGenders = ['male', 'female', 'M', 'F', 'X', 'other', ''];
 
       for (const gender of invalidGenders) {
-        const { error } = await serviceClient.from('player_identity').insert({
+        const { error } = await setupClient.from('player_identity').insert({
           casino_id: casinoId,
           player_id: playerId,
           created_by: staffId,
@@ -498,7 +493,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
     });
 
     it('CHECK: gender allows NULL', async () => {
-      const { data: player } = await serviceClient
+      const { data: player } = await setupClient
         .from('player')
         .insert({
           first_name: 'No',
@@ -508,14 +503,14 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         .select('id')
         .single();
 
-      await serviceClient.from('player_casino').insert({
+      await setupClient.from('player_casino').insert({
         player_id: player!.id,
         casino_id: casinoId,
         status: 'active',
         enrolled_by: staffId,
       });
 
-      const { data, error } = await serviceClient
+      const { data, error } = await setupClient
         .from('player_identity')
         .insert({
           casino_id: casinoId,
@@ -530,18 +525,18 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
       expect(data?.gender).toBeNull();
 
       // Cleanup
-      await serviceClient.from('player_identity').delete().eq('id', data!.id);
-      await serviceClient
+      await setupClient.from('player_identity').delete().eq('id', data!.id);
+      await setupClient
         .from('player_casino')
         .delete()
         .eq('player_id', player!.id);
-      await serviceClient.from('player').delete().eq('id', player!.id);
+      await setupClient.from('player').delete().eq('id', player!.id);
     });
   });
 
   describe('A4. NOT NULL Constraints', () => {
     it('NOT NULL: casino_id is required', async () => {
-      const { error } = await serviceClient.from('player_identity').insert({
+      const { error } = await setupClient.from('player_identity').insert({
         // @ts-expect-error Testing database constraint
         casino_id: null,
         player_id: playerId,
@@ -554,7 +549,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
     });
 
     it('NOT NULL: player_id is required', async () => {
-      const { error } = await serviceClient.from('player_identity').insert({
+      const { error } = await setupClient.from('player_identity').insert({
         casino_id: casinoId,
         // @ts-expect-error Testing database constraint
         player_id: null,
@@ -567,7 +562,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
     });
 
     it('NOT NULL: created_by is required', async () => {
-      const { error } = await serviceClient.from('player_identity').insert({
+      const { error } = await setupClient.from('player_identity').insert({
         casino_id: casinoId,
         player_id: playerId,
         // @ts-expect-error Testing database constraint
@@ -583,19 +578,19 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
   describe('A5. Composite Constraints', () => {
     it('Composite FK: (casino_id, player_id) validates both fields together', async () => {
       // Create second company, casino, and player (ADR-043)
-      const { data: company2 } = await serviceClient
+      const { data: company2 } = await setupClient
         .from('company')
         .insert({ name: 'Second Company' })
         .select('id')
         .single();
 
-      const { data: casino2 } = await serviceClient
+      const { data: casino2 } = await setupClient
         .from('casino')
         .insert({ name: 'Second Casino', company_id: company2!.id })
         .select('id')
         .single();
 
-      const { data: player2 } = await serviceClient
+      const { data: player2 } = await setupClient
         .from('player')
         .insert({
           first_name: 'Other',
@@ -606,7 +601,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
         .single();
 
       // Enroll player2 in casino1 (NOT casino2)
-      await serviceClient.from('player_casino').insert({
+      await setupClient.from('player_casino').insert({
         player_id: player2!.id,
         casino_id: casinoId,
         status: 'active',
@@ -615,7 +610,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
 
       // Try to create identity with mismatched (casino2, player2)
       // player2 is enrolled in casino1, not casino2
-      const { error } = await serviceClient.from('player_identity').insert({
+      const { error } = await setupClient.from('player_identity').insert({
         casino_id: casino2!.id,
         player_id: player2!.id,
         created_by: staffId,
@@ -626,13 +621,13 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
       expect(error?.message).toContain('fk_player_identity_enrollment');
 
       // Cleanup
-      await serviceClient
+      await setupClient
         .from('player_casino')
         .delete()
         .eq('player_id', player2!.id);
-      await serviceClient.from('player').delete().eq('id', player2!.id);
-      await serviceClient.from('casino').delete().eq('id', casino2!.id);
-      await serviceClient.from('company').delete().eq('id', company2!.id);
+      await setupClient.from('player').delete().eq('id', player2!.id);
+      await setupClient.from('casino').delete().eq('id', casino2!.id);
+      await setupClient.from('company').delete().eq('id', company2!.id);
     });
   });
 });
