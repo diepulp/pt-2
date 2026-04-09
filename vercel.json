@@ -10,6 +10,9 @@
       "maxDuration": 30
     }
   },
+  "git": {
+    "deploymentEnabled": false
+  },
   "headers": [
     {
       "source": "/api/(.*)",
