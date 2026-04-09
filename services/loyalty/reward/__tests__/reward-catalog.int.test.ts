@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Reward Catalog Integration Tests (PRD-LOYALTY-ADMIN-CATALOG WS5)
  *

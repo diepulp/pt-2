@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Gaming Day Boundary Integration Tests (ADR-026)
  *

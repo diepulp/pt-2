@@ -272,7 +272,7 @@ describeIntegration('player-identity Database Constraints (ADR-022)', () => {
 
       expect(error).toBeDefined();
       expect(error?.code).toBe('23505'); // unique_violation
-      expect(error?.message).toContain('player_identity_pkey');
+      expect(error?.message).toContain('uq_player_identity_casino_player');
 
       // Cleanup
       await setupClient

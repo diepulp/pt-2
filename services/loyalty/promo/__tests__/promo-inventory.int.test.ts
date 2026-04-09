@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Promo Inventory Integration Tests (PRD-LOYALTY-ADMIN-CATALOG WS5)
  *
@@ -73,7 +75,9 @@ async function createTestStaff(
   const { error } = await setupClient.from('staff').insert({
     id: staffId,
     casino_id: casinoId,
-    display_name: `${TEST_PREFIX} Staff`,
+    employee_id: `${TEST_PREFIX}-${Date.now()}`,
+    first_name: 'Test',
+    last_name: 'Staff',
     role: 'pit_boss',
     status: 'active',
   });

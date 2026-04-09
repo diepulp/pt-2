@@ -471,6 +471,8 @@ const RUN_INTEGRATION =
     // ===========================================================================
 
     describe('Company ID Derivation (ADR-043)', () => {
+      const testPassword = 'mode-c-test-password-12345';
+
       it('set_rls_context_from_staff returns company_id', async () => {
         // Mode C: authedClient1 JWT contains staff_id → RPC derives full context
         const { data, error } = await authedClient1.rpc(

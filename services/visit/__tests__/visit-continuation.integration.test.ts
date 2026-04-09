@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Visit Continuation Integration Tests (PRD-017)
  *
@@ -318,14 +320,14 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
     return fixture;
   }
 
-  // Fixture helpers — service-role RPC wrappers (machine-verifiable rule: FIB-H §F.4)
+  // Fixture helpers — Mode C RPC wrappers (ADR-024: business RPCs via authenticated client)
   async function setupStartSlip(
     visitId: string,
     tableId: string,
     seat: string,
     gameSettings: Record<string, unknown> = {},
   ) {
-    const { data, error } = await setupClient.rpc('rpc_start_rating_slip', {
+    const { data, error } = await pitBossClient.rpc('rpc_start_rating_slip', {
       p_visit_id: visitId,
       p_table_id: tableId,
       p_seat_number: seat,
@@ -338,7 +340,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
   async function setupCloseSlip(slipId: string, averageBet?: number) {
     const params: Record<string, unknown> = { p_rating_slip_id: slipId };
     if (averageBet !== undefined) params.p_average_bet = averageBet;
-    const { error } = await setupClient.rpc('rpc_close_rating_slip', params);
+    const { error } = await pitBossClient.rpc('rpc_close_rating_slip', params);
     if (error) throw error;
   }
 
@@ -403,7 +405,7 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
     it('preserves visit_group_id when explicitly provided', async () => {
       const fixture = await createTestFixture();
 
-      const explicitGroupId = 'custom-group-id-123';
+      const explicitGroupId = '00000000-0000-4000-a000-000000000123';
 
       // Create visit with explicit visit_group_id
       const { data: visit, error } = await setupCreateVisit(
@@ -568,26 +570,30 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
     it('returns paginated closed sessions', async () => {
       const fixture = await createTestFixture();
 
-      // Create 3 closed visits
+      // Create 3 visits: open first, add slips, then close
       for (let i = 0; i < 3; i++) {
+        const startedAt = new Date(
+          Date.now() - (3 - i) * 3600000,
+        ).toISOString();
+        const endedAt = new Date(
+          Date.now() - (3 - i) * 3600000 + 7200000,
+        ).toISOString();
+
+        // Create visit as open first
         const { data: visit } = await setupCreateVisit(
           fixture.playerId,
           testCasino1Id,
-          {
-            started_at: new Date(Date.now() - (3 - i) * 3600000).toISOString(),
-            ended_at: new Date(
-              Date.now() - (3 - i) * 3600000 + 7200000,
-            ).toISOString(),
-          },
+          { started_at: startedAt },
         );
         fixture.visitIds.push(visit.id);
 
-        // Create a rating slip for each visit to have segments
+        // Create a rating slip while visit is open
         const slip = await setupStartSlip(visit.id, testTable1Id, '1');
         fixture.slipIds.push(slip.id);
 
-        // Close the slip
+        // Close the slip, then close the visit
         await setupCloseSlip(slip.id);
+        await setupUpdateVisit(visit.id, { ended_at: endedAt });
       }
 
       const result = await service.getPlayerRecentSessions(

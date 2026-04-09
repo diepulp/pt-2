@@ -104,7 +104,7 @@ const RUN_INTEGRATION =
         .from('staff')
         .insert({
           casino_id: testCasinoId,
-          employee_id: 'PB-001',
+          employee_id: `PB-${Date.now()}`,
           first_name: 'Test',
           last_name: 'PitBoss',
           role: 'pit_boss',
@@ -117,7 +117,7 @@ const RUN_INTEGRATION =
         .from('staff')
         .insert({
           casino_id: testCasinoId,
-          employee_id: 'CSH-001',
+          employee_id: `CSH-${Date.now()}`,
           first_name: 'Test',
           last_name: 'Cashier',
           role: 'cashier',
@@ -230,7 +230,7 @@ const RUN_INTEGRATION =
             p_visit_id: testVisitId,
             p_amount: 500.0,
             p_direction: 'in',
-            p_source: 'table',
+            p_source: 'pit',
 
             p_tender_type: 'cash',
           },
@@ -238,7 +238,7 @@ const RUN_INTEGRATION =
 
         expect(error).toBeNull();
         expect(data).toBeTruthy();
-        expect(data?.amount).toBe('500');
+        expect(data?.amount).toBe(500);
         expect(data?.direction).toBe('in');
         expect(data?.tender_type).toBe('cash');
         expect(data?.created_by_staff_id).toBe(testPitBossStaffId);
@@ -252,7 +252,7 @@ const RUN_INTEGRATION =
             p_visit_id: testVisitId,
             p_amount: 1000.0,
             p_direction: 'in',
-            p_source: 'table',
+            p_source: 'pit',
 
             p_tender_type: 'chips',
           },
@@ -260,7 +260,7 @@ const RUN_INTEGRATION =
 
         expect(error).toBeNull();
         expect(data).toBeTruthy();
-        expect(data?.amount).toBe('1000');
+        expect(data?.amount).toBe(1000);
         expect(data?.direction).toBe('in');
         expect(data?.tender_type).toBe('chips');
         expect(data?.created_by_staff_id).toBe(testPitBossStaffId);
@@ -272,7 +272,7 @@ const RUN_INTEGRATION =
           p_visit_id: testVisitId,
           p_amount: (i + 1) * 100.0,
           p_direction: 'in' as const,
-          p_source: 'table' as const,
+          p_source: 'pit' as const,
 
           p_tender_type: i % 2 === 0 ? ('cash' as const) : ('chips' as const),
         }));
@@ -306,7 +306,7 @@ const RUN_INTEGRATION =
             p_visit_id: testVisitId,
             p_amount: 500.0,
             p_direction: 'out',
-            p_source: 'table',
+            p_source: 'pit',
 
             p_tender_type: 'cash',
           },
@@ -327,7 +327,7 @@ const RUN_INTEGRATION =
             p_visit_id: testVisitId,
             p_amount: 1000.0,
             p_direction: 'out',
-            p_source: 'table',
+            p_source: 'pit',
 
             p_tender_type: 'chips',
           },
@@ -354,7 +354,7 @@ const RUN_INTEGRATION =
             p_visit_id: testVisitId,
             p_amount: 5000.0,
             p_direction: 'in',
-            p_source: 'table',
+            p_source: 'pit',
 
             p_tender_type: 'marker',
           },
@@ -375,7 +375,7 @@ const RUN_INTEGRATION =
             p_visit_id: testVisitId,
             p_amount: 2000.0,
             p_direction: 'in',
-            p_source: 'table',
+            p_source: 'pit',
 
             p_tender_type: 'check',
           },
@@ -449,7 +449,7 @@ const RUN_INTEGRATION =
             p_visit_id: testVisitId,
             p_amount: (i + 1) * 50.0,
             p_direction: 'in' as const,
-            p_source: 'table' as const,
+            p_source: 'pit' as const,
 
             p_tender_type: 'cash' as const,
           },
@@ -462,7 +462,7 @@ const RUN_INTEGRATION =
             p_visit_id: testVisitId,
             p_amount: (i + 1) * 50.0,
             p_direction: i % 2 === 0 ? ('out' as const) : ('in' as const),
-            p_source: 'table' as const,
+            p_source: 'pit' as const,
 
             p_tender_type:
               i % 2 === 0 ? ('cash' as const) : ('marker' as const),
@@ -533,7 +533,7 @@ const RUN_INTEGRATION =
           .from('staff')
           .insert({
             casino_id: casino2!.id,
-            employee_id: 'PB-002',
+            employee_id: `PB2-${Date.now()}`,
             first_name: 'Test2',
             last_name: 'PitBoss2',
             role: 'pit_boss',
@@ -584,7 +584,7 @@ const RUN_INTEGRATION =
               p_visit_id: testVisitId,
               p_amount: 100.0,
               p_direction: 'in',
-              p_source: 'table',
+              p_source: 'pit',
 
               p_tender_type: 'cash',
             }),
@@ -593,7 +593,7 @@ const RUN_INTEGRATION =
               p_visit_id: visit2!.id,
               p_amount: 200.0,
               p_direction: 'in',
-              p_source: 'table',
+              p_source: 'pit',
 
               p_tender_type: 'chips',
             }),
@@ -640,7 +640,7 @@ const RUN_INTEGRATION =
           p_visit_id: testVisitId,
           p_amount: 500.0,
           p_direction: 'out',
-          p_source: 'table',
+          p_source: 'pit',
 
           p_tender_type: 'cash',
         });
@@ -657,7 +657,7 @@ const RUN_INTEGRATION =
           p_visit_id: testVisitId,
           p_amount: 5000.0,
           p_direction: 'in',
-          p_source: 'table',
+          p_source: 'pit',
 
           p_tender_type: 'marker',
         });
