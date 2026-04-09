@@ -293,14 +293,18 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   // Modal callback: Save with optional buy-in
   const handleSave = async (formState: FormState) => {
     if (!selectedSlipId || !ratingSlipModalData) {
-      console.error('Save failed: No slip or modal data');
+      logError(new Error('Save failed: No slip or modal data'), {
+        component: 'PitDashboard',
+        action: 'handleSave',
+      });
       return;
     }
 
     if (!staffId) {
-      console.error(
-        'Save failed: No staff ID available - authentication required',
-      );
+      logError(new Error('Save failed: No staff ID available'), {
+        component: 'PitDashboard',
+        action: 'handleSave',
+      });
       return;
     }
 
@@ -344,14 +348,18 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   // Modal callback: Close session with chips-taken
   const handleCloseSession = async (formState: FormState) => {
     if (!selectedSlipId || !ratingSlipModalData || !selectedTableId) {
-      console.error('Close failed: No slip, modal data, or table ID');
+      logError(new Error('Close failed: No slip, modal data, or table ID'), {
+        component: 'PitDashboard',
+        action: 'handleCloseSession',
+      });
       return;
     }
 
     if (!staffId) {
-      console.error(
-        'Close failed: No staff ID available - authentication required',
-      );
+      logError(new Error('Close failed: No staff ID available'), {
+        component: 'PitDashboard',
+        action: 'handleCloseSession',
+      });
       return;
     }
 
