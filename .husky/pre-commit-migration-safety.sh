@@ -402,6 +402,51 @@ for FILE in $MIGRATION_FILES; do
 done
 
 # ==============================================================================
+# Check 6a: Detect dangerous bulk REVOKE patterns
+# REVOKE ALL ON ALL FUNCTIONS or REVOKE ... FROM authenticated without
+# corresponding GRANT risks silently breaking authenticated access.
+# Reference: GAP-AUTHENTICATED-ROLE-GRANT-BLIND-SPOT (P1 2026-04-08)
+# ==============================================================================
+for FILE in $MIGRATION_FILES; do
+  HAS_BULK_REVOKE=$(git diff --cached "$FILE" | grep -c '^+.*REVOKE ALL ON ALL FUNCTIONS' || true)
+  HAS_REVOKE_AUTHENTICATED=$(git diff --cached "$FILE" | grep -c '^+.*REVOKE.*FROM authenticated' || true)
+
+  if [ "$HAS_BULK_REVOKE" -gt 0 ]; then
+    echo "⚠️  CHECK 6A WARNING: Bulk REVOKE ALL ON ALL FUNCTIONS detected"
+    echo ""
+    echo "File: $FILE"
+    echo ""
+    echo "WHY THIS IS DANGEROUS:"
+    echo "  • Strips EXECUTE grants from ALL functions, including authenticated role"
+    echo "  • Any function not explicitly re-granted will silently break"
+    echo "  • This pattern caused the P1 incident (2026-04-08)"
+    echo ""
+    echo "REQUIRED ACTIONS:"
+    echo "  1. Enumerate every rpc_* function and re-grant explicitly"
+    echo "  2. Run SEC-010 gate (10_authenticated_grant_audit.sql) locally"
+    echo "  3. Add 'GRANT_AUDIT_VERIFIED' comment to migration header"
+    echo ""
+    WARNINGS_FOUND=1
+  fi
+
+  if [ "$HAS_REVOKE_AUTHENTICATED" -gt 0 ]; then
+    HAS_GRANT_AUTHENTICATED=$(git diff --cached "$FILE" | grep -c '^+.*GRANT.*TO authenticated' || true)
+    if [ "$HAS_GRANT_AUTHENTICATED" -eq 0 ]; then
+      echo "⚠️  CHECK 6A WARNING: REVOKE FROM authenticated without corresponding GRANT"
+      echo ""
+      echo "File: $FILE"
+      echo ""
+      echo "WHY THIS IS DANGEROUS:"
+      echo "  • Removes authenticated EXECUTE without re-granting"
+      echo "  • Verify this is intentional (internal-only function?)"
+      echo "  • If the function is client-callable, add GRANT EXECUTE TO authenticated"
+      echo ""
+      WARNINGS_FOUND=1
+    fi
+  fi
+done
+
+# ==============================================================================
 # Check 6: Detect legacy exec_sql() usage in migrations
 # ==============================================================================
 for FILE in $MIGRATION_FILES; do

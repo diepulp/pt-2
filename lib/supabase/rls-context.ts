@@ -133,14 +133,16 @@ export async function injectRLSContext(
   // AUTH-HARDENING v0.1 WS6: Mark RPC context as injected for canary assertion
   markRpcContextInjected();
 
-  console.info(
-    '[RLS] context set: actor=%s casino=%s role=%s company=%s (correlationId=%s)',
-    context.actorId,
-    context.casinoId,
-    context.staffRole,
-    context.companyId,
-    correlationId,
-  );
+  if (process.env.NODE_ENV === 'development') {
+    console.info(
+      '[RLS] context set: actor=%s casino=%s role=%s company=%s (correlationId=%s)',
+      context.actorId,
+      context.casinoId,
+      context.staffRole,
+      context.companyId,
+      correlationId,
+    );
+  }
 
   return context;
 }

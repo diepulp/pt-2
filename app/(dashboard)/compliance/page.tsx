@@ -43,8 +43,7 @@ export default async function CompliancePage() {
       casinoId = context.casinoId;
       staffId = context.actorId ?? undefined;
       staffRole = context.staffRole ?? undefined;
-    } catch (error) {
-      console.error('Failed to get auth context:', error);
+    } catch {
       redirect('/signin');
     }
   } else if (isDevAuthBypassEnabled()) {

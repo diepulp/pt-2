@@ -1,0 +1,27 @@
+{
+  "prd": "FIB-H-SENTRY-001",
+  "prd_title": "Pilot-bounded Sentry Error Tracking",
+  "current_phase": 0,
+  "status": "initialized",
+  "completed_workstreams": [],
+  "in_progress_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4"],
+  "artifacts": {},
+  "gates_passed": [],
+  "gates_pending": ["type-check", "lint", "build"],
+  "timestamp": "2026-04-08T12:00:00Z",
+  "complexity_prescreen": "streamlined",
+  "fib_h_ref": "docs/issues/production-readiness/sentry-integration/FIB-H-SENTRY-001-pilot-bounded-sentry-error-tracking.md",
+  "fib_s_ref": "docs/issues/production-readiness/sentry-integration/FIB-S-SENTRY-001-pilot-bounded-sentry-error-tracking.json",
+  "fib_s_loaded": true,
+  "write_path_classification": "none",
+  "adversarial_review": {
+    "magnitude_score": 0,
+    "magnitude_tier": "self_certified",
+    "magnitude_signals": [
+      { "signal": "no_migrations", "points": -2, "evidence": "Zero database workstreams" },
+      { "signal": "no_rls", "points": -1, "evidence": "Zero RLS workstreams" },
+      { "signal": "no_security_definer", "points": -1, "evidence": "Zero SECURITY DEFINER" }
+    ]
+  }
+}

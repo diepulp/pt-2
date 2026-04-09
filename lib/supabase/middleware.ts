@@ -67,7 +67,7 @@ export async function updateSession(request: NextRequest) {
     '/pricing', // Marketing stub
     '/contact', // Marketing stub
     '/auth', // Existing auth flows
-    '/review', // Dev review pages
+    ...(process.env.NODE_ENV === 'development' ? ['/review'] : []), // Dev review pages — auth-gated in production
     '/login', // Backwards compat
     '/bootstrap', // Onboarding (internal auth check)
     '/setup', // Setup wizard (internal auth check)

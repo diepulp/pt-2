@@ -73,6 +73,45 @@ If argument is a file path:
 
 ---
 
+## Complexity Pre-Screen
+
+After input resolution but before full pipeline execution, perform a quick complexity assessment to determine which pipeline path to use. This prevents heavy ceremony for work that doesn't need it.
+
+**Low-complexity indicators** (all must be true for streamlined path):
+- No migration or schema workstreams expected (no new tables, columns, RPCs)
+- No RLS policy changes
+- No new SECURITY DEFINER functions
+- No new bounded contexts — all work stays within existing services
+- No new public API endpoints — all routes already exist
+- Workstream count <= 4
+
+**If all indicators are true** → **Streamlined path:**
+1. Single-stage EXEC-SPEC generation (lead-architect scaffold only, no expert consultation)
+2. Validation (structural + governance)
+3. Approval gate (skip DA team — Tier 0 auto-qualified)
+4. Execution
+
+**If any indicator is false** → **Full pipeline** (Stages 0-4 as described below)
+
+Display the pre-screen result:
+```
+[COMPLEXITY PRE-SCREEN] {PRD-ID}
+─────────────────────────────────────────
+Migrations:        {yes/no}
+RLS changes:       {yes/no}
+SECURITY DEFINER:  {yes/no}
+New bounded ctx:   {yes/no}
+New API surfaces:  {yes/no}
+WS count estimate: {N}
+─────────────────────────────────────────
+Path: {Streamlined | Full Pipeline}
+Override: reply "full" or "streamlined" to change.
+```
+
+Record in checkpoint: `complexity_prescreen: "streamlined"` or `"full"`, and `complexity_override` if changed.
+
+---
+
 ## Intake Authority Chain
 
 When a PRD references a Feature Intake Brief (FIB), the pipeline enforces a strict authority chain. The FIB defines what may exist, the PRD constrains requirements to that boundary, and the EXEC-SPEC constrains implementation to all three.
@@ -170,6 +209,10 @@ decisions:
 
 - `impact_on_scope: none` — the decision stays within intake boundaries, no amendment needed
 - `impact_on_scope: amendment_required` — the decision expands scope; pipeline **blocks** until the FIB is amended and the PRD updated
+- `verification: cited` — decision is backed by code/SQL evidence (file path + line cited in rationale)
+- `verification: assumption` — decision asserts existing behavior without ground-truth verification; must be flagged as "assumption pending WS verification" and a verification test injected into the relevant test workstream
+
+**Behavior Assertion Verification Rule:** When a decision resolves an open question by asserting *existing system behavior* (e.g., "RPC X tolerates NULL Y"), the pipeline must verify the claim against the actual code or SQL before marking `impact_on_scope: none`. Read the relevant file, cite the path and line in the rationale. If verification is not feasible at EXEC stage, mark `verification: assumption` — this automatically generates a verification test case in the relevant test workstream. A decision that depends on unverified behavior must not use `impact_on_scope: none` without evidence.
 
 Open questions that are **not** resolved at EXEC stage must appear in the EXEC-SPEC's risks section as carried-forward items. They must not silently disappear into hand-wavy task descriptions.
 
@@ -266,25 +309,37 @@ When FIB-S is loaded, the EXEC generator uses it for:
 
 6. Merge expert refinements into final EXECUTION-SPEC
 
+   **6a. Upstream Framing Cross-Check:**
+
+   Before proceeding to traceability audit, verify the EXEC-SPEC Overview section does not contradict the upstream framing from the FIB or PRD:
+   - If FIB Section C explicitly states the work is "not purely wiring" or similar characterization, the EXEC Overview must not revert to "primarily wiring/integration"
+   - If the PRD Section 1 establishes a scope characterization, the EXEC must preserve it
+   - Extract key framing assertions from the FIB-H and PRD first section and compare against the EXEC Overview. Flag contradictions — upstream framing corrections must propagate downstream.
+
 7. **Intake Traceability Audit (FIB-S gate, when loaded):**
 
    If FIB-S was loaded in Stage 0, run the traceability audit before proceeding:
 
    a. **Workstream coverage** — every workstream has a `traces_to` field citing at least one FIB-S element (capability, rule, outcome, or loop step). Infrastructure workstreams cite `infrastructure`.
    b. **Capability coverage** — every capability in `zachman.how.capabilities` is referenced by at least one workstream. Report uncovered capabilities.
-   c. **Anti-invention scan** — no workstream introduces operator-visible surfaces, public API endpoints, or workflow side-paths absent from `zachman.where.surfaces` or `containment.loop`.
+   c. **Anti-invention scan** — two-pass check:
+      - **Pass 1 (description-level):** No workstream description introduces operator-visible surfaces, public API endpoints, or workflow side-paths absent from `zachman.where.surfaces` or `containment.loop`.
+      - **Pass 2 (output-path extraction):** Extract every `app/api/` path from all workstream `outputs` arrays. Each extracted API path must match a declared surface in `zachman.where.surfaces[kind=api]`. Any unmatched API path is a violation — the description-level scan alone is insufficient because workstream descriptions can omit paths that appear in outputs.
    d. **Open-question disposition** — every item in `governance.open_questions_allowed_at_scaffold` is either resolved via a `decisions` record or carried forward in the EXEC-SPEC risks section. None may be silently absent.
    e. **Hard rule visibility** — every `severity: "hard"` rule in `zachman.why.business_rules` appears in at least one workstream's acceptance criteria or constraints.
+
+   f. **Decision-to-test injection** — after the `decisions` block is assembled, scan each resolved decision and inject a corresponding test requirement into the relevant test workstream: `"Verify DEC-{N}: {decision_statement excerpt}"`. Decisions with `verification: assumption` get a verification-focused test; decisions with `verification: cited` get a regression test. This is part of Stage 3 assembly — it must not be left for DA review or execution to discover.
 
    ```
    [INTAKE TRACEABILITY] EXEC-{ID} vs FIB-S {FIB-ID}
    ─────────────────────────────────────────────────────
    Workstream coverage:    {covered}/{total} capabilities
-   Anti-invention:         {clean|N violations}
+   Anti-invention (desc):  {clean|N violations}
+   Anti-invention (paths): {matched}/{total} output paths verified
    Open questions:         {resolved}/{carried}/{missing}
    Hard rule visibility:   {covered}/{total} rules
    ─────────────────────────────────────────────────────
-   {If violations: list each with workstream ID and FIB-S element}
+   {If violations: list each with workstream ID, output path, and FIB-S element}
    ```
 
    Violations block progression to DA review. The EXEC must be revised to either remove the invention or request an intake amendment.
@@ -409,6 +464,17 @@ When FIB-S is loaded, the EXEC generator uses it for:
     | Execution phases > 2 | +1 | EXEC-SPEC YAML execution_phases length |
     | Dependency graph depth > 3 | +1 | Max chain length in EXEC-SPEC DAG |
     | Executor diversity > 3 distinct skills | +1 | Count unique executors in EXEC-SPEC |
+
+    **Complexity discount signals** (reduce score when actual risk surface is small):
+
+    | Signal | Points | Source |
+    |--------|--------|--------|
+    | No migration workstreams | -2 | EXEC-SPEC has no `database` or `migration` type workstreams |
+    | No RLS workstreams | -1 | EXEC-SPEC has no `rls` type workstreams |
+    | No SECURITY DEFINER workstreams | -1 | No workstream mentions SECURITY DEFINER |
+    | All outputs modify existing files (no greenfield) | -1 | No new services, tables, or RPCs |
+
+    These discounts prevent mechanical over-scoring of wiring-only PRDs. A PRD that scores +8 from cross-context boundaries and ADR refs but has zero migrations, zero RLS, and zero SECURITY DEFINER work is fundamentally lower-risk than the raw score suggests. Minimum score after discounts is 0.
 
     **Tier thresholds:**
 

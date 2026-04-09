@@ -59,15 +59,13 @@ export function PitMapContainer() {
     if (pitId) {
       setSelectedPitId(pitId);
     }
-    // In a real app, this would navigate to the table detail view
-    console.log('Selected table:', tableId);
+    void tableId; // TODO: navigate to table detail view
   }, []);
 
   const handleTableFromPalette = useCallback(
     (tableId: string, pitId: string) => {
       setSelectedPitId(pitId);
-      // Navigate to table
-      console.log('Jump to table:', tableId);
+      void tableId; // TODO: navigate to table
     },
     [],
   );

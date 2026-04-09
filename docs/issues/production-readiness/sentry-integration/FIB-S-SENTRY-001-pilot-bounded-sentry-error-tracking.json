@@ -1,0 +1,456 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-H-SENTRY-001 v0",
+    "status": "draft",
+    "feature_id": "FIB-S-SENTRY-001",
+    "feature_name": "Pilot-bounded Sentry Error Tracking",
+    "priority": "P1",
+    "decision_horizon": "pilot",
+    "owner": "Vladimir Ivanov",
+    "opened_on": "2026-04-08"
+  },
+  "intent": {
+    "operator_problem": "Production failures can occur without reliable visibility into what broke, where it broke, and whether the issue is recurring, forcing reactive debugging and slowing pilot support.",
+    "pilot_fit": "The pilot needs minimal production error visibility for supported runtime and error-boundary paths so failures become actionable without expanding into a full observability initiative.",
+    "success_outcomes": [
+      "Unhandled production errors in approved surfaces are captured automatically.",
+      "Captured events include actionable stack trace and release context.",
+      "Sensitive casino and player data is redacted, filtered, or excluded.",
+      "Noise remains low enough for pilot triage to stay usable.",
+      "One approved alert path exists for high-signal failures.",
+      "No new user-facing workflow or top-level application surface is introduced."
+    ],
+    "explicit_exclusions": [
+      "Distributed tracing",
+      "Full observability platform design",
+      "Structured logging redesign",
+      "Product analytics or behavior telemetry",
+      "Session replay",
+      "Custom incident dashboard or new admin console",
+      "Multi-channel alert routing matrix",
+      "Broad instrumentation of every component and user action",
+      "Cross-property or tenant-level operational reporting",
+      "Vendor abstraction layer for future error tracking providers"
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Distributed tracing",
+        "why_considered": "Often paired with error monitoring",
+        "why_rejected_now": "Too large for pilot and not required for actionable failures"
+      },
+      {
+        "idea": "Session replay",
+        "why_considered": "Could help reproduce UI failures",
+        "why_rejected_now": "Higher privacy risk and broader scope than needed"
+      },
+      {
+        "idea": "Logging overhaul",
+        "why_considered": "Error capture often prompts broader logging cleanup",
+        "why_rejected_now": "Separate concern that would expand infrastructure scope"
+      },
+      {
+        "idea": "Slack/email/on-call matrix",
+        "why_considered": "Alerts raise routing questions",
+        "why_rejected_now": "Pilot needs one approved alert path only"
+      },
+      {
+        "idea": "Vendor-neutral abstraction",
+        "why_considered": "Seems architecturally clean",
+        "why_rejected_now": "Premature abstraction without pilot value"
+      }
+    ]
+  },
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "error_event",
+          "kind": "event",
+          "description": "Captured production exception or crash event sent to the tracking vendor",
+          "stateful": false,
+          "system_of_record": "Sentry project",
+          "fields_hint": [
+            "message",
+            "stack_trace",
+            "environment",
+            "release",
+            "route_or_component_context",
+            "sanitized_tags"
+          ]
+        },
+        {
+          "name": "redaction_policy",
+          "kind": "artifact",
+          "description": "Rules that remove or sanitize casino-, player-, and transaction-adjacent sensitive fields before sending",
+          "stateful": true,
+          "system_of_record": "Application configuration",
+          "fields_hint": [
+            "denylisted_keys",
+            "payload_scrub_rules",
+            "environment_rules"
+          ]
+        },
+        {
+          "name": "release_metadata",
+          "kind": "artifact",
+          "description": "Deployment identity used to map events to source maps and code versions",
+          "stateful": true,
+          "system_of_record": "Build/deploy pipeline",
+          "fields_hint": ["release_id", "environment", "commit_sha"]
+        },
+        {
+          "name": "alert_route",
+          "kind": "artifact",
+          "description": "Single approved destination for high-signal failure notifications",
+          "stateful": true,
+          "system_of_record": "Sentry project configuration",
+          "fields_hint": ["destination_type", "severity_threshold"]
+        }
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "name": "capture_server_runtime_exception",
+          "verb": "create",
+          "description": "Capture unhandled server/runtime failures in approved production paths",
+          "served_outcomes": ["OUT-1", "OUT-2", "OUT-4"],
+          "loop_steps": ["STEP-2", "STEP-3"]
+        },
+        {
+          "name": "capture_error_boundary_crash",
+          "verb": "create",
+          "description": "Capture supported UI/render crashes through existing error boundary surfaces",
+          "served_outcomes": ["OUT-1", "OUT-2", "OUT-4"],
+          "loop_steps": ["STEP-2", "STEP-3"]
+        },
+        {
+          "name": "sanitize_error_payload",
+          "verb": "update",
+          "description": "Scrub or exclude sensitive data before transmission",
+          "served_outcomes": ["OUT-3"],
+          "loop_steps": ["STEP-3"]
+        },
+        {
+          "name": "attach_release_context",
+          "verb": "update",
+          "description": "Attach release metadata so stack traces can be resolved against source maps",
+          "served_outcomes": ["OUT-2"],
+          "loop_steps": ["STEP-4", "STEP-6"]
+        },
+        {
+          "name": "route_high_signal_alert",
+          "verb": "issue",
+          "description": "Notify one approved destination for urgent failure classes",
+          "served_outcomes": ["OUT-5"],
+          "loop_steps": ["STEP-7"]
+        }
+      ]
+    },
+    "where": {
+      "primary_surface": "Existing application runtime and existing error boundaries",
+      "surfaces": [
+        {
+          "name": "Next.js server runtime",
+          "kind": "api"
+        },
+        {
+          "name": "Existing UI error boundaries",
+          "kind": "ui"
+        },
+        {
+          "name": "Sentry project console",
+          "kind": "dashboard"
+        },
+        {
+          "name": "Build/deploy pipeline for release and source maps",
+          "kind": "job"
+        }
+      ],
+      "touchpoints": {
+        "inbound": [
+          {
+            "name": "Unhandled server exception",
+            "type": "event"
+          },
+          {
+            "name": "Unhandled runtime exception",
+            "type": "event"
+          },
+          {
+            "name": "UI error boundary crash",
+            "type": "event"
+          }
+        ],
+        "outbound": [
+          {
+            "name": "Sanitized error event sent to Sentry",
+            "type": "integration"
+          },
+          {
+            "name": "High-signal alert to approved route",
+            "type": "notification"
+          }
+        ]
+      },
+      "bounded_contexts": [
+        "application runtime",
+        "deployment pipeline",
+        "operational support"
+      ]
+    },
+    "who": {
+      "primary_actor": "builder_operator_support_owner",
+      "actors": [
+        {
+          "role": "builder_operator_support_owner",
+          "permissions": [
+            "view_captured_errors",
+            "triage_events",
+            "configure_basic_alerting"
+          ],
+          "restrictions": [
+            "may not expand scope into broader observability without amendment"
+          ]
+        },
+        {
+          "role": "pilot_operator_end_user",
+          "permissions": ["continue normal application use"],
+          "restrictions": [
+            "no new user-facing workflow introduced by this feature"
+          ]
+        }
+      ],
+      "ownership": {
+        "business_owner": "Vladimir Ivanov",
+        "domain_owner": "Application/platform hardening"
+      }
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "name": "production_exception_occurs",
+          "source": "system",
+          "preconditions": [
+            "feature enabled in deployed environment",
+            "error occurs in approved capture surface"
+          ]
+        },
+        {
+          "name": "builder_reviews_captured_event",
+          "source": "user",
+          "preconditions": ["event was successfully captured and grouped"]
+        }
+      ],
+      "lifecycle_events": [
+        "error_detected",
+        "payload_sanitized",
+        "event_sent",
+        "event_grouped",
+        "triage_review_started",
+        "alert_routed_if_high_signal"
+      ],
+      "timing_constraints": [
+        "Capture occurs during production runtime failure handling",
+        "Alert routing is limited to high-signal failures only",
+        "Source map and release metadata must match deployed release closely enough to support debugging"
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "statement": "Only approved production error classes and surfaces are captured during pilot.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-2",
+          "statement": "Sensitive casino, player, and transaction-adjacent data must be redacted, filtered, or excluded before event transmission.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-3",
+          "statement": "Pilot alerting uses one approved route only; broader routing requires amendment.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-4",
+          "statement": "This feature must not introduce a new user-facing workflow or top-level application surface.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-5",
+          "statement": "Tracing, session replay, analytics, and logging redesign remain out of scope for this slice.",
+          "severity": "hard"
+        }
+      ],
+      "invariants": [
+        "Captured events are actionable enough to support debugging.",
+        "Noise stays low enough for pilot triage to remain usable.",
+        "The feature remains a hardening slice, not an observability platform."
+      ],
+      "decision_notes": [
+        "Vendor named explicitly as Sentry for this slice.",
+        "Scope is intentionally constrained to minimal production error visibility.",
+        "Privacy handling is a first-order boundary, not a follow-up nicety."
+      ]
+    }
+  },
+  "containment": {
+    "loop": [
+      {
+        "id": "STEP-1",
+        "actor": "pilot_operator_end_user",
+        "action": "uses the application during pilot operation",
+        "system_response": "runs the existing product flow normally"
+      },
+      {
+        "id": "STEP-2",
+        "actor": "system",
+        "action": "encounters a production exception in an approved server/runtime or UI error boundary path",
+        "system_response": "captures the failure event automatically"
+      },
+      {
+        "id": "STEP-3",
+        "actor": "system",
+        "action": "prepares the outbound event payload",
+        "system_response": "scrubs or excludes sensitive fields before sending to Sentry"
+      },
+      {
+        "id": "STEP-4",
+        "actor": "builder_operator_support_owner",
+        "action": "opens the captured event in the tracking console",
+        "system_response": "shows stack trace, environment, release, and occurrence context"
+      },
+      {
+        "id": "STEP-5",
+        "actor": "builder_operator_support_owner",
+        "action": "triages whether the event is blocking, recurring, or ignorable",
+        "system_response": "supports grouping and review of similar failures"
+      },
+      {
+        "id": "STEP-6",
+        "actor": "builder_operator_support_owner",
+        "action": "uses the trace to identify the failing route, component, or runtime path",
+        "system_response": "makes issue investigation concrete"
+      },
+      {
+        "id": "STEP-7",
+        "actor": "system",
+        "action": "detects a configured high-signal failure class",
+        "system_response": "routes one alert to the approved destination"
+      }
+    ],
+    "frozen": true,
+    "expansion_requires_amendment": true
+  },
+  "dependencies": {
+    "required_existing": [
+      "Deployable production environment",
+      "Environment variable management for DSN provisioning",
+      "Existing Next.js error boundaries or equivalent supported capture points",
+      "Build or deploy process capable of attaching release metadata",
+      "Access to Sentry project configuration",
+      "One approved alert destination"
+    ],
+    "missing_dependencies": [
+      "Exact SDK package choice not yet fixed",
+      "Exact alert destination not yet fixed",
+      "Exact source map upload wiring not yet fixed",
+      "Exact denylist of sensitive fields not yet fixed"
+    ],
+    "assumptions": [
+      "Minimal redaction rules can be defined without a broader data-governance project",
+      "Pilot operations benefit from actionable stack traces more than from broad telemetry",
+      "Error tracking can be added without introducing a new top-level product surface"
+    ]
+  },
+  "traceability": {
+    "outcomes": [
+      {
+        "id": "OUT-1",
+        "statement": "Unhandled production errors in approved surfaces are captured automatically."
+      },
+      {
+        "id": "OUT-2",
+        "statement": "Captured events include actionable stack trace and release context."
+      },
+      {
+        "id": "OUT-3",
+        "statement": "Sensitive casino and player data is redacted, filtered, or excluded."
+      },
+      {
+        "id": "OUT-4",
+        "statement": "Noise remains low enough for pilot triage to stay usable."
+      },
+      {
+        "id": "OUT-5",
+        "statement": "One approved alert path exists for high-signal failures."
+      },
+      {
+        "id": "OUT-6",
+        "statement": "No new user-facing workflow or top-level surface is introduced."
+      }
+    ],
+    "capability_to_outcome": [
+      {
+        "capability": "capture_server_runtime_exception",
+        "outcomes": ["OUT-1", "OUT-2", "OUT-4"]
+      },
+      {
+        "capability": "capture_error_boundary_crash",
+        "outcomes": ["OUT-1", "OUT-2", "OUT-4"]
+      },
+      {
+        "capability": "sanitize_error_payload",
+        "outcomes": ["OUT-3"]
+      },
+      {
+        "capability": "attach_release_context",
+        "outcomes": ["OUT-2"]
+      },
+      {
+        "capability": "route_high_signal_alert",
+        "outcomes": ["OUT-5"]
+      }
+    ],
+    "rule_to_loop_step": [
+      {
+        "rule_id": "RULE-1",
+        "loop_steps": ["STEP-2"]
+      },
+      {
+        "rule_id": "RULE-2",
+        "loop_steps": ["STEP-3"]
+      },
+      {
+        "rule_id": "RULE-3",
+        "loop_steps": ["STEP-7"]
+      },
+      {
+        "rule_id": "RULE-4",
+        "loop_steps": ["STEP-1", "STEP-4"]
+      },
+      {
+        "rule_id": "RULE-5",
+        "loop_steps": ["STEP-1", "STEP-7"]
+      }
+    ]
+  },
+  "governance": {
+    "scope_authority": {
+      "artifact": "FEATURE_INTAKE_BRIEF",
+      "version": "v0",
+      "frozen": true
+    },
+    "open_questions_allowed_at_scaffold": [
+      "Exact SDK package choice",
+      "Exact alert sink",
+      "Exact source map upload wiring",
+      "Exact PII denylist fields"
+    ],
+    "downstream_expansion_allowed_without_amendment": false
+  }
+}

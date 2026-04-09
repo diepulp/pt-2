@@ -48,7 +48,7 @@ When FIB-S is loaded in the pipeline:
 
 1. **Workstream traceability** — every workstream has `traces_to` citing FIB-S elements
 2. **Capability coverage** — every capability in `zachman.how.capabilities` is covered by at least one workstream
-3. **Anti-invention scan** — no new operator-visible surfaces, public API endpoints, or workflow side-paths
+3. **Anti-invention scan** — two-pass: (a) no workstream description introduces surfaces absent from FIB-S, (b) extract every `app/api/` path from workstream `outputs` arrays and verify each matches a declared `zachman.where.surfaces[kind=api]` entry
 4. **Hard rule visibility** — every `severity: "hard"` rule appears in workstream acceptance criteria
 5. **Open-question disposition** — every open question is resolved or carried forward; none silently absent
 
@@ -101,6 +101,7 @@ decisions:
 - `resolves_open_question` must match an item in `governance.open_questions_allowed_at_scaffold`
 - `impact_on_scope: amendment_required` blocks the pipeline until the FIB is amended and PRD updated
 - Decisions with `impact_on_scope: none` must genuinely stay within the declared scope — reviewers should validate this claim
+- Decisions that assert *existing system behavior* must include `verification: cited` with file path and line number in the rationale, OR `verification: assumption` which auto-injects a verification test into the relevant test workstream
 - The example content in decision records is illustrative of format, not recommended domain rulings
 
 ---
