@@ -12,6 +12,7 @@
 
 'use client';
 
+import * as Sentry from '@sentry/nextjs';
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Component, type ReactNode } from 'react';
@@ -100,6 +101,9 @@ class PanelErrorBoundaryInner extends Component<
   }
 
   componentDidCatch(error: Error): void {
+    Sentry.captureException(error, {
+      tags: { panelName: this.props.panelName },
+    });
     logError(error, {
       component: 'PanelErrorBoundary',
       action: 'componentDidCatch',
