@@ -184,6 +184,16 @@ Refine this workstream specification with domain-specific details:
 
 ⚠️ GOVERNANCE COMPLIANCE IS MANDATORY. Non-compliant outputs will fail validation.
 
+⚠️ GOVERNANCE CHALLENGE (REQUIRED): Before refining, review the architectural skeleton you received and flag any proposed output that appears to violate governance constraints:
+- New API surfaces not declared in FIB-S `zachman.where.surfaces` (if FIB-S is present)
+- New components or surfaces violating anti-invention policy
+- Cross-context writes to tables owned by other services
+- Ambiguities that need a concrete choice (see below)
+
+You are a reviewer of the skeleton, not just a refiner. If the skeleton proposes something that violates governance, flag it — do not silently accept and enrich it.
+
+⚠️ CONCRETE CHOICES REQUIRED: If the skeleton says "X or Y" (e.g., "Zustand or React state"), you MUST pick one and provide rationale. Do not echo alternatives — return a single concrete choice. Ambiguous decisions that propagate to the EXEC-SPEC erode implementation clarity.
+
 Return enriched workstream YAML.
 ```
 
