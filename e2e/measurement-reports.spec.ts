@@ -9,27 +9,32 @@
 
 import { test, expect } from '@playwright/test';
 
+import { authenticateAndNavigate } from './fixtures/auth';
+import { createTestScenario, type TestScenario } from './fixtures/test-data';
+
+let scenario: TestScenario;
+
+test.beforeAll(async () => {
+  scenario = await createTestScenario();
+});
+
+test.afterAll(async () => {
+  await scenario?.cleanup();
+});
+
 test.describe('Measurement Reports Dashboard', () => {
   test.beforeEach(async ({ page }) => {
-    // Login as pit boss (assumes test auth helper or seed data)
-    await page.goto('/signin');
-    await page.fill(
-      '[name="email"]',
-      process.env.E2E_PIT_BOSS_EMAIL ?? 'pitboss@test.com',
+    await authenticateAndNavigate(
+      page,
+      scenario.testEmail,
+      scenario.testPassword,
+      '/admin/reports',
     );
-    await page.fill(
-      '[name="password"]',
-      process.env.E2E_PIT_BOSS_PASSWORD ?? 'test-password',
-    );
-    await page.click('button[type="submit"]');
-    await page.waitForURL('**/shift-dashboard**');
   });
 
   test('navigates to /admin/reports and sees 4 widget headings', async ({
     page,
   }) => {
-    await page.goto('/admin/reports');
-
     // Verify page loads
     await expect(page.getByText('Measurement Reports')).toBeVisible();
 
@@ -41,8 +46,6 @@ test.describe('Measurement Reports Dashboard', () => {
   });
 
   test('MEAS-004 shows "As of" freshness badge', async ({ page }) => {
-    await page.goto('/admin/reports');
-
     // MEAS-004 should show periodic freshness badge
     // Either "As of {date}" if data exists, or "No data yet" for new casino
     const loyaltySection = page.locator('text=Loyalty Liability').locator('..');

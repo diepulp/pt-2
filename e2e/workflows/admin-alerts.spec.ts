@@ -2,10 +2,10 @@
  * Admin Alerts E2E Tests
  *
  * Validates:
- * - pit_boss can access /admin/alerts
+ * - pit_boss can access /admin/anomaly-detection/alerts
  * - dealer is redirected away from /admin routes
- * - /admin/reports shows Coming Soon placeholder
- * - /admin redirects to /admin/alerts
+ * - /admin/anomaly-detection/reports loads Measurement Reports
+ * - /admin redirects to /admin/anomaly-detection/alerts
  *
  * @see EXEC-040-PRD WS6
  */
@@ -14,10 +14,10 @@ import { expect, test } from '@playwright/test';
 
 import {
   ADMIN_URLS,
-  authenticateAdmin,
   createAdminTestScenario,
   type AdminTestScenario,
 } from '../fixtures/admin-helpers';
+import { authenticateAndNavigate } from '../fixtures/auth';
 
 test.describe('Admin Alerts — Authorized Access', () => {
   let scenario: AdminTestScenario;
@@ -31,31 +31,49 @@ test.describe('Admin Alerts — Authorized Access', () => {
   });
 
   test('pit_boss can access /admin/alerts', async ({ page }) => {
-    await authenticateAdmin(page, scenario.testEmail, scenario.testPassword);
-    await page.goto(ADMIN_URLS.alerts, { waitUntil: 'domcontentloaded' });
+    await authenticateAndNavigate(
+      page,
+      scenario.testEmail,
+      scenario.testPassword,
+      ADMIN_URLS.alerts,
+    );
 
-    expect(page.url()).toContain('/admin/alerts');
-    await expect(page.getByRole('heading', { name: 'Alerts' })).toBeVisible({
-      timeout: 10_000,
-    });
+    expect(page.url()).toContain('/admin/anomaly-detection/alerts');
+    await expect(
+      page.getByRole('heading', { name: 'Alerts', exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
-  test('/admin/reports shows Coming Soon', async ({ page }) => {
-    await authenticateAdmin(page, scenario.testEmail, scenario.testPassword);
-    await page.goto(ADMIN_URLS.reports, { waitUntil: 'domcontentloaded' });
+  test('/admin/reports loads Measurement Reports', async ({ page }) => {
+    await authenticateAndNavigate(
+      page,
+      scenario.testEmail,
+      scenario.testPassword,
+      '/admin/anomaly-detection/reports',
+    );
 
     await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByText('coming soon', { exact: false })).toBeVisible();
   });
 
-  test('/admin redirects to /admin/alerts', async ({ page }) => {
-    await authenticateAdmin(page, scenario.testEmail, scenario.testPassword);
-    // Server redirect from /admin → /admin/alerts
+  test('/admin redirects to /admin/anomaly-detection/alerts', async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await authenticateAndNavigate(
+      page,
+      scenario.testEmail,
+      scenario.testPassword,
+      ADMIN_URLS.alerts,
+    );
+
+    // Now navigate to /admin which should redirect through to /admin/anomaly-detection/alerts
     await page.goto(ADMIN_URLS.index, { waitUntil: 'commit' }).catch(() => {});
-    await page.waitForURL('**/admin/alerts**', { timeout: 15_000 });
-    expect(page.url()).toContain('/admin/alerts');
+    await page.waitForURL('**/admin/anomaly-detection/alerts**', {
+      timeout: 30_000,
+    });
+    expect(page.url()).toContain('/admin/anomaly-detection/alerts');
   });
 });
 
@@ -72,7 +90,12 @@ test.describe('Admin Alerts — Unauthorized Access', () => {
 
   test('dealer is redirected from /admin', async ({ page }) => {
     test.setTimeout(60_000);
-    await authenticateAdmin(page, scenario.testEmail, scenario.testPassword);
+    await authenticateAndNavigate(
+      page,
+      scenario.testEmail,
+      scenario.testPassword,
+      '/shift-dashboard',
+    );
 
     // Navigate to admin route — server redirect sends dealer to /shift-dashboard.
     // Use 'commit' (not 'networkidle') because the shift dashboard has continuous
@@ -82,10 +105,10 @@ test.describe('Admin Alerts — Unauthorized Access', () => {
     });
 
     // Wait for redirect to settle at shift-dashboard
-    await page.waitForURL('**/shift-dashboard**', { timeout: 15_000 });
+    await page.waitForURL('**/shift-dashboard**', { timeout: 30_000 });
 
     const url = page.url();
-    expect(url).not.toContain('/admin/alerts');
+    expect(url).not.toContain('/admin');
     expect(url).toContain('/shift-dashboard');
   });
 });

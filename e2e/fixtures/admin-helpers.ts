@@ -154,7 +154,7 @@ export async function authenticateAdmin(
 }
 
 export const ADMIN_URLS = {
-  alerts: '/admin/alerts',
+  alerts: '/admin/anomaly-detection/alerts',
   reports: '/admin/reports',
   index: '/admin',
 } as const;

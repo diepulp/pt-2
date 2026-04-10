@@ -1,0 +1,68 @@
+{
+  "prd": "FIB-E2E-001",
+  "prd_title": "E2E Test Validation Gap Remediation",
+  "current_phase": 1,
+  "status": "in_progress",
+  "completed_workstreams": ["WS2"],
+  "in_progress_workstreams": ["WS1"],
+  "pending_workstreams": ["WS3", "WS4", "WS5", "WS6"],
+  "artifacts": {
+    "WS1": [
+      "e2e/fixtures/test-data.ts",
+      "e2e/workflows/visit-continuation.spec.ts",
+      "e2e/measurement-reports.spec.ts",
+      "e2e/workflows/admin-settings.spec.ts"
+    ],
+    "WS2": [
+      "e2e/fixtures/admin-helpers.ts",
+      "e2e/workflows/admin-alerts.spec.ts"
+    ]
+  },
+  "gates_passed": ["e2e-ws2-validation"],
+  "gates_pending": ["e2e-ws1-validation", "test-pass", "build"],
+  "timestamp": "2026-04-09T20:00:00Z",
+  "complexity_prescreen": "full",
+  "complexity_override": "full",
+  "fib_h_ref": "docs/issues/production-readiness/e2e/FIB-H-E2E-001-e2e-test-validation-gap-remediation.md",
+  "fib_s_ref": "docs/issues/production-readiness/e2e/FIB-S-E2E-001-e2e-test-validation-gap-remediation.json",
+  "fib_s_loaded": true,
+  "write_path_classification": "none",
+  "adversarial_review": {
+    "magnitude_score": 0,
+    "magnitude_tier": "self_certified",
+    "magnitude_signals": [
+      {"signal": "workstream_count_gt_4", "points": 2, "evidence": "6 workstreams"},
+      {"signal": "execution_phases_gt_2", "points": 2, "evidence": "5 phases"},
+      {"signal": "no_migration_workstreams", "points": -2, "evidence": "All test/CI work"},
+      {"signal": "no_rls_workstreams", "points": -1, "evidence": "No RLS policy changes"},
+      {"signal": "no_security_definer", "points": -1, "evidence": "No new functions"},
+      {"signal": "all_existing_files", "points": -1, "evidence": "No greenfield creation"}
+    ],
+    "verdict": "ship",
+    "p0_count": 0,
+    "p1_count": 0,
+    "attempt": 0
+  },
+  "key_fixes": [
+    {"file": "e2e/fixtures/test-data.ts", "change": "RC-2: Added app_metadata to createUser, updateUserById with staff_id, casino_settings creation, testEmail/testPassword to interface"},
+    {"file": "e2e/workflows/visit-continuation.spec.ts", "change": "RC-1: Fixed theo_win_loss→computed_theo_cents, added policy_snapshot for chk_policy_snapshot_if_loyalty constraint"},
+    {"file": "e2e/measurement-reports.spec.ts", "change": "RC-3: Replaced seed-data login with createTestScenario + authenticateAndNavigate"},
+    {"file": "e2e/workflows/admin-settings.spec.ts", "change": "RC-3.5: Fixed auth to authenticateAndNavigate, upsert casino_settings, updated URLs to /admin/anomaly-detection/settings and /admin/settings/operations, fixed selectors"},
+    {"file": "e2e/fixtures/admin-helpers.ts", "change": "RC-4: ADMIN_URLS.alerts → /admin/anomaly-detection/alerts"},
+    {"file": "e2e/workflows/admin-alerts.spec.ts", "change": "RC-4: Switched to authenticateAndNavigate, fixed URL assertions, fixed heading strict mode, updated reports test"}
+  ],
+  "gate_validation_results": {
+    "phase_1_attempt_1": "9 failed (casino_settings missing in test-data.ts, min_bet/max_bet schema drift, redirect glob mismatch)",
+    "phase_1_attempt_2": "8 failed WS1 (visit-continuation closed slip needs theo_win_loss, measurement-reports weak assertion), 4 failed WS2 (admin-helpers auth user creation DB error)",
+    "phase_1_attempt_3": "PENDING — fixes applied, needs re-run",
+    "phase_1_attempt_4_ws2": "4/4 PASSED — admin-alerts all green",
+    "phase_1_attempt_7_ws1_settings": "5/5 PASSED — admin-settings all green",
+    "phase_1_attempt_5_ws1_meas": "1/2 — MEAS-004 transient DB error (not code issue)",
+    "phase_1_attempt_5_ws1_vc": "7/17 — 10 fail due to pre-existing auth design issue (cookie-based routes vs header-based API tests)"
+  },
+  "known_issues": [
+    "visit-continuation API tests: Routes use createClient() with cookies (server.ts), but API tests send Authorization header. Pre-existing design mismatch — needs route middleware to accept Bearer tokens or tests must use browser login. Outside WS1 fixture scope.",
+    "measurement-reports MEAS-004: Transient 'Database error creating new user' — Supabase auth rate limit or stale state. Passes when run independently.",
+    "admin-settings tests are flaky under resource pressure (dev server compilation during tests). Pass reliably when run with adequate resources."
+  ]
+}

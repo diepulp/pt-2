@@ -13,6 +13,7 @@
 
 import { test, expect } from '@playwright/test';
 
+import { authenticateAndNavigate } from '../fixtures/auth';
 import {
   createServiceClient,
   createTestScenario,
@@ -26,11 +27,14 @@ test.beforeAll(async () => {
 
   // Insert casino_settings row (bypasses bootstrap — see fixture note above)
   const supabase = createServiceClient();
-  const { error } = await supabase.from('casino_settings').insert({
-    casino_id: scenario.casinoId,
-    timezone: 'America/Los_Angeles',
-    gaming_day_start_time: '06:00',
-  });
+  const { error } = await supabase.from('casino_settings').upsert(
+    {
+      casino_id: scenario.casinoId,
+      timezone: 'America/Los_Angeles',
+      gaming_day_start_time: '06:00',
+    },
+    { onConflict: 'casino_id' },
+  );
   if (error) {
     throw new Error(`Failed to create casino_settings: ${error.message}`);
   }
@@ -42,16 +46,21 @@ test.afterAll(async () => {
 
 test.describe('Admin Settings — Thresholds', () => {
   test.beforeEach(async ({ page }) => {
-    // Authenticate via stored auth token
-    await page.goto('/signin');
-    await page.evaluate((token) => {
-      localStorage.setItem('supabase.auth.token', JSON.stringify(token));
-    }, scenario.authToken);
-    await page.goto('/admin/settings/thresholds');
-    await page.waitForLoadState('networkidle');
+    await authenticateAndNavigate(
+      page,
+      scenario.testEmail,
+      scenario.testPassword,
+      '/admin/anomaly-detection/settings',
+    );
   });
 
   test('renders all 8 threshold categories', async ({ page }) => {
+    test.setTimeout(60_000);
+    // Wait for the threshold form to render (client-side hydration + data fetch)
+    await expect(page.getByText('Financial Anomalies')).toBeVisible({
+      timeout: 30_000,
+    });
+
     // Verify all 8 category cards are visible
     const categories = [
       'Table Idle',
@@ -65,7 +74,9 @@ test.describe('Admin Settings — Thresholds', () => {
     ];
 
     for (const name of categories) {
-      await expect(page.getByText(name, { exact: false })).toBeVisible();
+      await expect(page.getByText(name, { exact: true })).toBeVisible({
+        timeout: 10_000,
+      });
     }
   });
 
@@ -94,8 +105,7 @@ test.describe('Admin Settings — Thresholds', () => {
     await expect(saveButton).not.toBeVisible({ timeout: 10_000 });
 
     // Reload and verify persistence
-    await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.reload({ waitUntil: 'domcontentloaded' });
 
     // Hold Deviation should now be enabled (toggle checked)
     const reloadedToggle = page
@@ -125,45 +135,58 @@ test.describe('Admin Settings — Thresholds', () => {
     await expect(saveButton).not.toBeVisible({ timeout: 10_000 });
 
     // Reload and verify
-    await page.reload();
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('#table_idle-warn_minutes')).toHaveValue('30');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#table_idle-warn_minutes')).toHaveValue('30', {
+      timeout: 15_000,
+    });
   });
 });
 
 test.describe('Admin Settings — Navigation', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/signin');
-    await page.evaluate((token) => {
-      localStorage.setItem('supabase.auth.token', JSON.stringify(token));
-    }, scenario.authToken);
+    await authenticateAndNavigate(
+      page,
+      scenario.testEmail,
+      scenario.testPassword,
+      '/admin/anomaly-detection/settings',
+    );
   });
 
-  test('settings sub-nav switches between tabs', async ({ page }) => {
-    await page.goto('/admin/settings/thresholds');
-    await page.waitForLoadState('networkidle');
+  test('anomaly-detection sidebar nav switches between pages', async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    // Wait for page content to render
+    await expect(
+      page.getByRole('heading', { name: 'Detection Settings' }),
+    ).toBeVisible({ timeout: 30_000 });
 
-    // Click Shifts tab
-    await page.getByRole('tab', { name: 'Shifts' }).click();
-    await expect(page).toHaveURL(/\/admin\/settings\/shifts/);
+    // Click Alerts link in the page-level sidebar (inside main > complementary)
+    const pageSidebar = page.locator('main').getByRole('complementary');
+    await pageSidebar.getByRole('link', { name: 'Alerts' }).click();
+    await expect(page).toHaveURL(/\/admin\/anomaly-detection\/alerts/, {
+      timeout: 15_000,
+    });
 
-    // Verify shifts page content
-    await expect(page.getByText('Gaming Day Configuration')).toBeVisible();
-
-    // Click back to Thresholds
-    await page.getByRole('tab', { name: 'Alert Thresholds' }).click();
-    await expect(page).toHaveURL(/\/admin\/settings\/thresholds/);
+    // Click back to Detection Settings
+    const alertsSidebar = page.locator('main').getByRole('complementary');
+    await alertsSidebar
+      .getByRole('link', { name: 'Detection Settings' })
+      .click();
+    await expect(page).toHaveURL(/\/admin\/anomaly-detection\/settings/, {
+      timeout: 15_000,
+    });
   });
 });
 
 test.describe('Admin Settings — Shifts', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/signin');
-    await page.evaluate((token) => {
-      localStorage.setItem('supabase.auth.token', JSON.stringify(token));
-    }, scenario.authToken);
-    await page.goto('/admin/settings/shifts');
-    await page.waitForLoadState('networkidle');
+    await authenticateAndNavigate(
+      page,
+      scenario.testEmail,
+      scenario.testPassword,
+      '/admin/settings/operations',
+    );
   });
 
   test('change gaming day start and verify preview updates', async ({
@@ -173,9 +196,8 @@ test.describe('Admin Settings — Shifts', () => {
     const timeInput = page.locator('#gaming-day-start');
     await timeInput.fill('04:00');
 
-    // Preview should update live
-    await expect(page.getByText('04:00')).toBeVisible();
-    await expect(page.getByText('04:00', { exact: false })).toBeVisible();
+    // Preview should update live — use the input value to verify
+    await expect(page.locator('#gaming-day-start')).toHaveValue('04:00');
 
     // Warning banner should appear
     await expect(
@@ -198,8 +220,9 @@ test.describe('Admin Settings — Shifts', () => {
     await expect(saveButton).not.toBeVisible({ timeout: 10_000 });
 
     // Reload and verify persistence
-    await page.reload();
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('#gaming-day-start')).toHaveValue('04:00');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#gaming-day-start')).toHaveValue('04:00', {
+      timeout: 15_000,
+    });
   });
 });

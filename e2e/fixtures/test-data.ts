@@ -42,6 +42,8 @@ export interface TestScenario {
   tableId: string;
   visitId: string;
   authToken: string;
+  testEmail: string;
+  testPassword: string;
   cleanup: () => Promise<void>;
 }
 
@@ -79,7 +81,22 @@ export async function createTestScenario(): Promise<TestScenario> {
     throw new Error(`Failed to create test casino: ${casinoError?.message}`);
   }
 
-  // Create test auth user
+  // Create casino settings (required by visit trigger)
+  const { error: settingsError } = await supabase
+    .from('casino_settings')
+    .insert({
+      casino_id: casino.id,
+      gaming_day_start_time: '06:00:00',
+      timezone: 'America/Los_Angeles',
+    });
+
+  if (settingsError) {
+    throw new Error(
+      `Failed to create casino settings: ${settingsError.message}`,
+    );
+  }
+
+  // Create test auth user with app_metadata for RLS (ADR-024)
   const testEmail = `${testPrefix}_staff@test.com`;
   const testPassword = 'TestPassword123!';
 
@@ -88,6 +105,10 @@ export async function createTestScenario(): Promise<TestScenario> {
       email: testEmail,
       password: testPassword,
       email_confirm: true,
+      app_metadata: {
+        casino_id: casino.id,
+        staff_role: 'admin',
+      },
     });
 
   if (authCreateError || !authData.user) {
@@ -115,9 +136,26 @@ export async function createTestScenario(): Promise<TestScenario> {
     throw new Error(`Failed to create test staff: ${staffError?.message}`);
   }
 
-  // Sign in to get auth token
+  // Update user's app_metadata with staff_id (for RLS context)
+  const { error: updateMetadataError } =
+    await supabase.auth.admin.updateUserById(authData.user.id, {
+      app_metadata: {
+        casino_id: casino.id,
+        staff_id: staff.id,
+        staff_role: 'admin',
+      },
+    });
+
+  if (updateMetadataError) {
+    throw new Error(
+      `Failed to update user metadata: ${updateMetadataError.message}`,
+    );
+  }
+
+  // Sign in to get auth token (separate client to preserve service role state)
+  const signInClient = createServiceClient();
   const { data: signInData, error: signInError } =
-    await supabase.auth.signInWithPassword({
+    await signInClient.auth.signInWithPassword({
       email: testEmail,
       password: testPassword,
     });
@@ -201,7 +239,9 @@ export async function createTestScenario(): Promise<TestScenario> {
     await supabase.from('player_casino').delete().eq('player_id', player.id);
     await supabase.from('player').delete().eq('id', player.id);
     await supabase.from('staff').delete().eq('id', staff.id);
+    await supabase.from('casino_settings').delete().eq('casino_id', casino.id);
     await supabase.from('casino').delete().eq('id', casino.id);
+    await supabase.from('company').delete().eq('id', company.id);
     // Delete auth user
     await supabase.auth.admin.deleteUser(authData.user.id);
   };
@@ -214,6 +254,8 @@ export async function createTestScenario(): Promise<TestScenario> {
     tableId: table.id,
     visitId: visit.id,
     authToken: signInData.session.access_token,
+    testEmail,
+    testPassword,
     cleanup,
   };
 }
