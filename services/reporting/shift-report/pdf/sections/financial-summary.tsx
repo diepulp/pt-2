@@ -2,7 +2,7 @@
  * PDF Section: Financial Summary
  *
  * Per-table financial table with columns: Table, Game Type, Drop,
- * Fills, Credits, Win/Loss, Hold%, Cash Obs Est, Cash Obs Count.
+ * Fills, Credits, W/L (Inv), W/L (Est), Hold%, Cash Obs Est, Cash Obs Count.
  * Casino totals row at bottom.
  *
  * @see EXEC-065 WS3
@@ -25,20 +25,21 @@ interface FinancialSummaryPdfProps {
 
 // Column widths as percentages
 const COL = {
-  table: '14%',
-  gameType: '10%',
-  drop: '12%',
-  fills: '11%',
-  credits: '11%',
-  winLoss: '12%',
-  hold: '8%',
-  cashObs: '12%',
-  cashCount: '10%',
+  table: '13%',
+  gameType: '9%',
+  drop: '11%',
+  fills: '10%',
+  credits: '10%',
+  winLossInv: '11%',
+  winLossEst: '11%',
+  hold: '7%',
+  cashObs: '10%',
+  cashCount: '8%',
 } as const;
 
 export function FinancialSummaryPdf({ data }: FinancialSummaryPdfProps) {
   return (
-    <View style={styles.section} break>
+    <View style={styles.section}>
       <Text style={styles.sectionTitle}>Financial Summary</Text>
       <View style={styles.table}>
         {/* Header Row */}
@@ -76,10 +77,18 @@ export function FinancialSummaryPdf({ data }: FinancialSummaryPdfProps) {
           <Text
             style={[
               styles.tableHeaderCell,
-              { width: COL.winLoss, textAlign: 'right' },
+              { width: COL.winLossInv, textAlign: 'right' },
             ]}
           >
-            Win/Loss
+            W/L (Inv)
+          </Text>
+          <Text
+            style={[
+              styles.tableHeaderCell,
+              { width: COL.winLossEst, textAlign: 'right' },
+            ]}
+          >
+            W/L (Est)
           </Text>
           <Text
             style={[
@@ -128,8 +137,11 @@ export function FinancialSummaryPdf({ data }: FinancialSummaryPdfProps) {
             <Text style={[styles.tableCellRight, { width: COL.credits }]}>
               {formatCents(row.creditsTotalCents)}
             </Text>
-            <Text style={[styles.tableCellRight, { width: COL.winLoss }]}>
+            <Text style={[styles.tableCellRight, { width: COL.winLossInv }]}>
               {formatCentsOrNA(row.winLossInventoryCents)}
+            </Text>
+            <Text style={[styles.tableCellRight, { width: COL.winLossEst }]}>
+              {formatCentsOrNA(row.winLossEstimatedCents)}
             </Text>
             <Text style={[styles.tableCellRight, { width: COL.hold }]}>
               {formatPercentOrNA(row.holdPercent)}
@@ -163,8 +175,11 @@ export function FinancialSummaryPdf({ data }: FinancialSummaryPdfProps) {
           <Text style={[styles.tableCellBold, { width: COL.credits }]}>
             {formatCents(data.casinoTotals.creditsTotalCents)}
           </Text>
-          <Text style={[styles.tableCellBold, { width: COL.winLoss }]}>
+          <Text style={[styles.tableCellBold, { width: COL.winLossInv }]}>
             {formatCentsOrNA(data.casinoTotals.winLossInventoryTotalCents)}
+          </Text>
+          <Text style={[styles.tableCellBold, { width: COL.winLossEst }]}>
+            {formatCentsOrNA(data.casinoTotals.winLossEstimatedTotalCents)}
           </Text>
           <Text style={[styles.tableCellBold, { width: COL.hold }]}>
             {formatPercentOrNA(data.casinoTotals.holdPercent)}

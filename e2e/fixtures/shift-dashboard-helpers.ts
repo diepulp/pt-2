@@ -186,13 +186,13 @@ export async function authenticateViaLogin(
   await page.goto('/auth/login', { waitUntil: 'networkidle' });
 
   // Wait for the submit button to confirm the form is interactive
-  await page.locator('button[type="submit"]:has-text("Login")').waitFor({
+  await page.locator('button[type="submit"]:has-text("Sign in")').waitFor({
     state: 'visible',
     timeout: 15_000,
   });
 
-  await page.locator('#email').fill(email);
-  await page.locator('#password').fill(password);
+  await page.locator('#login-email').fill(email);
+  await page.locator('#login-password').fill(password);
 
   // Click submit and wait for the Supabase auth API to confirm success
   await Promise.all([
