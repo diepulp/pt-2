@@ -1,0 +1,27 @@
+{
+  "prd": "EXEC-065",
+  "prd_title": "Shift Report — Assembly, Canonical PDF & Distribution",
+  "current_phase": 0,
+  "status": "initialized",
+  "completed_workstreams": [],
+  "in_progress_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS_E2E"],
+  "artifacts": {},
+  "gates_passed": [],
+  "gates_pending": ["type-check", "test-pass", "build", "e2e-write-path"],
+  "adversarial_review": {
+    "magnitude_score": 0,
+    "magnitude_tier": "self_certified",
+    "magnitude_signals": [],
+    "verdict": "ship",
+    "p0_count": 0,
+    "p1_count": 0,
+    "attempt": 0
+  },
+  "complexity_prescreen": "streamlined",
+  "fib_h_ref": "docs/00-vision/REPORTING-LAYER/FIB-H-SHIFT-REPORT.md",
+  "fib_s_ref": "docs/00-vision/REPORTING-LAYER/FIB-S-SHIFT-REPORT.json",
+  "fib_s_loaded": true,
+  "write_path_classification": "detected",
+  "timestamp": "2026-04-16T10:00:00Z"
+}
