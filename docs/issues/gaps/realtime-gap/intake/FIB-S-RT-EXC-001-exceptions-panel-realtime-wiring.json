@@ -1,0 +1,156 @@
+{
+  "artifact": {
+    "type": "FIB-S",
+    "feature_id": "FIB-RT-EXC-001",
+    "title": "Exceptions Panel Realtime Wiring",
+    "date": "2026-04-15",
+    "status": "proposed",
+    "project": "PT-2 / Casino Player Tracker"
+  },
+  "zachman": {
+    "what": {
+      "problem_object": "Exceptions panel approvals data refresh model",
+      "entities": [
+        "table_fill",
+        "table_credit",
+        "TanStack Query approvals cache",
+        "Exceptions panel / Approvals tab"
+      ],
+      "change_target": "Shift from timer-driven refresh to bounded event-driven updates for approvals"
+    },
+    "how": {
+      "mechanism": [
+        "Subscribe to relevant realtime events for table_fill and table_credit",
+        "Patch or invalidate approvals query cache on matching events",
+        "Reduce or remove 15-second approvals polling after verification"
+      ],
+      "non_goals": [
+        "Full ADR-004 implementation",
+        "Shared channel registry",
+        "Shared invalidation scheduler",
+        "Global realtime abstraction rollout"
+      ]
+    },
+    "where": {
+      "ui_surface": "Exceptions panel",
+      "subsurface": "Approvals tab",
+      "client_boundary": "Dashboard/shift dashboard query layer",
+      "backend_boundary": "Supabase Realtime for relevant table events"
+    },
+    "who": {
+      "primary_actors": ["floor_operator", "shift_supervisor"],
+      "delivery_owner": "application developer",
+      "beneficiary": "operator monitoring pending fills/credits"
+    },
+    "when": {
+      "trigger_events": [
+        "fill requested",
+        "fill completed",
+        "credit requested",
+        "credit completed"
+      ],
+      "interaction_moment": "while Exceptions panel is open and operator is monitoring approvals",
+      "rollout_timing": "pilot-bounded; immediate if implemented"
+    },
+    "why": {
+      "business_reason": "Reduce operator distraction and improve trust in panel state by updating on meaningful events rather than arbitrary timer refresh",
+      "pilot_reason": "Concrete user-facing pain with narrow blast radius and preexisting event concepts",
+      "rejection_reason_for_broader_scope": "Platform-wide realtime investment is not justified by this single pain point yet"
+    }
+  },
+  "operator_problem": {
+    "summary": "Approvals polling every 15 seconds causes unnecessary panel churn without realtime support for the underlying fill/credit events.",
+    "observed_effects": [
+      "tab count flicker",
+      "status animation restarts",
+      "possible scroll continuity disruption",
+      "operator distraction/fatigue"
+    ]
+  },
+  "containment_loop": {
+    "entry_condition": "Exceptions panel open; approvals state visible",
+    "system_event": "Fill/credit approval state changes",
+    "response": "Realtime listener updates approvals cache",
+    "exit_condition": "Panel reflects new approvals state with less visual churn"
+  },
+  "required_outcomes": [
+    {
+      "id": "RO-1",
+      "name": "event_driven_approvals_updates",
+      "description": "Requested/completed fill and credit changes reach the Approvals tab without primary reliance on 15-second polling"
+    },
+    {
+      "id": "RO-2",
+      "name": "reduced_visual_churn",
+      "description": "The panel no longer re-renders on timer cadence when nothing changed"
+    },
+    {
+      "id": "RO-3",
+      "name": "pilot_bounded_implementation",
+      "description": "Implementation remains local to Exceptions panel approval behavior"
+    },
+    {
+      "id": "RO-4",
+      "name": "safe_cache_reconciliation",
+      "description": "Realtime integration reconciles via TanStack Query, using patch or invalidation appropriately"
+    }
+  ],
+  "explicit_exclusions": [
+    "alerts tab realtime conversion",
+    "flags tab realtime conversion",
+    "global dashboard realtime refactor",
+    "shared channel registry",
+    "shared invalidation scheduler",
+    "new generic realtime framework",
+    "dashboard redesign",
+    "new operational rules or metrics"
+  ],
+  "dependencies": [
+    "Supabase Realtime access for relevant tables",
+    "Approvals data path remains query-isolated",
+    "Fill/credit status transitions can be mapped to event handlers"
+  ],
+  "assumptions": [
+    "Approvals tab is the highest operator pain point in this panel",
+    "Local implementation is acceptable for pilot scale",
+    "Realtime event volume is modest",
+    "Reconnection resilience relies on polling fallback rather than ADR-004 §5 reconnection stack; deferred with canonical infrastructure"
+  ],
+  "adjacent_rejected_ideas": [
+    {
+      "idea": "Implement full ADR-004 now",
+      "reason": "Too broad for the immediate pain and pilot scope"
+    },
+    {
+      "idea": "Keep polling and smooth the UI only",
+      "reason": "Symptom management without fixing event latency model"
+    },
+    {
+      "idea": "Convert entire panel to realtime in one pass",
+      "reason": "Unnecessary blast radius for first corrective slice"
+    }
+  ],
+  "expansion_trigger_rule": {
+    "expand_if": [
+      "multiple surfaces need near-identical local wiring",
+      "event bursts create cache thrash requiring batching",
+      "other widgets show comparable polling-fatigue cost"
+    ],
+    "otherwise": "Keep implementation narrow and surface-specific"
+  },
+  "governance": {
+    "scope_authority": "Only pilot-bounded realtime wiring for Exceptions panel approvals path is authorized",
+    "amendment_required_for": [
+      "generalized realtime abstractions",
+      "conversion of unrelated widgets",
+      "platform-level realtime initiative framing"
+    ]
+  },
+  "traceability": {
+    "source_context": [
+      "User-provided diagnosis of Exceptions panel polling fatigue",
+      "Referenced canon gap: ADR-004 / event catalog not fully implemented"
+    ],
+    "implementation_intent": "Use the smallest viable realtime slice that materially reduces operator-facing churn"
+  }
+}
