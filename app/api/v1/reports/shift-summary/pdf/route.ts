@@ -1,13 +1,12 @@
 /**
  * Shift Report PDF Generation Route
  *
- * POST /api/v1/reports/shift-summary/pdf
+ * GET  /api/v1/reports/shift-summary/pdf?gaming_day=YYYY-MM-DD&shift_boundary=swing|day|grave
+ * POST /api/v1/reports/shift-summary/pdf  (body: { gaming_day, shift_boundary })
  *
  * Generates a canonical PDF from the ShiftReportDTO using @react-pdf/renderer.
- * Requires pit_boss or admin role. Idempotency-Key required per PRD-HZ-001.
- *
- * Request body:
- *   { gaming_day: "YYYY-MM-DD", shift_boundary: "swing"|"day"|"grave" }
+ * Requires pit_boss or admin role.
+ * POST requires Idempotency-Key header (PRD-HZ-001); GET does not.
  *
  * Response: application/pdf binary (Content-Disposition: attachment)
  *
@@ -34,7 +33,10 @@ import { createClient } from '@/lib/supabase/server';
 import { createShiftReportService } from '@/services/reporting/shift-report';
 import type { ShiftReportParams } from '@/services/reporting/shift-report/dtos';
 import { ShiftReportPdf } from '@/services/reporting/shift-report/pdf/template';
-import { pdfRequestSchema } from '@/services/reporting/shift-report/schemas';
+import {
+  type PdfRequestInput,
+  pdfRequestSchema,
+} from '@/services/reporting/shift-report/schemas';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,28 +58,18 @@ const SHIFT_OFFSETS_HOURS: Record<
   grave: { startOffset: 16, endOffset: 24 },
 };
 
-// ── Route Handler ──────────────────────────────────────────────────────────
+// ── Core PDF Generation ───────────────────────────────────────────────────
 
-export async function POST(request: NextRequest) {
+async function generatePdfResponse(
+  request: NextRequest,
+  params: PdfRequestInput,
+  options: { requireIdempotency: boolean; idempotencyKey?: string },
+) {
   const ctx = createRequestContext(request);
 
   try {
-    const idempotencyKey = requireIdempotencyKey(request);
     const supabase = await createClient();
-    const rawBody = await readJsonBody(request);
 
-    // Validate with centralized schema (ADR-013)
-    const parsed = pdfRequestSchema.safeParse(rawBody);
-    if (!parsed.success) {
-      return errorResponse(ctx, {
-        code: 'VALIDATION_ERROR',
-        status: 400,
-        message: parsed.error.issues.map((i) => i.message).join('; '),
-      });
-    }
-    const body = parsed.data;
-
-    // Use middleware chain for auth/RLS, then assemble report DTO
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
@@ -110,8 +102,8 @@ export async function POST(request: NextRequest) {
 
         // Derive shift time windows from gaming_day + shift_boundary
         const { startTs, endTs } = computeShiftWindow(
-          body.gaming_day,
-          body.shift_boundary,
+          params.gaming_day,
+          params.shift_boundary,
           gamingDayStart,
         );
 
@@ -120,8 +112,8 @@ export async function POST(request: NextRequest) {
         const dto = await service.assembleShiftReport({
           casinoId,
           casinoName,
-          gamingDay: body.gaming_day,
-          shiftBoundary: body.shift_boundary,
+          gamingDay: params.gaming_day,
+          shiftBoundary: params.shift_boundary,
           startTs,
           endTs,
         } satisfies ShiftReportParams);
@@ -139,8 +131,10 @@ export async function POST(request: NextRequest) {
         domain: 'reporting',
         action: 'shift-report.pdf',
         correlationId: ctx.requestId,
-        requireIdempotency: true,
-        idempotencyKey,
+        requireIdempotency: options.requireIdempotency,
+        ...(options.idempotencyKey && {
+          idempotencyKey: options.idempotencyKey,
+        }),
       },
     );
 
@@ -157,8 +151,8 @@ export async function POST(request: NextRequest) {
 
     const filename = buildFilename(
       casinoName,
-      body.gaming_day,
-      body.shift_boundary,
+      params.gaming_day,
+      params.shift_boundary,
     );
 
     // Convert Buffer to Uint8Array for Response body compatibility
@@ -171,6 +165,65 @@ export async function POST(request: NextRequest) {
         'Cache-Control': 'no-store',
         'X-Request-Id': ctx.requestId,
       },
+    });
+  } catch (error) {
+    return errorResponse(ctx, error);
+  }
+}
+
+// ── Route Handlers ────────────────────────────────────────────────────────
+
+/**
+ * GET /api/v1/reports/shift-summary/pdf?gaming_day=YYYY-MM-DD&shift_boundary=swing|day|grave
+ *
+ * Browser-friendly PDF download. No Idempotency-Key required (GET is idempotent).
+ */
+export async function GET(request: NextRequest) {
+  const { searchParams } = request.nextUrl;
+  const rawParams = {
+    gaming_day: searchParams.get('gaming_day'),
+    shift_boundary: searchParams.get('shift_boundary'),
+  };
+
+  const parsed = pdfRequestSchema.safeParse(rawParams);
+  if (!parsed.success) {
+    const ctx = createRequestContext(request);
+    return errorResponse(ctx, {
+      code: 'VALIDATION_ERROR',
+      status: 400,
+      message: parsed.error.issues.map((i) => i.message).join('; '),
+    });
+  }
+
+  return generatePdfResponse(request, parsed.data, {
+    requireIdempotency: false,
+  });
+}
+
+/**
+ * POST /api/v1/reports/shift-summary/pdf
+ *
+ * Programmatic PDF generation. Requires Idempotency-Key header (PRD-HZ-001).
+ */
+export async function POST(request: NextRequest) {
+  const ctx = createRequestContext(request);
+
+  try {
+    const idempotencyKey = requireIdempotencyKey(request);
+    const rawBody = await readJsonBody(request);
+
+    const parsed = pdfRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return errorResponse(ctx, {
+        code: 'VALIDATION_ERROR',
+        status: 400,
+        message: parsed.error.issues.map((i) => i.message).join('; '),
+      });
+    }
+
+    return generatePdfResponse(request, parsed.data, {
+      requireIdempotency: true,
+      idempotencyKey,
     });
   } catch (error) {
     return errorResponse(ctx, error);
