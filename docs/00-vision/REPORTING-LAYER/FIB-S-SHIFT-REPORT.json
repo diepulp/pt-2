@@ -1,0 +1,608 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-H v0.4",
+    "status": "draft",
+    "feature_id": "FIB-H",
+    "feature_name": "Shift Report",
+    "priority": "P1",
+    "decision_horizon": "pilot",
+    "owner": "Vladimir Ivanov",
+    "opened_on": "2026-04-15",
+    "amendments": [
+      "fib-shift-report-alteration-mandate.md (v0.1)",
+      "fib-amendment-canonical-report-output.md (v0.2)",
+      "fib-amendment-pdf-rendering-direction.md (v0.3)"
+    ]
+  },
+  "intent": {
+    "operator_problem": "Pit boss must produce a shift handoff document for incoming supervisor and GM. Today this requires visiting 5-6 screens and manually transcribing numbers — slow, error-prone, and erodes operator trust in a system that records everything but cannot produce a single summary.",
+    "pilot_fit": "PT-2 sells management-grade operational proof. Without a report, the system captures events but cannot present them as a coherent narrative. The data already exists across built services; the gap is assembly, canonical rendering, and bounded distribution.",
+    "success_outcomes": [
+      "OUT-1: Single page consolidates data from enumerated services into a structured shift report",
+      "OUT-2: Financial totals match existing shift dashboard — read-only view, not second source of truth",
+      "OUT-3: Report answers three questions: what the floor produced, what was abnormal, how trustworthy the picture is",
+      "OUT-4: Canonical PDF generated server-side from fixed template using ShiftReportDTO — no business logic in template layer",
+      "OUT-5: PDF is professional, standardized, circulation-ready — suitable for printing, email attachment, and archival",
+      "OUT-6: On-screen report page is review surface only, not the authoritative artifact",
+      "OUT-7: Manual email distribution of canonical PDF supported for defined recipient classes",
+      "OUT-8: CSV export limited to Section 1 per-table financial summary rows only",
+      "OUT-9: Report loads within 3 seconds for casino with up to 50 tables",
+      "OUT-10: Fixed template with controlled pagination, no dashboard chrome, no interactive UI residue",
+      "OUT-11: No new database migrations, RPCs, or security model changes"
+    ],
+    "explicit_exclusions": [
+      "Staff attribution / 'Who acted?' section — no audit query service exists",
+      "Scheduled email delivery or recurring distribution automation",
+      "Automatic recipient resolution or routing rules engine",
+      "Multi-template support or recipient-specific template variants",
+      "Historical trend analysis or comparative reporting",
+      "Custom report builder or configurable sections",
+      "Cross-property portfolio reporting",
+      "Promo coupon activity section",
+      "Player exclusion activity section",
+      "New top-level navigation entry",
+      "Real-time / live-updating report",
+      "Custom time windows — casino-configured shift boundaries only",
+      "Export of non-financial report sections",
+      "New scoring, thresholding, or prioritization logic",
+      "Client-side PDF generation as primary artifact path",
+      "Independent business logic in template or rendering layer"
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Staff attribution audit section",
+        "why_considered": "So What brief Question 4 requires accountability signals",
+        "why_rejected_now": "No staff-action aggregation service exists. Would expand from assembly task to data-layer invention."
+      },
+      {
+        "idea": "Comparative / trend reporting",
+        "why_considered": "Pit bosses would benefit from shift-over-shift comparison",
+        "why_rejected_now": "Requires time-series query pattern and storage model that does not exist. Analytics-grade work."
+      },
+      {
+        "idea": "Player exclusion + promo sections",
+        "why_considered": "Gap analysis identified these as missing data sources with ready service layers",
+        "why_rejected_now": "Each adds report section requiring own assembly, DTO, and rendering. Silent scope expansion."
+      },
+      {
+        "idea": "Real-time streaming report",
+        "why_considered": "Shift dashboard already streams updates",
+        "why_rejected_now": "Report is a snapshot, not a dashboard. Mixing metaphors creates UX confusion."
+      },
+      {
+        "idea": "Custom time windows",
+        "why_considered": "Operators may want arbitrary time range reports",
+        "why_rejected_now": "Drags feature toward generalized reporting semantics. Casino-configured shift boundaries are the natural unit."
+      },
+      {
+        "idea": "Closed-session count",
+        "why_considered": "GREENFIELD proposed closed sessions summary as Section 2 data",
+        "why_rejected_now": "Existing RPC returns active visitors only. Deriving closed count requires new query path, violating assembly-only constraint."
+      },
+      {
+        "idea": "Client-side PDF generation (jsPDF, html2canvas)",
+        "why_considered": "Common browser-based export pattern",
+        "why_rejected_now": "Browser-specific variability, weaker formatting control, brittle output. Server-generated PDF is the approved path."
+      }
+    ]
+  },
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "ShiftReportDTO",
+          "kind": "aggregate",
+          "description": "Read-only composite DTO assembled from existing service outputs. Contains all data needed to render the canonical Shift Report. Display-ready — no business logic downstream.",
+          "stateful": false,
+          "system_of_record": "assembled in-memory from existing services",
+          "fields_hint": [
+            "report_header (casino_name, property_pit, gaming_day, shift_boundary, generated_at, generated_by, reference_id, confidential_marking)",
+            "executive_summary (total_drop, total_fills, total_credits, total_win_loss, hold_pct, total_theo, coverage_pct, active_rated_count, active_unrated_count, anomaly_total, anomaly_unresolved, compliance_trigger_count_mtl, compliance_trigger_count_ctr)",
+            "financial_summary (per-table rows: table_label, game_type, drop, fills, credits, win_loss, hold_pct, cash_obs_rollup; casino_totals_row)",
+            "rating_coverage (total_rated_sessions, total_unrated_sessions, coverage_pct, per_table_coverage_breakdown, active_rated_visitors, active_unrated_visitors, avg_bet_range, total_theo, theo_discrepancy_summary[open_question])",
+            "compliance_summary (mtl_trigger_count, ctr_trigger_count, aggregate_volumes; patron_names_excluded_mvp)",
+            "anomalies (total_alerts, severity_breakdown[critical/warning/info], acknowledged_count, unresolved_count, false_positive_count, alert_quality_ack_rate, alert_quality_fp_rate; staff_attribution_excluded)",
+            "baseline_quality (tables_with_opening_snapshot_count, tables_with_opening_snapshot_pct, provenance_breakdown[prior_day_close/manual_entry/fill_observation/no_snapshot], audit_correlation_completeness, evidence_quality_statement)",
+            "loyalty_liability (outstanding_points, enrolled_player_count, estimated_dollar_liability, policy_version, cents_per_point)"
+          ]
+        },
+        {
+          "name": "Shift Report PDF",
+          "kind": "artifact",
+          "description": "Canonical server-generated PDF document from Shift Report Standard Template v1. The authoritative output artifact for printing, email attachment, and archival.",
+          "stateful": false,
+          "system_of_record": "generated server-side per request",
+          "fields_hint": [
+            "binary PDF content",
+            "filename (shift-report-{casino}-{gaming_day}-{shift}.pdf)",
+            "content_type (application/pdf)"
+          ]
+        },
+        {
+          "name": "Shift Report Standard Template v1",
+          "kind": "artifact",
+          "description": "Fixed document template with 9 sections in standardized order. Consumes ShiftReportDTO. No business logic — presentational only.",
+          "stateful": false,
+          "system_of_record": "codebase",
+          "fields_hint": [
+            "report_header",
+            "executive_summary_strip",
+            "section_1_financial_summary",
+            "section_2_rating_coverage_quality",
+            "section_3_compliance_summary",
+            "section_4_exceptions_anomalies",
+            "section_5_baseline_evidence_quality",
+            "section_6_loyalty_liability",
+            "footer_attestation_block"
+          ]
+        },
+        {
+          "name": "Financial Summary CSV",
+          "kind": "artifact",
+          "description": "CSV export of Section 1 per-table financial summary rows only. No other report sections are CSV-exportable in MVP.",
+          "stateful": false,
+          "system_of_record": "generated client-side from ShiftReportDTO",
+          "fields_hint": [
+            "table_label, game_type, drop, fills, credits, win_loss, hold_pct"
+          ]
+        }
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "name": "assemble_shift_report",
+          "verb": "read",
+          "description": "Fetch data from existing services in parallel and compose a display-ready ShiftReportDTO. All business computation occurs here — downstream layers are presentational only.",
+          "served_outcomes": ["OUT-1", "OUT-2", "OUT-3", "OUT-11"],
+          "loop_steps": ["STEP-2"]
+        },
+        {
+          "name": "render_report_preview",
+          "verb": "read",
+          "description": "Render ShiftReportDTO as on-screen review surface with derivative highlighting of actionable items. Review surface only — not the authoritative artifact.",
+          "served_outcomes": ["OUT-6", "OUT-10"],
+          "loop_steps": ["STEP-3", "STEP-4"]
+        },
+        {
+          "name": "generate_canonical_pdf",
+          "verb": "create",
+          "description": "Generate canonical Shift Report PDF server-side from ShiftReportDTO via Shift Report Standard Template v1. Fixed layout, controlled pagination, no business logic in template layer.",
+          "served_outcomes": ["OUT-4", "OUT-5", "OUT-10"],
+          "loop_steps": ["STEP-5"]
+        },
+        {
+          "name": "export_financial_csv",
+          "verb": "create",
+          "description": "Generate CSV file from Section 1 per-table financial summary rows only. Browser download trigger.",
+          "served_outcomes": ["OUT-8"],
+          "loop_steps": ["STEP-6"]
+        },
+        {
+          "name": "send_report_email",
+          "verb": "create",
+          "description": "Manual distribution of canonical PDF as email attachment to bounded recipient classes via project email pathway.",
+          "served_outcomes": ["OUT-7"],
+          "loop_steps": ["STEP-7"]
+        }
+      ]
+    },
+    "where": {
+      "primary_surface": "/admin/reports/shift-summary",
+      "surfaces": [
+        {
+          "name": "/admin/reports/shift-summary",
+          "kind": "ui"
+        },
+        {
+          "name": "GET /api/v1/shift-dashboards/summary",
+          "kind": "api"
+        },
+        {
+          "name": "GET /api/v1/shift-dashboards/cash-observations/*",
+          "kind": "api"
+        },
+        {
+          "name": "GET /api/v1/shift-intelligence/anomaly-alerts",
+          "kind": "api"
+        },
+        {
+          "name": "GET /api/v1/shift-intelligence/alerts",
+          "kind": "api"
+        },
+        {
+          "name": "GET /api/v1/mtl/gaming-day-summary",
+          "kind": "api"
+        },
+        {
+          "name": "GET /api/v1/measurement/summary",
+          "kind": "api"
+        },
+        {
+          "name": "GET /api/v1/shift-dashboards/visitors-summary",
+          "kind": "api"
+        },
+        {
+          "name": "POST /api/v1/reports/shift-summary/pdf (new)",
+          "kind": "api"
+        },
+        {
+          "name": "POST /api/v1/reports/shift-summary/send (new)",
+          "kind": "api"
+        }
+      ],
+      "touchpoints": {
+        "inbound": [
+          {
+            "name": "navigate_to_report_page",
+            "type": "user_action"
+          },
+          {
+            "name": "select_gaming_day_and_shift",
+            "type": "user_action"
+          },
+          {
+            "name": "click_generate_pdf",
+            "type": "user_action"
+          },
+          {
+            "name": "click_export_csv",
+            "type": "user_action"
+          },
+          {
+            "name": "click_send_report",
+            "type": "user_action"
+          }
+        ],
+        "outbound": [
+          {
+            "name": "canonical_pdf_artifact",
+            "type": "report"
+          },
+          {
+            "name": "financial_summary_csv",
+            "type": "report"
+          },
+          {
+            "name": "email_with_pdf_attachment",
+            "type": "notification"
+          }
+        ]
+      },
+      "bounded_contexts": [
+        "table-context (shift-metrics, shift-cash-obs, shift-checkpoint)",
+        "shift-intelligence (alerts, anomaly, quality)",
+        "mtl (gaming-day-summary)",
+        "measurement (coverage, audit-correlation, loyalty-liability, theo-discrepancy)",
+        "email (distribution pathway)"
+      ]
+    },
+    "who": {
+      "primary_actor": "pit_boss",
+      "actors": [
+        {
+          "role": "pit_boss",
+          "permissions": [
+            "view_shift_report",
+            "generate_pdf",
+            "export_csv",
+            "send_report_email"
+          ],
+          "restrictions": [
+            "cannot_modify_report_data",
+            "cannot_configure_template_layout",
+            "cannot_schedule_delivery",
+            "cannot_select_custom_time_windows"
+          ]
+        },
+        {
+          "role": "floor_supervisor",
+          "permissions": [
+            "view_shift_report",
+            "generate_pdf",
+            "export_csv",
+            "send_report_email"
+          ],
+          "restrictions": ["same as pit_boss"]
+        },
+        {
+          "role": "report_recipient (GM, finance, compliance)",
+          "permissions": ["receive_pdf_via_email", "read_and_print_pdf"],
+          "restrictions": [
+            "no_system_access_required",
+            "cannot_generate_reports_directly"
+          ]
+        }
+      ],
+      "ownership": {
+        "business_owner": "Vladimir Ivanov",
+        "domain_owner": "reporting (new — read-only orchestration over existing bounded contexts)"
+      }
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "name": "operator_requests_shift_report",
+          "source": "user",
+          "preconditions": [
+            "user is authenticated pit_boss or floor_supervisor",
+            "gaming day exists in casino configuration",
+            "shift boundary is a configured casino shift (swing/day/grave)"
+          ]
+        },
+        {
+          "name": "operator_requests_pdf_generation",
+          "source": "user",
+          "preconditions": [
+            "report has been assembled and rendered on screen",
+            "ShiftReportDTO is available"
+          ]
+        },
+        {
+          "name": "operator_requests_email_send",
+          "source": "user",
+          "preconditions": [
+            "canonical PDF has been generated",
+            "at least one recipient selected from defined classes"
+          ]
+        },
+        {
+          "name": "operator_requests_csv_export",
+          "source": "user",
+          "preconditions": [
+            "report has been assembled",
+            "Section 1 financial summary data is available"
+          ]
+        }
+      ],
+      "lifecycle_events": [
+        "report_assembled (ShiftReportDTO constructed)",
+        "report_previewed (on-screen review surface rendered)",
+        "pdf_generated (canonical artifact produced server-side)",
+        "csv_exported (Section 1 financial summary downloaded)",
+        "report_sent (email with PDF attachment dispatched)"
+      ],
+      "timing_constraints": [
+        "Report assembly must complete within 3 seconds for up to 50 tables",
+        "Report uses casino-configured shift boundaries only — no custom time windows",
+        "Gaming day / shift derivation uses existing shift dashboard logic"
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "statement": "The canonical report artifact is a server-generated PDF from a fixed template. Browser print is a convenience fallback only.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-2",
+          "statement": "All business computation must occur in WS1 (Report Assembly). The template and PDF generation layers introduce no independent business logic. The document layer is DTO-first and presentational only.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-3",
+          "statement": "Report highlighting must be purely derivative of existing service states. No new interpretive scoring, thresholding, or prioritization logic.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-4",
+          "statement": "Financial totals on the report must match the existing shift dashboard. The report is a read-only view of authoritative data, not a second source of truth.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-5",
+          "statement": "CSV export applies only to Section 1 per-table financial summary rows. No other report sections are exportable in MVP.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-6",
+          "statement": "Report uses casino-configured shift boundaries only. Custom time windows are excluded from MVP.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-7",
+          "statement": "No new database migrations, RPCs, views, or security model changes. If implementation cannot proceed with existing data paths, the feature must pause for amendment.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-8",
+          "statement": "Manual email distribution only. No scheduled delivery, recurring automation, routing rules, or automatic recipient resolution.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-9",
+          "statement": "One standard template (Shift Report Standard Template v1) in MVP. No multi-template support, recipient-specific variants, or configurable layouts.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-10",
+          "statement": "The canonical report document must be free of navigation chrome, interactive controls, and screen-responsive layout dependency. Fixed section order, controlled pagination, suitable for print and PDF archival.",
+          "severity": "hard"
+        }
+      ],
+      "invariants": [
+        "Report is a point-in-time snapshot, not a live dashboard",
+        "On-screen page is review surface only — not the authoritative artifact",
+        "Canonical generation pipeline: ShiftReportDTO → fixed template → server-generated PDF",
+        "Client-side PDF generation is not the primary artifact path",
+        "Closed-session count is excluded from MVP (assembly-only constraint)"
+      ],
+      "decision_notes": [
+        "Frozen architectural direction: canonical DTO → fixed template → server-generated PDF",
+        "Browser print downgraded from primary output to convenience fallback (amendment v0.2)",
+        "Closed-session count resolved as Option B — removed from MVP (mandate #3)",
+        "Server-side PDF generation moved into scope from exclusion list (amendment v0.2)",
+        "Client-side PDF explicitly rejected as primary path (amendment v0.3)"
+      ]
+    }
+  },
+  "containment": {
+    "loop": [
+      {
+        "id": "STEP-1",
+        "actor": "pit_boss",
+        "action": "navigates to shift report page",
+        "system_response": "shows date picker (gaming day) and shift selector based on casino-configured shift boundaries only (swing/day/grave)"
+      },
+      {
+        "id": "STEP-2",
+        "actor": "pit_boss",
+        "action": "selects gaming day and configured shift boundary",
+        "system_response": "fetches and assembles data from existing services in parallel, shows loading state, constructs ShiftReportDTO"
+      },
+      {
+        "id": "STEP-3",
+        "actor": "system",
+        "action": "renders consolidated report on screen",
+        "system_response": "pit boss sees structured document with financial summary, rating activity, compliance triggers, anomaly/exception status, baseline quality, and loyalty liability — all on one page"
+      },
+      {
+        "id": "STEP-4",
+        "actor": "pit_boss",
+        "action": "reviews report sections",
+        "system_response": "highlights sections with actionable items — derivative of existing service states only, no new scoring/thresholding"
+      },
+      {
+        "id": "STEP-5",
+        "actor": "pit_boss",
+        "action": "clicks Generate PDF",
+        "system_response": "generates canonical Shift Report PDF server-side from ShiftReportDTO via Shift Report Standard Template v1 with controlled pagination"
+      },
+      {
+        "id": "STEP-6",
+        "actor": "pit_boss",
+        "action": "clicks Export CSV on Section 1 financial summary",
+        "system_response": "generates CSV of per-table financial rows only, triggers browser download"
+      },
+      {
+        "id": "STEP-7",
+        "actor": "pit_boss",
+        "action": "clicks Send Report",
+        "system_response": "presents bounded recipient selection (incoming supervisor, GM, finance, compliance), sends canonical PDF as email attachment"
+      },
+      {
+        "id": "STEP-8",
+        "actor": "report_recipient",
+        "action": "receives email with PDF attachment",
+        "system_response": "self-contained PDF document readable without system access"
+      }
+    ],
+    "frozen": false,
+    "expansion_requires_amendment": true
+  },
+  "dependencies": {
+    "required_existing": [
+      "GET /api/v1/shift-dashboards/summary — BFF for casino+pits+tables financial metrics (Section 1, 5)",
+      "services/shift-intelligence/ — getAlerts(), getAlertQuality() (Section 4)",
+      "services/shift-intelligence/anomaly.ts — getAnomalyAlerts() (Section 4)",
+      "services/mtl/crud.ts — mtl_gaming_day_summary view (Section 3)",
+      "services/measurement/queries.ts — queryRatingCoverage(), queryAuditCorrelation(), queryLoyaltyLiability(), queryTheoDiscrepancy() (Sections 2, 5, 6)",
+      "services/table-context/shift-cash-obs.ts — cash observation rollups (Section 1)",
+      "rpc_shift_active_visitors_summary — active rated/unrated counts (Section 2)",
+      "services/email/ — approved email pathway (WS3)",
+      "casino settings — shift boundary configuration"
+    ],
+    "missing_dependencies": [
+      "Staff audit query service — blocks 'Who acted?' section (FIB-H-A1 amendment)",
+      "Closed-session count query — removed from MVP, deferred to amendment"
+    ],
+    "assumptions": [
+      "All data sources already exist and are API-served",
+      "No new migrations or RPCs needed",
+      "Gaming day / shift time window uses existing shift dashboard derivation logic",
+      "Email service is operational for PDF attachment sending",
+      "Existing BFF endpoint meets 3-second SLA for up to 50 tables"
+    ]
+  },
+  "traceability": {
+    "outcomes": [
+      {
+        "id": "OUT-1",
+        "statement": "Single page consolidates data from enumerated services into structured shift report"
+      },
+      {
+        "id": "OUT-2",
+        "statement": "Financial totals match existing shift dashboard — read-only view, not second source of truth"
+      },
+      {
+        "id": "OUT-3",
+        "statement": "Report answers three questions: what the floor produced, what was abnormal, how trustworthy the picture is"
+      },
+      {
+        "id": "OUT-4",
+        "statement": "Canonical PDF generated server-side from fixed template using ShiftReportDTO"
+      },
+      {
+        "id": "OUT-5",
+        "statement": "PDF is professional, standardized, circulation-ready for printing, email, and archival"
+      },
+      {
+        "id": "OUT-6",
+        "statement": "On-screen page is review surface only — not authoritative artifact"
+      },
+      {
+        "id": "OUT-7",
+        "statement": "Manual email distribution of canonical PDF to defined recipient classes"
+      },
+      {
+        "id": "OUT-8",
+        "statement": "CSV export limited to Section 1 per-table financial summary rows"
+      },
+      {
+        "id": "OUT-9",
+        "statement": "Report loads within 3 seconds for up to 50 tables"
+      },
+      {
+        "id": "OUT-10",
+        "statement": "Fixed template, controlled pagination, no dashboard chrome"
+      },
+      {
+        "id": "OUT-11",
+        "statement": "No new database migrations, RPCs, or security model changes"
+      }
+    ],
+    "capability_to_outcome": [
+      {
+        "capability": "assemble_shift_report",
+        "outcomes": ["OUT-1", "OUT-2", "OUT-3", "OUT-9", "OUT-11"]
+      },
+      {
+        "capability": "render_report_preview",
+        "outcomes": ["OUT-6", "OUT-10"]
+      },
+      {
+        "capability": "generate_canonical_pdf",
+        "outcomes": ["OUT-4", "OUT-5", "OUT-10"]
+      },
+      { "capability": "export_financial_csv", "outcomes": ["OUT-8"] },
+      { "capability": "send_report_email", "outcomes": ["OUT-7"] }
+    ],
+    "rule_to_loop_step": [
+      { "rule_id": "RULE-1", "loop_steps": ["STEP-5"] },
+      { "rule_id": "RULE-2", "loop_steps": ["STEP-2", "STEP-3", "STEP-5"] },
+      { "rule_id": "RULE-3", "loop_steps": ["STEP-4"] },
+      { "rule_id": "RULE-4", "loop_steps": ["STEP-2", "STEP-3"] },
+      { "rule_id": "RULE-5", "loop_steps": ["STEP-6"] },
+      { "rule_id": "RULE-6", "loop_steps": ["STEP-1"] },
+      { "rule_id": "RULE-7", "loop_steps": ["STEP-2"] },
+      { "rule_id": "RULE-8", "loop_steps": ["STEP-7"] },
+      { "rule_id": "RULE-9", "loop_steps": ["STEP-5"] },
+      { "rule_id": "RULE-10", "loop_steps": ["STEP-5", "STEP-8"] }
+    ]
+  },
+  "governance": {
+    "scope_authority": {
+      "artifact": "FIB-H-SHIFT-REPORT",
+      "version": "v0.4",
+      "frozen": false
+    },
+    "open_questions_allowed_at_scaffold": [
+      "Cash observation data: inline in financial summary table or separate sub-section?",
+      "Theo discrepancy: include as quality badge in Section 2 or defer?"
+    ],
+    "downstream_expansion_allowed_without_amendment": false
+  }
+}

@@ -23,3 +23,24 @@ export const shiftReportParamsSchema = z.object({
 });
 
 export type ShiftReportParamsInput = z.infer<typeof shiftReportParamsSchema>;
+
+// ── Route handler request schemas (ADR-013) ────────────────────────────────
+
+export const pdfRequestSchema = z.object({
+  gaming_day: dateSchema('gaming_day'),
+  shift_boundary: shiftBoundarySchema,
+});
+
+export type PdfRequestInput = z.infer<typeof pdfRequestSchema>;
+
+export const sendRequestSchema = z.object({
+  gaming_day: dateSchema('gaming_day'),
+  shift_boundary: shiftBoundarySchema,
+  recipients: z
+    .array(z.string().email('Invalid recipient email address'))
+    .min(1, 'At least one recipient is required')
+    .max(10, 'Maximum 10 recipients per send'),
+  idempotency_key: uuidSchema('idempotency_key'),
+});
+
+export type SendRequestInput = z.infer<typeof sendRequestSchema>;

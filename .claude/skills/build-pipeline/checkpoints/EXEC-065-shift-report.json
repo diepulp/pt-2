@@ -1,14 +1,77 @@
 {
   "prd": "EXEC-065",
   "prd_title": "Shift Report — Assembly, Canonical PDF & Distribution",
-  "current_phase": 0,
-  "status": "initialized",
-  "completed_workstreams": [],
+  "current_phase": 5,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS_E2E"],
   "in_progress_workstreams": [],
-  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS_E2E"],
-  "artifacts": {},
-  "gates_passed": [],
-  "gates_pending": ["type-check", "test-pass", "build", "e2e-write-path"],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": [
+      "services/reporting/shift-report/dtos.ts",
+      "services/reporting/shift-report/assembler.ts",
+      "services/reporting/shift-report/schemas.ts",
+      "services/reporting/shift-report/keys.ts",
+      "services/reporting/shift-report/http.ts",
+      "services/reporting/shift-report/index.ts",
+      "services/reporting/shift-report/__tests__/assembler.test.ts"
+    ],
+    "WS2": [
+      "app/(dashboard)/admin/reports/shift-summary/page.tsx",
+      "app/(dashboard)/admin/reports/shift-summary/loading.tsx",
+      "components/reports/shift-report/shift-report-shell.tsx",
+      "components/reports/shift-report/shift-report-document.tsx",
+      "components/reports/shift-report/sections/report-header.tsx",
+      "components/reports/shift-report/sections/executive-summary.tsx",
+      "components/reports/shift-report/sections/financial-summary.tsx",
+      "components/reports/shift-report/sections/rating-coverage.tsx",
+      "components/reports/shift-report/sections/compliance-summary.tsx",
+      "components/reports/shift-report/sections/anomalies.tsx",
+      "components/reports/shift-report/sections/baseline-quality.tsx",
+      "components/reports/shift-report/sections/loyalty-liability.tsx",
+      "components/reports/shift-report/sections/report-footer.tsx",
+      "components/reports/shift-report/report-action-toolbar.tsx",
+      "components/reports/shift-report/csv-export.ts",
+      "components/reports/shift-report/format.ts",
+      "components/reports/shift-report/sections/index.ts",
+      "hooks/reporting/use-shift-report.ts"
+    ],
+    "WS3": [
+      "app/api/v1/reports/shift-summary/pdf/route.ts",
+      "services/reporting/shift-report/pdf/template.tsx",
+      "services/reporting/shift-report/pdf/sections/header.tsx",
+      "services/reporting/shift-report/pdf/sections/executive-summary.tsx",
+      "services/reporting/shift-report/pdf/sections/financial-summary.tsx",
+      "services/reporting/shift-report/pdf/sections/rating-coverage.tsx",
+      "services/reporting/shift-report/pdf/sections/compliance-summary.tsx",
+      "services/reporting/shift-report/pdf/sections/anomalies.tsx",
+      "services/reporting/shift-report/pdf/sections/baseline-quality.tsx",
+      "services/reporting/shift-report/pdf/sections/loyalty-liability.tsx",
+      "services/reporting/shift-report/pdf/sections/report-footer.tsx",
+      "services/reporting/shift-report/pdf/styles.ts",
+      "services/reporting/shift-report/pdf/format.ts"
+    ],
+    "WS4": [
+      "app/api/v1/reports/shift-summary/send/route.ts",
+      "lib/email/types.ts",
+      "lib/email/resend-adapter.ts",
+      "services/email/dtos.ts",
+      "services/email/index.ts"
+    ],
+    "WS5": [
+      "services/reporting/shift-report/__tests__/http-contract.test.ts"
+    ],
+    "WS_E2E": [
+      "e2e/reporting/shift-report.spec.ts"
+    ]
+  },
+  "gates_passed": [
+    "type-check (WS1)", "test-pass (WS1)",
+    "type-check (WS2+WS3)", "lint (WS2+WS3)",
+    "type-check (WS4)", "lint (WS4)", "email-backward-compat (WS4, 26/26)",
+    "type-check (WS5+E2E)", "test-pass (WS5, 18/18)"
+  ],
+  "gates_pending": [],
   "adversarial_review": {
     "magnitude_score": 0,
     "magnitude_tier": "self_certified",
@@ -23,5 +86,5 @@
   "fib_s_ref": "docs/00-vision/REPORTING-LAYER/FIB-S-SHIFT-REPORT.json",
   "fib_s_loaded": true,
   "write_path_classification": "detected",
-  "timestamp": "2026-04-16T10:00:00Z"
+  "timestamp": "2026-04-16T15:30:00Z"
 }
