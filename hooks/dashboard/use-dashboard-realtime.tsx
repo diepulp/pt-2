@@ -26,6 +26,8 @@ import { dashboardKeys } from './keys';
 
 type GamingTableRow = Database['public']['Tables']['gaming_table']['Row'];
 type RatingSlipRow = Database['public']['Tables']['rating_slip']['Row'];
+type TableFillRow = Database['public']['Tables']['table_fill']['Row'];
+type TableCreditRow = Database['public']['Tables']['table_credit']['Row'];
 
 interface UseDashboardRealtimeOptions {
   /** Casino ID to scope subscriptions */
@@ -107,6 +109,57 @@ export function useDashboardRealtime({
           handleSlipChange(payload);
         },
       )
+      // Subscribe to table_fill changes (INSERT + UPDATE only)
+      // FIB-RT-EXC-001: Approvals-path realtime wiring
+      .on<TableFillRow>(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'table_fill',
+          filter: `casino_id=eq.${casinoId}`,
+        },
+        () => {
+          handleFillCreditChange();
+        },
+      )
+      .on<TableFillRow>(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'table_fill',
+          filter: `casino_id=eq.${casinoId}`,
+        },
+        () => {
+          handleFillCreditChange();
+        },
+      )
+      // Subscribe to table_credit changes (INSERT + UPDATE only)
+      .on<TableCreditRow>(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'table_credit',
+          filter: `casino_id=eq.${casinoId}`,
+        },
+        () => {
+          handleFillCreditChange();
+        },
+      )
+      .on<TableCreditRow>(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'table_credit',
+          filter: `casino_id=eq.${casinoId}`,
+        },
+        () => {
+          handleFillCreditChange();
+        },
+      )
       .subscribe((status: string) => {
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
@@ -181,6 +234,19 @@ export function useDashboardRealtime({
 
       // PRD-020: Do NOT invalidate tables.scope - this triggers re-renders
       // The table card's activeSlipsCount will be updated by the targeted slip invalidation
+    }
+
+    // Handle fill/credit changes
+    // FIB-RT-EXC-001: Unconditional invalidation — simplicity tradeoff.
+    // Not every INSERT/UPDATE is semantically relevant to the Approvals
+    // query (status='requested'), but a spurious refetch is one lightweight
+    // SELECT vs. the fragile coupling of payload-inspecting filters.
+    function handleFillCreditChange() {
+      setLastUpdate(new Date());
+
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.pendingFillsCredits(casinoId),
+      });
     }
 
     // Cleanup on unmount
