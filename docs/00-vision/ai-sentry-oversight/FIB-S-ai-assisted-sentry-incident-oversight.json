@@ -1,0 +1,194 @@
+{
+  "artifact": "FIB-S",
+  "version": "1.0.0",
+  "feature_identity": {
+    "name": "AI-Assisted Sentry Incident Oversight",
+    "slug": "ai-assisted-sentry-incident-oversight",
+    "type": "pilot-bounded operational oversight feature",
+    "bounded_context": [
+      "observability",
+      "incident-triage",
+      "developer-operations"
+    ],
+    "scope_authority": "Post-capture incident oversight only. No mutation of primary runtime, request path, or autonomous production remediation."
+  },
+  "zachman": {
+    "what": {
+      "entities": [
+        "sentry_issue_alert",
+        "n8n_triage_workflow",
+        "langgraph_incident_analyst",
+        "incident_summary",
+        "notification_target",
+        "triage_policy",
+        "redaction_policy",
+        "audit_record"
+      ],
+      "inputs": [
+        "Sentry issue alert webhook payload",
+        "environment metadata",
+        "release/version metadata",
+        "route/context metadata",
+        "safe tenant-scoped metadata",
+        "triage policy configuration"
+      ],
+      "outputs": [
+        "structured triage decision",
+        "incident summary JSON",
+        "human notification",
+        "audit trail entry"
+      ]
+    },
+    "how": {
+      "workflow": [
+        "application emits telemetry to Sentry",
+        "Sentry groups and alerts on qualifying issue",
+        "n8n receives webhook",
+        "n8n validates source and payload",
+        "n8n deduplicates and enriches",
+        "n8n applies severity and routing policy",
+        "routine incidents route directly to humans",
+        "selected incidents escalate to LangGraph",
+        "LangGraph returns structured summary",
+        "human reviews and acts"
+      ],
+      "deterministic_steps": [
+        "signature validation",
+        "deduplication",
+        "severity policy check",
+        "routing",
+        "notification dispatch",
+        "audit log write"
+      ],
+      "reasoning_steps": [
+        "incident classification",
+        "probable-cause summarization",
+        "owner/system suggestion",
+        "recommended next-step generation"
+      ]
+    },
+    "where": {
+      "source_system": "Sentry",
+      "automation_layer": "n8n",
+      "reasoning_layer": "LangGraph",
+      "human_destinations": ["Slack", "email", "Jira"],
+      "runtime_boundary": "Outside primary application request path"
+    },
+    "who": {
+      "primary_actors": [
+        "developer_on_triage_duty",
+        "pilot_support_owner",
+        "technical_operator"
+      ],
+      "decision_authority": "Human",
+      "non_human_roles": {
+        "Sentry": "capture and alert source of truth",
+        "n8n": "routing and enrichment",
+        "LangGraph": "selective reasoning"
+      }
+    },
+    "when": {
+      "trigger": "Qualifying Sentry issue alert fires in pilot environment",
+      "escalation_conditions": [
+        "severity high",
+        "repeat occurrence threshold exceeded",
+        "classification ambiguous",
+        "manual escalation policy matched"
+      ],
+      "processing_mode": "near-real-time post-event triage"
+    },
+    "why": {
+      "operator_problem": [
+        "alert noise",
+        "weak triage quality",
+        "unclear incident ownership",
+        "insufficiently concise incident summaries"
+      ],
+      "target_benefits": [
+        "reduce noisy alerts",
+        "increase triage legibility",
+        "preserve human control",
+        "improve response speed without AI dependency"
+      ]
+    }
+  },
+  "required_outcomes": [
+    "Sentry remains source of truth for capture and issue state",
+    "n8n handles deterministic enrichment and routing",
+    "LangGraph is invoked only for selected incidents",
+    "structured JSON incident summaries are produced for escalated cases",
+    "tenant-sensitive metadata is redacted or reduced before AI escalation",
+    "no new request-path dependency is introduced",
+    "all escalations and decisions are auditable"
+  ],
+  "explicit_exclusions": [
+    "inline runtime AI interception",
+    "autonomous production remediation",
+    "auto-deploy or rollback",
+    "full observability platform replacement",
+    "universal event-to-agent routing",
+    "self-healing production loops"
+  ],
+  "dependencies": [
+    "Configured Sentry project and issue alerts",
+    "Reachable n8n instance",
+    "Secured webhook ingestion",
+    "Notification destination",
+    "LangGraph runtime/service",
+    "Metadata redaction policy"
+  ],
+  "assumptions": [
+    "Human review remains feasible at pilot scale",
+    "Most incidents can be handled deterministically",
+    "AI reasoning is useful only for a subset of incidents",
+    "Structured output is preferred over verbose prose"
+  ],
+  "containment_loop": {
+    "entry": "selected_sentry_issue_alert",
+    "core_path": [
+      "sentry_capture",
+      "n8n_validation",
+      "n8n_deduplication",
+      "n8n_enrichment",
+      "policy_decision"
+    ],
+    "branches": {
+      "routine": ["notify_human", "record_audit"],
+      "escalated": [
+        "redact_context",
+        "invoke_langgraph",
+        "emit_structured_summary",
+        "notify_human",
+        "record_audit"
+      ]
+    },
+    "exit": "human_decision"
+  },
+  "governance": {
+    "decision_rule": "Narrowest reading wins",
+    "human_in_the_loop": true,
+    "autonomous_mutation_allowed": false,
+    "runtime_path_modification_allowed": false,
+    "tenant_sensitive_data_policy": "Redact or minimize before external reasoning"
+  },
+  "expansion_trigger_rule": {
+    "all_required": [
+      "Sentry capture stable",
+      "n8n triage measurably useful",
+      "LangGraph summaries repeatedly actionable",
+      "human remains decision authority",
+      "workflow reduces time rather than adding ceremony"
+    ],
+    "otherwise": "Expansion blocked"
+  },
+  "traceability": {
+    "upstream_concept": "Pilot-bounded AI oversight over Sentry issue alerts",
+    "downstream_artifacts_expected": [
+      "PRD",
+      "ADR if architectural commitment expands",
+      "Exec spec",
+      "redaction policy",
+      "alert routing policy"
+    ]
+  }
+}

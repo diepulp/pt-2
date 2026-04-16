@@ -27,6 +27,7 @@
     "skill-creator@claude-plugins-official": true,
     "superpowers@superpowers-dev": true,
     "code-review@claude-plugins-official": true,
-    "vercel@claude-plugins-official": true
+    "vercel@claude-plugins-official": true,
+    "sentry@claude-plugins-official": true
   }
 }

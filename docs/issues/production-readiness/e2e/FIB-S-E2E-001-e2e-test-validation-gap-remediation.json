@@ -1,0 +1,700 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-H-E2E-001 v1 (DA-reviewed)",
+    "status": "da-reviewed",
+    "feature_id": "FIB-S-E2E-001",
+    "feature_name": "E2E Test Validation Gap Remediation",
+    "priority": "P1",
+    "decision_horizon": "pilot",
+    "owner": "Vladimir Ivanov",
+    "opened_on": "2026-04-09"
+  },
+  "intent": {
+    "operator_problem": "153 Playwright E2E test cases exist but have never been validated against a running application. Triage shows 22 passing, 50 failing, 68 blocked by cascade, and 13 stubs. Core operator workflows have zero browser-level validation, leaving regressions undetected.",
+    "pilot_fit": "E2E tests are the only layer validating the full browser-to-database stack through RLS. Mocked unit tests have already masked production failures. Without validated E2E coverage, the pilot ships without confidence that operator workflows work end-to-end.",
+    "success_outcomes": [
+      "All 140 implemented test cases pass against local dev server + local Supabase.",
+      "npx playwright test exits 0 consistently on a clean environment.",
+      "Fixture factories create deterministic, isolated test data with proper cleanup.",
+      "No test depends on remote Supabase, manual data setup, or seed data state.",
+      "CI e2e job in ci.yml runs the full suite and is blocking on PR merge."
+    ],
+    "explicit_exclusions": [
+      "Writing new E2E tests for uncovered workflows",
+      "Implementing test.fixme stubs (cashier-workflow, table-activation-drawer)",
+      "Page Object Model or fixture architecture redesign",
+      "Visual regression testing or screenshot comparisons",
+      "Cross-browser testing",
+      "E2E tests against remote/staging Supabase",
+      "Playwright version upgrade or migration"
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Rewrite all specs from scratch",
+        "why_considered": "Some specs have deep assertion drift",
+        "why_rejected_now": "Most specs are structurally sound; only selectors and fixtures need updates"
+      },
+      {
+        "idea": "Page Object Model refactor",
+        "why_considered": "Would reduce selector duplication across specs",
+        "why_rejected_now": "Scope creep; current tests work without POM once selectors are fixed"
+      },
+      {
+        "idea": "Parallel fixture consolidation",
+        "why_considered": "Multiple fixture files duplicate createServiceClient",
+        "why_rejected_now": "Duplication is annoying but not blocking; separate cleanup pass"
+      },
+      {
+        "idea": "Visual regression snapshots",
+        "why_considered": "Would catch UI drift automatically",
+        "why_rejected_now": "Adds CI complexity and brittle baselines; not needed for pilot"
+      },
+      {
+        "idea": "Run against Vercel preview deploys",
+        "why_considered": "Catches deploy-specific issues",
+        "why_rejected_now": "Requires separate Vercel preview env setup workstream"
+      }
+    ]
+  },
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "e2e_fixture_factory",
+          "kind": "artifact",
+          "description": "Test data scenario factories that create company→casino→staff→player→table→visit entity graphs via service-role client",
+          "stateful": false,
+          "system_of_record": "e2e/fixtures/",
+          "fields_hint": [
+            "casinoId",
+            "staffId",
+            "playerId",
+            "tableId",
+            "visitId",
+            "authToken",
+            "cleanup"
+          ]
+        },
+        {
+          "name": "e2e_spec_file",
+          "kind": "artifact",
+          "description": "Playwright test specification file containing test cases for a specific workflow or API surface",
+          "stateful": false,
+          "system_of_record": "e2e/workflows/ and e2e/api/",
+          "fields_hint": [
+            "describe_block",
+            "auth_mode",
+            "verification_class",
+            "test_cases"
+          ]
+        },
+        {
+          "name": "ci_e2e_job",
+          "kind": "artifact",
+          "description": "GitHub Actions job that runs the E2E suite against local Supabase in CI",
+          "stateful": true,
+          "system_of_record": ".github/workflows/ci.yml",
+          "fields_hint": [
+            "continue_on_error",
+            "spec_file_list",
+            "supabase_start_args"
+          ]
+        }
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "fix_fixture_rls_and_schema_bugs",
+          "verb": "update",
+          "description": "Fix fixture factories that fail due to missing company creation (ADR-043), RLS policy violations on service-role inserts, or wrong login form selectors",
+          "served_outcomes": ["OUT-1", "OUT-3"],
+          "workstream": "WS-1"
+        },
+        {
+          "id": "CAP-2",
+          "name": "fix_route_drift",
+          "verb": "update",
+          "description": "Update URL constants and assertions where application routes have moved (e.g., /admin/alerts → /admin/anomaly-detection/alerts)",
+          "served_outcomes": ["OUT-1"],
+          "workstream": "WS-2"
+        },
+        {
+          "id": "CAP-3",
+          "name": "fix_rls_context_for_triggers",
+          "verb": "update",
+          "description": "Fix createTestTransaction and createTestMtlEntry which fail because DB triggers require RLS context even from service-role inserts",
+          "served_outcomes": ["OUT-1", "OUT-3"],
+          "workstream": "WS-3"
+        },
+        {
+          "id": "CAP-4",
+          "name": "fix_pit_page_selector_drift",
+          "verb": "update",
+          "description": "Investigate and fix data-testid='table-grid' selector on /pit page — either add testid to component or update test selectors",
+          "served_outcomes": ["OUT-1"],
+          "workstream": "WS-4"
+        },
+        {
+          "id": "CAP-5",
+          "name": "fix_assertion_drift",
+          "verb": "update",
+          "description": "Update UI text assertions and selectors that have drifted (CSV import row counts, setup wizard step titles, loyalty catalog headings, API route paths)",
+          "served_outcomes": ["OUT-1"],
+          "workstream": "WS-5"
+        },
+        {
+          "id": "CAP-6",
+          "name": "promote_ci_e2e_to_blocking",
+          "verb": "update",
+          "description": "Update ci.yml e2e job: remove continue-on-error, expand spec list to full suite, ensure blocking on PR merge",
+          "served_outcomes": ["OUT-5"],
+          "workstream": "WS-6"
+        }
+      ]
+    },
+    "where": {
+      "primary_surface": "Playwright test harness and CI pipeline",
+      "surfaces": [
+        {
+          "name": "e2e/fixtures/",
+          "kind": "test_fixture",
+          "files": [
+            "e2e/fixtures/test-data.ts",
+            "e2e/fixtures/auth.ts",
+            "e2e/fixtures/rating-slip-fixtures.ts",
+            "e2e/fixtures/mtl-fixtures.ts",
+            "e2e/fixtures/admin-helpers.ts",
+            "e2e/fixtures/shift-dashboard-helpers.ts",
+            "e2e/fixtures/setup-wizard-fixtures.ts",
+            "e2e/fixtures/import-test-data.ts",
+            "e2e/fixtures/exclusion-fixtures.ts"
+          ]
+        },
+        {
+          "name": "e2e/workflows/",
+          "kind": "test_spec",
+          "files_affected": [
+            "e2e/workflows/admin-alerts.spec.ts",
+            "e2e/workflows/admin-settings.spec.ts",
+            "e2e/workflows/visit-continuation.spec.ts",
+            "e2e/workflows/rating-slip-modal.spec.ts",
+            "e2e/workflows/move-player.spec.ts",
+            "e2e/workflows/csv-player-import.spec.ts",
+            "e2e/workflows/csv-server-import.spec.ts",
+            "e2e/workflows/setup-wizard.spec.ts",
+            "e2e/workflows/loyalty-admin-catalog.spec.ts",
+            "e2e/workflows/loyalty-accrual-lifecycle.spec.ts",
+            "e2e/workflows/shift-dashboard-v3-layout.spec.ts",
+            "e2e/workflows/player-360-panels.spec.ts",
+            "e2e/workflows/player-360-navigation.spec.ts"
+          ]
+        },
+        {
+          "name": "e2e/api/",
+          "kind": "test_spec",
+          "files_affected": [
+            "e2e/api/shift-intelligence.spec.ts",
+            "e2e/api/loyalty-accrual.spec.ts"
+          ]
+        },
+        {
+          "name": "e2e/ (root)",
+          "kind": "test_spec",
+          "files_affected": [
+            "e2e/measurement-reports.spec.ts",
+            "e2e/mtl-threshold-notifications.spec.ts"
+          ]
+        },
+        {
+          "name": ".github/workflows/ci.yml",
+          "kind": "ci_config"
+        },
+        {
+          "name": "app/(dashboard)/pit/",
+          "kind": "ui_component",
+          "note": "May need data-testid attributes added"
+        }
+      ],
+      "bounded_contexts": ["testing infrastructure", "CI pipeline"]
+    },
+    "who": {
+      "primary_actor": "builder_qa_engineer",
+      "actors": [
+        {
+          "role": "builder_qa_engineer",
+          "permissions": [
+            "modify_test_fixtures",
+            "update_test_assertions",
+            "update_ci_config",
+            "add_data_testid_attributes"
+          ],
+          "restrictions": [
+            "may not write new test scenarios beyond fixing existing ones",
+            "may not redesign fixture architecture"
+          ]
+        }
+      ],
+      "ownership": {
+        "business_owner": "Vladimir Ivanov",
+        "domain_owner": "Quality assurance / production readiness"
+      }
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "name": "code_change_proposed",
+          "source": "user",
+          "preconditions": ["PR opened against main branch"]
+        },
+        {
+          "name": "pre_release_validation",
+          "source": "user",
+          "preconditions": ["all unit and integration tests pass"]
+        }
+      ],
+      "lifecycle_events": [
+        "fixture_creates_test_data",
+        "browser_authenticates_via_login_form",
+        "test_asserts_page_rendering",
+        "test_asserts_api_response",
+        "test_asserts_database_state",
+        "fixture_cleans_up_test_data",
+        "ci_reports_pass_or_fail"
+      ],
+      "timing_constraints": [
+        "Full E2E suite must complete within 20 minutes on CI",
+        "Individual spec files must complete within 5 minutes",
+        "Dev server must be ready within 120 seconds"
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "statement": "Only existing implemented test cases (140) are remediated; no new test scenarios are written.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-2",
+          "statement": "Fixture changes must maintain ADR-043 company-first creation, ADR-024 app_metadata stamping, and reverse FK cleanup order.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-3",
+          "statement": "Tests must not depend on seed data, remote Supabase, or manual data setup — except shift-intelligence.spec.ts, loyalty-accrual.spec.ts, and loyalty-accrual-lifecycle.spec.ts which retain seed-data dependencies for this remediation pass.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-4",
+          "statement": "Production application code changes are limited to adding data-testid attributes where necessary; no behavioral changes.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-5",
+          "statement": "CI promotion to blocking happens only after the full suite passes locally and in advisory CI.",
+          "severity": "hard"
+        }
+      ],
+      "invariants": [
+        "Test isolation: each test creates and cleans its own data.",
+        "Auth fidelity: Mode B tests authenticate through the real login form, Mode C tests use real JWTs.",
+        "Fixture factories use collision-resistant identifiers (UUID or timestamp+UUID).",
+        "No broad casino-level cleanup sweeps that destroy other tests' data."
+      ],
+      "decision_notes": [
+        "Failures cluster into 5 root causes, not 50 independent bugs.",
+        "Sequential fix order chosen because shared fixture files would conflict under parallel edits.",
+        "Cascade failures (68 blocked tests) will resolve automatically once early-in-serial-group failures are fixed."
+      ]
+    }
+  },
+  "containment": {
+    "loop": [
+      {
+        "id": "STEP-1",
+        "actor": "builder_qa_engineer",
+        "action": "identifies failure root cause from triage report",
+        "system_response": "failure is classified into one of 5 root cause categories"
+      },
+      {
+        "id": "STEP-2",
+        "actor": "builder_qa_engineer",
+        "action": "fixes fixture, selector, or route constant for the root cause",
+        "system_response": "affected test files are updated with correct values"
+      },
+      {
+        "id": "STEP-3",
+        "actor": "builder_qa_engineer",
+        "action": "runs affected spec files to validate the fix",
+        "system_response": "previously failing tests now pass; cascade-blocked tests unblock"
+      },
+      {
+        "id": "STEP-4",
+        "actor": "builder_qa_engineer",
+        "action": "repeats steps 1-3 for next root cause in priority order",
+        "system_response": "passing test count increases incrementally"
+      },
+      {
+        "id": "STEP-5",
+        "actor": "builder_qa_engineer",
+        "action": "runs full suite (npx playwright test) after all fixes",
+        "system_response": "140 implemented tests pass, 13 stubs skipped"
+      },
+      {
+        "id": "STEP-6",
+        "actor": "builder_qa_engineer",
+        "action": "updates ci.yml to run full suite and remove continue-on-error",
+        "system_response": "E2E failures now block PR merge"
+      }
+    ],
+    "frozen": true,
+    "expansion_requires_amendment": true
+  },
+  "workstreams": [
+    {
+      "id": "WS-1",
+      "name": "Quick Wins — Fixture Bugs",
+      "priority": 1,
+      "estimated_tests_unblocked": 22,
+      "files_touched": [
+        "e2e/workflows/visit-continuation.spec.ts",
+        "e2e/fixtures/test-data.ts",
+        "e2e/measurement-reports.spec.ts"
+      ],
+      "root_causes": [
+        {
+          "id": "RC-1",
+          "description": "visit-continuation.spec.ts: createVisitContinuationScenario() missing ADR-043 company creation — null value in column company_id",
+          "fix": "Add company insert before casino insert, pass company.id as company_id",
+          "tests_affected": 17
+        },
+        {
+          "id": "RC-2",
+          "description": "admin-settings.spec.ts: createTestScenario() from test-data.ts fails on player table RLS because admin.createUser() does not stamp app_metadata (casino_id, staff_id, staff_role). Company creation is already present.",
+          "fix": "Add app_metadata stamping to test-data.ts admin.createUser() and admin.updateUserById() calls, matching the pattern in rating-slip-fixtures.ts lines 104-148",
+          "tests_affected": 5
+        },
+        {
+          "id": "RC-3",
+          "description": "measurement-reports.spec.ts: login helper uses [name='email'] instead of #email",
+          "fix": "Switch to canonical authenticateAndNavigate from e2e/fixtures/auth.ts",
+          "tests_affected": 2
+        },
+        {
+          "id": "RC-3.5",
+          "description": "admin-settings.spec.ts uses non-canonical auth: page.goto('/signin') + localStorage.setItem('supabase.auth.token', ...) instead of form login. Both the route (/signin vs /auth/login) and auth mechanism differ from canonical helper.",
+          "fix": "Migrate all three test.describe blocks to use authenticateAndNavigate from e2e/fixtures/auth.ts",
+          "tests_affected": 5
+        }
+      ],
+      "validation": "npx playwright test e2e/workflows/visit-continuation.spec.ts e2e/workflows/admin-settings.spec.ts e2e/measurement-reports.spec.ts --reporter=list"
+    },
+    {
+      "id": "WS-2",
+      "name": "Route Drift — Admin Alerts",
+      "priority": 2,
+      "estimated_tests_unblocked": 3,
+      "files_touched": [
+        "e2e/workflows/admin-alerts.spec.ts",
+        "e2e/fixtures/admin-helpers.ts"
+      ],
+      "root_causes": [
+        {
+          "id": "RC-4",
+          "description": "/admin/alerts redirects to /admin/anomaly-detection/alerts (both routes exist). The toContain('/admin/alerts') URL assertion actually passes (substring match), but getByRole('heading', { name: 'Alerts' }) fails because page heading is now 'Statistical Anomaly Detection'.",
+          "fix": "Update heading assertion to match actual page heading ('Statistical Anomaly Detection'). Optionally update ADMIN_URLS to point directly to /admin/anomaly-detection/alerts to avoid redirect latency.",
+          "tests_affected": 3
+        }
+      ],
+      "validation": "npx playwright test e2e/workflows/admin-alerts.spec.ts --reporter=list"
+    },
+    {
+      "id": "WS-3",
+      "name": "RLS Context for DB Triggers",
+      "priority": 3,
+      "estimated_tests_unblocked": 11,
+      "files_touched": [
+        "e2e/fixtures/rating-slip-fixtures.ts",
+        "e2e/fixtures/mtl-fixtures.ts"
+      ],
+      "root_causes": [
+        {
+          "id": "RC-5",
+          "description": "createTestTransaction() inserts into player_financial_transaction via service-role but Finance-to-MTL bridge trigger requires app.casino_id/app.actor_id RLS context",
+          "fix": "Use authenticated client (Mode C) for transaction creation, or call set_rls_context before insert",
+          "tests_affected": 2
+        },
+        {
+          "id": "RC-6",
+          "description": "createTestMtlEntry() inserts into mtl_entry but triggers require RLS context",
+          "fix": "Same pattern — set RLS context vars before service-role insert via rpc('set_config')",
+          "tests_affected": 9
+        }
+      ],
+      "validation": "npx playwright test e2e/mtl-threshold-notifications.spec.ts e2e/workflows/rating-slip-modal.spec.ts --reporter=list"
+    },
+    {
+      "id": "WS-4",
+      "name": "Pit Page Selector Investigation",
+      "priority": 4,
+      "estimated_tests_unblocked": 15,
+      "files_touched": [
+        "app/(dashboard)/pit/",
+        "e2e/workflows/rating-slip-modal.spec.ts",
+        "e2e/workflows/move-player.spec.ts",
+        "e2e/mtl-threshold-notifications.spec.ts",
+        "e2e/workflows/loyalty-accrual-lifecycle.spec.ts"
+      ],
+      "root_causes": [
+        {
+          "id": "RC-7",
+          "description": "Tests wait for [data-testid='table-grid'] on /pit page which never appears. Either the component doesn't have this testid, or the page doesn't render tables for test scenarios (no active shift, no tables in casino, or missing casino_settings). Affects rating-slip-modal (13 tests), move-player (9 tests), mtl-threshold-notifications (11 tests), and loyalty-accrual-lifecycle (7 tests, 1 reference).",
+          "fix": "Step 1: Navigate to /pit with playwright-cli and inspect actual DOM. Step 2: Either add data-testid to the table grid component, or update test selectors to match actual DOM, or ensure fixture creates the data needed for /pit to render tables.",
+          "tests_affected": 28
+        }
+      ],
+      "validation": "npx playwright test e2e/workflows/rating-slip-modal.spec.ts e2e/workflows/move-player.spec.ts --reporter=list"
+    },
+    {
+      "id": "WS-5",
+      "name": "Assertion Drift — UI Text and Selectors",
+      "priority": 5,
+      "estimated_tests_unblocked": 20,
+      "files_touched": [
+        "e2e/workflows/csv-player-import.spec.ts",
+        "e2e/workflows/csv-server-import.spec.ts",
+        "e2e/workflows/setup-wizard.spec.ts",
+        "e2e/workflows/loyalty-admin-catalog.spec.ts",
+        "e2e/workflows/shift-dashboard-v3-layout.spec.ts",
+        "e2e/workflows/player-360-navigation.spec.ts",
+        "e2e/workflows/player-360-panels.spec.ts",
+        "e2e/workflows/loyalty-accrual-lifecycle.spec.ts",
+        "e2e/api/shift-intelligence.spec.ts",
+        "e2e/api/loyalty-accrual.spec.ts"
+      ],
+      "root_causes": [
+        {
+          "id": "RC-8",
+          "description": "CSV import specs expect '5 rows detected' / '10 rows detected' text — UI wording may have changed",
+          "fix": "Navigate to import page with playwright-cli, inspect actual text after file upload, update assertions",
+          "tests_affected": 6
+        },
+        {
+          "id": "RC-9",
+          "description": "Setup wizard specs expect 'Game Settings' card title via [data-slot='card-title'] — step titles or card structure may have changed",
+          "fix": "Navigate to /setup with playwright-cli, inspect card structure, update selectors",
+          "tests_affected": 2
+        },
+        {
+          "id": "RC-10",
+          "description": "loyalty-admin-catalog expects getByRole('heading', { name: 'Reward Catalog' }). The text 'Reward Catalog' exists in reward-list-client.tsx line 196 inside CardTitle, but CardTitle may render as <div> not <h*>, so getByRole('heading') fails on ARIA semantics.",
+          "fix": "Verify rendered HTML tag of CardTitle; if not an <h*> element, change test to use getByText('Reward Catalog') instead of getByRole('heading', ...)",
+          "tests_affected": 1
+        },
+        {
+          "id": "RC-11",
+          "description": "shift-dashboard-v3-layout unauthenticated redirect test expects different URL pattern",
+          "fix": "Verify actual redirect URL for unauthenticated access, update assertion",
+          "tests_affected": 1
+        },
+        {
+          "id": "RC-12",
+          "description": "player-360-navigation timeline redirect tests expect HTTP 308 — route.ts may not exist or returns different status",
+          "fix": "Verify /players/[id]/timeline route exists and returns correct redirect",
+          "tests_affected": 4
+        },
+        {
+          "id": "RC-13",
+          "description": "shift-intelligence API spec uses raw fetch() with hardcoded BASE_URL, may bypass auth or hit wrong route",
+          "fix": "Verify /api/v1/shift-intelligence/alerts route exists, update to use Playwright request context",
+          "tests_affected": 7
+        },
+        {
+          "id": "RC-14",
+          "description": "loyalty-accrual API spec close endpoint returns 401 — needs Mode C auth token in request",
+          "fix": "Add Authorization header to close request",
+          "tests_affected": 1
+        },
+        {
+          "id": "RC-15",
+          "description": "loyalty-accrual-lifecycle specs fail on close API and fixture creation",
+          "fix": "Fix auth + fixture issues (overlaps with WS-3)",
+          "tests_affected": 7
+        }
+      ],
+      "validation": "npx playwright test e2e/workflows/csv-player-import.spec.ts e2e/workflows/setup-wizard.spec.ts e2e/api/shift-intelligence.spec.ts --reporter=list"
+    },
+    {
+      "id": "WS-6",
+      "name": "CI Promotion — Advisory to Blocking",
+      "priority": 6,
+      "estimated_tests_unblocked": 0,
+      "files_touched": [".github/workflows/ci.yml"],
+      "root_causes": [
+        {
+          "id": "RC-16",
+          "description": "CI e2e job has continue-on-error: true and only runs 2 spec files (player-exclusion), not the full suite",
+          "fix": "Remove continue-on-error, change spec list to full 'npx playwright test', ensure Supabase start includes required services",
+          "tests_affected": 0
+        }
+      ],
+      "validation": "1. Run full suite in CI with continue-on-error: true for 3 consecutive green PR runs. 2. Only then remove continue-on-error. 3. Include ADR-044 section 12 change-control disclosure in the PR description."
+    }
+  ],
+  "triage_accounting": {
+    "total_non_passing": 118,
+    "workstream_unblock_estimates": {
+      "WS-1": 22,
+      "WS-2": 3,
+      "WS-3": 11,
+      "WS-4": 28,
+      "WS-5": 20,
+      "WS-6": 0,
+      "total_estimated": 84
+    },
+    "cascade_assumption": "Remaining ~34 tests are expected to auto-resolve as cascade-blocked tests in serial groups. If more than 10 cascade-unblocked tests reveal new independent failures, trigger an amendment per FIB-H section K.",
+    "overlap_note": "WS-5 RC-15 (loyalty-accrual-lifecycle, 7 tests) overlaps with WS-3 RLS context fixes. These tests may resolve from WS-3 alone."
+  },
+  "triage_evidence": {
+    "run_date": "2026-04-09",
+    "environment": "local Supabase + Next.js dev server (localhost:3000)",
+    "playwright_version": "^1.56.0",
+    "total_specs": 22,
+    "total_tests": 153,
+    "results": {
+      "passed": 22,
+      "failed": 50,
+      "did_not_run": 68,
+      "skipped_fixme": 13
+    },
+    "passing_specs": [
+      { "file": "player-exclusion-enforcement.spec.ts", "passed": 1 },
+      { "file": "company-registration.spec.ts", "passed": 5 },
+      {
+        "file": "player-exclusion.spec.ts",
+        "passed": 2,
+        "note": "role gating only"
+      },
+      {
+        "file": "admin-alerts.spec.ts",
+        "passed": 1,
+        "note": "dealer redirect only"
+      },
+      {
+        "file": "setup-wizard.spec.ts",
+        "passed": 2,
+        "note": "re-entry redirect only"
+      },
+      {
+        "file": "shift-dashboard-v3-layout.spec.ts",
+        "passed": 6,
+        "note": "layout tests"
+      },
+      {
+        "file": "player-360-panels.spec.ts",
+        "passed": 3,
+        "note": "route structure"
+      },
+      {
+        "file": "player-360-navigation.spec.ts",
+        "passed": 2,
+        "note": "route + URL params"
+      }
+    ]
+  },
+  "dependencies": {
+    "required_existing": [
+      "Local Supabase with all migrations applied",
+      "Next.js dev server at localhost:3000",
+      "Playwright chromium browser",
+      ".env.local with local Supabase credentials",
+      "Auth login form at /auth/login with #email and #password selectors",
+      "Service-role client with admin.createUser() capability",
+      "GitHub Actions Docker support for supabase start",
+      "ENABLE_DEV_AUTH=true set on dev server for shift-intelligence.spec.ts (Mode A dev bypass)"
+    ],
+    "missing_dependencies": [
+      "Exact data-testid attribute on pit page table grid component — needs investigation",
+      "Exact current text for CSV import row detection — needs investigation",
+      "Exact current route for shift-intelligence alerts API — needs investigation"
+    ],
+    "assumptions": [
+      "Most failures are fixture or selector bugs, not application bugs",
+      "Cascade failures (68 tests) will resolve when early serial-group failures are fixed",
+      "The 13 test.fixme stubs remain out of scope and will skip cleanly"
+    ]
+  },
+  "traceability": {
+    "outcomes": [
+      {
+        "id": "OUT-1",
+        "statement": "All 140 implemented test cases pass against local dev server + local Supabase."
+      },
+      {
+        "id": "OUT-2",
+        "statement": "npx playwright test exits 0 consistently on a clean environment."
+      },
+      {
+        "id": "OUT-3",
+        "statement": "Fixture factories create deterministic, isolated test data with proper cleanup."
+      },
+      {
+        "id": "OUT-4",
+        "statement": "No test depends on remote Supabase, manual data setup, or seed data state."
+      },
+      {
+        "id": "OUT-5",
+        "statement": "CI e2e job runs the full suite and is blocking on PR merge."
+      }
+    ],
+    "capability_to_outcome": [
+      { "capability": "CAP-1", "outcomes": ["OUT-1", "OUT-3"] },
+      { "capability": "CAP-2", "outcomes": ["OUT-1"] },
+      { "capability": "CAP-3", "outcomes": ["OUT-1", "OUT-3"] },
+      { "capability": "CAP-4", "outcomes": ["OUT-1"] },
+      { "capability": "CAP-5", "outcomes": ["OUT-1"] },
+      { "capability": "CAP-6", "outcomes": ["OUT-5"] }
+    ],
+    "workstream_to_root_cause": [
+      {
+        "workstream": "WS-1",
+        "root_causes": ["RC-1", "RC-2", "RC-3", "RC-3.5"]
+      },
+      { "workstream": "WS-2", "root_causes": ["RC-4"] },
+      { "workstream": "WS-3", "root_causes": ["RC-5", "RC-6"] },
+      { "workstream": "WS-4", "root_causes": ["RC-7"] },
+      {
+        "workstream": "WS-5",
+        "root_causes": [
+          "RC-8",
+          "RC-9",
+          "RC-10",
+          "RC-11",
+          "RC-12",
+          "RC-13",
+          "RC-14",
+          "RC-15"
+        ]
+      },
+      { "workstream": "WS-6", "root_causes": ["RC-16"] }
+    ]
+  },
+  "governance": {
+    "scope_authority": {
+      "artifact": "FEATURE_INTAKE_BRIEF",
+      "version": "v1",
+      "frozen": true
+    },
+    "open_questions_allowed_at_scaffold": [
+      "Exact data-testid selector names on pit page components",
+      "Exact API route paths for shift-intelligence alerts",
+      "Exact UI text for CSV import row detection feedback",
+      "Whether pit page requires active shift or casino_settings to render table grid"
+    ],
+    "downstream_expansion_allowed_without_amendment": false
+  }
+}

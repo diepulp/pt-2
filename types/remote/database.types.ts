@@ -297,6 +297,60 @@ export type Database = {
           },
         ]
       }
+      email_send_attempt: {
+        Row: {
+          casino_id: string
+          created_at: string
+          error_summary: string | null
+          id: string
+          original_attempt_id: string | null
+          payload_ref: Json | null
+          provider_message_id: string | null
+          recipient_email: string
+          status: string
+          template: string
+        }
+        Insert: {
+          casino_id: string
+          created_at?: string
+          error_summary?: string | null
+          id?: string
+          original_attempt_id?: string | null
+          payload_ref?: Json | null
+          provider_message_id?: string | null
+          recipient_email: string
+          status: string
+          template: string
+        }
+        Update: {
+          casino_id?: string
+          created_at?: string
+          error_summary?: string | null
+          id?: string
+          original_attempt_id?: string | null
+          payload_ref?: Json | null
+          provider_message_id?: string | null
+          recipient_email?: string
+          status?: string
+          template?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_send_attempt_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_send_attempt_original_attempt_id_fkey"
+            columns: ["original_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "email_send_attempt"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       finance_outbox: {
         Row: {
           attempt_count: number
