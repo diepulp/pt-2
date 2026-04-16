@@ -66,6 +66,10 @@ export async function updateSession(request: NextRequest) {
     '/start', // Gateway (redirect-only)
     '/pricing', // Marketing stub
     '/contact', // Marketing stub
+    '/floor-oversight', // Landing supporting page
+    '/session-tracking', // Landing supporting page
+    '/cash-accountability', // Landing supporting page
+    '/audit-compliance', // Landing supporting page
     '/auth', // Existing auth flows
     ...(process.env.NODE_ENV === 'development' ? ['/review'] : []), // Dev review pages — auth-gated in production
     '/login', // Backwards compat

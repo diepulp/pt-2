@@ -7,64 +7,64 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 
+import { Section } from '../section';
+
 const faqs = [
   {
-    question: 'What is Player Tracker for?',
+    question: 'What does Player Tracker replace?',
     answer:
-      'Player Tracker is a shift-ready CRM for table games operations. It tracks player sessions, rewards, visits, and floor activity for card rooms.',
+      'Player Tracker replaces legacy table games systems — the combination of paper rating slips, standalone tracking software, spreadsheets, and manual logs that most card rooms use to manage their floor. It becomes your system of record for player sessions, ratings, cash activity, and loyalty.',
   },
   {
-    question: 'Who is it for?',
+    question: 'Who is this built for?',
     answer:
-      'Pit bosses, shift managers, operations leads, and casino administrators who need consistent, auditable player tracking.',
+      'Owner-operators, GMs, and operations leads at small card rooms and similar gaming properties. If you run a floor and feel limited by your current systems, this is for you.',
   },
   {
-    question: 'What happens after I sign in?',
+    question: 'Is this a compliance product?',
     answer:
-      'Start Gateway checks your account status and routes you to the right step — bootstrap (new tenant), setup (incomplete config), or straight into the app.',
+      "No. Player Tracker is an operations platform with compliance built into the architecture — audit trails, immutable records, Title 31-aware cash tracking, and role-based access. It supports your compliance program; it doesn't replace it.",
   },
   {
-    question: 'Do I need to set up tables first?',
+    question: 'How long does setup take?',
     answer:
-      'Yes. After creating your casino workspace, the Setup Wizard guides you through configuring areas, tables, and game defaults before the app is fully operational.',
+      'A guided setup wizard walks you through configuring your property — areas, tables, games, and staff. Most properties are operational within a single session.',
   },
   {
-    question: 'Can one user manage multiple casinos?',
+    question: 'Can I import data from my current system?',
     answer:
-      'Not in the current version. Each staff account is bound to one casino. Multi-casino support is a future consideration.',
+      'Yes. Player Tracker includes a supervised import tool for player data and historical ratings. Imported records are quarantined, classified by match confidence, and only applied after admin review.',
   },
   {
-    question: 'Do you have billing?',
+    question: 'What about pricing?',
     answer:
-      'Not yet. We\u2019re in pilot/early access. Contact us to discuss access and pricing.',
+      'One product, one price per property. No tiers, no per-seat fees. Contact us to discuss pricing for your operation.',
   },
   {
-    question: 'How is data secured?',
+    question: 'Do I need to talk to someone before I can use it?',
     answer:
-      'All app routes are auth-protected. Data is isolated per casino via staff binding and row-level security policies.',
+      'We recommend a short walkthrough so we can understand your floor and make sure Player Tracker is a good fit. Self-serve setup is available if you prefer to get started on your own.',
   },
 ];
 
 export function FAQSection() {
   return (
-    <section id="faq" className="py-16 md:py-20 lg:py-24">
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl md:text-4xl font-semibold mb-10">
-          Common questions.
-        </h2>
-        <Accordion type="single" collapsible className="max-w-2xl">
-          {faqs.map((faq, i) => (
-            <AccordionItem key={i} value={`item-${i}`}>
-              <AccordionTrigger className="text-left">
-                {faq.question}
-              </AccordionTrigger>
-              <AccordionContent>
-                <p className="text-muted-foreground">{faq.answer}</p>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </div>
-    </section>
+    <Section id="faq">
+      <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+        Common questions.
+      </h2>
+      <Accordion type="single" collapsible className="mt-8 max-w-2xl">
+        {faqs.map((faq, i) => (
+          <AccordionItem key={i} value={`item-${i}`}>
+            <AccordionTrigger className="text-left text-base">
+              {faq.question}
+            </AccordionTrigger>
+            <AccordionContent>
+              <p className="text-muted-foreground">{faq.answer}</p>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </Section>
   );
 }

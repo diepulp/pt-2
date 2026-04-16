@@ -1,52 +1,52 @@
 import Link from 'next/link';
 
-import { Badge } from '@/components/ui/badge';
+import { Section } from '@/components/marketing/section';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+const included = [
+  'Shift dashboard and floor overview',
+  'Player profiles and visit tracking',
+  'Rating slips and theoretical win',
+  'Cash activity and threshold monitoring',
+  'Loyalty points and rewards',
+  'Operational logs and audit trail',
+  'Role-based access control',
+  'Ongoing updates and support',
+];
 
 export function PricingTeaserSection() {
   return (
-    <section id="pricing" className="py-16 md:py-20 lg:py-24 bg-muted/30">
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl md:text-4xl font-semibold mb-10">
-          Simple pricing.
+    <Section id="pricing" muted>
+      <div className="max-w-2xl">
+        <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+          One product. One price per property.
         </h2>
-        <div className="grid sm:grid-cols-2 gap-6 max-w-2xl">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-lg">Pilot / Early Access</CardTitle>
-                <Badge variant="secondary">Current</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-base">
-                Contact us to request access. We&apos;ll work with you to get
-                operational.
-              </p>
-              <Button variant="outline" className="mt-4" asChild>
-                <Link href="/contact">Contact us</Link>
-              </Button>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-lg">Standard</CardTitle>
-                <Badge variant="outline">Coming soon</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-base">
-                Per-casino pricing. Details available after pilot feedback.
-              </p>
-              <Button className="mt-4" asChild>
-                <Link href="/start">Get started</Link>
-              </Button>
-            </CardContent>
-          </Card>
+        <p className="mt-3 text-base text-muted-foreground md:text-lg">
+          No tiers. No modules. No per-seat pricing games. You get the full
+          platform for each property you operate.
+        </p>
+
+        <div className="mt-8 space-y-6">
+          <div>
+            <h3 className="text-lg font-semibold">What&apos;s included</h3>
+            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+              {included.map((item) => (
+                <li
+                  key={item}
+                  className="flex items-start gap-2 text-base text-muted-foreground"
+                >
+                  <span className="mt-1.5 block h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/40" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <Button size="lg" asChild>
+            <Link href="/contact">Talk to Us About Pricing</Link>
+          </Button>
         </div>
       </div>
-    </section>
+    </Section>
   );
 }

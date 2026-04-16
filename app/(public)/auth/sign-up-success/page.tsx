@@ -1,31 +1,38 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import Link from 'next/link';
 
 export default function Page() {
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">
-                Thank you for signing up!
-              </CardTitle>
-              <CardDescription>Check your email to confirm</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                You&apos;ve successfully signed up. Please check your email to
-                confirm your account before signing in.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 sm:p-8">
+      <div className="mb-4">
+        <h1
+          className="text-2xl font-bold"
+          style={{
+            background:
+              'linear-gradient(to right bottom, rgb(247 248 248) 30%, rgba(247 248 248 / 0.38))',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          Check your email
+        </h1>
+        <p className="mt-2 text-[15px] text-[#95A2B3]">
+          Account created successfully
+        </p>
+      </div>
+
+      <p className="text-sm leading-relaxed text-[#95A2B3]/70">
+        You&apos;ve successfully signed up. Please check your email to confirm
+        your account before signing in.
+      </p>
+
+      <div className="mt-6">
+        <Link
+          href="/auth/login"
+          className="text-sm text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8]"
+        >
+          &larr; Back to sign in
+        </Link>
       </div>
     </div>
   );

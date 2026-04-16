@@ -4,19 +4,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { getErrorMessage } from '@/lib/errors/error-utils';
 import { createBrowserComponentClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+
+const inputStyles =
+  'h-11 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 text-sm text-[#F7F8F8] placeholder:text-[#95A2B3]/40 transition-all duration-300 focus:border-[hsl(189_94%_43%/0.3)] focus:outline-none focus:ring-2 focus:ring-[hsl(189_94%_43%/0.2)]';
+
+const buttonStyles =
+  'mt-1 h-12 w-full rounded-full bg-[hsl(189_94%_43%)] text-sm font-semibold tracking-wide text-white shadow-[0_1px_40px_hsl(189_94%_43%/0.25)] transition-all duration-300 hover:bg-[hsl(189_94%_43%/0.85)] hover:shadow-[0_1px_50px_hsl(189_94%_43%/0.35)] disabled:opacity-50 disabled:cursor-not-allowed';
 
 export function SignUpForm({
   className,
@@ -59,64 +55,104 @@ export function SignUpForm({
   };
 
   return (
-    <div className={cn('flex flex-col gap-6', className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Sign up</CardTitle>
-          <CardDescription>Create a new account</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSignUp}>
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="repeat-password">Repeat Password</Label>
-                </div>
-                <Input
-                  id="repeat-password"
-                  type="password"
-                  required
-                  value={repeatPassword}
-                  onChange={(e) => setRepeatPassword(e.target.value)}
-                />
-              </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Creating an account...' : 'Sign up'}
-              </Button>
+    <div className={cn('flex flex-col', className)} {...props}>
+      {/* Glassmorphic card */}
+      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 sm:p-8">
+        {/* Header */}
+        <div className="mb-6">
+          <h1
+            className="text-2xl font-bold"
+            style={{
+              background:
+                'linear-gradient(to right bottom, rgb(247 248 248) 30%, rgba(247 248 248 / 0.38))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            Create account
+          </h1>
+          <p className="mt-2 text-[15px] text-[#95A2B3]">
+            Set up your pit station access
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSignUp}>
+          <div className="flex flex-col gap-5">
+            <div className="grid gap-2">
+              <label
+                htmlFor="signup-email"
+                className="text-sm font-medium text-[#95A2B3]"
+              >
+                Email
+              </label>
+              <input
+                id="signup-email"
+                type="email"
+                autoComplete="email"
+                placeholder="pit.boss@casino.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputStyles}
+              />
             </div>
-            <div className="mt-4 text-center text-sm">
-              Already have an account?{' '}
-              <Link href="/signin" className="underline underline-offset-4">
-                Login
-              </Link>
+
+            <div className="grid gap-2">
+              <label
+                htmlFor="signup-password"
+                className="text-sm font-medium text-[#95A2B3]"
+              >
+                Password
+              </label>
+              <input
+                id="signup-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={inputStyles}
+              />
             </div>
-          </form>
-        </CardContent>
-      </Card>
+
+            <div className="grid gap-2">
+              <label
+                htmlFor="signup-repeat-password"
+                className="text-sm font-medium text-[#95A2B3]"
+              >
+                Confirm password
+              </label>
+              <input
+                id="signup-repeat-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={repeatPassword}
+                onChange={(e) => setRepeatPassword(e.target.value)}
+                className={inputStyles}
+              />
+            </div>
+
+            {error && <p className="text-sm text-red-400/90">{error}</p>}
+
+            <button type="submit" disabled={isLoading} className={buttonStyles}>
+              {isLoading ? 'Creating account\u2026' : 'Create account'}
+            </button>
+          </div>
+
+          <div className="mt-6 text-center text-sm text-[#95A2B3]/60">
+            Already have an account?{' '}
+            <Link
+              href="/auth/login"
+              className="text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8]"
+            >
+              Sign in
+            </Link>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

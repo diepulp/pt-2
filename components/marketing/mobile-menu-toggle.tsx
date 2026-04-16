@@ -17,7 +17,7 @@ export function MobileMenuToggle() {
       >
         {isOpen ? (
           <svg
-            className="h-6 w-6"
+            className="h-5 w-5"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth="1.5"
@@ -31,7 +31,7 @@ export function MobileMenuToggle() {
           </svg>
         ) : (
           <svg
-            className="h-6 w-6"
+            className="h-5 w-5"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth="1.5"
@@ -47,21 +47,14 @@ export function MobileMenuToggle() {
       </button>
 
       {isOpen && (
-        <div className="absolute top-16 left-0 right-0 border-b bg-background p-4">
+        <div className="absolute left-0 right-0 top-14 border-b bg-background p-4">
           <nav className="flex flex-col gap-4">
-            <Link
-              href="/#capabilities"
-              className="text-sm text-muted-foreground hover:text-foreground"
-              onClick={() => setIsOpen(false)}
-            >
-              Product
-            </Link>
             <Link
               href="/#how-it-works"
               className="text-sm text-muted-foreground hover:text-foreground"
               onClick={() => setIsOpen(false)}
             >
-              How it works
+              Product
             </Link>
             <Link
               href="/pricing"
@@ -77,12 +70,12 @@ export function MobileMenuToggle() {
             >
               Contact
             </Link>
-            <div className="flex flex-col gap-2 pt-2 border-t">
+            <div className="flex flex-col gap-2 border-t pt-2">
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/signin">Sign in</Link>
               </Button>
               <Button size="sm" asChild>
-                <Link href="/start">Get started</Link>
+                <Link href="/contact">Request a Demo</Link>
               </Button>
             </div>
           </nav>

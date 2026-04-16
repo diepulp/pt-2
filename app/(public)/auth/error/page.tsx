@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
 
 export default async function Page({
   searchParams,
@@ -8,28 +8,35 @@ export default async function Page({
   const params = await searchParams;
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">
-                Sorry, something went wrong.
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {params?.error ? (
-                <p className="text-sm text-muted-foreground">
-                  Code error: {params.error}
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  An unspecified error occurred.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 sm:p-8">
+      <div className="mb-4">
+        <h1
+          className="text-2xl font-bold"
+          style={{
+            background:
+              'linear-gradient(to right bottom, rgb(247 248 248) 30%, rgba(247 248 248 / 0.38))',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          Something went wrong
+        </h1>
+      </div>
+
+      <p className="text-sm leading-relaxed text-[#95A2B3]/70">
+        {params?.error
+          ? `Error code: ${params.error}`
+          : 'An unspecified error occurred.'}
+      </p>
+
+      <div className="mt-6">
+        <Link
+          href="/auth/login"
+          className="text-sm text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8]"
+        >
+          &larr; Back to sign in
+        </Link>
       </div>
     </div>
   );

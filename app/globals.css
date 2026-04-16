@@ -243,6 +243,28 @@
 }
 
 /* ============================================================================
+ * PT-2 Landing Page
+ * Keyframes & utilities used by the marketing landing page.
+ * ============================================================================ */
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes grid-fade {
+  0%, 100% { opacity: 0.03; }
+  50% { opacity: 0.06; }
+}
+
+.text-gradient-heading {
+  background: linear-gradient(to right bottom, rgb(247 248 248) 30%, rgba(247 248 248 / 0.38));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================================================
  * Print Styles for Dialog/Modal Printing
  * When a dialog is open and print is triggered, hide the main app content
  * and show only the dialog. Uses :has() to detect open dialog state.
