@@ -20,6 +20,10 @@ jest.mock('@/hooks/mtl/use-threshold-notifications', () => ({
   notifyThreshold: jest.fn(),
 }));
 
+import {
+  checkCumulativeThreshold,
+  notifyThreshold,
+} from '@/hooks/mtl/use-threshold-notifications';
 import { createFinancialTransaction } from '@/services/player-financial/http';
 import { updateAverageBet } from '@/services/rating-slip/http';
 
@@ -208,5 +212,110 @@ describe('useSaveWithBuyIn', () => {
         }),
       );
     });
+  });
+
+  // ==========================================================================
+  // PRD-064 WS1: Commit-barrier threshold notification ordering
+  //
+  // Regression guard: notifyThreshold must fire AFTER the mutation resolves
+  // 2xx, not at step 1 of mutationFn. Firing early produces a success-like
+  // toast for a transaction that may never commit.
+  // ==========================================================================
+
+  it('should NOT fire notifyThreshold before the mutation resolves', async () => {
+    // Gate the PATCH update so we can assert ordering
+    let resolveUpdate: (value: unknown) => void;
+    (updateAverageBet as jest.Mock).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveUpdate = resolve;
+        }),
+    );
+    (checkCumulativeThreshold as jest.Mock).mockReturnValue({
+      level: 'watchlist_met',
+      shouldCreateMtl: true,
+      requiresCtr: false,
+      message: 'MTL entry required',
+    });
+
+    const { result } = renderHook(() => useSaveWithBuyIn(), {
+      wrapper: createWrapper(),
+    });
+
+    // Fire mutation but do not await — PATCH is still pending
+    const pendingMutation = result.current.mutateAsync({
+      slipId: 'slip-1',
+      visitId: 'visit-1',
+      playerId: 'player-1',
+      casinoId: 'casino-1',
+      tableId: 'table-1',
+      staffId: 'staff-1',
+      averageBet: 25,
+      newBuyIn: 3000,
+      chipsTaken: 0,
+      playerDailyTotal: 0,
+    });
+
+    // Wait for onMutate + step 1 of mutationFn to execute (threshold
+    // projection is synchronous within mutationFn, but onMutate awaits
+    // cancelQueries before mutationFn begins).
+    await waitFor(() => {
+      expect(checkCumulativeThreshold).toHaveBeenCalledWith(0, 3000);
+    });
+
+    // notify must NOT have fired yet — PATCH is still pending
+    expect(notifyThreshold).not.toHaveBeenCalled();
+
+    // Now resolve the PATCH and let the mutation complete
+    resolveUpdate!({ id: 'slip-1', average_bet: 25 });
+    await pendingMutation;
+
+    // After 2xx resolution, notifyThreshold fires exactly once with the projection
+    await waitFor(() => {
+      expect(notifyThreshold).toHaveBeenCalledTimes(1);
+    });
+    expect(notifyThreshold).toHaveBeenCalledWith({
+      level: 'watchlist_met',
+      shouldCreateMtl: true,
+      requiresCtr: false,
+      message: 'MTL entry required',
+    });
+  });
+
+  it('should NOT fire notifyThreshold when the mutation fails', async () => {
+    (updateAverageBet as jest.Mock).mockRejectedValue(
+      new Error('PATCH failed — 500'),
+    );
+    (checkCumulativeThreshold as jest.Mock).mockReturnValue({
+      level: 'watchlist_met',
+      shouldCreateMtl: true,
+      requiresCtr: false,
+      message: 'MTL entry required',
+    });
+
+    const { result } = renderHook(() => useSaveWithBuyIn(), {
+      wrapper: createWrapper(),
+    });
+
+    await expect(
+      result.current.mutateAsync({
+        slipId: 'slip-1',
+        visitId: 'visit-1',
+        playerId: 'player-1',
+        casinoId: 'casino-1',
+        tableId: 'table-1',
+        staffId: 'staff-1',
+        averageBet: 25,
+        newBuyIn: 3000,
+        chipsTaken: 0,
+        playerDailyTotal: 0,
+      }),
+    ).rejects.toThrow('PATCH failed — 500');
+
+    // Threshold was computed (pure client projection), but the notification
+    // must never fire on a failed mutation — operators must not see a
+    // success-class toast for a transaction that didn't commit.
+    expect(checkCumulativeThreshold).toHaveBeenCalledWith(0, 3000);
+    expect(notifyThreshold).not.toHaveBeenCalled();
   });
 });

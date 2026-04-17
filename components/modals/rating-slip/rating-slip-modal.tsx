@@ -1,6 +1,6 @@
 'use client';
 
-import { Pause, Play, RefreshCw, X } from 'lucide-react';
+import { Loader2, Pause, Play, RefreshCw, X } from 'lucide-react';
 import React, {
   useCallback,
   useEffect,
@@ -128,6 +128,14 @@ interface RatingSlipModalProps {
   /** Move player mutation pending state from parent */
   isMovePlayerPending?: boolean;
 
+  /**
+   * Save mutation pending state from parent (PRD-064 WS1).
+   * When true, the modal becomes a commit barrier — Escape/overlay/X are
+   * disabled so operators cannot dismiss a success-like UI while the
+   * financial transaction is still in-flight.
+   */
+  isSavePending?: boolean;
+
   /** Error message to display */
   error?: string | null;
 
@@ -183,6 +191,7 @@ export function RatingSlipModal({
   onCloseSession,
   onMovePlayer,
   isMovePlayerPending = false,
+  isSavePending = false,
   error = null,
   // Legacy props (ignored if slipId is provided)
   ratingSlip: legacyRatingSlip,
@@ -558,10 +567,43 @@ export function RatingSlipModal({
   const newBuyInAmount = Number(formState.newBuyIn) || 0;
   const playerDailyTotalDollars = (patronDailyTotal?.totalIn ?? 0) / 100;
 
+  // PRD-064 WS1: Commit-barrier UX — while the save mutation is in flight,
+  // operators must not be able to dismiss the modal. Escape, overlay click,
+  // and the X button are all disabled until the mutation resolves.
+  const handleOpenChange = (open: boolean) => {
+    if (!open && isSavePending) return;
+    if (!open) onClose();
+  };
+
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-h-[90vh] flex flex-col overflow-hidden">
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+        <DialogContent
+          className="max-h-[90vh] flex flex-col overflow-hidden"
+          onEscapeKeyDown={(e) => {
+            if (isSavePending) e.preventDefault();
+          }}
+          onPointerDownOutside={(e) => {
+            if (isSavePending) e.preventDefault();
+          }}
+          onInteractOutside={(e) => {
+            if (isSavePending) e.preventDefault();
+          }}
+        >
+          {/*
+            PRD-064 WS1: When a save is in flight, visually swap the X close
+            button for a spinner and block pointer events to prevent dismissal.
+            onOpenChange is already guarded (handleOpenChange), this is purely
+            the visual affordance so operators understand the modal is locked.
+          */}
+          {isSavePending && (
+            <div
+              className="absolute right-6 top-6 z-10 inline-flex size-8 items-center justify-center rounded-md bg-card text-muted-foreground"
+              aria-hidden="true"
+            >
+              <Loader2 className="size-4 animate-spin" />
+            </div>
+          )}
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-3">
               <span>Rating Slip - {playerName}</span>
@@ -789,15 +831,26 @@ export function RatingSlipModal({
               type="button"
               className="flex-1"
               onClick={handleSave}
-              disabled={isPending || !isDirty || !!validationError || isPaused}
+              disabled={
+                isPending ||
+                isSavePending ||
+                !isDirty ||
+                !!validationError ||
+                isPaused
+              }
             >
-              {isPending
-                ? 'Saving...'
-                : validationError
-                  ? 'Fix Errors'
-                  : isDirty
-                    ? 'Save Changes'
-                    : 'No Changes'}
+              {isPending || isSavePending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : validationError ? (
+                'Fix Errors'
+              ) : isDirty ? (
+                'Save Changes'
+              ) : (
+                'No Changes'
+              )}
             </Button>
 
             {/* Pause/Resume Toggle Button */}
@@ -807,7 +860,7 @@ export function RatingSlipModal({
                 variant="outline"
                 className="flex-1 border-amber-500/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 hover:border-amber-400"
                 onClick={handlePauseSession}
-                disabled={isPauseResumeLoading || isPending}
+                disabled={isPauseResumeLoading || isPending || isSavePending}
                 aria-label="Pause session - stops loyalty accrual and session timer"
               >
                 {isPauseResumeLoading ? (
@@ -826,7 +879,7 @@ export function RatingSlipModal({
                 variant="outline"
                 className="flex-1 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 hover:border-emerald-400"
                 onClick={handleResumeSession}
-                disabled={isPauseResumeLoading || isPending}
+                disabled={isPauseResumeLoading || isPending || isSavePending}
                 aria-label="Resume session - restarts loyalty accrual and session timer"
               >
                 {isPauseResumeLoading ? (
@@ -845,7 +898,7 @@ export function RatingSlipModal({
               variant="destructive"
               className="flex-1"
               onClick={handleCloseSession}
-              disabled={isPending || !!error}
+              disabled={isPending || isSavePending || !!error}
             >
               {isPending ? (
                 'Closing...'

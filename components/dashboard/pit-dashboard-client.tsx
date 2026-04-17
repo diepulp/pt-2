@@ -649,6 +649,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         onCloseSession={handleCloseSession}
         onMovePlayer={handleMovePlayer}
         isMovePlayerPending={movePlayer.isPending}
+        isSavePending={saveWithBuyIn.isPending}
       />
     </div>
   );

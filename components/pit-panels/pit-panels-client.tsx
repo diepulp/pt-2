@@ -24,6 +24,15 @@ import {
   type FormState,
 } from '@/components/modals/rating-slip/rating-slip-modal';
 import { ActivationDrawer } from '@/components/table/activation-drawer';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useGamingDay } from '@/hooks/casino/use-gaming-day';
 import {
   useDashboardTables,
@@ -37,6 +46,7 @@ import {
   useCloseWithFinancial,
   useMovePlayer,
   useRatingSlipModalData,
+  hasPendingUnsavedBuyIn,
 } from '@/hooks/rating-slip-modal';
 import { useCurrentTableSession } from '@/hooks/table-context/use-table-session';
 import { toast, useModal, usePitDashboardUI } from '@/hooks/ui';
@@ -132,6 +142,13 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   // Tracks both status changes AND table selection changes so switching
   // to an OPEN table (or re-selecting the same one) reopens the drawer.
   const [activationDrawerOpen, setActivationDrawerOpen] = React.useState(false);
+
+  // PRD-064 WS2 / P1.4: Unsaved-buy-in interlock — blocking prompt when
+  // operator attempts Close Session with a pending, unsaved buy-in.
+  // Non-dismissible: only control returns focus to the rating-slip modal's
+  // save flow. @see hasPendingUnsavedBuyIn.
+  const [unsavedBuyInPromptOpen, setUnsavedBuyInPromptOpen] =
+    React.useState(false);
   React.useEffect(() => {
     if (currentSession?.status === 'OPEN') {
       setActivationDrawerOpen(true);
@@ -340,6 +357,16 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     }
 
     if (!staffId) {
+      return;
+    }
+
+    // PRD-064 WS2 / P1.4 — Unsaved-Buy-In Interlock.
+    // If the operator typed a non-zero `newBuyIn` but has not saved it (the
+    // save mutation resets the field to '0' via initializeForm), block the
+    // close and surface a non-dismissible prompt that returns to the save
+    // flow. Never silently drop `newBuyIn`.
+    if (hasPendingUnsavedBuyIn(formState)) {
+      setUnsavedBuyInPromptOpen(true);
       return;
     }
 
@@ -553,6 +580,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         onCloseSession={handleCloseSession}
         onMovePlayer={handleMovePlayer}
         isMovePlayerPending={movePlayer.isPending}
+        isSavePending={saveWithBuyIn.isPending}
       />
 
       {/* PRD-059: Activation Drawer — OPEN → ACTIVE custody gate */}
@@ -566,6 +594,42 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
             tableId={selectedTableId}
           />
         )}
+
+      {/*
+        PRD-064 WS2 / P1.4 — Unsaved-Buy-In Interlock.
+        Non-dismissible blocking prompt shown when the operator hits Close
+        Session with a pending, unsaved buy-in. The only control dismisses
+        the alert and keeps the rating-slip modal open on the save surface
+        — never the close path. No silent discard of newBuyIn.
+      */}
+      <AlertDialog
+        open={unsavedBuyInPromptOpen}
+        // Intentionally omit onOpenChange so the overlay / Escape cannot
+        // dismiss the dialog. Operator must use the action button.
+      >
+        <AlertDialogContent data-testid="unsaved-buyin-interlock">
+          <AlertDialogHeader>
+            <AlertDialogTitle
+              className="text-sm font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Unsaved Buy-In Detected
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Unsaved buy-in detected. Save it before closing session.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              data-testid="unsaved-buyin-interlock-return"
+              onClick={() => setUnsavedBuyInPromptOpen(false)}
+              className="h-8 text-xs font-semibold uppercase tracking-wider"
+            >
+              Return to Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
