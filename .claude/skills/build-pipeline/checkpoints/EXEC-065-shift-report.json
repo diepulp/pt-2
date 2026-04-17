@@ -1,0 +1,82 @@
+{
+  "id": "EXEC-065-shift-report",
+  "prd": "FIB-H-SHIFT-REPORT",
+  "prd_title": "Shift Report — Assembly, Canonical PDF & Distribution",
+  "exec_spec": "docs/21-exec-spec/EXEC-065-shift-report.md",
+  "status": "approved",
+  "complexity_prescreen": "full",
+  "gov010_check": "n/a",
+  "fib_h_ref": "docs/00-vision/REPORTING-LAYER/FIB-H-SHIFT-REPORT.md",
+  "fib_s_ref": "docs/00-vision/REPORTING-LAYER/FIB-S-SHIFT-REPORT.json",
+  "fib_s_loaded": true,
+  "write_path_classification": "detected",
+  "write_path_evidence": [
+    "WS4 route handler uses withServerAction (server action middleware)",
+    "WS4 delegates INSERT to email_send_attempt via EmailService (services/email/index.ts:44)"
+  ],
+  "adversarial_review": {
+    "magnitude_score": 3,
+    "magnitude_tier": "tier_1_focused",
+    "magnitude_signals": [
+      "+3: Cross-context bounded contexts > 1 (6 consumed contexts)",
+      "+2: Workstream count > 4 (6 workstreams)",
+      "+1: Execution phases > 2 (5 phases)",
+      "+1: Executor diversity > 3 (4 distinct skills)",
+      "-2: No migration workstreams",
+      "-1: No RLS workstreams",
+      "-1: No SECURITY DEFINER workstreams"
+    ],
+    "review_type": "human_audit_delta",
+    "review_source": "exec-065-shift-report-audit-delta.md",
+    "verdict": "pass_after_patch",
+    "patches_applied": 8,
+    "patch_summary": [
+      "C1: Softened PDF library lock from frozen to preferred-initial-path",
+      "C2: Removed new-bounded-context claim, reframed as composition surface",
+      "C3: Clarified write-path scope (no DB security changes, bounded app-layer write via email)",
+      "C4: Grounded idempotency persistence with code citation (services/email/index.ts:44)",
+      "C5: Fixed stale FIB E1 traceability wording",
+      "C6: Conditionalized API catalog/OpenAPI governance artifacts",
+      "C7: Normalized 6-contexts/7-source-calls counting",
+      "C8: Added anti-schema-gravity statement to Architecture Context"
+    ]
+  },
+  "intake_traceability": {
+    "capability_coverage": "5/5",
+    "anti_invention_desc": "clean",
+    "anti_invention_paths": "2/2 verified",
+    "open_questions": "2 resolved / 0 carried / 0 missing",
+    "hard_rule_visibility": "10/10"
+  },
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "question": "Cash observation data: inline or separate sub-section?",
+      "resolution": "Inline in financial summary table",
+      "verification": "cited"
+    },
+    {
+      "id": "DEC-002",
+      "question": "Theo discrepancy: quality badge in Section 2 or defer?",
+      "resolution": "Included as quality badge in Section 2",
+      "verification": "cited"
+    },
+    {
+      "id": "DEC-003",
+      "question": "PDF library selection",
+      "resolution": "@react-pdf/renderer as preferred initial path (not frozen)",
+      "verification": "assumption"
+    }
+  ],
+  "current_phase": 0,
+  "total_phases": 5,
+  "completed_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS_E2E"],
+  "gates_passed": [],
+  "worktree": {
+    "path": "trees/reporting-layer",
+    "branch": "reporting-layer"
+  },
+  "created_at": "2026-04-15T00:00:00Z",
+  "approved_at": "2026-04-16T00:00:00Z"
+}
