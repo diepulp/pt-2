@@ -20,9 +20,15 @@
 
 'use client';
 
-import { format, subDays, addDays } from 'date-fns';
-import { Calendar, ChevronLeft, ChevronRight, Shield } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { format, subDays, addDays, parseISO } from 'date-fns';
+import {
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Shield,
+} from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
 
 import { AdjustmentModal } from '@/components/modals/rating-slip/adjustment-modal';
 import { Button } from '@/components/ui/button';
@@ -34,6 +40,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useGamingDay } from '@/hooks/casino/use-gaming-day';
 import { useGamingDaySummary } from '@/hooks/mtl/use-gaming-day-summary';
 import { useCreateFinancialAdjustment } from '@/hooks/player-financial/use-financial-mutations';
 import { cn } from '@/lib/utils';
@@ -68,10 +75,18 @@ export function ComplianceDashboard({
   canAddNotes = false,
   className,
 }: ComplianceDashboardProps) {
-  // Date state - default to today
-  const [gamingDay, setGamingDay] = useState(() =>
-    format(new Date(), 'yyyy-MM-dd'),
-  );
+  // Canonical current gaming day per TEMP-002 — DB-derived from casino TZ + cutoff.
+  const { data: gamingDayData } = useGamingDay();
+  const currentGamingDay = gamingDayData?.gaming_day ?? null;
+
+  // Operator-scrubbed view date, seeded from the canonical current day on first resolve.
+  const [gamingDay, setGamingDay] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (gamingDay === null && currentGamingDay !== null) {
+      setGamingDay(currentGamingDay);
+    }
+  }, [gamingDay, currentGamingDay]);
 
   // Selected patron state - track patron info for view modal
   const [selectedPatron, setSelectedPatron] = useState<{
@@ -94,10 +109,11 @@ export function ComplianceDashboard({
   // Adjustment mutation
   const createAdjustment = useCreateFinancialAdjustment();
 
-  // Fetch summary data for stats
+  // Fetch summary data for stats (query is gated on gamingDay being non-null
+  // via the hook's `enabled` guard: both casinoId and gamingDay must be set).
   const { data: summaryData } = useGamingDaySummary({
     casinoId,
-    gamingDay,
+    gamingDay: gamingDay ?? '',
   });
 
   // Calculate stats from summary data
@@ -125,19 +141,25 @@ export function ComplianceDashboard({
     };
   }, [summaryData]);
 
-  // Navigation handlers
+  // Navigation handlers (safe no-op until canonical gaming day has resolved —
+  // the date navigation UI isn't rendered until then).
   const goToPreviousDay = () => {
-    setGamingDay((d) => format(subDays(new Date(d), 1), 'yyyy-MM-dd'));
+    setGamingDay((d) =>
+      d ? format(subDays(parseISO(d), 1), 'yyyy-MM-dd') : d,
+    );
     setSelectedPatron(null);
   };
 
   const goToNextDay = () => {
-    setGamingDay((d) => format(addDays(new Date(d), 1), 'yyyy-MM-dd'));
+    setGamingDay((d) =>
+      d ? format(addDays(parseISO(d), 1), 'yyyy-MM-dd') : d,
+    );
     setSelectedPatron(null);
   };
 
   const goToToday = () => {
-    setGamingDay(format(new Date(), 'yyyy-MM-dd'));
+    if (currentGamingDay === null) return;
+    setGamingDay(currentGamingDay);
     setSelectedPatron(null);
   };
 
@@ -203,7 +225,23 @@ export function ComplianceDashboard({
     }
   };
 
-  const isToday = gamingDay === format(new Date(), 'yyyy-MM-dd');
+  const isToday = gamingDay !== null && gamingDay === currentGamingDay;
+
+  // Suspense-style gate: wait for the canonical gaming day before rendering
+  // nav / summary. Prevents operator clicks against a null selector and
+  // eliminates a browser-local-TZ flash default.
+  if (gamingDay === null) {
+    return (
+      <div
+        className={cn(
+          'flex flex-1 items-center justify-center py-12',
+          className,
+        )}
+      >
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className={cn('flex flex-1 flex-col', className)}>
@@ -291,8 +329,8 @@ export function ComplianceDashboard({
           />
           <StatCard
             title="Gaming Day"
-            value={format(new Date(gamingDay), 'EEE')}
-            description={format(new Date(gamingDay), 'MMM d, yyyy')}
+            value={format(parseISO(gamingDay), 'EEE')}
+            description={format(parseISO(gamingDay), 'MMM d, yyyy')}
           />
         </div>
 
