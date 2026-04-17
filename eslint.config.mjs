@@ -234,7 +234,10 @@ const eslintConfig = [
   },
   // ==========================================================================
   // TEMP-003 / PRD-027: Temporal governance enforcement
-  // Prevents JS temporal bypass patterns in query paths (services/, app/, hooks/)
+  // Prevents JS temporal bypass patterns in query paths (services/, app/,
+  // hooks/) AND components/. The components/ scope was added after the MTL
+  // compliance-dashboard drift (commit f2327702) surfaced the same bypass
+  // pattern in display-layer code.
   // ==========================================================================
   {
     files: [
@@ -244,6 +247,8 @@ const eslintConfig = [
       'app/**/*.tsx',
       'hooks/**/*.ts',
       'hooks/**/*.tsx',
+      'components/**/*.ts',
+      'components/**/*.tsx',
     ],
     ignores: [
       '**/*.test.ts',

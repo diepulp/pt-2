@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDismissedAlerts } from '@/hooks/admin/dismissed-alerts-context';
 import { useAdminAlerts } from '@/hooks/admin/use-admin-alerts';
+import { useGamingDay } from '@/hooks/casino/use-gaming-day';
 import {
   usePersistAlerts,
   useShiftAlerts,
@@ -31,16 +32,14 @@ const SEVERITY_ORDER: Record<Severity, number> = {
   info: 2,
 };
 
-function todayGamingDay(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export function AlertsPageClient() {
   const { data: alerts, isLoading, timeWindow } = useAdminAlerts();
   const { dismissAlert, isDismissed } = useDismissedAlerts();
 
-  // PRD-056: Persistent baseline alerts
-  const gamingDay = todayGamingDay();
+  // PRD-056: Persistent baseline alerts, keyed on the canonical casino gaming
+  // day (TEMP-002). useShiftAlerts gates on truthy gamingDay.
+  const { data: gamingDayData } = useGamingDay();
+  const gamingDay = gamingDayData?.gaming_day ?? '';
   const persistMutation = usePersistAlerts();
   const { data: shiftAlertsData, isLoading: isLoadingShiftAlerts } =
     useShiftAlerts(gamingDay);

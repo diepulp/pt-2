@@ -56,6 +56,8 @@ module.exports = {
         'TEMPORAL BYPASS: `{{name}}` is a deprecated JS temporal function that bypasses the canonical DB authority path. Use `getServerGamingDay()` (RSC), `useGamingDay()` (client), or `rpc_current_gaming_day()` (RPC). See TEMP-003 §3, PRD-027.',
       noBannedTemporalImport:
         'TEMPORAL BYPASS: Importing `{{name}}` — this is a deprecated JS temporal function. Use `getServerGamingDay()` from `@/lib/gaming-day/server` (RSC) or `useGamingDay()` from `@/hooks/casino/use-gaming-day` (client). See TEMP-003 §3, PRD-027.',
+      noDateFnsFormatNow:
+        'TEMPORAL BYPASS: `format(new Date(), \'{{pattern}}\')` formats the browser-local calendar date, not the casino gaming day. Use `useGamingDay()` (client) or `getServerGamingDay()` (RSC). See TEMP-003 §3.1.',
     },
     schema: [],
   },
@@ -63,12 +65,14 @@ module.exports = {
   create(context) {
     const filename = context.getFilename();
 
-    // Only enforce in query paths: services/, app/, hooks/
-    // Exclude: components/ (display-only), docs/, tests, .claude/
+    // Enforce in query paths + components. Components were originally excluded
+    // as "display-only" but the MTL compliance-dashboard drift (commit
+    // f2327702) showed the default-computation pattern lives in components too.
     const isQueryPath =
       filename.includes('/services/') ||
       filename.includes('/app/') ||
-      filename.includes('/hooks/');
+      filename.includes('/hooks/') ||
+      filename.includes('/components/');
 
     if (!isQueryPath) {
       return {};
@@ -210,6 +214,47 @@ module.exports = {
             data: { name: prop.name },
           });
         }
+      },
+
+      // ---------------------------------------------------------------
+      // Pattern 5: date-fns format(new Date(), '<date-pattern>')
+      // Catches: format(new Date(), 'yyyy-MM-dd') — browser-local calendar
+      // date derivation. Narrow match: arg0 must be `new Date()` with no args,
+      // arg1 must be a string literal containing a year token (yy / yyyy).
+      // Time-only patterns ('HH:mm') and formatted timestamps are unaffected.
+      // AST: CallExpression callee.name="format", args=[NewExpression(Date), Literal(string with year)]
+      // ---------------------------------------------------------------
+      'CallExpression[callee.type="Identifier"][callee.name="format"]'(node) {
+        if (!node.arguments || node.arguments.length < 2) return;
+        const [arg0, arg1] = node.arguments;
+
+        const isNowDate =
+          arg0?.type === 'NewExpression' &&
+          arg0.callee?.type === 'Identifier' &&
+          arg0.callee.name === 'Date' &&
+          (!arg0.arguments || arg0.arguments.length === 0);
+
+        if (!isNowDate) return;
+
+        const pattern =
+          arg1?.type === 'Literal' && typeof arg1.value === 'string'
+            ? arg1.value
+            : null;
+        if (!pattern) return;
+
+        // Match only pure business-date patterns: year token present AND no
+        // time-of-day tokens (H/h/m/s). A pattern with a time component is a
+        // wall-clock timestamp (e.g. "Printed: MMM d, yyyy HH:mm") — not a
+        // gaming-day derivation, so it's allowed.
+        const hasYearToken = /y{2,4}/.test(pattern);
+        const hasTimeToken = /[Hhms]/.test(pattern);
+        if (!hasYearToken || hasTimeToken) return;
+
+        context.report({
+          node,
+          messageId: 'noDateFnsFormatNow',
+          data: { pattern },
+        });
       },
     };
   },

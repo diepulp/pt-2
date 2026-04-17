@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useGamingDay } from '@/hooks/casino/use-gaming-day';
 import { useUpdateValuationPolicy } from '@/hooks/loyalty/use-loyalty-mutations';
 import { useActiveValuationPolicy } from '@/hooks/loyalty/use-loyalty-queries';
 import { useAuth } from '@/hooks/use-auth';
@@ -38,10 +39,6 @@ function formatDate(date: string): string {
   });
 }
 
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 // --- Component ---
 
 export function ValuationSettingsForm() {
@@ -54,6 +51,12 @@ export function ValuationSettingsForm() {
   const mutation = useUpdateValuationPolicy(casinoId ?? '');
   const [isPending, startTransition] = useTransition();
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // Canonical casino gaming day (TEMP-002) — used as the effective-date
+  // default and as a version-label suffix. Empty string until resolved;
+  // handleSave guards on required fields before mutating.
+  const { data: gamingDayData } = useGamingDay();
+  const todayGamingDay = gamingDayData?.gaming_day ?? '';
 
   // Form state
   const [centsPerPoint, setCentsPerPoint] = useState<string>('');
@@ -83,7 +86,7 @@ export function ValuationSettingsForm() {
     if (!formTouched) {
       // Initialize both fields from current server state on first edit
       setCentsPerPoint(value);
-      setEffectiveDate(policy?.effectiveDate ?? todayISO());
+      setEffectiveDate(policy?.effectiveDate ?? todayGamingDay);
       setFormTouched(true);
     } else {
       setCentsPerPoint(value);
@@ -109,7 +112,7 @@ export function ValuationSettingsForm() {
         input: {
           centsPerPoint: cents,
           effectiveDate,
-          versionIdentifier: `admin-${todayISO()}`,
+          versionIdentifier: `admin-${todayGamingDay}`,
         },
         idempotencyKey: `valuation-${casinoId}-${Date.now()}`,
       });
