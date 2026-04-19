@@ -14,6 +14,10 @@ Production-observed glitch (2026-04-15): a pit boss saw a threshold-acknowledgem
 | [`../../10-prd/PRD-064-mtl-buyin-glitch-containment-v0.md`](../../10-prd/PRD-064-mtl-buyin-glitch-containment-v0.md) | PRD-064 — containment slice (P0.1/P0.2/P0.3/P1.4). Short-term release path. Codifies `INV-MTL-BRIDGE-ATOMICITY`. |
 | [`../../80-adrs/ADR-049-operator-action-atomicity-boundary.md`](../../80-adrs/ADR-049-operator-action-atomicity-boundary.md) | ADR-049 — parallel architectural ADR (composite client mutation vs single server-side command contract). Direction affirmed, packaging deferred. Non-blocking for PRD-064. |
 | [`../../../e2e/repro-mtl-glitch.spec.ts`](../../../e2e/repro-mtl-glitch.spec.ts) | Playwright headless reproduction; confirms the race is not transient. |
+| [`POST-IMPL-PRECIS.md`](./POST-IMPL-PRECIS.md) | What PRD-064 shipped; commit pointer and test inventory. |
+| [`PRD-065-DEFERRAL-RATIONALLE.md`](./PRD-065-DEFERRAL-RATIONALLE.md) | Rationale for deferring ADR-049 packaging; trigger gates for un-deferral. |
+| [`DOWNSTREAM-CONSUMER-POSTURE.md`](./DOWNSTREAM-CONSUMER-POSTURE.md) | Read-plane investigation; origin of H2/H3 scope. |
+| [`HARDENING-BACKLOG.md`](./HARDENING-BACKLOG.md) | Consolidated remediation-priority map across PRD-064 §2.3 + `PRD-065-DEFERRAL-RATIONALLE` + `DOWNSTREAM-CONSUMER-POSTURE`; Phase H / K / F / G / hygiene structure. |
 
 ## Invariant
 

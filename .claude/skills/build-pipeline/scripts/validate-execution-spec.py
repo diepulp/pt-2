@@ -93,6 +93,8 @@ VALID_GATES = {
     "lint",
     "test-pass",
     "build",
+    "pft-rls-isolation-check",
+    "playwright-reconciliation",
 }
 
 REQUIRED_WORKSTREAM_FIELDS = {"name", "executor", "executor_type", "depends_on", "outputs", "gate"}

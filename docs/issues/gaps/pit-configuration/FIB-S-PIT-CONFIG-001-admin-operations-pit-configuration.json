@@ -1,0 +1,598 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-PIT-CONFIG-001 v0",
+    "source_artifact": "docs/issues/gaps/pit-configuration/FIB-PIT-CONFIG-001-admin-operations-pit-configuration.md",
+    "status": "proposed",
+    "feature_id": "FIB-S-PIT-CONFIG-001",
+    "feature_name": "Admin Operations Pit Configuration",
+    "priority": "P1",
+    "decision_horizon": "current admin operations configuration slice",
+    "owner": "Vladimir Ivanov",
+    "opened_on": "2026-04-19"
+  },
+  "intent": {
+    "operator_problem": "An admin or operations lead can create gaming tables during casino setup, but after bootstrap there is no admin capability to assign, correct, or relocate existing tables into the desired pit mapping. Operators cannot make the digital floor match the live floor after deferred setup or floor changes, which weakens pit-scoped reporting and filtering.",
+    "pilot_fit": "The setup wizard intentionally allows pit assignment to be deferred, but the post-setup admin operations surface has no correction path. Pilot operators need a contained admin settings workflow to complete or fix table-to-pit-slot mappings without turning the work into a floor-layout subsystem.",
+    "success_outcomes": [
+      "Existing tables can be assigned to a slot within an existing pit after casino bootstrap.",
+      "Existing table-to-pit-slot assignments can be changed from the admin operations surface.",
+      "A table cannot end up assigned to multiple slots in the same active mapping.",
+      "Unassigned tables are visible so operators can complete deferred bootstrap configuration.",
+      "Pit-scoped reporting and filtering use the updated canonical assignment after save.",
+      "The feature stays inside the existing admin settings operations surface.",
+      "Edit authority is admin-only for this slice."
+    ],
+    "explicit_exclusions": [
+      "Creating a new top-level floor-layout designer.",
+      "Drawing, dragging, or visually editing a full casino floor map.",
+      "Creating new gaming tables from this surface.",
+      "Creating, editing, ordering, deleting, or otherwise managing pit definitions.",
+      "Changing game variants, par targets, table status, dealer rotation, or table session lifecycle.",
+      "Cross-property or multi-casino pit assignment.",
+      "External notifications, approvals, or shift handoff workflows.",
+      "Rebuilding measurement widgets or dashboard reports beyond consuming the updated mapping.",
+      "Broad migration of all legacy gaming_table.pit behavior unless required for compatibility.",
+      "Pit boss edit access."
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Full floor-plan editor",
+        "why_considered": "Pit mapping naturally relates to floor layout and table placement.",
+        "why_rejected_now": "The operator need is assignment correction, not spatial design or review workflow."
+      },
+      {
+        "idea": "Add table creation to operations settings",
+        "why_considered": "Operators may notice missing tables while assigning pits.",
+        "why_rejected_now": "Table creation already belongs to onboarding/table setup; mixing it into this slice expands the workflow."
+      },
+      {
+        "idea": "Use only free-text gaming_table.pit",
+        "why_considered": "Bootstrap currently captures an optional pit text field.",
+        "why_rejected_now": "Pit-scoped measurement already resolves through canonical slot assignments, so text-only updates would not satisfy the reporting outcome."
+      },
+      {
+        "idea": "Approval workflow for pit changes",
+        "why_considered": "Floor changes may be operationally sensitive.",
+        "why_rejected_now": "This slice is an admin correction/configuration path, not a governance workflow."
+      },
+      {
+        "idea": "Rebuild dashboards around pit IDs",
+        "why_considered": "Updated assignments affect pit-scoped reporting.",
+        "why_rejected_now": "Report UI redesign is not needed for the assignment workflow itself."
+      },
+      {
+        "idea": "Minimal pit creation in this surface",
+        "why_considered": "Some casinos may not have usable pit definitions yet.",
+        "why_rejected_now": "Even minimal creation introduces naming, uniqueness, ordering, deletion, and cleanup semantics; this slice is assignment correction only."
+      },
+      {
+        "idea": "Pit boss edit permissions",
+        "why_considered": "Pit bosses are operations users and may notice table placement issues first.",
+        "why_rejected_now": "Edit permissions would add auth and policy churn; pilot-safe scope is admin edit only."
+      }
+    ]
+  },
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "gaming_table",
+          "kind": "record",
+          "description": "Existing casino-scoped gaming table that can be assigned to one active pit slot.",
+          "stateful": true,
+          "system_of_record": "public.gaming_table",
+          "fields_hint": ["id", "casino_id", "label", "type", "status", "pit"]
+        },
+        {
+          "name": "floor_pit",
+          "kind": "record",
+          "description": "Existing pit definition within a floor layout version. Pit definitions are read by this feature, not created or managed.",
+          "stateful": true,
+          "system_of_record": "public.floor_pit",
+          "fields_hint": [
+            "id",
+            "layout_version_id",
+            "label",
+            "sequence",
+            "capacity"
+          ]
+        },
+        {
+          "name": "floor_table_slot",
+          "kind": "record",
+          "description": "Canonical slot assignment record that links an existing table to a pit slot through preferred_table_id.",
+          "stateful": true,
+          "system_of_record": "public.floor_table_slot",
+          "fields_hint": [
+            "id",
+            "layout_version_id",
+            "pit_id",
+            "slot_label",
+            "game_type",
+            "preferred_table_id"
+          ]
+        },
+        {
+          "name": "floor_layout_activation",
+          "kind": "record",
+          "description": "Current active floor layout activation used to identify the active pit/slot mapping scope.",
+          "stateful": true,
+          "system_of_record": "public.floor_layout_activation",
+          "fields_hint": [
+            "id",
+            "casino_id",
+            "layout_version_id",
+            "activated_at",
+            "deactivated_at"
+          ]
+        },
+        {
+          "name": "pit_assignment_state",
+          "kind": "view",
+          "description": "Operator-facing grouped state of pits, slots, assigned tables, and unassigned tables.",
+          "stateful": false,
+          "system_of_record": "derived from floor_layout_activation, floor_pit, floor_table_slot, and gaming_table",
+          "fields_hint": [
+            "pit_id",
+            "slot_id",
+            "assigned_table_id",
+            "unassigned_table_ids",
+            "duplicate_assignment_state"
+          ]
+        }
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "view_pit_assignment_state",
+          "verb": "read",
+          "description": "Show existing pits, slots, assigned tables, and unassigned tables inside Casino Operations settings.",
+          "served_outcomes": ["OUT-4", "OUT-6"],
+          "loop_steps": ["STEP-1", "STEP-2"]
+        },
+        {
+          "id": "CAP-2",
+          "name": "assign_table_to_slot",
+          "verb": "update",
+          "description": "Assign an existing casino table to a specific active slot within an existing pit.",
+          "served_outcomes": ["OUT-1", "OUT-5", "OUT-7"],
+          "loop_steps": ["STEP-3", "STEP-4"]
+        },
+        {
+          "id": "CAP-3",
+          "name": "relocate_table_between_slots",
+          "verb": "update",
+          "description": "Move a table from its previous active slot to a new active slot without duplicate assignment.",
+          "served_outcomes": ["OUT-2", "OUT-3", "OUT-5", "OUT-7"],
+          "loop_steps": ["STEP-5"]
+        },
+        {
+          "id": "CAP-4",
+          "name": "clear_slot_assignment",
+          "verb": "update",
+          "description": "Clear an existing table assignment from a pit slot, leaving the table available for later reassignment.",
+          "served_outcomes": ["OUT-2", "OUT-4", "OUT-5", "OUT-7"],
+          "loop_steps": ["STEP-6"]
+        },
+        {
+          "id": "CAP-5",
+          "name": "consume_updated_canonical_mapping",
+          "verb": "read",
+          "description": "Allow downstream pit-scoped views to resolve table membership through the updated canonical mapping after save.",
+          "served_outcomes": ["OUT-5"],
+          "loop_steps": ["STEP-7"]
+        }
+      ]
+    },
+    "where": {
+      "primary_surface": "/admin/settings/operations",
+      "surfaces": [
+        {
+          "name": "Casino Operations settings",
+          "kind": "ui",
+          "path": "app/(dashboard)/admin/settings/operations/page.tsx"
+        },
+        {
+          "name": "Pit configuration panel",
+          "kind": "ui",
+          "note": "New panel inside existing Casino Operations settings surface; not a new top-level page."
+        },
+        {
+          "name": "Table/pit assignment API or server action",
+          "kind": "api",
+          "note": "Exact transport is downstream design; it must serve only the contained assignment workflow."
+        },
+        {
+          "name": "Pit-scoped reporting and filtering consumers",
+          "kind": "report",
+          "note": "Consumers only read updated canonical mapping; report redesign is excluded."
+        }
+      ],
+      "touchpoints": {
+        "inbound": [
+          {
+            "name": "admin_opens_operations_settings",
+            "type": "user_action"
+          },
+          {
+            "name": "admin_saves_slot_assignment",
+            "type": "user_action"
+          },
+          {
+            "name": "admin_clears_slot_assignment",
+            "type": "user_action"
+          }
+        ],
+        "outbound": [
+          {
+            "name": "updated_canonical_pit_table_mapping",
+            "type": "report"
+          }
+        ]
+      },
+      "bounded_contexts": [
+        "FloorLayoutService",
+        "TableContextService",
+        "Measurement/reporting consumers"
+      ]
+    },
+    "who": {
+      "primary_actor": "casino_admin",
+      "actors": [
+        {
+          "role": "admin",
+          "permissions": [
+            "view_pit_assignment_state",
+            "assign_existing_table_to_existing_slot",
+            "relocate_existing_table_between_existing_slots",
+            "clear_existing_slot_assignment"
+          ],
+          "restrictions": [
+            "cannot create tables in this feature",
+            "cannot create or manage pit definitions in this feature",
+            "cannot use this feature across casinos"
+          ]
+        },
+        {
+          "role": "pit_boss",
+          "permissions": [],
+          "restrictions": [
+            "no edit access in this slice",
+            "read-only visibility is deferred and not required for pilot"
+          ]
+        }
+      ],
+      "ownership": {
+        "business_owner": "Vladimir Ivanov",
+        "domain_owner": "Admin operations / floor layout configuration"
+      }
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "name": "post_bootstrap_pit_mapping_deferred",
+          "source": "user",
+          "preconditions": [
+            "casino setup completed",
+            "gaming tables exist",
+            "one or more tables are unassigned or incorrectly assigned"
+          ]
+        },
+        {
+          "name": "floor_reconfiguration_or_table_relocation",
+          "source": "user",
+          "preconditions": [
+            "existing pits and slots are available",
+            "admin needs the digital mapping to match live operations"
+          ]
+        },
+        {
+          "name": "admin_saves_assignment_change",
+          "source": "user",
+          "preconditions": [
+            "admin is authenticated and casino-scoped",
+            "target slot belongs to the active mapping",
+            "table belongs to the same casino"
+          ]
+        }
+      ],
+      "lifecycle_events": [
+        "pit_assignment_loaded",
+        "table_assigned_to_slot",
+        "table_relocated_between_slots",
+        "slot_assignment_cleared",
+        "pit_scoped_views_consume_updated_mapping"
+      ],
+      "timing_constraints": [
+        "Used after initial casino bootstrap, not as part of first table creation.",
+        "Assignment changes should be visible after save before operators rely on pit-scoped reporting.",
+        "Implementation must verify pit and slot bootstrap coverage before build work begins."
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "statement": "The canonical source for table-to-pit assignment is the active floor layout pit/slot mapping, not free-text gaming_table.pit.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-2",
+          "statement": "Only admin users may edit pit assignment mappings in this slice.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-3",
+          "statement": "A table may not be assigned to more than one active slot in the same active mapping.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-4",
+          "statement": "Pit definitions and slots are required existing inputs; creating or managing them is not part of this feature.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-5",
+          "statement": "Any gaming_table.pit compatibility mirroring must remain secondary to canonical mapping.",
+          "severity": "hard"
+        }
+      ],
+      "invariants": [
+        "Assignments are casino-scoped.",
+        "Only existing gaming tables are assignable.",
+        "Only existing active slots are assignable targets.",
+        "Unassigned tables remain visible for later assignment.",
+        "Pit-scoped views must resolve table membership through the updated canonical mapping after save."
+      ],
+      "decision_notes": [
+        "First implementation assigns tables to specific active slots, not directly to pits.",
+        "Pilot default is admin-only panel visibility.",
+        "If pilot casinos lack sufficient pit/slot scaffolding, that is a separate antecedent slice and must not be smuggled into this feature."
+      ]
+    }
+  },
+  "containment": {
+    "loop": [
+      {
+        "id": "STEP-1",
+        "actor": "admin",
+        "action": "opens Casino Operations settings",
+        "system_response": "shows current pit configuration alongside existing operations settings"
+      },
+      {
+        "id": "STEP-2",
+        "actor": "admin",
+        "action": "reviews existing pits, slots, and tables",
+        "system_response": "shows which tables are assigned, unassigned, or already mapped to another active slot"
+      },
+      {
+        "id": "STEP-3",
+        "actor": "admin",
+        "action": "selects an existing table for a target slot within an existing pit",
+        "system_response": "validates that the table belongs to the current casino and is eligible for assignment"
+      },
+      {
+        "id": "STEP-4",
+        "actor": "admin",
+        "action": "saves the assignment",
+        "system_response": "persists the table-to-slot mapping and refreshes the displayed configuration"
+      },
+      {
+        "id": "STEP-5",
+        "actor": "admin",
+        "action": "relocates a table from one slot or pit to another",
+        "system_response": "moves the table out of the previous active slot and into the new slot without duplicate assignment"
+      },
+      {
+        "id": "STEP-6",
+        "actor": "admin",
+        "action": "clears an assignment for a table that is no longer mapped to a pit slot",
+        "system_response": "leaves the table available for later reassignment"
+      },
+      {
+        "id": "STEP-7",
+        "actor": "admin",
+        "action": "returns to pit-scoped operational or reporting views",
+        "system_response": "resolves pit-level table membership through the updated canonical mapping"
+      }
+    ],
+    "frozen": true,
+    "expansion_requires_amendment": true
+  },
+  "dependencies": {
+    "required_existing": [
+      "/admin/settings/operations exists and remains the primary surface.",
+      "Gaming tables exist before this feature is used.",
+      "A canonical pit/table mapping path exists through floor layout pit and table slot records.",
+      "Pit definitions and slots exist before this feature is used.",
+      "The current actor is casino-scoped and authorized as admin."
+    ],
+    "missing_dependencies": [
+      "Unknown until downstream planning verifies pilot pit and slot bootstrap coverage."
+    ],
+    "assumptions": [
+      "The setup wizard can leave pit assignment blank and still create valid tables.",
+      "Existing pit-scoped measurement/reporting paths resolve table membership through canonical mapping.",
+      "Compatibility mirroring to gaming_table.pit, if needed, is secondary and not source-of-truth behavior.",
+      "Pit boss read-only visibility is deferred unless a real operator need is established."
+    ]
+  },
+  "traceability": {
+    "outcomes": [
+      {
+        "id": "OUT-1",
+        "statement": "Existing tables can be assigned to a slot within an existing pit after casino bootstrap."
+      },
+      {
+        "id": "OUT-2",
+        "statement": "Existing table-to-pit-slot assignments can be changed from the admin operations surface."
+      },
+      {
+        "id": "OUT-3",
+        "statement": "A table cannot end up assigned to multiple slots in the same active mapping."
+      },
+      {
+        "id": "OUT-4",
+        "statement": "Unassigned tables are visible so operators can complete deferred bootstrap configuration."
+      },
+      {
+        "id": "OUT-5",
+        "statement": "Pit-scoped reporting and filtering use the updated canonical assignment after save."
+      },
+      {
+        "id": "OUT-6",
+        "statement": "The feature stays inside the existing admin settings operations surface."
+      },
+      {
+        "id": "OUT-7",
+        "statement": "Edit authority is admin-only for this slice."
+      }
+    ],
+    "capability_to_outcome": [
+      {
+        "capability": "CAP-1",
+        "outcomes": ["OUT-4", "OUT-6"]
+      },
+      {
+        "capability": "CAP-2",
+        "outcomes": ["OUT-1", "OUT-5", "OUT-7"]
+      },
+      {
+        "capability": "CAP-3",
+        "outcomes": ["OUT-2", "OUT-3", "OUT-5", "OUT-7"]
+      },
+      {
+        "capability": "CAP-4",
+        "outcomes": ["OUT-2", "OUT-4", "OUT-5", "OUT-7"]
+      },
+      {
+        "capability": "CAP-5",
+        "outcomes": ["OUT-5"]
+      }
+    ],
+    "rule_to_loop_step": [
+      {
+        "rule_id": "RULE-1",
+        "loop_steps": ["STEP-4", "STEP-5", "STEP-6", "STEP-7"]
+      },
+      {
+        "rule_id": "RULE-2",
+        "loop_steps": ["STEP-1", "STEP-3", "STEP-4", "STEP-5", "STEP-6"]
+      },
+      {
+        "rule_id": "RULE-3",
+        "loop_steps": ["STEP-4", "STEP-5"]
+      },
+      {
+        "rule_id": "RULE-4",
+        "loop_steps": ["STEP-2", "STEP-3"]
+      },
+      {
+        "rule_id": "RULE-5",
+        "loop_steps": ["STEP-7"]
+      }
+    ],
+    "loop_step_to_capability": [
+      {
+        "loop_step": "STEP-1",
+        "capabilities": ["CAP-1"]
+      },
+      {
+        "loop_step": "STEP-2",
+        "capabilities": ["CAP-1"]
+      },
+      {
+        "loop_step": "STEP-3",
+        "capabilities": ["CAP-2"]
+      },
+      {
+        "loop_step": "STEP-4",
+        "capabilities": ["CAP-2"]
+      },
+      {
+        "loop_step": "STEP-5",
+        "capabilities": ["CAP-3"]
+      },
+      {
+        "loop_step": "STEP-6",
+        "capabilities": ["CAP-4"]
+      },
+      {
+        "loop_step": "STEP-7",
+        "capabilities": ["CAP-5"]
+      }
+    ]
+  },
+  "coherence": {
+    "non_goals": [
+      "new top-level floor-layout designer",
+      "visual floor-map editing",
+      "gaming table creation",
+      "pit-definition management",
+      "game variant changes",
+      "par target changes",
+      "table status changes",
+      "dealer rotation changes",
+      "table session lifecycle changes",
+      "cross-property assignment",
+      "external notifications",
+      "approval workflow",
+      "dashboard/report redesign",
+      "pit boss edit access"
+    ],
+    "feature_loop": [
+      "STEP-1",
+      "STEP-2",
+      "STEP-3",
+      "STEP-4",
+      "STEP-5",
+      "STEP-6",
+      "STEP-7"
+    ],
+    "feature_loop_frozen": true,
+    "deferred_items": [
+      "full floor layout management surface",
+      "table inventory creation/decommissioning workflow",
+      "audit/history review of pit assignment changes",
+      "pit boss read-only visibility",
+      "pit/slot bootstrap coverage antecedent slice if pilot data is incomplete"
+    ],
+    "scope_authority": {
+      "artifact": "FEATURE_INTAKE_BRIEF",
+      "path": "docs/issues/gaps/pit-configuration/FIB-PIT-CONFIG-001-admin-operations-pit-configuration.md",
+      "version": "v0",
+      "frozen": true
+    },
+    "violations": []
+  },
+  "governance": {
+    "scope_authority": {
+      "artifact": "FEATURE_INTAKE_BRIEF",
+      "version": "v0",
+      "frozen": true
+    },
+    "open_questions_allowed_at_scaffold": [
+      "whether compatibility mirroring to gaming_table.pit is required for legacy dashboard filters",
+      "whether pit_boss users receive read-only visibility later; pilot default is admin-only panel visibility"
+    ],
+    "downstream_expansion_allowed_without_amendment": false,
+    "amendment_required_for": [
+      "new top-level admin page",
+      "visual floor-map editor",
+      "table creation or decommissioning",
+      "pit-definition management",
+      "dealer assignment",
+      "session lifecycle changes",
+      "cross-casino assignment",
+      "approval workflow",
+      "external notification path",
+      "pit boss edit permissions",
+      "reporting or dashboard redesign",
+      "using free-text gaming_table.pit as the only persisted assignment"
+    ]
+  }
+}
