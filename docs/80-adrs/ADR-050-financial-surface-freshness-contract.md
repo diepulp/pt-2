@@ -3,7 +3,7 @@
 **Status**: DRAFT
 **Date Drafted**: 2026-04-19
 **Decision Makers**: Architecture Review
-**Validation**: Lint rule for E1, E2E window-correctness probes for E2, publication-membership audit query for E3. EXEC-066 (shift-dashboard TBT subscription) is **deferred pending adoption of this ADR** and will become its first reference implementation when it resumes.
+**Validation**: Lint rule for E1, E2E window-correctness probes for E2, publication-membership audit query for E3. The shift-dashboard exemplar slice is this ADR's first reference implementation and drives validation of the standing enforcement.
 **Related**: ADR-004 (real-time strategy, extended in the financial domain by this ADR), ADR-015 (RLS hybrid), ADR-025 (MTL authorization), ADR-031 (financial amount convention), ADR-041 (surface governance), ADR-049 (operator action atomicity)
 
 ---
@@ -148,7 +148,7 @@ The registry is authoritative. Adding a financial fact to the system, or adding 
 ### Neutral / Latent
 
 1. **The stale comment at `hooks/mtl/use-mtl-mutations.ts:85-90` and the dead invalidation block at `:91-101` are not fixed by this ADR.** They are correctly captured by the registry: if direct MTL entry does not produce a `player_financial_transaction`, the invalidation of `playerFinancialKeys` on `useCreateMtlEntry` success is out of contract and should be removed in a follow-up. The contract makes the finding visible; it does not mandate a specific cleanup.
-2. **EXEC-066 becomes the reference implementation once it resumes.** EXEC-066 is deferred pending adoption of this ADR. When it resumes, it retargets to TBT per §3, ships the first publication migration (or backfill) per E3, and the shift-dashboard surface becomes the first registry entry. Subsequent surfaces use EXEC-066 as a pattern.
+2. **The shift-dashboard exemplar slice becomes the first reference implementation.** It is drafted natively against this ADR (D1–D4 declarations, §4 E1/E2/E3 workstreams, registry promotion), not as a continuation of any prior spec. It retargets to TBT per §3, ships the first publication migration (or backfill) per E3, and the shift-dashboard surface becomes the first `ACTIVE` registry row. Subsequent surfaces inherit the pattern via the Replication Checklist produced at the exemplar's merge.
 
 ---
 
@@ -213,13 +213,13 @@ First application of the contract. Becomes the first row of `REGISTRY_FINANCIAL_
 | `hooks` | `hooks/shift-dashboard/use-shift-dashboard-summary.ts`, `hooks/shift-dashboard/use-shift-table-metrics.ts` |
 | `reaction_model` | LIVE |
 | `sla_seconds` | 2s realtime / 30s fallback |
-| `realtime_hook` | `hooks/shift-dashboard/use-shift-dashboard-realtime.ts` (proposed new hook; will ship when EXEC-066 resumes) |
-| `window_correctness` | Rolling-window refactor of `shift-dashboard-v3.tsx:87` (will ship when EXEC-066 resumes) |
+| `realtime_hook` | `hooks/shift-dashboard/use-shift-dashboard-realtime.ts` (proposed new hook; will ship with the exemplar slice's implementation PR) |
+| `window_correctness` | Rolling-window refactor of `shift-dashboard-v3.tsx:87` (will ship with the exemplar slice's implementation PR) |
 | `owner_context` | Shift Intelligence (SRM) |
 
-Migration to ship with EXEC-066: `ALTER PUBLICATION supabase_realtime ADD TABLE table_buyin_telemetry` (or a backfill migration, per §4 E3, if membership is already present in the running environment but absent from migration history).
+Migration to ship with the exemplar slice: `ALTER PUBLICATION supabase_realtime ADD TABLE table_buyin_telemetry` (or a backfill migration, per §4 E3, if membership is already present in the running environment but absent from migration history).
 
-EXEC-066 is **currently deferred pending adoption of this ADR**. When it resumes, the original WS0 (PFT RLS remediation preflight) is removed from scope; the separate PFT SELECT policy posture is no longer a precondition for shift-dashboard freshness and is tracked as the open verification item noted in Appendix A.
+EXEC-066 and its three investigation memos (`INVESTIGATION-2026-04-17-winloss-estdrop-staleness.md`, `ALTENATE-DIRECTION.md`, `architecture-review-financial-surface-freshness-contract.md`) are **archived as contract prior-art** under `docs/20-architecture/specs/_archive/ISSUE-SHIFT-DASH-FRESHNESS/`. EXEC-066 itself has no residual implementation role: the exemplar slice is drafted natively against this ADR, not as a rewrite of any prior spec. The separate PFT SELECT policy posture — originally WS0 of EXEC-066 — is no longer a precondition for shift-dashboard freshness and is tracked as the open verification item noted in Appendix A.
 
 ---
 

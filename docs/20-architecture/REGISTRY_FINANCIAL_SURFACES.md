@@ -58,7 +58,7 @@ Per fact header:
 
 ### `FACT-RATED-BUYIN`
 
-**Status**: `PROPOSED` (first surface blocked on EXEC-066 resumption)
+**Status**: `PROPOSED` (first surface pending exemplar slice implementation)
 **Definition**: A rated buy-in or rated adjustment that contributes to a gaming table's estimated drop and win/loss figures within a shift window.
 **D1 — authoritative mutation source**: `player_financial_transaction` (via `rpc_create_financial_txn` for originals; `rpc_create_financial_adjustment` for adjustments).
 **D2 — canonical freshness event source**: `table_buyin_telemetry` (read-symmetric with `rpc_shift_table_metrics`; Pattern C direct casino-scope RLS; bridge-terminal; idempotency key `pft:{id}`).
@@ -68,7 +68,7 @@ Per fact header:
 
 | Surface | Status | Hooks | Reaction | SLA | Realtime hook | Window correctness | Owner context |
 |---|---|---|---|---|---|---|---|
-| `components/shift-dashboard-v3/shift-dashboard-v3.tsx` | `PROPOSED` | `hooks/shift-dashboard/use-shift-dashboard-summary.ts`, `hooks/shift-dashboard/use-shift-table-metrics.ts` | `LIVE` | 2s realtime / 30s fallback | `hooks/shift-dashboard/use-shift-dashboard-realtime.ts` *(not yet implemented; ships with EXEC-066)* | Rolling-window refactor of `shift-dashboard-v3.tsx:87` *(not yet implemented; ships with EXEC-066)* | Shift Intelligence |
+| `components/shift-dashboard-v3/shift-dashboard-v3.tsx` | `PROPOSED` | `hooks/shift-dashboard/use-shift-dashboard-summary.ts`, `hooks/shift-dashboard/use-shift-table-metrics.ts` | `LIVE` | 2s realtime / 30s fallback | `hooks/shift-dashboard/use-shift-dashboard-realtime.ts` *(pending exemplar slice)* | Rolling-window refactor of `shift-dashboard-v3.tsx:87` *(pending exemplar slice)* | Shift Intelligence |
 
 ---
 
