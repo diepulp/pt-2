@@ -54,6 +54,26 @@ Per fact header:
 
 ---
 
+## P0.1b Registry Alignment Sweep — 2026-04-19
+
+Per `FINANCIAL-FRESHNESS-ROLLOUT.md` P0.1b. Each registered fact validated against the accepted ADR-050 text (§1–§7) and the five Decisions Resolved. Rows with unresolved D1/D2/D4 ambiguity are explicitly marked; those rows do not proceed into Phase 1 or Phase 2 by default.
+
+| Fact | Sweep verdict | Phase gate |
+|---|---|---|
+| `FACT-RATED-BUYIN` | **CLEAR** — D1/D2/D3/D4 fully declared; aligned with Decision #1 (one fact covers rated buy-ins and rated adjustments). | Cleared for Phase 1 exemplar. |
+| `FACT-MTL-PATRON-DAILY-TOTAL` | **BLOCKED** — D4 reaction model unresolved pending P0.3 stakeholder decision (Open Verification Item #3). | Does not proceed into Phase 3 until P0.3 resolves. |
+| `FACT-PIT-CASH-OBSERVATION` | **CLEAR on declaration** — D4 declared `LIVE` 2s/30s, consistent with rollout Phase 2.A (new `use-pit-cash-observation-realtime.ts` hook). Surface row updated in-sweep. | Cleared for Phase 2.A. |
+| `FACT-PIT-APPROVALS` | **CLEAR with precedent extension** — D1 names two tables (`table_fill`, `table_credit`) under one fact. Sweep accepts this as a scope-analogous extension of Decision #1 (one operator-visible concept covering distinct write paths). Documented, not blocked. | Cleared for Phase 2.B. |
+| `FACT-SESSION-CUSTODY` | **CLEAR** — D1=D2 correctly declared per ADR-050 §3 rule 3 (no-derivation second clause). Scope boundary (custody state with financial implications) aligned with §1. | Cleared for Phase 2.C. |
+
+Alignment corrections applied in the same pass:
+
+1. `FACT-PIT-CASH-OBSERVATION` D2-verification wording: "rule §3.3 of ADR-050 only applies when derivation exists" inverted §3.3's second clause. Replaced with an explicit clause cite.
+2. Open Verification Item #1 cross-reference: SEC ticket filing is scheduled under `FINANCIAL-FRESHNESS-ROLLOUT.md` P0.4, not referenced in ADR-050 Appendix B as previously stated.
+3. `FACT-PIT-CASH-OBSERVATION` surface row: Reaction/SLA/realtime-hook fields updated from `(TBD)` to declared `LIVE` per sweep verdict.
+
+---
+
 ## Facts
 
 ### `FACT-RATED-BUYIN`
@@ -74,7 +94,7 @@ Per fact header:
 
 ### `FACT-MTL-PATRON-DAILY-TOTAL`
 
-**Status**: `PROPOSED`
+**Status**: `PROPOSED` **[P0.1b sweep: BLOCKED on P0.3 — D4 reaction model pending stakeholder decision; see Open Verification Item #3]**
 **Definition**: Per-patron per-gaming-day aggregate of cash-in / cash-out volume used for CTR threshold tracking and compliance reporting.
 **D1 — authoritative mutation source**: `player_financial_transaction` (indirect, via the forward bridge to MTL) for any operational money movement; `mtl_entry` direct write via `useCreateMtlEntry` for compliance-audit correction.
 **D2 — canonical freshness event source**: `mtl_entry`.
@@ -95,14 +115,14 @@ Per fact header:
 **Status**: `PROPOSED`
 **Definition**: Walk-with and phone-confirmed cash observations entered by pit staff for operational reconciliation and shift-level cash-obs rollups.
 **D1 — authoritative mutation source**: `pit_cash_observation` (via `rpc_create_pit_cash_observation`). No upstream bridge.
-**D2 — canonical freshness event source**: `pit_cash_observation` (D1 = D2; rule §3.3 of ADR-050 only applies when derivation exists).
+**D2 — canonical freshness event source**: `pit_cash_observation` (D1 = D2 per ADR-050 §3 rule 3, no-derivation second clause).
 **D2 verification**: Pattern C direct casino-scope RLS + actor binding. Publication membership **not yet declared via migration**.
 
 **Registered surfaces:**
 
 | Surface | Status | Hooks | Reaction | SLA | Realtime hook | Window correctness | Owner context |
 |---|---|---|---|---|---|---|---|
-| `components/shift-dashboard-v3/shift-dashboard-v3.tsx` (cash-obs cards) | `PENDING-BACKFILL` | `hooks/shift-dashboard/use-cash-obs-summary.ts`, `hooks/shift-dashboard/use-cash-observations.ts` | *(TBD — currently INTERVAL 30–60s, no realtime)* | *(TBD)* | *(not yet implemented)* | Inherits shift-dashboard rolling-window fix | Shift Intelligence |
+| `components/shift-dashboard-v3/shift-dashboard-v3.tsx` (cash-obs cards) | `PENDING-BACKFILL` | `hooks/shift-dashboard/use-cash-obs-summary.ts`, `hooks/shift-dashboard/use-cash-observations.ts` | `LIVE` | 2s realtime / 30s fallback | `hooks/shift-dashboard/use-pit-cash-observation-realtime.ts` *(not yet implemented; ships with Phase 2.A)* | Inherits shift-dashboard rolling-window fix | Shift Intelligence |
 
 ---
 
@@ -158,7 +178,7 @@ The following financially responsible surfaces were identified in the 2026-04-19
 
 These must be resolved before their referenced entries can be promoted to `ACTIVE`.
 
-1. **PFT RLS posture** — the 2026-04-19 investigation streams disagreed on whether `player_financial_transaction`'s SELECT policy is Pattern C direct or EXISTS-indirect. Per ADR-050 Appendix A, this ADR does not assert PFT's realtime eligibility. **Resolution required** before any future fact is registered with PFT as its D2 (currently none are). Tracked independently of this registry; see the pending SEC ticket referenced in ADR-050 Appendix B.
+1. **PFT RLS posture** — the 2026-04-19 investigation streams disagreed on whether `player_financial_transaction`'s SELECT policy is Pattern C direct or EXISTS-indirect. Per ADR-050 Appendix A, this ADR does not assert PFT's realtime eligibility. **Resolution required** before any future fact is registered with PFT as its D2 (currently none are). SEC ticket filing is scheduled under `FINANCIAL-FRESHNESS-ROLLOUT.md` P0.4 (PFT RLS re-audit).
 2. **Publication membership inventory** — no migration under `supabase/migrations/` declares membership for any of the D2 tables named in this registry. A one-time audit against `pg_publication_tables` is required to determine which D2 tables already have ambient membership (must be backfilled into migration history per §4 E3) versus which require a new ADD-TABLE migration on first activation.
 3. **MTL compliance-dashboard reaction model** — is intra-day CTR threshold alerting operationally required, or is the per-gaming-day snapshot model sufficient? This determines whether `FACT-MTL-PATRON-DAILY-TOTAL`'s first surface is `LIVE` or `INTERVAL`.
 4. **`hooks/mtl/use-mtl-mutations.ts:85-101`** — the reverse-bridge comment and dead `playerFinancialKeys` invalidation block. Per ADR-050 Appendix A, this is a registry-visible smell: `useCreateMtlEntry` does not produce a `player_financial_transaction`, so the invalidation is out of contract. Cleanup is not blocking registration of `FACT-MTL-PATRON-DAILY-TOTAL`; triage under a separate ticket.
@@ -171,3 +191,4 @@ These must be resolved before their referenced entries can be promoted to `ACTIV
 |---|---|---|
 | 2026-04-19 | Scaffold created alongside ADR-050 draft. All five seed facts registered at fact-level `PROPOSED`: `FACT-RATED-BUYIN`, `FACT-MTL-PATRON-DAILY-TOTAL`, `FACT-PIT-CASH-OBSERVATION`, `FACT-PIT-APPROVALS`, `FACT-SESSION-CUSTODY`. `FACT-PIT-APPROVALS` and `FACT-SESSION-CUSTODY` have in-production realtime coverage at the surface level but still require E3 publication-membership backfill (and, for `FACT-PIT-APPROVALS`, §4 E2 window correctness) before any surface promotes to `ACTIVE`; their surface rows are `PENDING-BACKFILL`. Pending-backfill queue listed. Four open verification items recorded. | Architecture Review |
 | 2026-04-19 | Bundle review sign-off: corrected fact-level status for `FACT-PIT-APPROVALS` and `FACT-SESSION-CUSTODY` (initial scaffold mislabeled both `ACTIVE` against the vocabulary at lines 49–53). Changelog scaffold entry rewritten with level-correct vocabulary (fact-level statuses are `ACTIVE` / `PROPOSED` / `OPEN-VERIFICATION` only; `PENDING-BACKFILL` is a surface-level status). Surface rows unchanged. ADR-050 header flipped `DRAFT → ACCEPTED` in the same commit. | Architecture Review |
+| 2026-04-19 | **P0.1b Registry Alignment Sweep** (commit immediately after P0.1 acceptance). Per-fact verdicts: `FACT-RATED-BUYIN` CLEAR, `FACT-MTL-PATRON-DAILY-TOTAL` BLOCKED on P0.3, `FACT-PIT-CASH-OBSERVATION` cleared with D4=LIVE declared (consistent with rollout Phase 2.A), `FACT-PIT-APPROVALS` cleared with two-table D1 accepted as scope-analogous extension of Decision #1, `FACT-SESSION-CUSTODY` CLEAR. Alignment corrections: `FACT-PIT-CASH-OBSERVATION` §3.3 citation inverted → fixed; Open Verification Item #1 SEC-ticket cross-reference re-pointed from ADR-050 Appendix B to rollout P0.4. New sweep section added after Status vocabulary. | Architecture Review |
