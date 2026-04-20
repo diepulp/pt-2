@@ -95,6 +95,7 @@ VALID_GATES = {
     "build",
     "pft-rls-isolation-check",
     "playwright-reconciliation",
+    "e2e-write-path",  # Test-per-PRD mandate gate (workflows-gaps.md §3); prescribed by quality.context.md and build-pipeline/SKILL.md
 }
 
 REQUIRED_WORKSTREAM_FIELDS = {"name", "executor", "executor_type", "depends_on", "outputs", "gate"}
