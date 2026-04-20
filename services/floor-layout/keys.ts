@@ -37,6 +37,8 @@ export const floorLayoutKeys = {
     [...ROOT, 'pits', layoutVersionId] as const,
   slots: (layoutVersionId: string) =>
     [...ROOT, 'slots', layoutVersionId] as const,
+  pitAssignmentState: (casinoId: string) =>
+    [...ROOT, 'pit-assignment-state', casinoId] as const,
   create: [...ROOT, 'mutations', 'create'] as const,
   update: (layoutId: string) =>
     [...ROOT, 'mutations', 'update', layoutId] as const,

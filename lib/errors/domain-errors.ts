@@ -390,7 +390,16 @@ export type FloorLayoutErrorCode =
   | 'LAYOUT_NOT_APPROVED'
   | 'LAYOUT_ALREADY_ACTIVE'
   | 'LAYOUT_IMMUTABLE'
-  | 'LAYOUT_VALIDATION_FAILED';
+  | 'LAYOUT_VALIDATION_FAILED'
+  // Pit Assignment Errors (PRD-067)
+  | 'NO_ACTIVE_LAYOUT'
+  | 'SLOT_NOT_FOUND'
+  | 'SLOT_NOT_ACTIVE'
+  | 'SLOT_HAS_NO_PIT'
+  | 'SLOT_OCCUPIED'
+  | 'PIT_NOT_FOUND'
+  | 'CROSS_CASINO_FORBIDDEN'
+  | 'FORBIDDEN_ADMIN_REQUIRED';
 
 export const FLOOR_LAYOUT_ERROR_MESSAGES: Record<FloorLayoutErrorCode, string> =
   {
@@ -400,6 +409,15 @@ export const FLOOR_LAYOUT_ERROR_MESSAGES: Record<FloorLayoutErrorCode, string> =
     LAYOUT_ALREADY_ACTIVE: 'A layout is already active for this casino',
     LAYOUT_IMMUTABLE: 'Layout version cannot be modified',
     LAYOUT_VALIDATION_FAILED: 'Floor layout validation failed',
+    // Pit Assignment Errors (PRD-067)
+    NO_ACTIVE_LAYOUT: 'Casino has no active floor layout',
+    SLOT_NOT_FOUND: 'Floor slot not found',
+    SLOT_NOT_ACTIVE: 'Slot is not in the active layout version',
+    SLOT_HAS_NO_PIT: 'Slot has no pit association',
+    SLOT_OCCUPIED: 'Slot already holds a different table',
+    PIT_NOT_FOUND: 'Target pit not found',
+    CROSS_CASINO_FORBIDDEN: 'Table belongs to a different casino',
+    FORBIDDEN_ADMIN_REQUIRED: 'Admin role required for this operation',
   };
 
 // ============================================================================
