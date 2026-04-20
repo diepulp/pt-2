@@ -67,7 +67,7 @@ Phase 1 is complete when:
 
 1. All W0–W4 land.
 2. Registry row for `FACT-RATED-BUYIN` / shift-dashboard is `ACTIVE`.
-3. Reviewer produces a **Replication Checklist** — a one-page distillation of "what changed, where, in what order" from the exemplar slice, written so that the next slice's author can follow it mechanically. This is the actual deliverable that unblocks Phase 2. Without it, Phase 2 is guesswork.
+3. Reviewer produces a **Replication Checklist** — a one-page distillation of "what changed, where, in what order" from the exemplar slice, written so that the next slice's author can follow it mechanically. The checklist MUST document how the slice coordinates overlapping mutation-side invalidation and WAL-side invalidation for the same query keys; this is the reusable behavioral lesson every subsequent slice will repeat and therefore must be captured once, correctly, here. This is the actual deliverable that unblocks Phase 2. Without it, Phase 2 is guesswork.
 4. **Replication viability.** Reviewer confirms the exemplar did not require undocumented slice-specific exceptions to ADR-050 beyond those captured in the Replication Checklist. The pattern is proven replicable, not just technically correct for this one surface.
 
 ---
