@@ -2,7 +2,7 @@
 
 **Companion artifact to [ADR-050](../80-adrs/ADR-050-financial-surface-freshness-contract.md).**
 **Status**: scaffolding (first fact seeded; remaining facts pending backfill)
-**Last amended**: 2026-04-19
+**Last amended**: 2026-04-20
 **Owner**: Architecture Review
 
 ---
@@ -103,17 +103,17 @@ This does not block rollout — it aligns the Phase 2.B and 2.C slices with real
 
 ### `FACT-RATED-BUYIN`
 
-**Status**: `PROPOSED` (first surface pending exemplar slice implementation)
+**Status**: `ACTIVE` (Phase 1 exemplar slice shipped 2026-04-20 under PRD-068)
 **Definition**: A rated buy-in or rated adjustment that contributes to a gaming table's estimated drop and win/loss figures within a shift window.
 **D1 — authoritative mutation source**: `player_financial_transaction` (via `rpc_create_financial_txn` for originals; `rpc_create_financial_adjustment` for adjustments).
 **D2 — canonical freshness event source**: `table_buyin_telemetry` (read-symmetric with `rpc_shift_table_metrics`; Pattern C direct casino-scope RLS; bridge-terminal; idempotency key `pft:{id}`).
-**D2 verification**: RLS posture consistent across both 2026-04-19 investigation streams. Publication membership confirmed absent by P0.2 audit — **ADD-TABLE migration required** (no backfill path; `supabase_realtime` publication is empty) before the Phase 1 exemplar surface goes `ACTIVE`.
+**D2 verification**: RLS posture consistent across both 2026-04-19 investigation streams. Publication membership ACTIVE via `supabase/migrations/20260420002749_add_tbt_to_supabase_realtime.sql` (PRD-068 W0). Idempotency guard verified.
 
 **Registered surfaces:**
 
 | Surface | Status | Hooks | Reaction | SLA | Realtime hook | Window correctness | Owner context |
 |---|---|---|---|---|---|---|---|
-| `components/shift-dashboard-v3/shift-dashboard-v3.tsx` | `PROPOSED` | `hooks/shift-dashboard/use-shift-dashboard-summary.ts`, `hooks/shift-dashboard/use-shift-table-metrics.ts` | `LIVE` | 2s realtime / 30s fallback | `hooks/shift-dashboard/use-shift-dashboard-realtime.ts` *(pending exemplar slice)* | Rolling-window refactor of `shift-dashboard-v3.tsx:87` *(pending exemplar slice)* | Shift Intelligence |
+| `components/shift-dashboard-v3/shift-dashboard-v3.tsx` | `ACTIVE` | `hooks/shift-dashboard/use-shift-dashboard-summary.ts`, `hooks/shift-dashboard/use-shift-table-metrics.ts` | `LIVE` | 2s realtime / 30s fallback | `hooks/shift-dashboard/use-shift-dashboard-realtime.ts` (DEC-DD1(c) centralized debounce via `queryClient.getQueryCache().subscribe()`, 500ms window) | Date.now()-based recompute at query-function time (`components/shift-dashboard-v3/shift-dashboard-v3.tsx` rolling-anchor + `computeRollingWindow()` pure helper; operator override freezes rolling) | Shift Intelligence |
 
 ---
 
@@ -219,3 +219,4 @@ These must be resolved before their referenced entries can be promoted to `ACTIV
 | 2026-04-19 | Bundle review sign-off: corrected fact-level status for `FACT-PIT-APPROVALS` and `FACT-SESSION-CUSTODY` (initial scaffold mislabeled both `ACTIVE` against the vocabulary at lines 49–53). Changelog scaffold entry rewritten with level-correct vocabulary (fact-level statuses are `ACTIVE` / `PROPOSED` / `OPEN-VERIFICATION` only; `PENDING-BACKFILL` is a surface-level status). Surface rows unchanged. ADR-050 header flipped `DRAFT → ACCEPTED` in the same commit. | Architecture Review |
 | 2026-04-19 | **P0.1b Registry Alignment Sweep** (commit immediately after P0.1 acceptance). Per-fact verdicts: `FACT-RATED-BUYIN` CLEAR, `FACT-MTL-PATRON-DAILY-TOTAL` BLOCKED on P0.3, `FACT-PIT-CASH-OBSERVATION` cleared with D4=LIVE declared (consistent with rollout Phase 2.A), `FACT-PIT-APPROVALS` cleared with two-table D1 accepted as scope-analogous extension of Decision #1, `FACT-SESSION-CUSTODY` CLEAR. Alignment corrections: `FACT-PIT-CASH-OBSERVATION` §3.3 citation inverted → fixed; Open Verification Item #1 SEC-ticket cross-reference re-pointed from ADR-050 Appendix B to rollout P0.4. New sweep section added after Status vocabulary. | Architecture Review |
 | 2026-04-19 | **P0.2 Publication-Membership Audit** — one `pg_publication_tables` query per D2 candidate. Result: `supabase_realtime` publication exists with zero user tables; all six D2 tables require ADD-TABLE migrations, no backfill path exists. OVI #2 resolved. Fact-level D2-verification narratives for all five facts updated to cite the audit and remove outdated "backfill" / "ambient membership" framing. OVI #5 opened: `useDashboardRealtime` subscribes `postgres_changes` to unpublished tables, so `FACT-PIT-APPROVALS` / `FACT-SESSION-CUSTODY` production freshness is not actually WAL-driven; underlying driver (polling vs. mutation invalidation) must be verified but does not block Phase 2.B / 2.C ADD-TABLE migrations. Rollout 2.B / 2.C "backfill" framing corrected to ADD-TABLE in companion commit to `FINANCIAL-FRESHNESS-ROLLOUT.md`. | Architecture Review |
+| 2026-04-20 | **PRD-068 Phase 1 Exemplar — `FACT-RATED-BUYIN` / shift-dashboard `PROPOSED → ACTIVE`.** W0 migration `20260420002749_add_tbt_to_supabase_realtime.sql` adds `table_buyin_telemetry` to `supabase_realtime`. W1 rolling-window refactor lands in `components/shift-dashboard-v3/shift-dashboard-v3.tsx` (Date.now()-based recompute, operator override preserved). W2 ships the canonical realtime hook `hooks/shift-dashboard/use-shift-dashboard-realtime.ts` implementing DEC-DD1(c) centralized debounce via `queryClient.getQueryCache().subscribe()` with 500ms suppression window (verified observer API in TanStack Query v5). W3 contract-property tests cover §4 E1/E2/E3. W5 Replication Checklist authored at `docs/20-architecture/specs/REPLICATION-CHECKLIST-ADR-050.md`. SRM co-ownership row added for `table_buyin_telemetry` under PlayerFinancialService with read-only consumer row under ShiftIntelligenceService. PRD-066 re-status to `Superseded` by PRD-068. | Architecture Review |

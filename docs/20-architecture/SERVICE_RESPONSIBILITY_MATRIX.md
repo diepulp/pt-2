@@ -1,7 +1,7 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.23.0
+nsversion: 4.24.0
 status: CANONICAL
 effective: 2026-02-23
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
@@ -28,8 +28,8 @@ source_of_truth:
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.23.0 (EmailService — Pilot SMTP email wiring, append-only send attempt log)
-> **Date**: 2026-03-25
+> **Version**: 4.24.0 (PRD-068 ADR-050 Phase 1 Exemplar — `table_buyin_telemetry` co-ownership + ShiftIntelligence WAL consumer row)
+> **Date**: 2026-04-20
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -55,6 +55,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.24.0 (2026-04-20)** – **PRD-068 ADR-050 Phase 1 Exemplar — `FACT-RATED-BUYIN` / shift-dashboard promotion**: Added `table_buyin_telemetry` to PlayerFinancialService `Owns:` as co-ownership (write-side via `trg_bridge_finance_to_telemetry`); the table has no standalone owning service and ShiftIntelligenceService consumes it read-only via WAL. Added ShiftIntelligenceService → PlayerFinancialService cross-context consumption row referencing `hooks/shift-dashboard/use-shift-dashboard-realtime.ts` (ADR-050 §4 E1/E3 canonical surface). Closes SRM gap flagged by PRD-068 DA review P0-R2-1. See `docs/10-prd/PRD-068-adr050-phase1-shift-dashboard-freshness-pilot-v0.md` and `docs/21-exec-spec/EXEC-068-adr050-phase1-shift-dashboard-freshness-pilot.md`.
 - **4.23.0 (2026-04-06)** – **EmailService (PRD-062 Pilot SMTP & Email Wiring)**: Registered `EmailService` as pilot-scoped utility service (Operational context). New table: `email_send_attempt` (append-only send log). RLS: Pattern C hybrid SELECT + INSERT only (no UPDATE/DELETE). No RPCs — writes via authenticated Supabase client after `set_rls_context_from_staff()` in server actions. 3 server actions: `sendShiftReportAction`, `retryShiftReportAction`, `dismissFailedAttemptAction`. Infrastructure adapter: `lib/email/` with provider-agnostic interface, Resend implementation. Service: `services/email/` with `createEmailService` factory. See `docs/10-prd/PRD-062-pilot-smtp-email-wiring-v0.md` and `docs/21-exec-spec/EXEC-062-pilot-smtp-email-wiring.md`.
 - **4.22.0 (2026-03-25)** – **ShiftIntelligenceService Alert Maturity (PRD-056)**: Added `shift_alert`, `alert_acknowledgment` to Owns. 2 new RPCs: `rpc_persist_anomaly_alerts` (SECURITY DEFINER), `rpc_acknowledge_alert` (SECURITY DEFINER). 1 new RPC: `rpc_get_alert_quality` (SECURITY INVOKER). 3 new API routes: `POST /api/v1/shift-intelligence/persist-alerts`, `POST /api/v1/shift-intelligence/acknowledge-alert`, `GET /api/v1/shift-intelligence/alerts`. ALTER `table_metric_baseline` add `last_error`. Pattern C RLS + DELETE denial on new tables. RPC-only mutation posture.
 - **4.21.0 (2026-03-23)** – **ShiftIntelligenceService**: Registered `ShiftIntelligenceService` (Operational context) for shift anomaly detection. New table: `table_metric_baseline`. 2 new RPCs: `rpc_compute_rolling_baseline` (SECURITY DEFINER, ADR-024), `rpc_get_anomaly_alerts` (SECURITY INVOKER). 2 API routes: `POST /api/shift-intelligence/compute-baselines`, `GET /api/shift-intelligence/anomaly-alerts`. Dependencies: TableContextService (source metric RPCs), CasinoService (casino_settings), TemporalAuthority (compute_gaming_day). Cross-context reads only; writes confined to owned `table_metric_baseline`.
@@ -125,7 +126,7 @@ Approved JSON blobs (all others require first-class columns):
 | **Operational**  | ShiftIntelligenceService | table_metric_baseline, shift_alert, alert_acknowledgment                                                                  | Shift anomaly detection, rolling baselines & alert maturity |
 | **Telemetry**    | RatingSlipService       | rating_slip, rating_slip_pause, pit_cash_observation                                                                       | Gameplay measurement                                        |
 | **Reward**       | LoyaltyService          | player_loyalty, loyalty_ledger, loyalty_outbox, promo_program, promo_coupon, reward_catalog, reward_price_points, reward_entitlement_tier, reward_limits, reward_eligibility, loyalty_earn_config | Reward policy & assignment                                  |
-| **Finance**      | PlayerFinancialService  | player_financial_transaction                                                                                               | Financial ledger (SoT) ¹                                    |
+| **Finance**      | PlayerFinancialService  | player_financial_transaction, table_buyin_telemetry (co-owned, bridge-written)                                             | Financial ledger (SoT) ¹                                    |
 | **Compliance**   | MTLService              | mtl_entry, mtl_audit_note                                                                                                  | AML/CTR compliance                                          |
 | **Onboarding**   | PlayerImportService     | import_batch, import_row                                                                                                   | CSV player import & staging ⁵                               |
 | **Analytics**    | Player360DashboardService ⁷ | (read-only aggregation across LoyaltyService + PromoService)                                                          | Player 360 dashboard data aggregation                       |
@@ -664,9 +665,11 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 
 ## PlayerFinancialService (Finance Context) ✅ IMPLEMENTED
 
-**Owns**: `player_financial_transaction`
+**Owns**: `player_financial_transaction`, `table_buyin_telemetry` (co-ownership; see note below)
 
 **Planned (post-MVP)**: `finance_outbox` — ADR-016 for payment gateway integration
+
+> **`table_buyin_telemetry` co-ownership (PRD-068, 2026-04-20):** This telemetry table is populated by `trg_bridge_finance_to_telemetry` whose source is PFT's authoritative write path. PlayerFinancialService therefore carries write-side ownership via the bridge. `table_buyin_telemetry` has no separate owning service of its own; ShiftIntelligenceService consumes it read-only via the WAL stream registered in ADR-050 / REGISTRY_FINANCIAL_SURFACES (see cross-context consumption entry below). This declaration closes the SRM gap flagged in PRD-068 DA review P0-R2-1.
 
 **Bounded Context**: "What monetary transactions occurred?"
 
@@ -1064,6 +1067,7 @@ create type import_row_status as enum ('staged','created','linked','skipped','co
 | Measurement Layer   | TableContextService | `table_session` via `measurement_rating_coverage_v` |
 | ShiftIntelligenceService | TableContextService | `rpc_shift_table_metrics`, `rpc_shift_cash_obs_table` (source metric RPCs) |
 | ShiftIntelligenceService | CasinoService      | `casino_settings` (operational config)               |
+| ShiftIntelligenceService | PlayerFinancialService | `table_buyin_telemetry` — **WAL-stream read-only** via `hooks/shift-dashboard/use-shift-dashboard-realtime.ts` (PRD-068 / ADR-050 §4 E1/E3 canonical surface; co-owned table, PFT is write-side via `trg_bridge_finance_to_telemetry`) |
 
 **Rule**: Cross-context consumers interact via DTO-level APIs, service factories, or RPCs—never by reaching into another service's tables directly.
 

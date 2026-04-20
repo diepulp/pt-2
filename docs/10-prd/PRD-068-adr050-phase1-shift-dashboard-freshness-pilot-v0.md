@@ -1,5 +1,5 @@
 ---
-id: PRD-067
+id: PRD-068
 title: ADR-050 Phase 1 Exemplar — Shift-Dashboard Financial Freshness Pilot
 owner: Lead Architect
 status: Draft
@@ -13,7 +13,7 @@ supersedes: PRD-066
 driving_authority: ADR-050 (ACCEPTED 2026-04-19)
 ---
 
-# PRD-067 — ADR-050 Phase 1 Exemplar: Shift-Dashboard Financial Freshness Pilot
+# PRD-068 — ADR-050 Phase 1 Exemplar: Shift-Dashboard Financial Freshness Pilot
 
 > **Supersedes PRD-066.** The legacy PRD (and its child EXEC-066, EXEC-066a/b, and three investigation memos in `docs/issues/shift-dash/`) pre-date ADR-050's acceptance. This PRD replaces PRD-066 wholesale; it is not an extension. PRD-066 is re-statused `Superseded` in the same commit. The archived prior-art remains readable as historical context but is **not** a requirements source for this PRD — the authority is ADR-050 §1–§7 and the companion registry and rollout matrix.
 
@@ -213,7 +213,7 @@ The release is considered **Done** when:
 
 **Documentation**
 - [ ] `REGISTRY_FINANCIAL_SURFACES.md` row updated with concrete `realtime_hook` and `window_correctness` values; changelog entry added
-- [ ] PRD-066 re-statused `Superseded` in its frontmatter, with a one-line pointer to PRD-067
+- [ ] PRD-066 re-statused `Superseded` in its frontmatter, with a one-line pointer to PRD-068
 - [ ] Replication Checklist (see Phase 1 Exit Criteria below) authored and linked from the registry row
 
 > **Archival note (not a DoD item):** the legacy EXEC-066, EXEC-066a, EXEC-066b, and the three investigation memos in `docs/issues/shift-dash/` are scheduled for archival under `docs/20-architecture/specs/_archive/ISSUE-SHIFT-DASH-FRESHNESS/` at EXEC-SPEC drafting time. This is filing hygiene, not pilot completion work — it is called out so it does not get forgotten, not gated on PRD DoD.

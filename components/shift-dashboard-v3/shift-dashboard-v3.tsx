@@ -1,7 +1,7 @@
 'use client';
 
 import { RefreshCwIcon } from 'lucide-react';
-import React, { lazy, Suspense, useMemo, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 
 import { PanelErrorBoundary } from '@/components/error-boundary';
 import { CheckpointButton } from '@/components/shift-dashboard/checkpoint-button';
@@ -36,6 +36,7 @@ import { useGamingDay } from '@/hooks/casino/use-gaming-day';
 import {
   useActiveVisitorsSummary,
   useCashObsSummary,
+  useShiftDashboardRealtime,
   useShiftDashboardSummary,
   type ShiftTimeWindow,
 } from '@/hooks/shift-dashboard';
@@ -66,12 +67,31 @@ function ChartSkeleton() {
   );
 }
 
-function getDefaultWindow(): ShiftTimeWindow {
-  const now = new Date();
-  const start = new Date(now.getTime() - 8 * 60 * 60 * 1000);
+/**
+ * Default rolling-window span (ADR-050 §4 E2).
+ * Exported for test assertions — unit test references this constant to compute
+ * expected window_end / window_start deltas.
+ */
+export const DEFAULT_ROLLING_SPAN_MS = 8 * 60 * 60 * 1000;
+
+/**
+ * Cadence at which the rolling-window anchor advances. Aligned with
+ * useShiftDashboardSummary's refetchInterval (30_000ms) so each tick produces
+ * a fresh window and a corresponding React Query refetch.
+ */
+export const ROLLING_TICK_MS = 30_000;
+
+/**
+ * Compute an ADR-050 §4 E2-compliant rolling window from a given anchor
+ * timestamp. Pure function — no React, no side effects.
+ */
+export function computeRollingWindow(
+  anchorMs: number,
+  spanMs: number = DEFAULT_ROLLING_SPAN_MS,
+): ShiftTimeWindow {
   return {
-    start: start.toISOString(),
-    end: now.toISOString(),
+    start: new Date(anchorMs - spanMs).toISOString(),
+    end: new Date(anchorMs).toISOString(),
   };
 }
 
@@ -84,11 +104,36 @@ function getTimeSinceUpdate(updatedAt: number): string {
 }
 
 export function ShiftDashboardV3() {
-  const [timeWindow, setTimeWindow] =
-    useState<ShiftTimeWindow>(getDefaultWindow);
+  // ADR-050 §4 E2 rolling window.
+  // `operatorWindow` is null until the operator interacts with TimeWindowSelector;
+  // while null, the effective window rolls — its `end` advances on each tick.
+  // Once an operator commits an explicit window (preset or Refresh), rolling is
+  // bypassed and the chosen window stays static until the next operator action.
+  const [operatorWindow, setOperatorWindow] = useState<ShiftTimeWindow | null>(
+    null,
+  );
+  const [rollingAnchorMs, setRollingAnchorMs] = useState<number>(() =>
+    Date.now(),
+  );
+
+  useEffect(() => {
+    if (operatorWindow !== null) return; // rolling disabled under operator override
+    const id = setInterval(() => {
+      setRollingAnchorMs(Date.now());
+    }, ROLLING_TICK_MS);
+    return () => clearInterval(id);
+  }, [operatorWindow]);
+
+  const timeWindow: ShiftTimeWindow =
+    operatorWindow ?? computeRollingWindow(rollingAnchorMs);
+
+  const handleTimeWindowChange = (next: ShiftTimeWindow) => {
+    setOperatorWindow(next);
+  };
 
   // === Auth & Gaming Day (for coverage widget) ===
   const { casinoId } = useAuth();
+  useShiftDashboardRealtime({ casinoId });
   const { data: gamingDayData } = useGamingDay();
   const gamingDay = gamingDayData?.gaming_day;
 
@@ -169,7 +214,10 @@ export function ShiftDashboardV3() {
           <div className="flex items-center gap-3">
             <DeltaBadge />
             <CheckpointButton />
-            <TimeWindowSelector value={timeWindow} onChange={setTimeWindow} />
+            <TimeWindowSelector
+              value={timeWindow}
+              onChange={handleTimeWindowChange}
+            />
           </div>
         </div>
         {/* Coverage bar */}

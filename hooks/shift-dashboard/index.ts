@@ -56,6 +56,13 @@ export {
   type UseActiveVisitorsSummaryOptions,
 } from './use-active-visitors-summary';
 
+// Realtime Hook (ADR-050 §4 E1/E3 canonical surface)
+export {
+  useShiftDashboardRealtime,
+  isShiftDashboardKey,
+  DEBOUNCE_WINDOW_MS,
+} from './use-shift-dashboard-realtime';
+
 // HTTP Fetchers (for direct use if needed)
 export {
   fetchCashObsAlerts,

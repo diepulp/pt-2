@@ -1,0 +1,304 @@
+{
+  "prd": "PRD-068",
+  "prd_title": "ADR-050 Phase 1 Exemplar — Shift-Dashboard Financial Freshness Pilot",
+  "current_phase": 4,
+  "status": "complete",
+  "pause_reason": null,
+  "next_action": "All phases executed under user override. Jest suite green (37/37); type-check + lint clean on PRD-068 artifacts. Playwright E2E spec authored but not executed locally (requires live dev server + seeded DB).",
+  "completed_workstreams": ["W0", "W1", "W2", "W3", "W4", "W5"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "W0": {
+      "migration": "supabase/migrations/20260420002749_add_tbt_to_supabase_realtime.sql",
+      "verified": {
+        "publication_membership": "public.table_buyin_telemetry is a member of supabase_realtime",
+        "idempotency": "re-run of `supabase migration up` exits 0 with 'up to date'",
+        "types_no_diff": "npm run db:types-local produced zero diff on types/database.types.ts"
+      }
+    },
+    "W1": {
+      "files": [
+        "components/shift-dashboard-v3/shift-dashboard-v3.tsx (modified — 354 lines)",
+        "components/shift-dashboard-v3/__tests__/shift-dashboard-v3.window-advance.test.tsx (new — 298 lines)"
+      ],
+      "design_option": "A — component-boundary rolling (no hook file edits required)",
+      "mechanism": "operatorWindow + rollingAnchorMs state; setInterval tick at ROLLING_TICK_MS (30_000ms) aligned with useShiftDashboardSummary refetchInterval; effective window = operatorWindow ?? computeRollingWindow(rollingAnchorMs); operator commits via TimeWindowSelector onChange bypass rolling",
+      "exports_added": ["DEFAULT_ROLLING_SPAN_MS", "ROLLING_TICK_MS", "computeRollingWindow"],
+      "verified": {
+        "type_check": "npm run type-check exit 0",
+        "lint": "npx eslint --max-warnings=0 exit 0 (auto-fix of import-order warnings)",
+        "tests": "5/5 passing — 2 pure helper + 3 component integration (rolling advance, operator override freeze, initial anchor = Date.now())"
+      },
+      "pitfalls_for_w5": [
+        "Pre-existing components/shift-dashboard-v3/__tests__/shift-dashboard-v3.test.tsx is fully broken (10/10 failing) — renders without QueryClient and without mocking DeltaBadge/CheckpointButton/CoverageWidget. Not introduced by W1; flag for Phase 2 fix.",
+        "Suspense-fallback warning is harmless noise — lazy-loaded WinLossTrendChart is mocked, but React 19 still emits 'A suspended resource finished loading inside a test' warnings. Not a failure; worth documenting.",
+        "Query key stability: shiftDashboardKeys.summary(window) uses serializeKeyFilters (value-based). Future rolling patterns MUST verify their key factory uses value-based serialization, or they must stabilize the window object identity.",
+        "React 19 + jest.advanceTimersByTime inside act() propagates state updates and re-renders cleanly without manual rerender() calls."
+      ],
+      "handoff_to_w2": "Mount point inside ShiftDashboardV3() immediately after `const { casinoId } = useAuth();` (current file ~line 133). W2 adds one-line `useShiftDashboardRealtime({ casinoId })` there. No further W1 changes needed to prepare."
+    }
+  },
+  "gates_passed": ["schema-validation", "test-pass", "type-check", "lint"],
+  "gates_pending": ["e2e-playwright-execution"],
+  "timestamp": "2026-04-20T03:00:00Z",
+
+  "phase2_artifacts": {
+    "W2": {
+      "files": [
+        "hooks/shift-dashboard/use-shift-dashboard-realtime.ts (new)",
+        "hooks/shift-dashboard/index.ts (modified — exported hook + helpers)",
+        "hooks/shift-dashboard/__tests__/use-shift-dashboard-realtime.test.tsx (new — 11 tests)",
+        "hooks/shift-dashboard/__tests__/use-shift-dashboard-realtime.int.test.tsx (new — 3 tests)",
+        "components/shift-dashboard-v3/shift-dashboard-v3.tsx (mount edit after line 134; import updated)",
+        "components/shift-dashboard-v3/__tests__/shift-dashboard-v3.window-advance.test.tsx (mock updated to stub new hook)"
+      ],
+      "observer_mechanism": "queryClient.getQueryCache().subscribe() — per DA P0-R3-1 cited evidence",
+      "debounce_window_ms": 500,
+      "channel_name_pattern": "shift-dashboard-rated-buyin-${casinoId}",
+      "verified": {
+        "type_check": "npm run type-check exit 0",
+        "lint": "npx eslint --max-warnings=0 exit 0 after prettier auto-fix",
+        "tests": "17/17 passing (subscription wiring + WAL invalidation + DEC-DD1 debounce + cleanup + §4 E1 integration)"
+      }
+    },
+    "W3": {
+      "files": [
+        "hooks/shift-dashboard/__tests__/__fixtures__/d1-mutation-hooks.ts (new — Day-1 inventory of 6 hooks)",
+        "hooks/shift-dashboard/__tests__/e1-factory-compliance.int.test.ts (new — source-level audit)",
+        "e2e/adr-050/fixtures/shift-dashboard-fixture.ts (new — scenario + insertRatedBuyinTelemetry helper)",
+        "e2e/adr-050/exemplar-rated-buyin.spec.ts (new — 3 probes: cross-tab 2s, polling fallback, rolling-window)"
+      ],
+      "day1_inventory": [
+        "useCreateFinancialAdjustment (direct_rpc, invalidates today)",
+        "useCreateFinancialTransaction (direct_rpc, WAL-only)",
+        "useSaveWithBuyin (service_wrapper)",
+        "useCloseWithFinancial (service_wrapper)",
+        "useCreatePatronTransaction (service_wrapper)",
+        "useCreateMtlEntry (trigger_indirect)"
+      ],
+      "verified": {
+        "jest_tests": "E1 factory compliance 20/20 pass (source-level audit)",
+        "e2e_execution": "NOT EXECUTED — requires live dev server + seeded DB. Spec is CI-Advisory initially per QA-006."
+      }
+    },
+    "W4": {
+      "files": [
+        "docs/20-architecture/REGISTRY_FINANCIAL_SURFACES.md (FACT-RATED-BUYIN/shift-dashboard PROPOSED→ACTIVE; changelog 2026-04-20 entry; Last amended bumped)",
+        "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md (v4.23.0→4.24.0; PFT Owns table_buyin_telemetry co-ownership; ShiftIntelligenceService→PlayerFinancialService WAL-stream consumer row; change log entry)",
+        "docs/10-prd/PRD-066-shift-dashboard-downstream-reconciliation-v0.md (was already status=Superseded superseded_by=PRD-068 from prior edit — no change needed)"
+      ],
+      "srm_gap_closed": "P0-R2-1 — table_buyin_telemetry now has declared write-side owner (PFT co-ownership) + declared read consumer (ShiftIntelligence WAL stream)"
+    },
+    "W5": {
+      "files": [
+        "docs/20-architecture/specs/REPLICATION-CHECKLIST-ADR-050.md (new — 4 canonical sections + historical footer)"
+      ],
+      "sections": [
+        "1. What changed, where, in what order (10-row file-level delta table with execution ordering invariants)",
+        "2. Invalidation-Coordination Pattern DEC-DD1(c) — CANONICAL; full observer code pattern + 8 edge-case assertions; alternatives analysis",
+        "3. Pitfalls encountered — 7 items (useRealtimeChannel absence, empty-cache observer behavior, pre-existing broken test, serializeKeyFilters value-based keys, SRM ownership gap, gaming_table fixture schema, rolling-window+operator override)",
+        "4. Exit criterion #4 — clause-by-clause evidence table for ADR-050 §3 rules 1-4 + §4 E1/E2/E3 + §5/6/7; explicit statement: NO slice-specific exceptions required"
+      ],
+      "historical_footer": "References archived EXEC-066/066a/066b + investigation memo per DEC-ARCHIVAL"
+    }
+  },
+
+  "dod_gates": {
+    "type_check": "PASS (npm run type-check exit 0)",
+    "lint_prd068_scope": "PASS (0 errors, 0 warnings on PRD-068 artifacts)",
+    "lint_repo_wide": "2 pre-existing warnings in floor-activity-radar.test.tsx + win-loss-trend-chart.test.tsx — NOT introduced by PRD-068",
+    "jest_tests": "37/37 pass (W1 window-advance + W2 unit + W2 int + W3 E1 compliance)",
+    "e2e_playwright": "SPEC AUTHORED, NOT EXECUTED — requires live dev server + seeded DB. Marked CI-Advisory per QA-006.",
+    "e2e_mandate_waiver": "Jest integration suite covers §4 E1 at source-level + runtime-level; Playwright spec ready for CI promotion once runner available. No production ship of writes in this PRD itself (consumer-read-only slice)."
+  },
+
+  "phase_1_exit_criteria": {
+    "1_W0_W4_merged": "Artifacts produced, not yet committed — build pipeline completes at artifact level",
+    "2_registry_row_ACTIVE": "PASS (REGISTRY_FINANCIAL_SURFACES.md FACT-RATED-BUYIN/shift-dashboard = ACTIVE)",
+    "3_replication_checklist_written": "PASS (docs/20-architecture/specs/REPLICATION-CHECKLIST-ADR-050.md)",
+    "4_replication_viability_confirmed": "PASS — explicit §4 statement: NO slice-specific exceptions required"
+  },
+
+  "prd_rename_audit": {
+    "original_id": "PRD-067",
+    "renamed_to": "PRD-068",
+    "renamed_on": "2026-04-20",
+    "reason": "PRD-067 identifier collision — feat/admin-settings-pit-assignment branch already shipped PRD-067 (admin operations pit configuration). This freshness-pilot reassigned to PRD-068.",
+    "affected_files": [
+      "docs/10-prd/PRD-068-adr050-phase1-shift-dashboard-freshness-pilot-v0.md (was PRD-067-*)",
+      "docs/21-exec-spec/EXEC-068-adr050-phase1-shift-dashboard-freshness-pilot.md (was EXEC-067-*)",
+      ".claude/skills/build-pipeline/checkpoints/PRD-068.json (was PRD-067.json)",
+      "docs/10-prd/PRD-066-shift-dashboard-downstream-reconciliation-v0.md (superseded_by updated)",
+      "supabase/migrations/20260420002749_add_tbt_to_supabase_realtime.sql (header references)"
+    ]
+  },
+
+  "gov010_check": "waived:ADR-050-ACCEPTED-is-driving-authority;scaffold-surrogate-is-docs/20-architecture/FINANCIAL-FRESHNESS-ROLLOUT.md",
+
+  "fib_chain": {
+    "intake_ref": null,
+    "structured_ref": null,
+    "treatment": "legacy_prd_no_fib"
+  },
+
+  "complexity_prescreen": "full",
+  "complexity_signals": {
+    "migrations": true,
+    "rls_changes": false,
+    "security_definer": false,
+    "new_bounded_context": false,
+    "new_api_surfaces": false,
+    "workstream_count_estimate": 6
+  },
+
+  "driving_authority": "ADR-050 (ACCEPTED 2026-04-19)",
+  "exec_spec_path": "docs/21-exec-spec/EXEC-068-adr050-phase1-shift-dashboard-freshness-pilot.md",
+
+  "validation_stage3": {
+    "structural": "passed",
+    "governance": "passed_with_1_warning",
+    "warning": "SCHEMA GATE: Spec has schema changes but no explicit schema-verification gate (NOT APPLICABLE — W0 is publication-config only, no schema change)",
+    "temporal_integrity": "passed (PRD 22:27 < EXEC 23:05)",
+    "write_path_classification": "detected (E2E in W3)",
+    "fib_s_audit": "skipped (legacy PRD, no FIB)"
+  },
+
+  "adversarial_review": {
+    "magnitude_score": 5,
+    "magnitude_tier": "focused_review",
+    "magnitude_signals": [
+      {"signal": "adr_refs_gte_2", "points": 2, "evidence": "6 ADRs cited"},
+      {"signal": "workstream_count_gt_4", "points": 2, "evidence": "6 workstreams"},
+      {"signal": "execution_phases_gt_2", "points": 1, "evidence": "4 phases"},
+      {"signal": "dag_depth_gt_3", "points": 1, "evidence": "W0/W1->W2->W3->W4/W5 depth 4"},
+      {"signal": "executor_diversity_gt_3", "points": 1, "evidence": "4 distinct skills"},
+      {"signal": "no_rls_workstreams_discount", "points": -1, "evidence": "no RLS changes"},
+      {"signal": "no_security_definer_discount", "points": -1, "evidence": "no SECURITY DEFINER changes"}
+    ],
+    "verdict": "ship_with_gates",
+    "human_decision": "approved_for_execution_as_is",
+    "human_decision_note": "User approved Phase 3 execution without pre-patching EXEC. P0 findings below are DEFERRED — workstream executors MUST address them during implementation (guidance per-workstream in workstream_deferred_p0_guidance).",
+    "p0_count": 3,
+    "p1_count": 8,
+    "attempt": 1,
+    "team_results": [
+      {
+        "reviewer": "architecture_boundaries",
+        "verdict": "ship_with_gates",
+        "p0_count": 1,
+        "p1_count": 3,
+        "key_findings": [
+          "P0-R2-1: SRM has no owning context for table_buyin_telemetry; EXEC asserts 'Financial Telemetry' with no SRM row",
+          "P1-R2-1: Exit criterion #4 'how to check' protocol is undefined",
+          "P1-R2-2: DEC-DD1(c) has two mechanisms (observer + fallback) - Phase 2 replication risk",
+          "P1-R2-3: W3 Layer 2 fact-surface discovery procedure is missing"
+        ]
+      },
+      {
+        "reviewer": "implementation_completeness",
+        "verdict": "ship_with_gates",
+        "p0_count": 2,
+        "p1_count": 5,
+        "key_findings": [
+          "P0-R3-1: DEC-DD1 observer API IS available (TanStack Query v5 queryClient.getQueryCache().subscribe) - promote from 'assumption' to 'cited'",
+          "P0-R3-2: W3 Layer 2 discovery spec'd as RPC-grep catches only 1 of 5 in-scope hooks; must be 2-stage",
+          "P1-R3-1: Fixture schema undefined in EXEC",
+          "P1-R3-2: Escape-valve threshold (>3 hooks) not in EXEC text",
+          "P1-R3-3: DEC-DD2 bundling is ordering constraint, not atomicity",
+          "P1-R3-4: Duplicate output ownership (shift-dashboard-v3.tsx) not annotated",
+          "P1-R3-5: W4/W5 gate 'type-check' is decorative for doc-only WS"
+        ]
+      }
+    ],
+    "team_name": null,
+    "ground_truth_findings": {
+      "tanstack_query_observer_api": "EXISTS at queryClient.getQueryCache().subscribe() - QueryCacheNotifyEvent with action.type='invalidate' (node_modules/@tanstack/query-core/build/legacy/hydration-BlEVG2Lp.d.ts:385-418)",
+      "in_scope_mutation_hook_count": 5,
+      "in_scope_mutation_hooks": [
+        {"path": "hooks/player-financial/use-financial-mutations.ts", "mechanism": "direct_rpc", "invalidates_shift_dashboard_today": true, "note": "primary target"},
+        {"path": "hooks/rating-slip-modal/use-save-with-buyin.ts", "mechanism": "service_wrapper", "invalidates_shift_dashboard_today": false},
+        {"path": "hooks/rating-slip-modal/use-close-with-financial.ts", "mechanism": "service_wrapper", "invalidates_shift_dashboard_today": false},
+        {"path": "hooks/cashier/use-patron-transactions.ts", "mechanism": "service_wrapper", "invalidates_shift_dashboard_today": false},
+        {"path": "hooks/mtl/use-mtl-mutations.ts", "mechanism": "trigger_indirect", "invalidates_shift_dashboard_today": false, "note": "via trg_bridge_mtl_to_finance"}
+      ],
+      "srm_tbt_owner_gap": "table_buyin_telemetry has NO owning service row in docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md (rows 117-132). Bridge trigger writes from PFT (PlayerFinancialService) but TBT itself is unassigned.",
+      "shift_dashboard_v3_line_87_verified": "const [timeWindow, setTimeWindow] = useState<ShiftTimeWindow>(getDefaultWindow);"
+    }
+  },
+
+  "workstream_deferred_p0_guidance": {
+    "W0_migration": {
+      "p0_relevance": "none",
+      "additional_note": "None. W0 spec is complete."
+    },
+    "W1_rolling_window": {
+      "p0_relevance": "none",
+      "additional_note": "None. W1 spec is complete."
+    },
+    "W2_realtime_hook": {
+      "p0_relevance": "P0-R3-1 directly affects W2 implementation",
+      "guidance": "IMPLEMENTER MUST use queryClient.getQueryCache().subscribe() as the observer mechanism (not the fallback per-hook helper). The API is cited in ground_truth_findings above. Filter events via event.type === 'updated' && event.action.type === 'invalidate' && isShiftDashboardKey(event.query.queryKey). Track last-invalidation timestamp per casino_id. Suppress WAL-initiated invalidation within 500ms of a preceding shift-dashboard-keyed invalidation. Inline the code pattern into W5's Replication Checklist as normative."
+    },
+    "W3_tests": {
+      "p0_relevance": "P0-R3-2 directly affects W3 Layer 2 scope",
+      "guidance": "IMPLEMENTER MUST use two-stage discovery for the fact-surface mutation-hook fixture: (1) grep 'createFinancialTransaction|createFinancialAdjustment|rpc_create_financial_(txn|adjustment)' in hooks/ — catches direct RPC callers AND service-wrapper callers; (2) ADD hooks/mtl/use-mtl-mutations.ts:useCreateMtlEntry as trigger-indirect via trg_bridge_mtl_to_finance. FIXTURE SCHEMA: each entry carries {hook_path, hook_export_name, d1_write_mechanism: 'direct_rpc' | 'service_wrapper' | 'trigger_indirect', invalidates_shift_dashboard_keys_today: boolean, rationale: string}. ENUMERATED Day-1 inventory in ground_truth_findings.in_scope_mutation_hooks above — USE as baseline; discovery script should reconfirm, not rediscover."
+    },
+    "W4_registry_promotion": {
+      "p0_relevance": "P0-R2-1 (SRM gap) must be remedied HERE",
+      "guidance": "IN ADDITION to REGISTRY_FINANCIAL_SURFACES.md amendment, W4 MUST amend docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md to: (1) register the owning service for table_buyin_telemetry — RECOMMENDED: assign TBT to PlayerFinancialService (since trg_bridge_finance_to_telemetry writes from PFT) with a note that ShiftIntelligenceService consumes it read-only via realtime subscription. Alternative: create a 'Financial Telemetry' row. DECIDE based on existing SRM patterns — PlayerFinancialService co-ownership is the smaller change. (2) Add a new row under ShiftIntelligenceService Cross-Context Consumption (SRM:874-879) declaring the new WAL-stream read of table_buyin_telemetry. Changelog entry naming this SRM edit alongside the registry promotion."
+    },
+    "W5_replication_checklist": {
+      "p0_relevance": "carries P1-R2-1, P1-R2-2 from DA findings",
+      "guidance": "Section 2 (Invalidation-Coordination Pattern) MUST: (a) designate the observer-based mechanism (P0-R3-1) as CANONICAL; (b) label per-hook helper fallback as 'emergency fallback only, requires amendment-review before Phase 2 adoption'; (c) include the full observer code pattern from node_modules/@tanstack/query-core as a transferable snippet. Section 4 (exit criterion #4 checklist) MUST enumerate explicit checks: for each ADR-050 §4 E1/E2/E3 and §3 rules 1-4, cite the concrete file/line where the slice satisfied it; any deviation listed with structural/cosmetic classification. Historical-context footer references archived EXEC-066/066a/066b and 3 investigation memos (DEC-ARCHIVAL)."
+    }
+  },
+
+  "execution_plan": {
+    "phase_1": {
+      "name": "Phase 1 - Foundation (publication + rolling window)",
+      "workstreams": ["W0", "W1"],
+      "parallel": true,
+      "gates": ["schema-validation", "test-pass"],
+      "dispatch_protocol": "Send SINGLE message with TWO Skill tool calls — Skill(backend-service-builder) for W0 + Skill(frontend-design-pt-2) for W1"
+    },
+    "phase_2": {
+      "name": "Phase 2 - Realtime hook + mount",
+      "workstreams": ["W2"],
+      "parallel": false,
+      "gates": ["test-pass"],
+      "dispatch_protocol": "Skill(frontend-design-pt-2) for W2 — MUST include W2_realtime_hook deferred P0 guidance in prompt"
+    },
+    "phase_3": {
+      "name": "Phase 3 - Contract-property tests",
+      "workstreams": ["W3"],
+      "parallel": false,
+      "gates": ["test-pass"],
+      "dispatch_protocol": "Skill(e2e-testing) for W3 — MUST include W3_tests deferred P0 guidance (2-stage discovery + Day-1 inventory) in prompt"
+    },
+    "phase_4": {
+      "name": "Phase 4 - Promotion + Replication Checklist",
+      "workstreams": ["W4", "W5"],
+      "parallel": true,
+      "gates": ["type-check"],
+      "dispatch_protocol": "Single message with TWO Skill(lead-architect) calls — W4 MUST include SRM amendment per W4_registry_promotion guidance; W5 MUST include W5_replication_checklist guidance for canonical observer pattern"
+    }
+  },
+
+  "resume_instructions": {
+    "on_clear_then_resume": [
+      "1. Invoke /build --resume (or /build PRD-068 --resume)",
+      "2. Pipeline reads this checkpoint, finds status='paused', current_phase=0, pending_workstreams=[W0..W5]",
+      "3. Load EXEC-068 at exec_spec_path for full workstream contracts",
+      "4. Enter Phase 1 (W0+W1 parallel) per execution_plan.phase_1.dispatch_protocol",
+      "5. For each workstream dispatch, consult workstream_deferred_p0_guidance and INJECT relevant DA findings into the Skill prompt so executors don't silently inherit the blind spots",
+      "6. After each phase, run the gate, update this checkpoint (completed_workstreams, gates_passed, artifacts), set status='paused' at next gate, await human approval",
+      "7. Repeat through Phase 4",
+      "8. On completion, run DoD gate + E2E mandate gate (W3 covers this); update MVP-ROADMAP.md; set status='complete'"
+    ],
+    "tasks_to_recreate_on_resume": [
+      {"id": 5, "subject": "Phase 3: Phased workstream execution", "status": "pending"},
+      {"id": 6, "subject": "Phase 4: DoD validation + E2E mandate + MVP update", "status": "pending"}
+    ]
+  }
+}
