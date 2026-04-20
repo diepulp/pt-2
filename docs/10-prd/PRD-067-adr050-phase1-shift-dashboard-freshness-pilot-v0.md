@@ -71,8 +71,8 @@ The aggregate effect: an operator adjusting a buy-in in one tab watches another 
 
 ### 3.1 Primary user: Pit Boss / Floor Supervisor operating the shift-dashboard
 
-- **U1 — Adjust a buy-in in Tab A; watch Win/Loss and Est. Drop update in Tab B within 2 seconds.** Today: stale indefinitely. Post-exemplar: ≤2s realtime, ≤30s fallback.
-- **U2 — Adjust a buy-in in Tab A; see Tab A's own panels update within the same LIVE SLA.** Today: mutation-side invalidation produces a refetch with the wrong (frozen) window. Post-exemplar: rolling-window refetch returns the correct aggregate.
+- **U1 — Adjust a buy-in in Tab A; watch Win/Loss and Est. Drop update in Tab B within 2 seconds via cross-tab WAL propagation.** Today: stale indefinitely. Post-exemplar: ≤2s realtime, ≤30s polling fallback.
+- **U2 — Adjust a buy-in in Tab A; see Tab A's own panels update within the declared LIVE SLA via the exemplar's chosen mutation-path coordination pattern (F5).** The mechanism differs from U1: same-tab freshness is driven by mutation-side response coordinated with the new WAL-side invalidation, not by cross-tab WAL propagation. Today: mutation-side invalidation produces a refetch with the wrong (frozen) window. Post-exemplar: the chosen coordination pattern produces exactly one refetch over a rolling window that returns the correct aggregate, still within the declared LIVE SLA.
 - **U3 — Observe aggregate numbers through a shift's lifespan without reloading.** Today: window staleness compounds; numbers silently drift from reality. Post-exemplar: window advances each refetch; realtime covers inter-poll gaps.
 
 ### 3.2 Secondary user: Engineer adding the next financial surface (Phase 2+ author)
@@ -91,7 +91,7 @@ All items below are testable and scoped to the one fact × one surface. No item 
 - **F4** — On TBT WAL events, invalidate `shiftDashboardKeys.summary.*` and `shiftDashboardKeys.tableMetrics.*` via the registered factory (§4 E1 compliance).
 - **F5** — Resolve the duplicate-invalidation coordination: choose either (a) remove the shift-dashboard invalidations from `useCreateFinancialAdjustment.onSuccess` once WAL coverage is live, OR (b) make the WAL hook idempotent via WAL-sequence deduplication, OR (c) a documented hybrid. The choice MUST be captured in the Replication Checklist and its rationale noted in the registry row's `window_correctness` column or a linked comment.
 - **F6** — Contract-property test `e2e/adr-050/exemplar-rated-buyin.spec.ts` probing: (a) cross-tab Win/Loss update within 2s nominal, (b) polling fallback to 30s under degraded realtime, (c) rolling-window correctness (post-mount adjustment included without reload).
-- **F7** — Unit/integration coverage: §4 E1 factory compliance for all mutation hooks that invalidate shift-dashboard keys; §4 E2 window-advance assertion for the refactored hook.
+- **F7** — Unit/integration coverage: §4 E1 factory compliance for **all in-scope mutation hooks writing to `FACT-RATED-BUYIN` / D1 (`player_financial_transaction`) and affecting this surface**, not merely the ones already known to invalidate shift-dashboard keys (the test surface is defined by the fact-and-surface pair, not by existing invalidation wiring — otherwise blind spots are preserved); §4 E2 window-advance assertion for the refactored hook.
 - **F8** — Registry promotion: amend `REGISTRY_FINANCIAL_SURFACES.md` row for `FACT-RATED-BUYIN` / `components/shift-dashboard-v3/shift-dashboard-v3.tsx` from `PROPOSED → ACTIVE`, filling in the realtime-hook and window-correctness columns with concrete file references. Changelog entry added.
 - **F9** — Replication Checklist authored at `docs/20-architecture/specs/REPLICATION-CHECKLIST-ADR-050.md`, including the four canonical sections (what changed, where, in what order; invalidation-coordination pattern; pitfalls encountered; slice-specific ADR exceptions, if any) per `FINANCIAL-FRESHNESS-ROLLOUT.md` §Phase 1 exit criteria.
 
@@ -118,7 +118,7 @@ All items below are testable and scoped to the one fact × one surface. No item 
 |---|---|---|
 | NFR1 | LIVE SLA: operator observes a committed adjustment within 2s under nominal realtime conditions | E2E probe F6 |
 | NFR2 | Polling fallback SLA: ≤30s under degraded realtime | E2E probe F6 |
-| NFR3 | Publication-membership migration is reversible (`DROP TABLE` migration possible without data loss) | Rollout §Reversibility |
+| NFR3 | Publication-membership migration is reversible (`DROP TABLE` migration possible without row-level data loss). Rollback changes runtime freshness behavior and requires the registry row to be demoted from `ACTIVE`. | Rollout §Reversibility |
 | NFR4 | No increase in shift-dashboard mutation-path latency (invalidation coordination must not regress the write path) | Existing mutation tests; no new harness required |
 | NFR5 | WAL event volume from TBT publication monitored post-deployment | Observability track (not blocking) |
 
@@ -173,8 +173,13 @@ The Replication Checklist is the deliverable that makes this constraint *a patte
 
 ### 7.4 Open questions
 
-- **Q1:** Does the rolling-window refactor (W1) warrant extracting a shared `useRollingWindow` hook in this PRD, or should that extraction wait until 2.A inherits the same surface? Recommendation: wait — scope-creeps Phase 1 otherwise; 2.A can extract when it replicates.
-- **Q2:** Coordination pattern F5: is the preferred default (a) remove mutation-side shift-dashboard invalidations once WAL is live, or (b) WAL-seq idempotency in the new hook? Recommendation defer to implementation; both are in-contract. The choice + rationale is the Replication Checklist's content.
+- **Q1 (truly open):** Coordination pattern F5 — is the preferred default (a) remove mutation-side shift-dashboard invalidations once WAL is live, or (b) WAL-seq idempotency in the new hook, or (c) a documented hybrid? All three are in-contract; the choice + rationale is the Replication Checklist's content. Implementation is free to select.
+
+### 7.5 Deferred considerations
+
+Items already resolved in favor of containment; listed so the decision is not re-opened during implementation.
+
+- **Extracting a shared `useRollingWindow` hook** — explicitly deferred. W1 ships the rolling-window fix inline on `shift-dashboard-v3.tsx:87`. Phase 2.A inherits the same surface and is the natural point at which to decide if extraction is warranted. Doing so in this PRD would scope-creep Phase 1 and blur the exemplar's "one fact × one surface" boundary.
 
 ---
 
@@ -209,7 +214,9 @@ The release is considered **Done** when:
 **Documentation**
 - [ ] `REGISTRY_FINANCIAL_SURFACES.md` row updated with concrete `realtime_hook` and `window_correctness` values; changelog entry added
 - [ ] PRD-066 re-statused `Superseded` in its frontmatter, with a one-line pointer to PRD-067
-- [ ] EXEC-066, EXEC-066a, EXEC-066b, and the three investigation memos archived under `docs/20-architecture/specs/_archive/ISSUE-SHIFT-DASH-FRESHNESS/` (archival is a documentation step, not an execution step — handled at EXEC-SPEC drafting time per rollout Phase 1 artifact line)
+- [ ] Replication Checklist (see Phase 1 Exit Criteria below) authored and linked from the registry row
+
+> **Archival note (not a DoD item):** the legacy EXEC-066, EXEC-066a, EXEC-066b, and the three investigation memos in `docs/issues/shift-dash/` are scheduled for archival under `docs/20-architecture/specs/_archive/ISSUE-SHIFT-DASH-FRESHNESS/` at EXEC-SPEC drafting time. This is filing hygiene, not pilot completion work — it is called out so it does not get forgotten, not gated on PRD DoD.
 
 **Phase 1 Exit Criteria (by reference to `FINANCIAL-FRESHNESS-ROLLOUT.md` §Phase 1)**
 - [ ] **#1** — W0–W4 all merged
@@ -284,3 +291,4 @@ The release is considered **Done** when:
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | v0 | 2026-04-19 | Lead Architect | Initial draft. Supersedes PRD-066. Native to ADR-050. Pilot-containment posture explicit. |
+| v0.1 | 2026-04-19 | Lead Architect | Review-feedback patches: (1) U2 distinguishes same-tab mutation-path coordination from cross-tab WAL propagation; (2) F7 scope tightened to "in-scope mutation hooks writing to FACT-RATED-BUYIN / D1 and affecting this surface" to prevent blind spots; (3) NFR3 acknowledges rollback changes runtime freshness behavior and demotes registry row; (4) archival choreography demoted from DoD to a documentation note; (5) Q1 (`useRollingWindow` extraction) moved to §7.5 Deferred Considerations; only the F5 coordination choice remains truly open. |
