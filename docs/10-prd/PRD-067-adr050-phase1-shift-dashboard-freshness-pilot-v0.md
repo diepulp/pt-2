@@ -109,7 +109,7 @@ All items below are testable and scoped to the one fact × one surface. No item 
 | FR4 | D4 declared as LIVE; SLA ≤2s realtime / ≤30s fallback | §1 D4, §2 LIVE |
 | FR5 | TBT is a declared publication member via migration under `supabase/migrations/` | §4 E3 |
 | FR6 | The surface's time window includes post-mount mutations | §4 E2 |
-| FR7 | All mutation hooks writing to D1 that invalidate shift-dashboard keys use a registered factory | §4 E1 |
+| FR7 | All in-scope mutation hooks writing to `FACT-RATED-BUYIN` / D1 (`player_financial_transaction`) and affecting this surface use a registered factory for every shift-dashboard-key invalidation (scope is defined by the fact-and-surface pair, not by existing invalidation wiring) | §4 E1 |
 | FR8 | Duplicate-invalidation coordination pattern explicitly chosen, documented, and referenced from the registry row | Rollout §Phase 1 exit criterion #3 (amended) |
 
 ### 5.2 Non-functional requirements
@@ -124,7 +124,7 @@ All items below are testable and scoped to the one fact × one surface. No item 
 
 ### 5.3 The invalidation-coordination constraint (named explicitly)
 
-The existing `useCreateFinancialAdjustment` hook (and adjacent mutation hooks that touch rated buy-ins) invalidate shift-dashboard query keys on success. Once W0 (TBT publication membership) and W2 (the new realtime hook) land, the same mutation produces a TBT WAL event that independently invalidates the same query keys via the new hook. Without deliberate coordination, every mutation produces two refetches.
+The existing `useCreateFinancialAdjustment` hook — and, more generally, every in-scope mutation hook writing to `FACT-RATED-BUYIN` / D1 (`player_financial_transaction`) and affecting this surface — invalidates shift-dashboard query keys on success. Once W0 (TBT publication membership) and W2 (the new realtime hook) land, the same mutation produces a TBT WAL event that independently invalidates the same query keys via the new hook. Without deliberate coordination, every mutation produces two refetches. (Note: the coordination requirement is scoped by the fact-and-surface pair, matching F7 / FR7 — not by which hooks currently happen to invalidate shift-dashboard keys.)
 
 This PRD requires the exemplar slice to:
 
@@ -292,3 +292,4 @@ The release is considered **Done** when:
 |---|---|---|---|
 | v0 | 2026-04-19 | Lead Architect | Initial draft. Supersedes PRD-066. Native to ADR-050. Pilot-containment posture explicit. |
 | v0.1 | 2026-04-19 | Lead Architect | Review-feedback patches: (1) U2 distinguishes same-tab mutation-path coordination from cross-tab WAL propagation; (2) F7 scope tightened to "in-scope mutation hooks writing to FACT-RATED-BUYIN / D1 and affecting this surface" to prevent blind spots; (3) NFR3 acknowledges rollback changes runtime freshness behavior and demotes registry row; (4) archival choreography demoted from DoD to a documentation note; (5) Q1 (`useRollingWindow` extraction) moved to §7.5 Deferred Considerations; only the F5 coordination choice remains truly open. |
+| v0.2 | 2026-04-19 | Lead Architect | Consistency polish: FR7 (§5.1) aligned with F7 (§4) scope language — requirement and feature list now state the identical fact-and-surface-pair boundary instead of keying off existing invalidation behavior. §5.3 opening sentence similarly tightened: "adjacent mutation hooks that touch rated buy-ins" → "every in-scope mutation hook writing to FACT-RATED-BUYIN / D1 and affecting this surface," closing the same loophole. |
