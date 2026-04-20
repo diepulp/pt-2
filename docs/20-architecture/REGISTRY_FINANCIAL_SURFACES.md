@@ -108,7 +108,7 @@ Per fact header:
 
 ### `FACT-PIT-APPROVALS`
 
-**Status**: `ACTIVE` (existing realtime coverage; registration is a formality)
+**Status**: `PROPOSED` (surface has in-production realtime coverage but requires E3 publication-membership backfill and §4 E2 window-correctness fix before any surface promotes to `ACTIVE`; inherited realtime is not presumed compliant per `FINANCIAL-FRESHNESS-ROLLOUT.md` Phase 2 validation note)
 **Definition**: Pending fills and credits awaiting cashier confirmation, plus confirmed amounts with discrepancy flags.
 **D1 — authoritative mutation source**: `table_fill`, `table_credit`.
 **D2 — canonical freshness event source**: `table_fill`, `table_credit` (D1 = D2).
@@ -124,7 +124,7 @@ Per fact header:
 
 ### `FACT-SESSION-CUSTODY`
 
-**Status**: `ACTIVE` (existing realtime coverage; registration is a formality)
+**Status**: `PROPOSED` (surface has in-production realtime coverage but requires E3 publication-membership backfill before any surface promotes to `ACTIVE`; inherited realtime is not presumed compliant per `FINANCIAL-FRESHNESS-ROLLOUT.md` Phase 2 validation note)
 **Definition**: Rating-slip lifecycle state (open / paused / closed) and table occupancy used for operator seat management. Not a financial balance itself, but a **custody state with financial implications** per ADR-050 §1 scope boundary — open slips hold player financial context; incorrect custody produces reconciliation errors.
 **D1 — authoritative mutation source**: `rating_slip`.
 **D2 — canonical freshness event source**: `rating_slip`.
@@ -169,4 +169,5 @@ These must be resolved before their referenced entries can be promoted to `ACTIV
 
 | Date | Change | Author |
 |---|---|---|
-| 2026-04-19 | Scaffold created alongside ADR-050 draft. Seeded `FACT-RATED-BUYIN` (PROPOSED), `FACT-MTL-PATRON-DAILY-TOTAL` (PROPOSED), `FACT-PIT-CASH-OBSERVATION` (PROPOSED), `FACT-PIT-APPROVALS` (PENDING-BACKFILL for existing realtime coverage), `FACT-SESSION-CUSTODY` (PENDING-BACKFILL for existing realtime coverage). Pending-backfill queue listed. Four open verification items recorded. | Architecture Review |
+| 2026-04-19 | Scaffold created alongside ADR-050 draft. All five seed facts registered at fact-level `PROPOSED`: `FACT-RATED-BUYIN`, `FACT-MTL-PATRON-DAILY-TOTAL`, `FACT-PIT-CASH-OBSERVATION`, `FACT-PIT-APPROVALS`, `FACT-SESSION-CUSTODY`. `FACT-PIT-APPROVALS` and `FACT-SESSION-CUSTODY` have in-production realtime coverage at the surface level but still require E3 publication-membership backfill (and, for `FACT-PIT-APPROVALS`, §4 E2 window correctness) before any surface promotes to `ACTIVE`; their surface rows are `PENDING-BACKFILL`. Pending-backfill queue listed. Four open verification items recorded. | Architecture Review |
+| 2026-04-19 | Bundle review sign-off: corrected fact-level status for `FACT-PIT-APPROVALS` and `FACT-SESSION-CUSTODY` (initial scaffold mislabeled both `ACTIVE` against the vocabulary at lines 49–53). Changelog scaffold entry rewritten with level-correct vocabulary (fact-level statuses are `ACTIVE` / `PROPOSED` / `OPEN-VERIFICATION` only; `PENDING-BACKFILL` is a surface-level status). Surface rows unchanged. ADR-050 header flipped `DRAFT → ACCEPTED` in the same commit. | Architecture Review |

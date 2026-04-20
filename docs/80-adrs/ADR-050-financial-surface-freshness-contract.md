@@ -1,7 +1,8 @@
 # ADR-050: Financial Surface Freshness Contract
 
-**Status**: DRAFT
+**Status**: ACCEPTED
 **Date Drafted**: 2026-04-19
+**Date Accepted**: 2026-04-19
 **Decision Makers**: Architecture Review
 **Validation**: Lint rule for E1, E2E window-correctness probes for E2, publication-membership audit query for E3. The shift-dashboard exemplar slice is this ADR's first reference implementation and drives validation of the standing enforcement.
 **Related**: ADR-004 (real-time strategy, extended in the financial domain by this ADR), ADR-015 (RLS hybrid), ADR-025 (MTL authorization), ADR-031 (financial amount convention), ADR-041 (surface governance), ADR-049 (operator action atomicity)
