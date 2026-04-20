@@ -2,20 +2,17 @@
   "prd_id": "PRD-067",
   "prd_title": "Admin Operations Pit Configuration",
   "exec_spec_path": "docs/21-exec-spec/EXEC-067-admin-operations-pit-configuration.md",
-  "status": "executing",
+  "status": "complete",
   "created_at": "2026-04-19T17:15:23Z",
-  "updated_at": "2026-04-19T23:15:00Z",
-  "awaiting_user_approval": true,
+  "updated_at": "2026-04-19T23:45:00Z",
+  "completed_at": "2026-04-19T23:45:00Z",
+  "awaiting_user_approval": false,
 
-  "next_action": {
-    "phase": "Phase 5 — E2E Tests (WS6)",
-    "workstream": "WS6",
-    "executor": "e2e-testing",
-    "skill_dispatch_args_summary": "Create Playwright specs covering admin pit-assignment write-path per Test-per-PRD mandate. Tests must cover: (a) admin can assign unassigned table to empty slot via Select; (b) admin can clear assigned slot; (c) non-admin cannot see mutation controls (Select/Clear buttons absent); (d) panel shows skeleton during load then renders pits+slots; (e) mirror invariant observed via subsequent fetch. Use Mode C auth (authenticated via test fixtures) with admin + non-admin personas. Gate: e2e-write-path (Playwright specs in e2e/floor-layout/ pass against seeded local DB).",
-    "depends_on": ["WS4"],
-    "gate": "e2e-write-path",
-    "exec_spec_section": "EXEC-067 §WS6"
-  },
+  "e2e_mandate_waiver": "Deferred — 35/35 integration tests cover write-path invariants (RULE-2/3/4/5, mirror, audit, rollback, concurrent-move). Playwright spec to follow in a dedicated E2E PR.",
+  "e2e_mandate_waiver_approved_by": "user",
+  "e2e_mandate_waiver_approved_at": "2026-04-19T23:45:00Z",
+
+  "next_action": null,
 
   "approval_gate": {
     "approved_at": "2026-04-19T17:30:00Z",
@@ -267,7 +264,8 @@
     "2026-04-19T22:35Z — User approved Phase 3 (WS3). Dispatched WS3 to api-builder skill.",
     "2026-04-19T22:50Z — WS3 complete. 2 new route files created (pit-assignment-state/route.ts, slots/[slotId]/assign/route.ts with co-located POST+DELETE). API_SURFACE_MVP.md updated with PRD-067 surface entry. lint EXIT=0 + type-check EXIT=0. 2 minor deviations recorded: (a) audit domain string aligned to existing 'floor-layout' convention vs EXEC's 'floor_layout'; (b) GET handler also gets inline admin gate per EXEC §WS3 L884 'all three handlers' clause. Awaiting user approval for Phase 4 (WS4 → frontend-design-pt-2).",
     "2026-04-19T23:00Z — User approved Phase 4 (WS4). Dispatched WS4 to frontend-design-pt-2 skill.",
-    "2026-04-19T23:15Z — WS4 complete. Panel component (components/admin/pit-configuration-panel.tsx), 3 hooks files (hooks/floor-layout/*), 1 modified page (operations/page.tsx), 1 cleanup (http.ts dead-code removal). type-check + lint EXIT=0. 1 deviation: single composed SettingsContentSection vs two separate (EXEC §WS4 allows either; chosen to avoid flex-1 height-split under settings/layout). Admin gate verified (controls absent for non-admin; server rejects as defence-in-depth). Awaiting user approval for Phase 5 (WS6 → e2e-testing) per write-path E2E mandate."
+    "2026-04-19T23:15Z — WS4 complete. Panel component (components/admin/pit-configuration-panel.tsx), 3 hooks files (hooks/floor-layout/*), 1 modified page (operations/page.tsx), 1 cleanup (http.ts dead-code removal). type-check + lint EXIT=0. 1 deviation: single composed SettingsContentSection vs two separate (EXEC §WS4 allows either; chosen to avoid flex-1 height-split under settings/layout). Admin gate verified (controls absent for non-admin; server rejects as defence-in-depth). Awaiting user approval for Phase 5 (WS6 → e2e-testing) per write-path E2E mandate.",
+    "2026-04-19T23:45Z — User waived WS6 E2E mandate with justification recorded (integration tests cover write-path invariants; Playwright follow-up in dedicated E2E PR). Pipeline marked complete. Proceeding to push + PR."
   ],
 
   "task_tracker": {
@@ -278,7 +276,7 @@
       "WS3": "completed",
       "WS5": "completed",
       "WS4": "completed",
-      "WS6": "pending (blocked_by: WS4 — now unblocked; next to dispatch per write-path E2E mandate)"
+      "WS6": "waived (E2E mandate deferred to follow-up PR — integration tests cover write-path invariants)"
     }
   },
 
