@@ -2,7 +2,9 @@
 id: PRD-066
 title: Shift Dashboard Downstream Reconciliation (Win/Loss + Est. Drop)
 owner: Lead Architect
-status: Draft
+status: Superseded
+superseded_by: PRD-067
+superseded_on: 2026-04-19
 affects: [PRD-064, PRD-065, ADR-049]
 created: 2026-04-19
 last_review: 2026-04-19
@@ -11,6 +13,9 @@ pattern: C
 http_boundary: false
 investigation_ref: docs/issues/shift-dash/INVESTIGATION-2026-04-17-winloss-estdrop-staleness.md
 ---
+
+> **SUPERSEDED 2026-04-19 by [PRD-067](./PRD-067-adr050-phase1-shift-dashboard-freshness-pilot-v0.md).**
+> PRD-066 pre-dates ADR-050's acceptance and frames the shift-dashboard staleness problem as a local read-plane remediation with its own bespoke preflight (PFT RLS) and workstream taxonomy. ADR-050 now provides the normative contract for all financial-surface freshness; the shift-dashboard work is re-scoped as the Phase 1 exemplar of that contract. PRD-067 is the authoritative product container for the revised approach. This file is retained as historical prior-art — do not implement from it.
 
 # PRD-066 — Shift Dashboard Downstream Reconciliation (Win/Loss + Est. Drop)
 
