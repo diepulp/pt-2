@@ -59,7 +59,7 @@ One slice. Ship, review, pattern-verify. Do not start Phase 2 until this is `ACT
 | Workstreams | W0 publication migration (TBT); W1 rolling-window refactor of `shift-dashboard-v3.tsx:87`; W2 `use-shift-dashboard-realtime.ts` subscription to TBT; W3 contract-property tests; W4 registry promotion |
 | Acceptance | All §4 rules satisfied *for this slice*; registry row `PROPOSED → ACTIVE`; reviewer has written the replication checklist (see **Exemplar Exit Criteria** below) |
 | Expected duration | 1–2 sprints |
-| Depends on | P0.1, P0.2 |
+| Depends on | P0.1, P0.1b, P0.2 |
 
 ### Exemplar Exit Criteria
 
