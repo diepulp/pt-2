@@ -74,6 +74,31 @@ Alignment corrections applied in the same pass:
 
 ---
 
+## P0.2 Publication-Membership Audit — 2026-04-19
+
+Per `FINANCIAL-FRESHNESS-ROLLOUT.md` P0.2. One `pg_publication_tables` query per D2 candidate (and one inventory-wide query for context).
+
+**Result:** The `supabase_realtime` publication exists (`puballtables=false`, all DML enabled) but currently contains **zero user tables**. The only populated publication is `supabase_realtime_messages_publication`, which covers internal `realtime.messages_*` partitions (Broadcast/Presence mechanism, not `postgres_changes`).
+
+| D2 table | Current membership | Decision |
+|---|---|---|
+| `table_buyin_telemetry` | none | ADD-TABLE migration |
+| `mtl_entry` | none | ADD-TABLE migration |
+| `pit_cash_observation` | none | ADD-TABLE migration |
+| `table_fill` | none | ADD-TABLE migration |
+| `table_credit` | none | ADD-TABLE migration |
+| `rating_slip` | none | ADD-TABLE migration |
+
+**Decision tree resolution:** every Phase 1 / Phase 2 / Phase 3 slice ships a fresh ADD-TABLE migration. **No backfill migrations are needed anywhere** — the "ambient membership / backfill" branch of E3 has zero occurrences in the current environment.
+
+### Material follow-on finding — `useDashboardRealtime` integrity
+
+`hooks/dashboard/use-dashboard-realtime.tsx:83-155` subscribes via `postgres_changes` to `gaming_table`, `rating_slip`, `table_fill`, and `table_credit`. None of those tables are in any user publication. Under the Supabase Realtime contract, `postgres_changes` events require publication membership; without it, the channel connects but no WAL events are delivered. **The "in-production realtime coverage" narrative previously attributed to `useDashboardRealtime` for `FACT-PIT-APPROVALS` and `FACT-SESSION-CUSTODY` is not supported by the database state.** Whatever freshness those surfaces exhibit in production must be driven by polling / mutation-side invalidation, not WAL.
+
+This does not block rollout — it aligns the Phase 2.B and 2.C slices with reality (ADD-TABLE, not backfill). But it is a latent surface-behavior question recorded as Open Verification Item #5 below.
+
+---
+
 ## Facts
 
 ### `FACT-RATED-BUYIN`
@@ -82,7 +107,7 @@ Alignment corrections applied in the same pass:
 **Definition**: A rated buy-in or rated adjustment that contributes to a gaming table's estimated drop and win/loss figures within a shift window.
 **D1 — authoritative mutation source**: `player_financial_transaction` (via `rpc_create_financial_txn` for originals; `rpc_create_financial_adjustment` for adjustments).
 **D2 — canonical freshness event source**: `table_buyin_telemetry` (read-symmetric with `rpc_shift_table_metrics`; Pattern C direct casino-scope RLS; bridge-terminal; idempotency key `pft:{id}`).
-**D2 verification**: RLS posture consistent across both 2026-04-19 investigation streams. Publication membership **not yet declared via migration** — required backfill or new ADD-TABLE migration before first surface goes `ACTIVE` (ADR-050 §4 E3).
+**D2 verification**: RLS posture consistent across both 2026-04-19 investigation streams. Publication membership confirmed absent by P0.2 audit — **ADD-TABLE migration required** (no backfill path; `supabase_realtime` publication is empty) before the Phase 1 exemplar surface goes `ACTIVE`.
 
 **Registered surfaces:**
 
@@ -98,7 +123,7 @@ Alignment corrections applied in the same pass:
 **Definition**: Per-patron per-gaming-day aggregate of cash-in / cash-out volume used for CTR threshold tracking and compliance reporting.
 **D1 — authoritative mutation source**: `player_financial_transaction` (indirect, via the forward bridge to MTL) for any operational money movement; `mtl_entry` direct write via `useCreateMtlEntry` for compliance-audit correction.
 **D2 — canonical freshness event source**: `mtl_entry`.
-**D2 verification**: Pattern C direct casino-scope RLS. Publication membership **not yet declared via migration** — required backfill before first surface goes `ACTIVE`.
+**D2 verification**: Pattern C direct casino-scope RLS. Publication membership confirmed absent by P0.2 audit — **ADD-TABLE migration required** before first surface goes `ACTIVE`.
 
 **Registered surfaces:**
 
@@ -116,7 +141,7 @@ Alignment corrections applied in the same pass:
 **Definition**: Walk-with and phone-confirmed cash observations entered by pit staff for operational reconciliation and shift-level cash-obs rollups.
 **D1 — authoritative mutation source**: `pit_cash_observation` (via `rpc_create_pit_cash_observation`). No upstream bridge.
 **D2 — canonical freshness event source**: `pit_cash_observation` (D1 = D2 per ADR-050 §3 rule 3, no-derivation second clause).
-**D2 verification**: Pattern C direct casino-scope RLS + actor binding. Publication membership **not yet declared via migration**.
+**D2 verification**: Pattern C direct casino-scope RLS + actor binding. Publication membership confirmed absent by P0.2 audit — **ADD-TABLE migration required** before surface goes `ACTIVE`.
 
 **Registered surfaces:**
 
@@ -132,7 +157,7 @@ Alignment corrections applied in the same pass:
 **Definition**: Pending fills and credits awaiting cashier confirmation, plus confirmed amounts with discrepancy flags.
 **D1 — authoritative mutation source**: `table_fill`, `table_credit`.
 **D2 — canonical freshness event source**: `table_fill`, `table_credit` (D1 = D2).
-**D2 verification**: Pattern C direct casino-scope RLS (both tables, per `supabase/migrations/20251211153228_adr015_rls_compliance_patch.sql`). Publication membership currently realtime-observed by `useDashboardRealtime` — **membership source must be verified against migration history (E3 backfill)** before status is confirmed `ACTIVE` under this contract.
+**D2 verification**: Pattern C direct casino-scope RLS (both tables, per `supabase/migrations/20251211153228_adr015_rls_compliance_patch.sql`). Publication membership confirmed absent by P0.2 audit for both tables — **ADD-TABLE migration required for each** (previous "ambient membership via `useDashboardRealtime`" framing was wrong; see Open Verification Item #5 for the underlying surface-behavior question). No backfill path exists.
 
 **Registered surfaces:**
 
@@ -148,7 +173,7 @@ Alignment corrections applied in the same pass:
 **Definition**: Rating-slip lifecycle state (open / paused / closed) and table occupancy used for operator seat management. Not a financial balance itself, but a **custody state with financial implications** per ADR-050 §1 scope boundary — open slips hold player financial context; incorrect custody produces reconciliation errors.
 **D1 — authoritative mutation source**: `rating_slip`.
 **D2 — canonical freshness event source**: `rating_slip`.
-**D2 verification**: Pattern C direct casino-scope RLS. Publication membership observed in practice via `useDashboardRealtime`; E3 backfill required.
+**D2 verification**: Pattern C direct casino-scope RLS. Publication membership confirmed absent by P0.2 audit — **ADD-TABLE migration required** (previous "observed in practice via `useDashboardRealtime`" framing was wrong; see Open Verification Item #5). No backfill path exists.
 
 **Registered surfaces:**
 
@@ -179,9 +204,10 @@ The following financially responsible surfaces were identified in the 2026-04-19
 These must be resolved before their referenced entries can be promoted to `ACTIVE`.
 
 1. **PFT RLS posture** — the 2026-04-19 investigation streams disagreed on whether `player_financial_transaction`'s SELECT policy is Pattern C direct or EXISTS-indirect. Per ADR-050 Appendix A, this ADR does not assert PFT's realtime eligibility. **Resolution required** before any future fact is registered with PFT as its D2 (currently none are). SEC ticket filing is scheduled under `FINANCIAL-FRESHNESS-ROLLOUT.md` P0.4 (PFT RLS re-audit).
-2. **Publication membership inventory** — no migration under `supabase/migrations/` declares membership for any of the D2 tables named in this registry. A one-time audit against `pg_publication_tables` is required to determine which D2 tables already have ambient membership (must be backfilled into migration history per §4 E3) versus which require a new ADD-TABLE migration on first activation.
+2. ~~**Publication membership inventory**~~ — **RESOLVED 2026-04-19 via P0.2 audit.** The `supabase_realtime` publication exists with zero user tables; all six D2 tables named by the registry require ADD-TABLE migrations, and no backfill path exists. See "P0.2 Publication-Membership Audit" section above.
 3. **MTL compliance-dashboard reaction model** — is intra-day CTR threshold alerting operationally required, or is the per-gaming-day snapshot model sufficient? This determines whether `FACT-MTL-PATRON-DAILY-TOTAL`'s first surface is `LIVE` or `INTERVAL`.
 4. **`hooks/mtl/use-mtl-mutations.ts:85-101`** — the reverse-bridge comment and dead `playerFinancialKeys` invalidation block. Per ADR-050 Appendix A, this is a registry-visible smell: `useCreateMtlEntry` does not produce a `player_financial_transaction`, so the invalidation is out of contract. Cleanup is not blocking registration of `FACT-MTL-PATRON-DAILY-TOTAL`; triage under a separate ticket.
+5. **`useDashboardRealtime` `postgres_changes` integrity** — discovered 2026-04-19 via P0.2 audit. `hooks/dashboard/use-dashboard-realtime.tsx:83-155` subscribes via `postgres_changes` to `gaming_table`, `rating_slip`, `table_fill`, `table_credit`. Per P0.2 audit, none of those tables are in any user publication, so `postgres_changes` cannot deliver WAL events. Production freshness for `FACT-PIT-APPROVALS` and `FACT-SESSION-CUSTODY` surfaces must therefore come from polling / mutation-side invalidation, not WAL. Required: verify which mechanism is actually driving observed freshness, and decide whether the `postgres_changes` subscriptions should be (a) backed by their ADD-TABLE migrations (Phase 2.B / 2.C intent), or (b) removed as dead code. Does not block Phase 2.B / 2.C ADD-TABLE migrations — those are the intended fix either way.
 
 ---
 
@@ -192,3 +218,4 @@ These must be resolved before their referenced entries can be promoted to `ACTIV
 | 2026-04-19 | Scaffold created alongside ADR-050 draft. All five seed facts registered at fact-level `PROPOSED`: `FACT-RATED-BUYIN`, `FACT-MTL-PATRON-DAILY-TOTAL`, `FACT-PIT-CASH-OBSERVATION`, `FACT-PIT-APPROVALS`, `FACT-SESSION-CUSTODY`. `FACT-PIT-APPROVALS` and `FACT-SESSION-CUSTODY` have in-production realtime coverage at the surface level but still require E3 publication-membership backfill (and, for `FACT-PIT-APPROVALS`, §4 E2 window correctness) before any surface promotes to `ACTIVE`; their surface rows are `PENDING-BACKFILL`. Pending-backfill queue listed. Four open verification items recorded. | Architecture Review |
 | 2026-04-19 | Bundle review sign-off: corrected fact-level status for `FACT-PIT-APPROVALS` and `FACT-SESSION-CUSTODY` (initial scaffold mislabeled both `ACTIVE` against the vocabulary at lines 49–53). Changelog scaffold entry rewritten with level-correct vocabulary (fact-level statuses are `ACTIVE` / `PROPOSED` / `OPEN-VERIFICATION` only; `PENDING-BACKFILL` is a surface-level status). Surface rows unchanged. ADR-050 header flipped `DRAFT → ACCEPTED` in the same commit. | Architecture Review |
 | 2026-04-19 | **P0.1b Registry Alignment Sweep** (commit immediately after P0.1 acceptance). Per-fact verdicts: `FACT-RATED-BUYIN` CLEAR, `FACT-MTL-PATRON-DAILY-TOTAL` BLOCKED on P0.3, `FACT-PIT-CASH-OBSERVATION` cleared with D4=LIVE declared (consistent with rollout Phase 2.A), `FACT-PIT-APPROVALS` cleared with two-table D1 accepted as scope-analogous extension of Decision #1, `FACT-SESSION-CUSTODY` CLEAR. Alignment corrections: `FACT-PIT-CASH-OBSERVATION` §3.3 citation inverted → fixed; Open Verification Item #1 SEC-ticket cross-reference re-pointed from ADR-050 Appendix B to rollout P0.4. New sweep section added after Status vocabulary. | Architecture Review |
+| 2026-04-19 | **P0.2 Publication-Membership Audit** — one `pg_publication_tables` query per D2 candidate. Result: `supabase_realtime` publication exists with zero user tables; all six D2 tables require ADD-TABLE migrations, no backfill path exists. OVI #2 resolved. Fact-level D2-verification narratives for all five facts updated to cite the audit and remove outdated "backfill" / "ambient membership" framing. OVI #5 opened: `useDashboardRealtime` subscribes `postgres_changes` to unpublished tables, so `FACT-PIT-APPROVALS` / `FACT-SESSION-CUSTODY` production freshness is not actually WAL-driven; underlying driver (polling vs. mutation invalidation) must be verified but does not block Phase 2.B / 2.C ADD-TABLE migrations. Rollout 2.B / 2.C "backfill" framing corrected to ADD-TABLE in companion commit to `FINANCIAL-FRESHNESS-ROLLOUT.md`. | Architecture Review |
