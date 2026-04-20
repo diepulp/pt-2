@@ -4539,6 +4539,10 @@ export type Database = {
           points_delta: number
         }[]
       }
+      rpc_assign_or_move_table_to_slot: {
+        Args: { p_slot_id: string; p_table_id: string }
+        Returns: Json
+      }
       rpc_bootstrap_casino: {
         Args: {
           p_casino_name: string
@@ -4556,6 +4560,7 @@ export type Database = {
         Returns: Json
       }
       rpc_clear_pin_attempts: { Args: never; Returns: undefined }
+      rpc_clear_slot_assignment: { Args: { p_slot_id: string }; Returns: Json }
       rpc_close_rating_slip: {
         Args: { p_average_bet?: number; p_rating_slip_id: string }
         Returns: {

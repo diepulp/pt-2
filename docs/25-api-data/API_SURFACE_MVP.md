@@ -1049,6 +1049,51 @@ Operational notes:
 - **Auth/RBAC**: admins only.
 - **Side effects**: Inserts activation row, emits `floor_layout.activated` event, notifies TableContext to reconcile active tables.
 
+#### Pit Assignment Surface (PRD-067)
+
+Admin-only endpoints powering the pit-configuration panel. Casino is derived
+authoritatively in the database (ADR-024 INV-8) — no `casino_id` or
+`actor_id` are accepted as parameters. RPCs (`rpc_assign_or_move_table_to_slot`,
+`rpc_clear_slot_assignment`) are the authoritative gate; the route adds a
+defence-in-depth admin role check.
+
+##### GET /api/v1/floor-layouts/pit-assignment-state
+
+Returns the aggregate `PitAssignmentStateDTO | null` for the casino's
+currently-active layout version.
+
+- **Auth/RBAC**: admin only (`FORBIDDEN_ADMIN_REQUIRED` if not).
+- **Idempotency**: Read-only.
+- **Behavior**: Returns `null` when the casino has no active layout.
+
+##### POST /api/v1/floor-layouts/slots/{slot_id}/assign
+
+Body:
+```ts
+export const AssignOrMoveRequestSchema = z.object({
+  table_id: z.string().uuid(),
+});
+```
+
+Returns `AssignOrMoveResultDTO`. Wraps `rpc_assign_or_move_table_to_slot`.
+
+- **Auth/RBAC**: admin only.
+- **Idempotency**: Header required.
+- **Errors**: `SLOT_NOT_FOUND`, `SLOT_NOT_ACTIVE`, `SLOT_HAS_NO_PIT`,
+  `SLOT_OCCUPIED`, `TABLE_NOT_FOUND`, `CROSS_CASINO_FORBIDDEN`,
+  `NO_ACTIVE_LAYOUT`, `FORBIDDEN_ADMIN_REQUIRED`.
+
+##### DELETE /api/v1/floor-layouts/slots/{slot_id}/assign
+
+Returns `ClearResultDTO`. Wraps `rpc_clear_slot_assignment`. Idempotent at
+the RPC layer — already-empty slots return `cleared: false, idempotent: true`.
+
+- **Auth/RBAC**: admin only.
+- **Idempotency**: Header required (route-layer dedupe); RPC is idempotent
+  on already-cleared slots.
+- **Errors**: `SLOT_NOT_FOUND`, `SLOT_NOT_ACTIVE`, `NO_ACTIVE_LAYOUT`,
+  `FORBIDDEN_ADMIN_REQUIRED`.
+
 ### cURL sanity
 ```bash
 # create layout draft
