@@ -55,53 +55,14 @@ interface PipelineCheckpoint {
     line?: number;
   };
 
-  // Optional: Adversarial Review Result (DA Team)
+  // Optional: Adversarial Review Result (single-pass DA)
   adversarial_review?: {
-    // Magnitude assessment (computed before DA deployment)
-    magnitude_score: number;                    // 0-14+ total from scoring rubric
-    magnitude_tier: "self_certified" | "focused_review" | "full_team" | null;
-    magnitude_signals: Array<{
-      signal: string;                           // e.g., "cross_context_writes"
-      points: number;                           // e.g., 3
-      evidence: string;                         // e.g., "player_casino (RecognitionService)"
-    }>;
-    tier_override?: "tier_0" | "tier_1" | "tier_2" | null;  // if user overrode
-    tier_override_reason?: string;                           // why they overrode
-
-    // Review results (populated only if DA ran — Tier 1 or Tier 2)
-    verdict: "ship" | "ship_with_gates" | "do_not_ship" | "overridden";
-    p0_count: number;             // consolidated across all reviewers (deduplicated)
-    p1_count: number;             // consolidated across all reviewers (deduplicated)
-    attempt: number;              // 1-based attempt count (max 2)
-    findings_path?: string;       // path to full consolidated DA report if saved
+    verdict: "ship" | "ship_with_gates" | "do_not_ship" | "overridden" | "skipped";
+    p0_count: number;
+    p1_count: number;
+    attempt: number;              // increments on each revision; no automatic cap
+    findings_path?: string;       // path to full DA report if saved
     override_reason?: string;     // required when verdict is "overridden"
-
-    // DA Team results (5 reviewers)
-    team_results?: Array<{
-      reviewer: "security_tenancy" | "architecture_boundaries"
-             | "implementation_completeness" | "test_quality"
-             | "performance_operability";
-      verdict: "ship" | "ship_with_gates" | "do_not_ship";
-      p0_count: number;
-      p1_count: number;
-      key_findings: string[];     // top 3 finding summaries from this reviewer
-    }>;
-
-    // Team coordination metadata
-    team_name?: string;                    // e.g., "da-review-PRD-053"
-    cross_domain_findings?: number;        // count of cross-domain messages sent in Phase 1
-    cross_domain_verified?: number;        // count confirmed by owning reviewer in Phase 2
-    cross_domain_refuted?: number;         // count refuted by owning reviewer in Phase 2
-
-    // Conflict resolution tracking
-    resolved_conflicts?: Array<{
-      between: [string, string];           // e.g., ["r2-architecture", "r5-performance"]
-      subject: string;                     // what they disagreed about
-      resolution: string;                  // joint recommendation from reviewer negotiation
-    }>;
-
-    // Unresolved conflicts requiring human decision
-    unresolved_conflicts?: string[];
   };
 
   // Optional: Execution Notes
@@ -140,7 +101,7 @@ initialized → in_progress → paused → in_progress → complete
 
 | Status | Description | Next Action |
 |--------|-------------|-------------|
-| `initialized` | Checkpoint created, EXECUTION-SPEC ready, DA review recorded | Begin phase 1 |
+| `initialized` | Checkpoint created, EXECUTION-SPEC ready, DA review recorded (or skipped on streamlined path) | Begin phase 1 |
 | `in_progress` | Workstreams actively executing | Wait for completion |
 | `paused` | User reviewing at gate | User approves to continue |
 | `failed` | Workstream or gate failed | Manual fix, then resume |
