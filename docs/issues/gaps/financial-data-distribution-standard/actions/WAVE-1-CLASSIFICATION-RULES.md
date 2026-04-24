@@ -1,9 +1,10 @@
 ---
 name: Wave 1 — Classification Rules
 description: Source-to-authority mapping for every financial value emitted by PT-2 services; the canonical rulebook for populating FinancialValue.type/source/completeness at the service boundary.
-status: Draft (pending lead-architect sign-off at Phase 1.0 exit gate)
+status: Accepted (Phase 1.0 exit gate passed 2026-04-23)
 date: 2026-04-23
 phase: 1.0
+signed_off: 2026-04-23 via actions/WAVE-1-PHASE-1.0-SIGNOFF.md
 derives_from:
 - actions/SURFACE-RENDERING-CONTRACT.md §3, §10
 - decisions/ADR-FINANCIAL-FACT-MODEL.md §D1, §D3, §D4, §5
@@ -54,6 +55,13 @@ Per SRC §3 and FACT-MODEL §D1/D4, the envelope carries exactly four authority 
 ## 3. Source-to-authority mapping (canonical)
 
 Primary table. Phase 1.1 mappers consume this directly. Column semantics match `WAVE-1-SURFACE-INVENTORY.md §0`.
+
+**Normative rules governing this section (Phase 1.0 sign-off):**
+
+- **N-1 (Q-A2 resolution):** `observed` and `compliance` envelopes carry the authority label for surface consistency. They do NOT imply the row was authored under this ADR set's governance. Consumers MUST NOT merge `observed`/`compliance` envelopes with Class A/B values into derived totals (SRC §C1 reinforced).
+- **N-2 (Q-A3 resolution):** Source strings are service-private. UI MAY display `source` verbatim in debugging / provenance tooltips. UI MUST NOT branch control flow or styling on `source` values. Integration tests and UI tests MUST NOT assert exact source strings (mapper-level unit tests may).
+- **N-3 (Q-A4 resolution):** Cross-authority rollups MUST render as Pattern A split by default (SRC §8). Pattern B derived totals are permitted as secondary displays only, with worst-of authority and input declaration (SRC §C2, §C3). Pattern B is not a Pattern A substitute.
+- **N-4 (Q-A5 resolution — shift-intelligence):** For `AnomalyAlertDTO.observedValue` and `ShiftAlertDTO.observedValue`, envelope authority mirrors the metric-kind source. Phase 1.1 produces the concrete metric-kind → authority table. If the alert DTO lacks a metric-kind discriminator, Phase 1.1 scope includes adding one.
 
 ### 3.1 Class A — `actual` (Ledger)
 
@@ -125,6 +133,8 @@ FACT-MODEL §D1: "Class B — Operational Financial Fact: grind (unrated buy-ins
 
 **Rounding rule for dollar→cents conversion:** `Math.round(dollars * 100)`. Never `Math.floor` or `Math.trunc` — floor would silently drop sub-cent precision into a systematic bias. Document rounding convention in mapper source.
 
+**Normative rule (Q-A6 sign-off addendum):** Phase 1.1 mapper implementations converting dollars→cents MUST include a unit test pinning rounding behavior at boundary cases (e.g. `0.005`, `0.015`, `0.025`, `-0.005`, `-0.015`). This pinned test is the bridge to Wave 2 schema migration: Wave 2 will either replicate these semantics OR intentionally change them with a documented rationale. Without a pinned test, the migration cannot preserve-vs-change with intent.
+
 ---
 
 ## 5. Completeness determination (`completeness.status`)
@@ -157,6 +167,7 @@ Is the source a single committed row (PFT, MTL entry, comp issuance)?
 
 These sources cannot confidently determine completeness and must not guess:
 - `rating_slip.legacy_theo_cents` — legacy rows, provenance unrecoverable
+- **Uncomputed theo on player-360 summary (Q-A7 resolution)** — while computation is not implemented, the DTO field emits an envelope with `type: 'estimated'`, `source: "rating_slip.theo"`, `completeness.status: 'unknown'`. UI treatment ("Not computed" badge) is Phase 1.3 frontend-design-pt-2 deliverable. The envelope itself is Phase 1.1 mapper scope.
 - Any rollup over an ambiguous-boundary scope (e.g., gaming-day summary during a gaming-day rollover)
 - Shift baselines with sample size below threshold (Phase 1.1 sets threshold)
 - Any confirmed-vs-expected field where the confirmation row is null (e.g., `table_fill.confirmed_amount_cents IS NULL`)
@@ -197,73 +208,22 @@ All loyalty `pointsDelta`, `currentBalance`, `balanceBefore`, `balanceAfter`, `p
 
 ---
 
-## 7. Open questions requiring sign-off (Phase 1.0 exit gate)
+## 7. Phase 1.0 Resolved Decisions
 
-Must resolve before Phase 1.1 service mapper work begins. Numbered to match `WAVE-1-SURFACE-INVENTORY.md §6`.
+> **Status:** All 8 questions resolved on 2026-04-23. See `actions/WAVE-1-PHASE-1.0-SIGNOFF.md` for full decision records, rationales, and governing clauses. This section records the decided rules in summary form; the sign-off doc is authoritative.
 
-### Q-A1 — Classification of `rating_slip.average_bet`
+| Q | Topic | Decision | Rule now lives in |
+|---|-------|----------|-------------------|
+| Q-A1 | `rating_slip.average_bet` classification | **APPROVED** — not wrapped (operator input); UI labels as "Input" and visually distinguishes from envelope-wrapped values where co-displayed with theo | §6.1 (operator inputs) + SIGNOFF §2 Q-A1 |
+| Q-A2 | `observed` / `compliance` labels in pilot | **APPROVED** — existing rows are live sources for envelope labeling; no new authoring workflows in Wave 1; Class A/B invariants do NOT extend to these classes; cross-class merging forbidden | §2 (taxonomy) + §3 normative rule N-1 + SIGNOFF §2 Q-A2 |
+| Q-A3 | Class B source string stability | **APPROVED** (with clarifying rule) — source strings are service-private; UI may display verbatim for debugging, MUST NOT branch on value | §3 normative rule N-2 + SIGNOFF §2 Q-A3 |
+| Q-A4 | Cash-obs extrapolated vs confirmed split | **APPROVED** — always Pattern A split; Pattern B derived totals permitted as secondary display with worst-of authority + input declaration (SRC §C2/§C3) | §3 normative rule N-3 + SIGNOFF §2 Q-A4 |
+| Q-A5 | Shift-intelligence `observedValue` authority routing | **APPROVED** (principle) — authority mirrors metric-kind source; concrete mapping deliverable in Phase 1.1; if metric-kind discriminator is absent, Phase 1.1 scope expands to add it | §3 normative rule N-4 + §3.2 table row + SIGNOFF §2 Q-A5 |
+| Q-A6 | `pit_cash_observation.amount` dollar→cents | **APPROVED** (with test requirement) — mapper `Math.round(dollars * 100)`; schema migration deferred to Wave 2; Phase 1.1 unit test MUST pin rounding at boundary cases for Wave 2 migration replication | §4 (unit normalization) + §4 addendum + SIGNOFF §2 Q-A6 |
+| Q-A7 | `theoEstimate` stub | **AMENDED** — principle is render envelope with `status: 'unknown'` and authority-labeled "Not computed" badge (SRC §10 native slot); UI treatment DEFERRED to `/frontend-design-pt-2` in Phase 1.3; interim SRC §F4 violation logged, out-of-phase patch is a product call | §5.3 (must-emit-unknown methods) + §6.1 notes + SIGNOFF §2 Q-A7 |
+| Q-A8 | `FinancialSectionDTO.totalChipsOut` rename | **APPROVED** — rename to `totalCashOut` at DTO boundary in Phase 1.1; scope covers DTOs, mappers, schemas, RPC, API, UI, tests, docs; FORBIDDEN-LABELS §2.D rule promoted to active | §1 scope reference + FORBIDDEN-LABELS §2.D + SIGNOFF §2 Q-A8 |
 
-**Proposed:** not wrapped; treated as operator input (§6.1).
-
-**Rationale:** `average_bet` is a dealer-entered bet rate parameter used to compute theo. It is not sourced from PFT, not from an observation, and not a compliance record. Wrapping it as `observed` would semantically collapse operator estimation into physical observation. Wrapping it as `estimated` would conflict with FACT-MODEL §D3's reservation of Class B for "grind (unrated buy-ins) and equivalent table-level money movement" — average_bet is a rate parameter, not a money movement.
-
-**Alternative (rejected):** add a fifth authority `input` to the envelope. Rejected because it supersedes SRC §10 (4 values frozen).
-
-**Alternative (considered):** wrap computed theo (authority `estimated`, source `"rating_slip.theo"`) while leaving average_bet bare. **This is the recommendation** — theo is the emitted estimated financial fact; average_bet is the upstream input.
-
-**Decision requested:** confirm "not wrapped; labeled 'Input' in UI" for `average_bet` across all surfaces.
-
-### Q-A2 — `observed` / `compliance` in pilot
-
-**Proposed:** treat existing `pit_cash_observation`, `table_inventory_snapshot`, and `mtl_entry` rows as live sources for envelope labeling purposes only. Do not open new authoring workflows in Wave 1.
-
-**Rationale:** FACT-MODEL §D1 says "not authored in pilot" for these classes. The ADR is speaking to *governance scope* — it does not claim the rows don't exist. Surfaces still need labels. The labels must match the taxonomy.
-
-**Decision requested:** confirm this rendering interpretation. If lead-architect reads §D1 strictly (no labels until authoring is governed), Wave 1 has no way to label existing pit-cash or MTL surfaces, which breaks SRC §L1.
-
-### Q-A3 — Class B source string stability
-
-**Proposed:** source strings (`"table_session.drop"`, `"rating_slip.theo"`, etc.) are internal mapper details. UI consumers render `type` + provided label, never `source`.
-
-**Rationale:** Wave 2 may consolidate Class B authoring into a new store (FACT-MODEL §5 open question). Source strings must be allowed to change without UI churn.
-
-**Decision requested:** confirm source is service-private; UI does not branch on source strings.
-
-### Q-A4 — Cash-obs split rendering
-
-**Proposed:** extrapolated (`estimated`) and confirmed (`observed`) cash-obs rollups ALWAYS render as Pattern A split display. No combined number anywhere in UI.
-
-**Decision requested:** confirm split-only rendering — Phase 1.3 will enforce.
-
-### Q-A5 — Shift-intelligence `observedValue` authority routing
-
-**Proposed:** Phase 1.1 enumerates a metric-kind → authority map for `AnomalyAlertDTO.observedValue` and `ShiftAlertDTO.observedValue`. Values derived from `drop_total` are `estimated`; values derived from `cash_obs_confirmed` are `observed`; etc.
-
-**Decision requested:** approve approach; Phase 1.1 produces the concrete table.
-
-### Q-A6 — `pit_cash_observation.amount` stored in dollars
-
-**Proposed:** mapper converts to cents at envelope boundary (×100). Schema stays in dollars in Wave 1.
-
-**Alternative:** migrate schema to cents in Wave 1 (break "surface before schema" principle).
-
-**Decision requested:** confirm mapper-level conversion; schema migration deferred to Wave 2.
-
-### Q-A7 — `theoEstimate` placeholder in player-360 (`summary-band.tsx:137`)
-
-**Proposed:** **remove from UI** until `theo` is actually computed. Do not render `Theo: 0` (SRC §F4 explicit prohibition).
-
-**Alternative:** render with `status: 'unknown'` and an explicit "Not computed" badge.
-
-**Decision requested:** choose one. If "render unknown": Phase 1.3 must guarantee zero visual ambiguity with an authoritative zero.
-
-### Q-A8 — `FinancialSectionDTO.totalChipsOut` rename
-
-**Proposed:** rename to `totalCashOut` at the DTO boundary (`services/rating-slip-modal/dtos.ts:149`), propagate through API contracts and consumers. Service-layer breaking change in Phase 1.1.
-
-**Rationale:** "Chips" semantically implies physical chip count (`observed`); the field's source is PFT cash-out aggregate (`actual`). The misleading name is a confusion risk the audit flagged as Stream D #2.
-
-**Decision requested:** approve rename + Phase 1.1 scope to update all consumers (contract tests, UI, integration tests).
+**Phase 1.0 exit gate: PASSED.** Phase 1.1 PRD authoring unblocked. See SIGNOFF §4 for Phase 1.1 PRD handoff prerequisites.
 
 ---
 

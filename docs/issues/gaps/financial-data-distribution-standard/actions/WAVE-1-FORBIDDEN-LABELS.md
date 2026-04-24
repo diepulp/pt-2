@@ -1,9 +1,10 @@
 ---
 name: Wave 1 — Forbidden Labels (Grep-Ready)
 description: Denylist, replace-with mapping, and allowlist for currency-related labels in PT-2. Feeds the Phase 1.4 ESLint rules no-forbidden-financial-label and no-unlabeled-financial-value.
-status: Draft (pending lead-architect sign-off at Phase 1.0 exit gate)
+status: Accepted (Phase 1.0 exit gate passed 2026-04-23; rules §2.A–E active, §2.D promoted ACTIVE via Q-A8)
 date: 2026-04-23
 phase: 1.0
+signed_off: 2026-04-23 via actions/WAVE-1-PHASE-1.0-SIGNOFF.md
 derives_from:
 - actions/SURFACE-RENDERING-CONTRACT.md §L3, §F1, §F2, §F3, §F4, §K1
 - actions/WAVE-1-SURFACE-INVENTORY.md §5.1 (confirmed live violations)
@@ -11,6 +12,7 @@ derives_from:
 feeds:
 - Phase 1.4 ESLint custom rules
 - Phase 1.4 Playwright DOM assertions
+- Phase 1.1 DTO rename scope (§2.D Q-A8 resolution)
 ---
 
 # Wave 1 — Forbidden Labels (Grep-Ready)
@@ -60,25 +62,29 @@ Strings that suggest a specific authority but originate from a different class.
 
 ### 2.C — Placeholder authority (SRC §F4)
 
-Zero-valued or empty-valued currency displays that masquerade as authoritative.
+Zero-valued or empty-valued currency displays that masquerade as authoritative. **Rule status: active (post Phase 1.0 sign-off).**
 
 | Pattern | Matches | SRC clause |
 |---------|---------|------------|
 | `/Theo\s*:\s*0\b/` | `"Theo: 0"`, `"Theo:0"`, with or without spacing | §F4 |
 | `/Theo\s*:\s*\$0(\.00)?\b/` | `"Theo: $0"`, `"Theo: $0.00"` | §F4 |
 
-**Live violation today:** audit Stream B Hot Finding #1 — `theoEstimate` hardcoded to `0` and rendered in `components/player-360/summary/summary-band.tsx`. Phase 1.3 fix is either removal or explicit `status: 'unknown'` with "Not computed" badge (see CLASSIFICATION-RULES §7 Q-A7).
+**Live violation today:** audit Stream B Hot Finding #1 — `theoEstimate` hardcoded to `0` and rendered in `components/player-360/summary/summary-band.tsx`.
+
+**Q-A7 resolved fix (SIGNOFF §2):** Phase 1.1 emits envelope with `type: 'estimated'`, `source: "rating_slip.theo"`, `completeness.status: 'unknown'`. Phase 1.3 `/frontend-design-pt-2` renders authority-labeled "Not computed" badge. Rule §2.C is NOT softened — rendering `$0` with no authority label remains forbidden. The compliant path is envelope-unknown, not bare zero.
 
 ### 2.D — Misleading DTO field names (service-level)
 
-Unlike §2.A–C which target `.tsx`, this rule targets `services/**/dtos.ts`.
+Unlike §2.A–C which target `.tsx`, this rule targets `services/**/dtos.ts`. **Rule status: ACTIVE (Q-A8 sign-off 2026-04-23).**
 
 | Pattern | Matches | Rationale | Replace with |
 |---------|---------|-----------|--------------|
 | `/\btotalChipsOut\b/` | Identifier `totalChipsOut` in a DTO | Name implies `observed` (chips = physical count); source is PFT (`actual`) | `totalCashOut` |
 | `/\btotalChipsIn\b/` | Analog | Same reasoning | `totalCashIn` |
 
-**Live violation today:** `services/rating-slip-modal/dtos.ts:149`. Phase 1.1 rename (CLASSIFICATION-RULES §7 Q-A8).
+**Live violation today:** `services/rating-slip-modal/dtos.ts:149`.
+
+**Q-A8 resolved fix (SIGNOFF §2):** Phase 1.1 renames `totalChipsOut` → `totalCashOut` with full consumer scope (DTO + mapper + schema + RPC + API/OpenAPI + UI + tests + docs). Post-Phase-1.1, this §2.D rule prevents regression via Phase 1.4 ESLint enforcement.
 
 ### 2.E — Coverage-as-completeness confusion (SRC §K1, §K2)
 

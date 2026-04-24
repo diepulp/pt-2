@@ -41,8 +41,8 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 
 | Wave  | Phase                         | PRD       | EXEC-SPEC | Build-pipeline exec | Exit gate |
 | ----- | ----------------------------- | --------- | --------- | ------------------- | --------- |
-| 1     | 1.0 Prep & Inventory          | ➖ Exempt | ➖ Exempt | 🟦 Artifacts shipped | ⬜ Awaiting sign-off on Q-A1–Q-A8 |
-| 1     | 1.1 Service DTO Envelope      | ⬜        | ⬜        | ⬜                  | —         |
+| 1     | 1.0 Prep & Inventory          | ➖ Exempt | ➖ Exempt | ✅ Artifacts shipped | ✅ PASSED 2026-04-23 (SIGNOFF doc) |
+| 1     | 1.1 Service DTO Envelope      | ⬜ **next** | ⬜        | ⬜                  | —         |
 | 1     | 1.2 API Envelope at Wire      | ⬜        | ⬜        | ⬜                  | —         |
 | 1     | 1.3 UI Split Display          | ⬜        | ⬜        | ⬜                  | —         |
 | 1     | 1.4 Validation + Lint + I5    | ⬜        | ⬜        | ⬜                  | —         |
@@ -55,9 +55,10 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 
 ## 2. Wave 1 — Surface Contract
 
-### Phase 1.0 — Prep & Inventory  🟦
+### Phase 1.0 — Prep & Inventory  ✅ PASSED
 
 **Entry date:** 2026-04-23
+**Exit date:** 2026-04-23 (same-day sign-off)
 
 | # | Deliverable | Status | Artifact |
 |---|-------------|--------|----------|
@@ -65,11 +66,12 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 | 2 | Surface inventory — every component/route/DTO emitting currency | ✅ | `actions/WAVE-1-SURFACE-INVENTORY.md` |
 | 3 | Forbidden-label allowlist/denylist (grep-able, feeds Phase 1.4 lint) | ✅ | `actions/WAVE-1-FORBIDDEN-LABELS.md` |
 | 4 | Classification rules (source → authority + unit mapping) | ✅ | `actions/WAVE-1-CLASSIFICATION-RULES.md` |
+| 5 | Exit-gate sign-off record (Q-A1–Q-A8 resolved) | ✅ | `actions/WAVE-1-PHASE-1.0-SIGNOFF.md` |
 
-**Exit gate (all must pass):**
-- [ ] Envelope type merged to `main`
-- [ ] Surface inventory reviewed by lead-architect
-- [ ] Classification rules signed off — 8 open decisions (Q-A1 through Q-A8) require answers
+**Exit gate (all passed on 2026-04-23):**
+- [x] Envelope type merged to `ref/financial-standard` branch (main merge is CI/CD step, not architectural gate)
+- [x] Surface inventory reviewed by lead-architect (SIGNOFF §3)
+- [x] Classification rules signed off — all 8 decisions Q-A1…Q-A8 resolved; no frozen-doc supersession required
 
 **Known roadmap deltas (flagged during context gathering 2026-04-23):**
 - Service named `player-financial-transaction` in roadmap → actual path `services/player-financial/`
@@ -280,3 +282,4 @@ Pulled from ROLLOUT-ROADMAP.md §7; update status as mitigations land.
 | 2026-04-23 | Tracker created. Phase 1.0 opened. Context gathered against frozen ADR set + SRC. Roadmap-path deltas flagged (service rename mismatches, unit heterogeneity). |
 | 2026-04-23 | **Phase 1.0 deliverables complete** (lead-architect). Shipped: (1) `types/financial.ts` — 3 exports, tsc clean; (2) `WAVE-1-SURFACE-INVENTORY.md` — 8 services enumerated, 4 confirmed SRC violations catalogued, shift-dashboard v3-vs-legacy split documented; (3) `WAVE-1-CLASSIFICATION-RULES.md` — source → authority mapping for ~40 sources, custody-chain resolved to `estimated` per FACT-MODEL §D1 (audit's proposed 5th `custody` class rejected as unnecessary), 8 open questions Q-A1…Q-A8 raised; (4) `WAVE-1-FORBIDDEN-LABELS.md` — regex-anchored denylist + replace-with + allowlist, ready for Phase 1.4 ESLint rule generation. Merged independent findings from `SURFACE-CLASSIFICATION-AUDIT.md` (added missed `services/rating-slip-modal/` + `Handle`/`Theo: 0`/`totalChipsOut` violations). **Exit gate NOT yet passed** — awaits lead-architect sign-off on Q-A1–Q-A8. |
 | 2026-04-23 | **Execution governance added** to `ROLLOUT-ROADMAP.md` (new §2.5) and this tracker (PRD/EXEC-SPEC columns). ADRs are decisions; they do not ship. PRDs do. No PRDs exist yet for any phase, so the roadmap is NOT directly implementable as-is. Every Phase ≥ 1.1 now requires `/prd-writer` → `/lead-architect` EXEC-SPEC scaffold → `/build-pipeline` before implementation. Phase 1.0 explicitly exempted as meta-phase (produces the governance docs every subsequent PRD cites). Skill-routing table in roadmap §9 clarified to indicate skills are dispatched by build-pipeline, not invoked directly. |
+| 2026-04-23 | **Phase 1.0 EXIT GATE PASSED** (lead-architect sign-off). All 8 open decisions resolved: Q-A1 `average_bet` not wrapped (operator input); Q-A2 `observed`/`compliance` labels live for surfaces, no new authoring; Q-A3 source strings service-private (UI may display, must not branch); Q-A4 cash-obs always Pattern A split; Q-A5 shift-intelligence metric-kind routing principle approved (Phase 1.1 produces concrete map); Q-A6 dollar→cents mapper with pinned rounding test; Q-A7 theo renders envelope `unknown` + "Not computed" badge (UI treatment deferred to frontend-design-pt-2 in Phase 1.3); Q-A8 `totalChipsOut` → `totalCashOut` rename approved for Phase 1.1 with full consumer scope. Sign-off record: `actions/WAVE-1-PHASE-1.0-SIGNOFF.md`. Classification rules + inventory + forbidden-labels amended to `Accepted` status with rules promoted to normative. **Phase 1.1 PRD authoring unblocked** — next action is `/prd-writer` for Phase 1.1 Service DTO Envelope migration. |

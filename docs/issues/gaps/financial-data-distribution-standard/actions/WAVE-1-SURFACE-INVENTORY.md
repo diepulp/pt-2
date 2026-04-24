@@ -280,8 +280,8 @@ Confirmed by merging the independent `SURFACE-CLASSIFICATION-AUDIT.md` findings 
 |-----------|-----------|------------|--------------|
 | `app/(landing)/floor-oversight/page.tsx` | Label `"Coverage quality"` used for attribution KPI | §K1 | Rename to `"Attribution Ratio"`; route through `<AttributionRatio>` component. |
 | `components/pit-panels/analytics-panel.tsx:169` | Estimated-drop metric labeled `"Handle"` with no authority badge | §L3 (forbidden name), §F3 (silent estimation) | Replace label with `"Estimated Drop"`; wrap with `<FinancialValue type="estimated">`. |
-| `components/player-360/summary/summary-band.tsx` ("Theo Estimate" row, audit §5 line 137) | `theoEstimate` is hardcoded `0` in mappers (audit Stream B #1); UI renders `$0` as if authoritative | §F4 (placeholder authority) | **Hide the field entirely until `theo` is computed** (remove from DTO or mark `status: 'unknown'` with explicit "Not computed" badge). Do NOT ship with `Theo: 0`. |
-| `services/rating-slip-modal/dtos.ts:149` | DTO field `totalChipsOut` — "Chips" implies `observed`; source is PFT (`actual`) | §L3 wording-mismatch | Rename to `totalCashOut` at DTO boundary; propagate through consumers. Service-layer change, not UI-only. |
+| `components/player-360/summary/summary-band.tsx` ("Theo Estimate" row, audit §5 line 137) | `theoEstimate` is hardcoded `0` in mappers (audit Stream B #1); UI renders `$0` as if authoritative | §F4 (placeholder authority) | **Q-A7 resolution (SIGNOFF §2):** Phase 1.1 emits envelope with `type: 'estimated'`, `source: "rating_slip.theo"`, `completeness.status: 'unknown'`. Phase 1.3 `/frontend-design-pt-2` renders with authority-labeled "Not computed" badge. Interim violation ships until Phase 1.3 unless product elects out-of-phase patch. |
+| `services/rating-slip-modal/dtos.ts:149` | DTO field `totalChipsOut` — "Chips" implies `observed`; source is PFT (`actual`) | §L3 wording-mismatch | **Q-A8 resolution (SIGNOFF §2):** Rename to `totalCashOut` in Phase 1.1. Scope: DTO + mapper + schema + RPC + API/OpenAPI + UI + tests + docs. FORBIDDEN-LABELS §2.D rule promoted to active. |
 
 **Absence ≠ compliance.** The broader grep for `"Total In"`, `"Total Drop"`, `"Theo: 0"` literals turns up zero hits — but the dominant violation class in PT-2 today is **bare currency rendered without an authority label**, which fails SRC §L1 regardless of label text. Audit Stream A confirms pervasive unlabeled custody-chain `actual` (`estimated` under the frozen model) values across `components/shift-dashboard/` and `rundown-summary-panel`.
 
@@ -296,7 +296,7 @@ Merges the audit's Streams A–C with the broader grep-based inventory. Shift-da
 | Shift dashboard v2 | `app/review/shift-dashboard-v2/**` | Shift metrics (mixed `estimated` / `observed`) | Unaudited (not covered by SURFACE-CLASSIFICATION-AUDIT streams A–D) | Phase 1.3 re-grep; `<FinancialValue>` + split display; `<AttributionRatio>` if KPI rendered |
 | Pit panels | `components/pit-panels/analytics-panel.tsx:169` (**"Handle" violation**), `/closed-sessions-panel.tsx` | Win/Loss (actual), Estimated drop mislabeled as Handle | §5.1 violation | Fix label + wrap |
 | Table rundown | `components/table/rundown-summary-panel.tsx:205–218,229,242` | Fills, Credits, Drop Total, Win/Loss | Unlabeled; drop gated on `drop_posted_at` but origin not surfaced | Full `<FinancialValue>` migration, Pattern B for derived Win/Loss |
-| Player 360 | `components/player-360/summary/summary-band.tsx:136–155`, `/left-rail/filter-tile-stack.tsx:87` | Session Value, **Theo Estimate (=0 stub, §5.1 violation)**, Cash Velocity, Rate/hr | Unlabeled; Theo is placeholder | Wrap cells; **remove Theo until implemented** |
+| Player 360 | `components/player-360/summary/summary-band.tsx:136–155`, `/left-rail/filter-tile-stack.tsx:87` | Session Value, **Theo Estimate (=0 stub, §5.1 violation)**, Cash Velocity, Rate/hr | Unlabeled; Theo is placeholder | Wrap cells; **Theo renders envelope with `status: 'unknown'` + "Not computed" badge** per Q-A7 (frontend-design-pt-2 specifies badge treatment in Phase 1.3) |
 | Player sessions | `components/player-sessions/start-from-previous.tsx:213,219,237` | total_buy_in, total_cash_out, net | Unlabeled PFT aggregates | `<FinancialValue>`; Pattern B for net |
 | Cashier | `components/cashier/amount-display.tsx`, `/cash-out-form.tsx:54` | Amount display + form input | Form input is operator-draft until POST (audit Stream C #2) | `<FinancialValue>` for committed; **"Draft" badge** for in-form input |
 | MTL | `components/mtl/gaming-day-summary.tsx:158–163,272,288`, `/compliance-dashboard.tsx:132`, `/entry-badge.tsx`, `/agg-badge.tsx` | MTL totals, badges | Mostly labeled (MTL badge) — correct per audit | `<FinancialValue type="compliance">` formalizes existing badges |
@@ -318,15 +318,19 @@ Phase 1.3 eliminates local formatter duplication in favor of the shared `<Financ
 
 ---
 
-## 6. Open questions for Phase 1.0 exit gate
+## 6. Phase 1.0 Resolved Decisions (formerly "Open questions")
 
-These block the exit gate and must resolve before Phase 1.1 can start. Rationale lives in `WAVE-1-CLASSIFICATION-RULES.md §7`.
+> **Status:** All 8 questions Q-A1 through Q-A8 resolved on 2026-04-23. See `actions/WAVE-1-PHASE-1.0-SIGNOFF.md` for full decision records and `actions/WAVE-1-CLASSIFICATION-RULES.md §7` for the summary table.
 
-1. **Q-A1 — `rating_slip.average_bet` classification.** Proposed: **not wrapped**, treated as a labeled bare number in UI. Alternative: wrap as `observed` authority with source `"rating_slip.average_bet"`. Sign-off required.
-2. **Q-A2 — Observed authority in pilot.** FACT-MODEL §D1 says `observed` is "taxonomy only, not authored in pilot." Yet `pit_cash_observation` rows and `table_inventory_snapshot` attestations ARE authored today. Proposal: treat existing rows as `observed` for SURFACE labeling purposes only (consistent with taxonomy); do not derive NEW observation authoring workflows in Wave 1. Sign-off required.
-3. **Q-A3 — Class B source naming.** Proposed sources above use `"table_session.drop"`, `"table_session.fills_total"`, etc. Wave 2 may introduce a unified `"grind"` source. Phase 1.1 mapper MUST define sources such that Wave 2 can migrate without UI churn — i.e., source strings are internal to services, not exposed in forbidden-label rules.
-4. **Q-A4 — Extrapolated vs confirmed cash-obs rollups.** Two authorities (`estimated` vs `observed`) per cash-obs rollup DTO. Confirmed: must render as Pattern A split. Sign-off confirming no UI will display a combined number.
-5. **Q-A5 — Shift-intelligence `observedValue` authority routing.** Phase 1.1 must enumerate the metric-kind → authority map. Proposed source/authority routing table sketched in §3.7; formal map TBD in Phase 1.1.
+Inventory impact summary:
+- Q-A1 — `average_bet` not wrapped; UI labels as "Input" with visual distinction from envelope-wrapped theo. (Inventory §3.2, §3.3)
+- Q-A2 — `observed` / `compliance` rows in pit-cash, table-inventory, and MTL surfaces are live sources for envelope labeling. (Inventory §3.4, §3.5)
+- Q-A3 — Service-private source strings — tests and UI branching rules govern usage. (All §3.x tables)
+- Q-A4 — Cash-obs rollups Pattern A split mandatory. (Inventory §3.5 cash-obs subsection)
+- Q-A5 — Metric-kind routing principle approved; concrete map is Phase 1.1 deliverable. (Inventory §3.8)
+- Q-A6 — Dollar→cents mapper conversion; rounding-test pinning required in Phase 1.1. (Inventory §2 unit heterogeneity)
+- Q-A7 — Theo renders `unknown` envelope + "Not computed" badge; UI treatment Phase 1.3. (Inventory §5.1, §5.2 Player 360 row)
+- Q-A8 — `totalChipsOut` → `totalCashOut` Phase 1.1 rename with full consumer scope. (Inventory §3.7, §5.1)
 
 ---
 
