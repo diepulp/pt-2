@@ -54,6 +54,72 @@ derived_from:
 
 ---
 
+# 2.5. Execution Protocol (READ THIS BEFORE IMPLEMENTING)
+
+> **This roadmap is a PLANNING document, not an EXEC-SPEC.**
+>
+> The phase tables in §3 enumerate *what must be built* and *what the exit gate looks like*. They do **not** replace PT-2's implementation pipeline. No engineer or agent should read a Phase 1.x checklist and start writing service code against it.
+
+## 2.5.1 The frozen-ADR / PRD gap
+
+The ADR-FINANCIAL-* set + SRC are **decisions**. PT-2 decisions do not ship; PRDs do. No PRDs exist yet for any phase of this rollout. Therefore:
+
+- **Every Phase ≥ 1.1 requires its own PRD** before an EXEC-SPEC can be generated.
+- **Every Phase ≥ 1.1 requires its own EXEC-SPEC** before build-pipeline can execute it.
+- **Every Phase ≥ 1.1 runs through `/build-pipeline`** with explicit validation gates — not as ad-hoc skill invocations.
+
+## 2.5.2 Per-phase execution chain
+
+For each Phase ≥ 1.1, the chain is fixed:
+
+```
+┌──────────────┐   ┌──────────────────────┐   ┌──────────────┐
+│ /prd-writer  │ → │  /lead-architect     │ → │ /build-pipeline │
+│ (PRD for     │   │  (EXEC-SPEC scaffold  │   │ (workstream   │
+│  the phase)  │   │   + workstream IDs)   │   │  execution)  │
+└──────────────┘   └──────────────────────┘   └──────────────┘
+```
+
+1. **`/prd-writer`** converts this roadmap's phase entry + the classification rules + the surface inventory into a bounded, shippable PRD that cites ADRs, defines a Definition of Done, and lists cross-context impacts.
+2. **`/lead-architect`** (acting in the EXEC-SPEC scaffolding role defined in the skill header) produces the workstream skeleton: IDs, dependencies, bounded contexts. No implementation hints.
+3. **`/build-pipeline`** invokes the domain-expert skills (`backend-service-builder`, `api-builder`, `frontend-design-pt-2`, `qa-specialist`, `rls-expert`) per workstream and enforces phase-gate validation.
+
+The skill-routing table in §9 lists the **terminal** skills each phase invokes **through build-pipeline** — it is NOT a list of skills to call directly without PRD/EXEC-SPEC.
+
+## 2.5.3 Phase 1.0 exception (why no PRD)
+
+Phase 1.0 is a **meta-phase**: its deliverables ARE the source-of-truth governance docs (`types/financial.ts`, surface inventory, classification rules, forbidden-label taxonomy) that every subsequent PRD will cite. A PRD for Phase 1.0 would be meta-circular — "write docs that define the envelope" — so lead-architect produced the artifacts directly under this roadmap's scope. Phase 1.0 is the **only** phase with this exemption. Phase 1.1 onwards has no such out.
+
+## 2.5.4 What the phase tables in §3 ARE and ARE NOT
+
+| The phase tables in §3 ARE… | …ARE NOT |
+|-----------------------------|----------|
+| A list of capabilities that must exist by phase end | A task breakdown for an engineer |
+| A scope boundary (what belongs in 1.1 vs 1.2 vs 1.3) | A workstream dependency graph |
+| A gate definition (what "done" means for review) | An acceptance-criteria PRD |
+| Input material for `/prd-writer` | Output of `/lead-architect` EXEC-SPEC scaffolding |
+
+## 2.5.5 Phase transitions
+
+Exiting Phase N → Opening Phase N+1 is a **two-document transition**, not a checkbox flip:
+
+1. Phase N exit gate met (this roadmap's §3 criteria).
+2. Phase N+1 PRD drafted, reviewed, and approved.
+
+No code may be written for Phase N+1 before its PRD lands. This is the freeze-discipline principle (§2.5) applied to implementation, not just decisions.
+
+## 2.5.6 PRD naming convention (proposed)
+
+Phase PRDs land in `docs/10-prd/` using the existing PRD-NNN numbering. Suggested title pattern:
+
+```
+PRD-NNN: Financial Telemetry — Wave 1 Phase 1.<N> — <phase name>
+```
+
+Each PRD cites ADR-FINANCIAL-FACT-MODEL, ADR-FINANCIAL-SYSTEM-SCOPE, ADR-FINANCIAL-EVENT-PROPAGATION, ADR-FINANCIAL-AUTHORING-PARITY, and SRC as canonical decisions; cites this roadmap as parent planning doc.
+
+---
+
 # 3. WAVE 1 — Surface Contract Rollout
 
 **Goal:** every financial value rendered in UI, API response, export, or report carries the SRC envelope. No schema changes. No outbox. No dual-authoring path.
@@ -295,17 +361,19 @@ Track resolutions in a `WAVE-2-PREP-DECISIONS.md` accumulated during Wave 1.
 
 ---
 
-# 9. Ownership & Skill Routing
+# 9. Ownership & Skill Routing (invoked *through* `/build-pipeline`)
 
-| Phase | Primary skill | Supporting |
-|-------|--------------|-----------|
-| 1.0 Prep | `lead-architect` | — |
-| 1.1 Service DTOs | `backend-service-builder` | — |
-| 1.2 API | `api-builder` | `backend-service-builder` |
-| 1.3 UI | `frontend-design-pt-2` | `web-design-guidelines` for review |
-| 1.4 Validation | `qa-specialist` | `e2e-testing` for Playwright assertions |
-| 1.5 Rollout | `devops-pt2` | `qa-specialist` for final gate |
-| Wave 2 (all) | TBD post-Wave-1 | — |
+**Do not invoke these skills directly for Phase ≥ 1.1.** Per §2.5, each phase runs `/prd-writer` → `/lead-architect` (EXEC-SPEC scaffold) → `/build-pipeline`; `/build-pipeline` is what dispatches the domain-expert skills below. The column names indicate which skill `/build-pipeline` invokes for each workstream type, not a call-order for humans.
+
+| Phase | Terminal skill(s) (dispatched by build-pipeline) | Supporting |
+|-------|--------------------------------------------------|-----------|
+| 1.0 Prep | `/lead-architect` — **direct invocation permitted** (meta-phase, see §2.5.3) | — |
+| 1.1 Service DTOs | `/backend-service-builder` | — |
+| 1.2 API | `/api-builder` | `/backend-service-builder` for DTO contract updates |
+| 1.3 UI | `/frontend-design-pt-2` | `/web-design-guidelines` for review |
+| 1.4 Validation | `/qa-specialist` | `/e2e-testing` for Playwright assertions |
+| 1.5 Rollout | `/devops-pt2` | `/qa-specialist` for final gate |
+| Wave 2 (all) | TBD post-Wave-1 (PRD + EXEC-SPEC per workstream) | — |
 
 ---
 

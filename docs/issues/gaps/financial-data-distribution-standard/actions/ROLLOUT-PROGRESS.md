@@ -21,6 +21,8 @@ tracks:
 > Single source of truth for Wave 1/Wave 2 execution status.
 > Update inline as deliverables ship. Do not patch the frozen decision docs — use the supersession process.
 
+> ⚠️ **Governance:** Every phase ≥ 1.1 requires PRD → EXEC-SPEC → `/build-pipeline`. See `ROLLOUT-ROADMAP.md §2.5`. Checkbox completion in this tracker does NOT authorize starting the next phase; Phase N+1's PRD must land first.
+
 ---
 
 ## Legend
@@ -35,15 +37,19 @@ tracks:
 
 ## 1. Overall Status
 
-| Wave  | Phase                         | Status | Owner              | Exit gate met |
-| ----- | ----------------------------- | ------ | ------------------ | ------------- |
-| 1     | 1.0 Prep & Inventory          | 🟦     | lead-architect     | No — deliverables done; awaiting sign-off on Q-A1–Q-A8 |
-| 1     | 1.1 Service DTO Envelope      | ⬜     | backend-service-builder | —        |
-| 1     | 1.2 API Envelope at Wire      | ⬜     | api-builder        | —             |
-| 1     | 1.3 UI Split Display          | ⬜     | frontend-design-pt-2 | —           |
-| 1     | 1.4 Validation + Lint + I5    | ⬜     | qa-specialist      | —             |
-| 1     | 1.5 Rollout & Sign-off        | ⬜     | devops-pt2         | —             |
-| 2     | Schema + Outbox + Consumer    | ⬜     | TBD post-Wave-1    | —             |
+Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-SPEC scaffolded → build-pipeline executed to exit criteria**. Phase 1.0 is exempted from PRD/EXEC-SPEC per `ROLLOUT-ROADMAP.md §2.5.3` (meta-phase: produces the governance docs that feed every subsequent PRD).
+
+| Wave  | Phase                         | PRD       | EXEC-SPEC | Build-pipeline exec | Exit gate |
+| ----- | ----------------------------- | --------- | --------- | ------------------- | --------- |
+| 1     | 1.0 Prep & Inventory          | ➖ Exempt | ➖ Exempt | 🟦 Artifacts shipped | ⬜ Awaiting sign-off on Q-A1–Q-A8 |
+| 1     | 1.1 Service DTO Envelope      | ⬜        | ⬜        | ⬜                  | —         |
+| 1     | 1.2 API Envelope at Wire      | ⬜        | ⬜        | ⬜                  | —         |
+| 1     | 1.3 UI Split Display          | ⬜        | ⬜        | ⬜                  | —         |
+| 1     | 1.4 Validation + Lint + I5    | ⬜        | ⬜        | ⬜                  | —         |
+| 1     | 1.5 Rollout & Sign-off        | ⬜        | ⬜        | ⬜                  | —         |
+| 2     | Schema + Outbox + Consumer    | ⬜        | ⬜        | ⬜                  | —         |
+
+**Skill routing per phase:** see `ROLLOUT-ROADMAP.md §9`. Skills are dispatched by `/build-pipeline`, not invoked directly.
 
 ---
 
@@ -75,7 +81,12 @@ tracks:
 
 ### Phase 1.1 — Service Layer: DTO Envelope  ⬜
 
-Blocked on: Phase 1.0 exit gate.
+Blocked on: Phase 1.0 exit gate + **Phase 1.1 PRD** + **Phase 1.1 EXEC-SPEC**.
+
+**Pipeline chain (required before any code change):**
+- [ ] PRD-NNN drafted via `/prd-writer` citing classification rules + surface inventory
+- [ ] EXEC-SPEC scaffolded via `/lead-architect` (workstream IDs, dependencies, bounded contexts)
+- [ ] `/build-pipeline` executed; dispatches `/backend-service-builder` per workstream
 
 | # | Deliverable | Status |
 |---|-------------|--------|
@@ -105,7 +116,9 @@ Blocked on: Phase 1.0 exit gate.
 
 ### Phase 1.2 — API Layer: Envelope at the Wire  ⬜
 
-Blocked on: Phase 1.1.
+Blocked on: Phase 1.1 exit gate + **Phase 1.2 PRD** + **Phase 1.2 EXEC-SPEC**.
+
+**Pipeline chain:** `/prd-writer` → `/lead-architect` EXEC-SPEC → `/build-pipeline` dispatching `/api-builder` (+ `/backend-service-builder` for DTO contract touches).
 
 | # | Deliverable | Status |
 |---|-------------|--------|
@@ -124,7 +137,9 @@ Blocked on: Phase 1.1.
 
 ### Phase 1.3 — UI Layer: Split Display + Labels  ⬜
 
-Blocked on: Phase 1.2.
+Blocked on: Phase 1.2 exit gate + **Phase 1.3 PRD** + **Phase 1.3 EXEC-SPEC**.
+
+**Pipeline chain:** `/prd-writer` → `/lead-architect` EXEC-SPEC → `/build-pipeline` dispatching `/frontend-design-pt-2` (+ `/web-design-guidelines` review).
 
 | # | Deliverable | Status |
 |---|-------------|--------|
@@ -155,7 +170,9 @@ Blocked on: Phase 1.2.
 
 ### Phase 1.4 — Validation: Lint + Truth-Telling Tests  ⬜
 
-Blocked on: Phase 1.3.
+Blocked on: Phase 1.3 exit gate + **Phase 1.4 PRD** + **Phase 1.4 EXEC-SPEC**.
+
+**Pipeline chain:** `/prd-writer` → `/lead-architect` EXEC-SPEC → `/build-pipeline` dispatching `/qa-specialist` (+ `/e2e-testing` for Playwright assertions).
 
 | # | Deliverable | Status |
 |---|-------------|--------|
@@ -175,7 +192,9 @@ Blocked on: Phase 1.3.
 
 ### Phase 1.5 — Rollout & Sign-off  ⬜
 
-Blocked on: Phase 1.4.
+Blocked on: Phase 1.4 exit gate + **Phase 1.5 PRD** + **Phase 1.5 EXEC-SPEC**.
+
+**Pipeline chain:** `/prd-writer` → `/lead-architect` EXEC-SPEC → `/build-pipeline` dispatching `/devops-pt2` (+ `/qa-specialist` for final gate).
 
 | # | Deliverable | Status |
 |---|-------------|--------|
@@ -260,3 +279,4 @@ Pulled from ROLLOUT-ROADMAP.md §7; update status as mitigations land.
 |------------|-------|
 | 2026-04-23 | Tracker created. Phase 1.0 opened. Context gathered against frozen ADR set + SRC. Roadmap-path deltas flagged (service rename mismatches, unit heterogeneity). |
 | 2026-04-23 | **Phase 1.0 deliverables complete** (lead-architect). Shipped: (1) `types/financial.ts` — 3 exports, tsc clean; (2) `WAVE-1-SURFACE-INVENTORY.md` — 8 services enumerated, 4 confirmed SRC violations catalogued, shift-dashboard v3-vs-legacy split documented; (3) `WAVE-1-CLASSIFICATION-RULES.md` — source → authority mapping for ~40 sources, custody-chain resolved to `estimated` per FACT-MODEL §D1 (audit's proposed 5th `custody` class rejected as unnecessary), 8 open questions Q-A1…Q-A8 raised; (4) `WAVE-1-FORBIDDEN-LABELS.md` — regex-anchored denylist + replace-with + allowlist, ready for Phase 1.4 ESLint rule generation. Merged independent findings from `SURFACE-CLASSIFICATION-AUDIT.md` (added missed `services/rating-slip-modal/` + `Handle`/`Theo: 0`/`totalChipsOut` violations). **Exit gate NOT yet passed** — awaits lead-architect sign-off on Q-A1–Q-A8. |
+| 2026-04-23 | **Execution governance added** to `ROLLOUT-ROADMAP.md` (new §2.5) and this tracker (PRD/EXEC-SPEC columns). ADRs are decisions; they do not ship. PRDs do. No PRDs exist yet for any phase, so the roadmap is NOT directly implementable as-is. Every Phase ≥ 1.1 now requires `/prd-writer` → `/lead-architect` EXEC-SPEC scaffold → `/build-pipeline` before implementation. Phase 1.0 explicitly exempted as meta-phase (produces the governance docs every subsequent PRD cites). Skill-routing table in roadmap §9 clarified to indicate skills are dispatched by build-pipeline, not invoked directly. |
