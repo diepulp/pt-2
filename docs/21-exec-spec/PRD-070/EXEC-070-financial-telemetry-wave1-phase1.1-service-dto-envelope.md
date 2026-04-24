@@ -53,6 +53,35 @@ amendment_log:
       ~3–5x effort) under equal-weight rows. In-flight amendment would trigger per-WS
       escalation per PRD-070 §2.3 / NFR-7. A scoped child PRD with corrected blast radius
       is cleaner and more truthful than amending the parent mid-execution.
+  - date: "2026-04-24"
+    kind: "child-spec-completion"
+    summary: >
+      FIB-FIN-CENTS-001 child spec chain closed at Phase 1.1b semantic-labeling scope via
+      PRD-072 (commit 38d25cc1). WS5/WS5_ROUTE/WS5_UI/WS6 superseded at this scope —
+      FinancialValue type wrapping shipped, /100 preserved, dollar-float values intentional.
+      Phase 1.2 canonicalization (remove /100, integer cents, formatCents migration) deferred
+      to a future Phase 1.2 PRD not tracked under EXEC-070. WS9 FIB-FIN-CENTS-001 blocker
+      lifted. WS7B (FIB-FIN-SHIFT-001) still blocks. WS9 matrix items 9/10/11 formally struck
+      (component __tests__/ dir absent; review page excluded per user directive 2026-04-24).
+      Items 4/12 still blocked on WS7B.
+    child_spec_completion:
+      prd: "docs/10-prd/PRD-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope-v0.md"
+      exec_spec: "docs/21-exec-spec/PRD-072/EXEC-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope.md"
+      commit: "38d25cc1"
+      scope_note: "Phase 1.1b labeling only — /100 preserved. FinancialValue.value is a dollar float."
+    superseded_workstreams:
+      - {id: "WS5",       new_status: "completed_phase_1_1b_via_prd072", phase_1_2_obligation: "Remove /100 in services/visit/crud.ts; FinancialValue.value → integer cents; Zod wire/DTO partition"}
+      - {id: "WS5_ROUTE", new_status: "completed_phase_1_1b_via_prd072", phase_1_2_obligation: "Expand route test matrix (unauthorized, 404, validation-error cases)"}
+      - {id: "WS5_UI",    new_status: "completed_phase_1_1b_via_prd072", phase_1_2_obligation: "formatDollars → formatCents migration; birth components/player-sessions/__tests__/"}
+      - {id: "WS6",       new_status: "completed_phase_1_1b_via_prd072", phase_1_2_obligation: "Remove /100 in services/rating-slip/mappers.ts; FinancialValue.value → integer cents; expand live-view route test matrix"}
+    ws9_matrix_amendment:
+      struck:
+        - {item: 9,  path: "components/player-sessions/__tests__/start-from-previous.test.tsx",       reason: "Dir absent — Phase 1.2 scope"}
+        - {item: 10, path: "components/player-sessions/__tests__/start-from-previous-modal.test.tsx", reason: "Dir absent — Phase 1.2 scope"}
+        - {item: 11, path: "app/review/start-from-previous/__tests__/page.test.tsx",                  reason: "Review page excluded per user directive 2026-04-24"}
+      still_blocked:
+        - {item: 4,  command: "npm run test:slice:shift-intelligence",                                              blocked_on: "WS7B"}
+        - {item: 12, path:    "services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts",        blocked_on: "WS7B — stale test needs rewrite"}
 
 workstreams:
   WS0:
@@ -168,8 +197,11 @@ workstreams:
     estimated_complexity: low
 
   WS5:
-    status: "deferred_to_child_spec"
+    status: "completed_phase_1_1b_via_prd072"
     deferred_to: "FIB-FIN-CENTS-001"
+    child_prd: "docs/10-prd/PRD-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope-v0.md"
+    child_exec_spec: "docs/21-exec-spec/PRD-072/EXEC-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope.md"
+    phase_1_2_obligation: "Remove /100 in services/visit/crud.ts; FinancialValue.value → integer cents; Zod wire/DTO partition"
     name: "Visit Recent-Sessions Cents Service Core"
     description: >
       Remove visit-side dollar pre-conversion and land the cents-envelope contract for the
@@ -186,8 +218,11 @@ workstreams:
     estimated_complexity: medium
 
   WS5_ROUTE:
-    status: "deferred_to_child_spec"
+    status: "completed_phase_1_1b_via_prd072"
     deferred_to: "FIB-FIN-CENTS-001"
+    child_prd: "docs/10-prd/PRD-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope-v0.md"
+    child_exec_spec: "docs/21-exec-spec/PRD-072/EXEC-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope.md"
+    phase_1_2_obligation: "Expand route test matrix (unauthorized, 404, validation-error cases)"
     name: "Visit Recent-Sessions Route Boundary Slice"
     description: >
       Move the bounded recent-sessions route handler and route-boundary coverage with the
@@ -202,9 +237,12 @@ workstreams:
     estimated_complexity: low
 
   WS5_UI:
-    status: "deferred_to_child_spec"
+    status: "completed_phase_1_1b_via_prd072"
     deferred_to: "FIB-FIN-CENTS-001"
     scope_narrowed: "app/review/start-from-previous/page.tsx EXCLUDED from child spec (demo/design-review surface, user directive 2026-04-24)"
+    child_prd: "docs/10-prd/PRD-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope-v0.md"
+    child_exec_spec: "docs/21-exec-spec/PRD-072/EXEC-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope.md"
+    phase_1_2_obligation: "formatDollars → formatCents migration; birth components/player-sessions/__tests__/"
     name: "Visit Recent-Sessions UI Consumer Slice"
     description: >
       Update the verified player-session consumers for the cents-envelope contract:
@@ -222,8 +260,11 @@ workstreams:
     estimated_complexity: low
 
   WS6:
-    status: "deferred_to_child_spec"
+    status: "completed_phase_1_1b_via_prd072"
     deferred_to: "FIB-FIN-CENTS-001"
+    child_prd: "docs/10-prd/PRD-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope-v0.md"
+    child_exec_spec: "docs/21-exec-spec/PRD-072/EXEC-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope.md"
+    phase_1_2_obligation: "Remove /100 in services/rating-slip/mappers.ts; FinancialValue.value → integer cents; expand live-view route test matrix"
     name: "Visit Live-View Cents Canonicalization Slice"
     description: >
       Remove the remaining rating-slip-owned visit live-view pre-conversion path and land
@@ -418,10 +459,10 @@ Fixing these in-place would trigger per-workstream escalation per PRD-070 §2.3 
 
 | Workstream | Deferred to | Status |
 |---|---|---|
-| WS5 — Visit Recent-Sessions Cents Service Core | FIB-FIN-CENTS-001 | Intake drafted, awaiting lead-architect PRD |
-| WS5_ROUTE — Visit Recent-Sessions Route Boundary Slice | FIB-FIN-CENTS-001 | Intake drafted |
-| WS5_UI — Visit Recent-Sessions UI Consumer Slice (narrowed — `/review/` excluded) | FIB-FIN-CENTS-001 | Intake drafted |
-| WS6 — Visit Live-View Cents Canonicalization Slice | FIB-FIN-CENTS-001 | Intake drafted |
+| WS5 — Visit Recent-Sessions Cents Service Core | FIB-FIN-CENTS-001 → PRD-072 | ✅ Phase 1.1b complete (labeling only; /100 preserved) |
+| WS5_ROUTE — Visit Recent-Sessions Route Boundary Slice | FIB-FIN-CENTS-001 → PRD-072 | ✅ Phase 1.1b complete (1 smoke test; full matrix Phase 1.2) |
+| WS5_UI — Visit Recent-Sessions UI Consumer Slice (narrowed — `/review/` excluded) | FIB-FIN-CENTS-001 → PRD-072 | ✅ Phase 1.1b complete (formatDollars preserved; formatCents Phase 1.2) |
+| WS6 — Visit Live-View Cents Canonicalization Slice | FIB-FIN-CENTS-001 → PRD-072 | ✅ Phase 1.1b complete (labeling only; /100 preserved) |
 | WS7B — Shift-Intelligence Authority Routing Implementation | Pending FIB (recommended: FIB-FIN-SHIFT-001) | Intake NOT yet drafted |
 
 ### Intake artifacts
@@ -434,11 +475,53 @@ Fixing these in-place would trigger per-workstream escalation per PRD-070 §2.3 
 
 Phase 1.1 does not close until all three of the following are true:
 
-1. FIB-FIN-CENTS-001 → PRD (TBD) → EXEC-SPEC (TBD) → implementation completion for WS5, WS5_ROUTE, WS5_UI (narrowed), WS6
+1. ~~FIB-FIN-CENTS-001 → PRD (TBD) → EXEC-SPEC (TBD) → implementation completion for WS5, WS5_ROUTE, WS5_UI (narrowed), WS6~~ **✅ Complete — PRD-072 Phase 1.1b (commit 38d25cc1). Labeling-only scope; /100 preserved; dollar float.**
 2. Pending FIB (FIB-FIN-SHIFT-001 recommended) → PRD → EXEC-SPEC → implementation completion for WS7B
-3. WS9 runs its full verification matrix across all Phase 1.1 artifacts — envelope coverage across all 8 bounded contexts, route-boundary/UI/component coverage for every exception slice, `totalCashOut` grep gate (already satisfied), rollback matrix completion including the `20260424024019` migration as a WS4 revert dependency, and the Phase 1.2 handoff package enumerating every deferred field + owner + paired consumer obligation
+3. WS9 runs its amended verification matrix (items 1–3 ✅ runnable, item 4 blocked WS7B, items 5–8 ✅ runnable, items 9–11 struck, item 12 blocked WS7B) and produces the Phase 1.2 handoff package
 
 WS9's `depends_on` list has been rewritten to point at `child-spec:FIB-FIN-CENTS-001` and `child-spec:FIB-FIN-SHIFT-001-pending` in place of the deferred workstream IDs.
+
+## Amendment 2026-04-24 (2) — Child Spec Completion: PRD-072 Phase 1.1b
+
+**PRD-072** (`commit 38d25cc1`) shipped under the FIB-FIN-CENTS-001 authority chain and
+closes the dormant WS5 / WS5_ROUTE / WS5_UI / WS6 workstreams at **Phase 1.1b labeling scope**.
+
+### What PRD-072 delivered
+
+| Dormant WS | Delivered | Not delivered (Phase 1.2) |
+|---|---|---|
+| WS5 | RecentSessionDTO fields → FinancialValue (dollar float); centsToDollars inline wrap | Remove /100; integer cents; Zod partition |
+| WS5_ROUTE | Route passthrough verified clean; 1 smoke test born | Full unauthorized/404/validation matrix |
+| WS5_UI | start-from-previous.tsx + modal updated with `.value` access; formatDollars preserved | formatCents migration; components/player-sessions/\_\_tests\_\_/ birth |
+| WS6 | VisitLiveViewDTO fields → FinancialValue (dollar float); mappers.ts inline wrap + null guard | Remove /100; integer cents; expanded route tests |
+
+**Phase boundary enforced:** `/100` is preserved throughout. `FinancialValue.value` is a dollar
+float (e.g. 500.00, not 50000). `financialValueSchema z.number().int()` not applied.
+This is correct and intentional. Phase 1.2 owns canonicalization.
+
+### WS9 matrix amendment
+
+Items 9, 10, 11 formally struck — component test directories do not exist (Phase 1.2 birth
+obligation) and the review page is excluded per user directive 2026-04-24.
+Items 4 and 12 remain blocked on WS7B (FIB-FIN-SHIFT-001 not yet drafted).
+
+| Item | Path / Command | Status |
+|---|---|---|
+| 1–3 | test:slice:rating-slip-modal, visit, rating-slip | ✅ Runnable |
+| 4 | test:slice:shift-intelligence | ❌ Blocked — WS7B |
+| 5–8 | Route + modal-data test paths | ✅ Runnable |
+| 9 | components/player-sessions/\_\_tests\_\_/start-from-previous.test.tsx | ~~Struck~~ — Phase 1.2 |
+| 10 | components/player-sessions/\_\_tests\_\_/start-from-previous-modal.test.tsx | ~~Struck~~ — Phase 1.2 |
+| 11 | app/review/start-from-previous/\_\_tests\_\_/page.test.tsx | ~~Struck~~ — excluded |
+| 12 | anomaly-alerts-route-boundary.test.ts | ❌ Blocked — WS7B |
+
+### Phase 1.1 Close Dependency Chain (revised)
+
+Phase 1.1 does not close until:
+
+1. ~~FIB-FIN-CENTS-001 → PRD → EXEC-SPEC → implementation close~~ **✅ Complete via PRD-072**
+2. FIB-FIN-SHIFT-001 (pending) → FIB → PRD → EXEC-SPEC → implementation close for WS7B
+3. WS9 runs its amended verification matrix and produces the Phase 1.2 handoff package
 
 ## Scope
 

@@ -1,6 +1,6 @@
 {
   "prd": "PRD-070",
-  "prd_title": "Financial Telemetry — Wave 1 Phase 1.1 — Service Layer DTO Envelope",
+  "prd_title": "Financial Telemetry \u2014 Wave 1 Phase 1.1 \u2014 Service Layer DTO Envelope",
   "spec_file": "docs/10-prd/PRD-070-financial-telemetry-wave1-phase1.1-service-dto-envelope-v0.md",
   "exec_spec": "docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md",
   "status": "partially_finalized_awaiting_child_specs",
@@ -27,8 +27,11 @@
       "deferred_to": "FIB-FIN-CENTS-001",
       "fib_h": "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-H-FIN-CENTS-001-visit-anchored-cents-envelope.md",
       "fib_s": "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-S-FIN-CENTS-001-visit-anchored-cents-envelope.json",
-      "child_prd": "TBD (lead-architect to draft)",
-      "child_exec_spec": "TBD"
+      "child_prd": "docs/10-prd/PRD-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope-v0.md",
+      "child_exec_spec": "docs/21-exec-spec/PRD-072/EXEC-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope.md",
+      "status": "completed_phase_1_1b",
+      "completed_via": "PRD-072 commit 38d25cc1",
+      "phase_1_2_obligation": "Remove /100 in services/visit/crud.ts; FinancialValue.value \u2192 integer cents; Zod wire/DTO partition"
     },
     {
       "id": "WS5_ROUTE",
@@ -36,17 +39,23 @@
       "deferred_to": "FIB-FIN-CENTS-001",
       "fib_h": "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-H-FIN-CENTS-001-visit-anchored-cents-envelope.md",
       "fib_s": "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-S-FIN-CENTS-001-visit-anchored-cents-envelope.json",
-      "child_prd": "TBD",
-      "child_exec_spec": "TBD"
+      "child_prd": "docs/10-prd/PRD-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope-v0.md",
+      "child_exec_spec": "docs/21-exec-spec/PRD-072/EXEC-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope.md",
+      "status": "completed_phase_1_1b",
+      "completed_via": "PRD-072 commit 38d25cc1",
+      "phase_1_2_obligation": "Expand route test matrix (unauthorized, 404, validation-error cases)"
     },
     {
       "id": "WS5_UI",
-      "reason": "Deferred to child spec per 2026-04-24 amendment. Scope NARROWED per user directive: app/review/start-from-previous/page.tsx EXCLUDED (demo/design-review surface). Interim render pattern: formatCents(envelope.value) from lib/format.ts — NOT <FinancialValue> (deferred to Phase 1.3).",
+      "reason": "Deferred to child spec per 2026-04-24 amendment. Scope NARROWED per user directive: app/review/start-from-previous/page.tsx EXCLUDED (demo/design-review surface). Interim render pattern: formatCents(envelope.value) from lib/format.ts \u2014 NOT <FinancialValue> (deferred to Phase 1.3).",
       "deferred_to": "FIB-FIN-CENTS-001",
       "fib_h": "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-H-FIN-CENTS-001-visit-anchored-cents-envelope.md",
       "fib_s": "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-S-FIN-CENTS-001-visit-anchored-cents-envelope.json",
-      "child_prd": "TBD",
-      "child_exec_spec": "TBD"
+      "child_prd": "docs/10-prd/PRD-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope-v0.md",
+      "child_exec_spec": "docs/21-exec-spec/PRD-072/EXEC-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope.md",
+      "status": "completed_phase_1_1b",
+      "completed_via": "PRD-072 commit 38d25cc1",
+      "phase_1_2_obligation": "formatDollars \u2192 formatCents migration; birth components/player-sessions/__tests__/"
     },
     {
       "id": "WS6",
@@ -54,8 +63,11 @@
       "deferred_to": "FIB-FIN-CENTS-001",
       "fib_h": "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-H-FIN-CENTS-001-visit-anchored-cents-envelope.md",
       "fib_s": "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-S-FIN-CENTS-001-visit-anchored-cents-envelope.json",
-      "child_prd": "TBD",
-      "child_exec_spec": "TBD"
+      "child_prd": "docs/10-prd/PRD-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope-v0.md",
+      "child_exec_spec": "docs/21-exec-spec/PRD-072/EXEC-072-financial-telemetry-wave1-phase1.1b-visit-anchored-cents-envelope.md",
+      "status": "completed_phase_1_1b",
+      "completed_via": "PRD-072 commit 38d25cc1",
+      "phase_1_2_obligation": "Remove /100 in services/rating-slip/mappers.ts; FinancialValue.value \u2192 integer cents; expand live-view route test matrix"
     },
     {
       "id": "WS7B",
@@ -68,8 +80,7 @@
     }
   ],
   "ws9_blocked_on": [
-    "child-spec:FIB-FIN-CENTS-001 → PRD → EXEC-SPEC → implementation close",
-    "child-spec:FIB-FIN-SHIFT-001-pending → FIB → PRD → EXEC-SPEC → implementation close"
+    "child-spec:FIB-FIN-SHIFT-001-pending \u2192 FIB \u2192 PRD \u2192 EXEC-SPEC \u2192 implementation close"
   ],
   "artifacts": {
     "PRD": [
@@ -144,7 +155,7 @@
     "summary": "Final devils-advocate pass cleared P0s and left execution gates centered on shift-intelligence split, alias policy, blast-radius, tests, and rollback artifacts."
   },
   "created_at": "2026-04-23T00:00:00Z",
-  "updated_at": "2026-04-24T09:45:00Z",
+  "updated_at": "2026-04-24T10:30:00Z",
   "write_path_classification": "none",
   "notes": {
     "checkpoint_purpose": "WS1 shared contract foundation landed; ready for Phase 2 internal service bundles.",
@@ -152,7 +163,7 @@
     "next_action": "Dispatch Phase 2 (WS2 player-financial/loyalty/mtl/table-context + WS3 rating-slip core) in parallel via backend-service-builder.",
     "gov010_status_from_prd": "waived-via-planning-lock",
     "ws0_summary": "Resolved GATE-070.6 by deferring shift-intelligence public DTO shape changes to Phase 1.2 while keeping internal authority routing in Phase 1.1; resolved GATE-070.7 with a no-alias hard rename for totalCashOut; verified direct-coupling inventory, minimum test matrix, and rollback skeleton recorded in EXEC-070.",
-    "ws1_summary": "Shared contract foundation: lib/financial/schema.ts exports financialAuthoritySchema, completenessStatusSchema, completenessSchema, financialValueSchema (all satisfies z.ZodType<canonical> from types/financial.ts, no type duplication). lib/financial/rounding.ts exports dollarsToCents with pinned Math.round(dollars * 100) semantics. Test suite lib/financial/__tests__/schema.test.ts has 39 passing tests covering all 4 authorities × 3 completeness states, explicit completeness required, integer-only value enforcement, negative/zero cents, empty source rejection, coverage [0,1] bounds, and pinned rounding boundary cases — including the Wave-2 replication pin for 1.005 → 100 and 1.015 → 101 float-imprecision outcomes.",
+    "ws1_summary": "Shared contract foundation: lib/financial/schema.ts exports financialAuthoritySchema, completenessStatusSchema, completenessSchema, financialValueSchema (all satisfies z.ZodType<canonical> from types/financial.ts, no type duplication). lib/financial/rounding.ts exports dollarsToCents with pinned Math.round(dollars * 100) semantics. Test suite lib/financial/__tests__/schema.test.ts has 39 passing tests covering all 4 authorities \u00d7 3 completeness states, explicit completeness required, integer-only value enforcement, negative/zero cents, empty source rejection, coverage [0,1] bounds, and pinned rounding boundary cases \u2014 including the Wave-2 replication pin for 1.005 \u2192 100 and 1.015 \u2192 101 float-imprecision outcomes.",
     "stage2_expert_consultation": "re-run in parallel and synthesized into EXEC-070; WS5 and WS6 are now serialized, WS8 defaults to skipped unless leadership reopens a public shift-intelligence exception slice.",
     "patch_delta_applied": "Applied devils-advocate remediation delta: split mixed service/API/UI work into ownership-aligned sub-workstreams, split WS7 planning vs implementation, normalized WS5 consumer inventory, removed WS8 from the active execution graph pending explicit spec amendment, and replaced the generic test gate with a named verification matrix.",
     "ws8_status": "Dormant placeholder only; not part of the active execution graph until a lead-architect amendment reopens Phase 1.1 public shift-intelligence work.",
@@ -179,41 +190,62 @@
     "human_gate_override": "User instructed on resume: drive pipeline to completion; override human validation gates; dispatch all remaining phases. Future phase transitions auto-approve once their named gates pass.",
     "phase3_gate_log": {
       "ws7a_summary": "JSDoc-only carve-out comment added to services/shift-intelligence/dtos.ts (deferral register) and waiver comment added to services/shift-intelligence/schemas.ts (outbound-schema request-only posture). No code shape changed; GATE-070.6 decisions are now surfaced inline where WS7B implementers will look.",
-      "ws4_summary": "Hard rename totalChipsOut → totalCashOut landed atomically across the full direct-coupling slice: services/rating-slip-modal/{dtos,schemas,rpc}.ts + 4 __tests__ suites + app/api/v1/rating-slips/[id]/modal-data/route.ts + route.test.ts + components/modals/rating-slip/rating-slip-modal.tsx. SQL migration 20260424024019_prd070_rename_modal_bff_total_cash_out.sql recreates rpc_get_rating_slip_modal_data with the renamed JSONB key so the wire format matches the TS contract; body is otherwise byte-identical to the preceding PRD-043 definition. grep gate satisfied: zero totalChipsOut under services/, app/, components/.",
+      "ws4_summary": "Hard rename totalChipsOut \u2192 totalCashOut landed atomically across the full direct-coupling slice: services/rating-slip-modal/{dtos,schemas,rpc}.ts + 4 __tests__ suites + app/api/v1/rating-slips/[id]/modal-data/route.ts + route.test.ts + components/modals/rating-slip/rating-slip-modal.tsx. SQL migration 20260424024019_prd070_rename_modal_bff_total_cash_out.sql recreates rpc_get_rating_slip_modal_data with the renamed JSONB key so the wire format matches the TS contract; body is otherwise byte-identical to the preceding PRD-043 definition. grep gate satisfied: zero totalChipsOut under services/, app/, components/.",
       "ws4_route_summary": "Modal-data route handler financial section key rename propagated with route.test.ts expected-shape update.",
       "ws4_ui_summary": "rating-slip-modal.tsx computedChipsOut derivation updated to read .totalCashOut (semantic field rename only; no math change).",
       "type-check": "exit 0 after rename (resume 2026-04-24T09:37Z)",
       "jest_slice_rating_slip_modal": "5 suites / 124 tests pass (npx jest --runInBand services/rating-slip-modal, 2026-04-24T09:43Z)"
     },
     "phase3_scope_note": "WS4_ROUTE and WS4_UI were landed co-atomically with WS4 rather than deferred to their ordered phases. The rationale: a TS-only rename inside services/rating-slip-modal/ breaks route + UI type-check because they consume FinancialSectionDTO directly. EXEC-SPEC phase boundaries are executor-ownership boundaries (backend-service-builder vs api-builder vs frontend-design-pt-2); the user's 'override human gates, drive to conclusion' directive plus the atomic nature of a hard rename make splitting the diff strictly worse (intermediate broken builds, rollback matrix fractured). All files are still attributable to their named workstream in artifacts.WSx arrays.",
-    "phase3_migration_note": "PRD-070 §Out-of-scope defers schema migrations to Wave 2, yet EXEC-SPEC §WS9 grep gate mandates zero live-code totalChipsOut. A TS-only rename leaves the RPC JSONB key out-of-sync with the TS type guard, breaking runtime. Resolution: emit a FUNCTION-body-only migration (no table DDL change) that renames the JSONB key. This interprets 'schema migration' as 'table DDL change' per standard Postgres usage, not 'any SQL change'. WS9 handoff must note that Wave 2's pit_cash_observation.amount cents migration remains separate scope.",
-    "pause_reason": "Resume-session budget constraint: WS5/WS6 are DTO-shape conversions (bare number → FinancialValue envelope), not renames — they cascade through Zod validators, CRUD dollar-conversion removal, test mock shapes, route passthroughs, UI consumers (formatDollars → value-unwrap + cents formatter), and hardcoded demo-page fixtures in app/review/start-from-previous/page.tsx. WS7B is a fresh mapper/alert routing implementation. WS9 is a verification matrix + rollback + handoff package. Each is best executed in a dedicated session with fresh context. Checkpoint is clean at Phase 4 entry; /build-pipeline PRD-070 --resume will continue from WS5.",
+    "phase3_migration_note": "PRD-070 \u00a7Out-of-scope defers schema migrations to Wave 2, yet EXEC-SPEC \u00a7WS9 grep gate mandates zero live-code totalChipsOut. A TS-only rename leaves the RPC JSONB key out-of-sync with the TS type guard, breaking runtime. Resolution: emit a FUNCTION-body-only migration (no table DDL change) that renames the JSONB key. This interprets 'schema migration' as 'table DDL change' per standard Postgres usage, not 'any SQL change'. WS9 handoff must note that Wave 2's pit_cash_observation.amount cents migration remains separate scope.",
+    "pause_reason": "Resume-session budget constraint: WS5/WS6 are DTO-shape conversions (bare number \u2192 FinancialValue envelope), not renames \u2014 they cascade through Zod validators, CRUD dollar-conversion removal, test mock shapes, route passthroughs, UI consumers (formatDollars \u2192 value-unwrap + cents formatter), and hardcoded demo-page fixtures in app/review/start-from-previous/page.tsx. WS7B is a fresh mapper/alert routing implementation. WS9 is a verification matrix + rollback + handoff package. Each is best executed in a dedicated session with fresh context. Checkpoint is clean at Phase 4 entry; /build-pipeline PRD-070 --resume will continue from WS5.",
     "blast_radius_reality_check_2026-04-24": {
-      "summary": "User-directed re-slice review after pipeline paused at Phase 4 entry. Compared PRD-070 §258 blast radius table and EXEC-070 WS5/WS6 scope lists against actual codebase inventory. PRD under-declared scope for both cents-envelope workstreams and conflated rename complexity (WS4, tier-1) with shape-conversion complexity (WS5/WS6, tier-2). Checkpoint scope corrected below so the next resume starts with realistic bounds.",
+      "summary": "User-directed re-slice review after pipeline paused at Phase 4 entry. Compared PRD-070 \u00a7258 blast radius table and EXEC-070 WS5/WS6 scope lists against actual codebase inventory. PRD under-declared scope for both cents-envelope workstreams and conflated rename complexity (WS4, tier-1) with shape-conversion complexity (WS5/WS6, tier-2). Checkpoint scope corrected below so the next resume starts with realistic bounds.",
       "review_exclusion": {
         "file": "app/review/start-from-previous/page.tsx",
         "verdict": "EXCLUDED from implementation scope",
         "evidence": "File header has 'use client' + 'Mock Data' block + theme-toggle icons + hardcoded mockGamingDay fixtures (total_buy_in: 300, etc.). Used as visual design-review surface, not a shipped data-flow consumer.",
         "action": "Demo fixtures may be refreshed post-implementation as a pure content update, independent of envelope migration.",
-        "supersedes": "EXEC-070 §442 '/review/start-from-previous/page.tsx moves in the same slice so fixture/demo drift cannot hide an old contract' — user has proven otherwise."
+        "supersedes": "EXEC-070 \u00a7442 '/review/start-from-previous/page.tsx moves in the same slice so fixture/demo drift cannot hide an old contract' \u2014 user has proven otherwise."
       },
       "ws5_declared_vs_real": {
-        "prd_258_declared": ["services/visit/crud.ts (producer)", "app/api/v1/players/[playerId]/recent-sessions/route.ts", "components/player-sessions/start-from-previous.tsx", "services/visit/__tests__/visit-continuation*.ts"],
-        "reality_also_includes": ["services/visit/dtos.ts — DTO type home (PRD named only crud.ts as producer)", "services/visit/schemas.ts — recentSessionsRpcResponseSchema currently validates z.number(); wire/DTO partition decision missing", "components/player-sessions/start-from-previous-modal.tsx — paired UI, EXEC-070 §442 escalated but PRD didn't list", "app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts — DIRECTORY DOES NOT EXIST, must be born from scratch"],
-        "removed_per_user_directive": ["app/review/start-from-previous/page.tsx"]
+        "prd_258_declared": [
+          "services/visit/crud.ts (producer)",
+          "app/api/v1/players/[playerId]/recent-sessions/route.ts",
+          "components/player-sessions/start-from-previous.tsx",
+          "services/visit/__tests__/visit-continuation*.ts"
+        ],
+        "reality_also_includes": [
+          "services/visit/dtos.ts \u2014 DTO type home (PRD named only crud.ts as producer)",
+          "services/visit/schemas.ts \u2014 recentSessionsRpcResponseSchema currently validates z.number(); wire/DTO partition decision missing",
+          "components/player-sessions/start-from-previous-modal.tsx \u2014 paired UI, EXEC-070 \u00a7442 escalated but PRD didn't list",
+          "app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts \u2014 DIRECTORY DOES NOT EXIST, must be born from scratch"
+        ],
+        "removed_per_user_directive": [
+          "app/review/start-from-previous/page.tsx"
+        ]
       },
       "ws6_declared_vs_real": {
-        "prd_258_declared": ["services/rating-slip/mappers.ts (producer)", "app/api/v1/visits/[visitId]/live-view/route.ts", "services/rating-slip/__tests__/rating-slip-continuity.integration.test.ts"],
-        "reality_also_includes": ["services/visit/dtos.ts — VisitLiveViewDTO shape lives here; shared with WS5 (sequencing hazard)", "services/rating-slip/crud.ts — re-exports mapper output path", "services/rating-slip/index.ts — service interface declares VisitLiveViewDTO | null return", "app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts — DIRECTORY DOES NOT EXIST, must be born from scratch"]
+        "prd_258_declared": [
+          "services/rating-slip/mappers.ts (producer)",
+          "app/api/v1/visits/[visitId]/live-view/route.ts",
+          "services/rating-slip/__tests__/rating-slip-continuity.integration.test.ts"
+        ],
+        "reality_also_includes": [
+          "services/visit/dtos.ts \u2014 VisitLiveViewDTO shape lives here; shared with WS5 (sequencing hazard)",
+          "services/rating-slip/crud.ts \u2014 re-exports mapper output path",
+          "services/rating-slip/index.ts \u2014 service interface declares VisitLiveViewDTO | null return",
+          "app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts \u2014 DIRECTORY DOES NOT EXIST, must be born from scratch"
+        ]
       },
-      "complexity_tier_asymmetry": "PRD §258 presented three blast-radius rows with equal visual weight. In reality WS4 (Q-A8) was a tier-1 rename (pure identifier change, under 30 minutes) while WS5/WS6 (Q-A6) are tier-2 shape conversions (number → FinancialValue envelope, cascading through type signatures, Zod validators, mapper authority assignments, CRUD conversion deletions, tests, routes, UI formatters, and fixtures). Tier-2 workstreams are ~3–5× the effort of tier-1 and must be sliced accordingly.",
+      "complexity_tier_asymmetry": "PRD \u00a7258 presented three blast-radius rows with equal visual weight. In reality WS4 (Q-A8) was a tier-1 rename (pure identifier change, under 30 minutes) while WS5/WS6 (Q-A6) are tier-2 shape conversions (number \u2192 FinancialValue envelope, cascading through type signatures, Zod validators, mapper authority assignments, CRUD conversion deletions, tests, routes, UI formatters, and fixtures). Tier-2 workstreams are ~3\u20135\u00d7 the effort of tier-1 and must be sliced accordingly.",
       "ui_rendering_dependency": {
-        "finding": "PRD §87 defers <FinancialValue> component to Phase 1.3. components/financial/ does NOT exist yet. However, lib/format.ts already exports formatCents(cents) helper.",
-        "phase_1_1_ui_pattern": "formatCents(session.total_buy_in.value) — unwrap envelope .value then format. Zero dependency on Phase 1.3 component.",
+        "finding": "PRD \u00a787 defers <FinancialValue> component to Phase 1.3. components/financial/ does NOT exist yet. However, lib/format.ts already exports formatCents(cents) helper.",
+        "phase_1_1_ui_pattern": "formatCents(session.total_buy_in.value) \u2014 unwrap envelope .value then format. Zero dependency on Phase 1.3 component.",
         "required_guidance": "This pattern must be stated explicitly in WS5_UI / WS6 scope before execution resumes, otherwise implementers could incorrectly reach for an unbuilt component or inline /100 math."
       },
       "sequencing_hazard_missing_from_prd": {
-        "finding": "WS5 and WS6 both touch services/visit/dtos.ts (RecentSessionDTO vs VisitLiveViewDTO shape). PRD §258 did not flag this; EXEC-070 §454 caught it.",
+        "finding": "WS5 and WS6 both touch services/visit/dtos.ts (RecentSessionDTO vs VisitLiveViewDTO shape). PRD \u00a7258 did not flag this; EXEC-070 \u00a7454 caught it.",
         "implication": "Anyone reading only the PRD would dispatch WS5 + WS6 concurrently and collide."
       },
       "recommended_reslice": [
@@ -227,35 +259,96 @@
     },
     "pending_work_inventory": {
       "WS5": {
-        "files": ["services/visit/dtos.ts (RecentSessionDTO shape change: total_buy_in/total_cash_out/net → FinancialValue)", "services/visit/schemas.ts (partition decision: keep wire-Zod bare, add outbound DTO Zod from financialValueSchema)", "services/visit/crud.ts (remove /100 dollar conversion @ L516-522; wrap into envelope with authority='actual', source='visit_financial_summary', completeness={status:'complete'} when all fields present)", "services/visit/__tests__/visit-continuation.test.ts (mock shapes → envelope)", "services/visit/__tests__/visit-continuation.integration.test.ts (gated by RUN_INTEGRATION_TESTS; expected shape update only)"],
-        "change_type": "tier-2 shape conversion: number → FinancialValue envelope",
-        "complexity_note": "Zod wire-vs-DTO partition is load-bearing — the RPC (migration 20251222142645) emits bare 'total_cash_out' numbers, so recentSessionsRpcResponseSchema must continue to validate bare. The mapper wraps into envelope; a new outbound DTO schema (optional) validates envelope shape for the DTO contract."
+        "files": [
+          "services/visit/dtos.ts (RecentSessionDTO shape change: total_buy_in/total_cash_out/net \u2192 FinancialValue)",
+          "services/visit/schemas.ts (partition decision: keep wire-Zod bare, add outbound DTO Zod from financialValueSchema)",
+          "services/visit/crud.ts (remove /100 dollar conversion @ L516-522; wrap into envelope with authority='actual', source='visit_financial_summary', completeness={status:'complete'} when all fields present)",
+          "services/visit/__tests__/visit-continuation.test.ts (mock shapes \u2192 envelope)",
+          "services/visit/__tests__/visit-continuation.integration.test.ts (gated by RUN_INTEGRATION_TESTS; expected shape update only)"
+        ],
+        "change_type": "tier-2 shape conversion: number \u2192 FinancialValue envelope",
+        "complexity_note": "Zod wire-vs-DTO partition is load-bearing \u2014 the RPC (migration 20251222142645) emits bare 'total_cash_out' numbers, so recentSessionsRpcResponseSchema must continue to validate bare. The mapper wraps into envelope; a new outbound DTO schema (optional) validates envelope shape for the DTO contract."
       },
       "WS5_ROUTE": {
-        "files": ["app/api/v1/players/[playerId]/recent-sessions/route.ts (passthrough — no math change, just type propagation)", "app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts (NEW FILE — directory does not exist)"],
+        "files": [
+          "app/api/v1/players/[playerId]/recent-sessions/route.ts (passthrough \u2014 no math change, just type propagation)",
+          "app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts (NEW FILE \u2014 directory does not exist)"
+        ],
         "change_type": "passthrough + new route-boundary test suite birth"
       },
       "WS5_UI": {
-        "files": ["components/player-sessions/start-from-previous.tsx (L35/36 type decl: total_buy_in: number → FinancialValue; L213/219 formatDollars(x) → formatCents(x.value))", "components/player-sessions/start-from-previous-modal.tsx (paired consumer — same pattern)", "components/player-sessions/__tests__/start-from-previous.test.tsx (if exists — verify + update mock)", "components/player-sessions/__tests__/start-from-previous-modal.test.tsx (if exists — verify + update mock)"],
-        "excluded": ["app/review/start-from-previous/page.tsx (per user directive 2026-04-24 — demo/design-review surface, not shipped consumer)"],
-        "change_type": "tier-2 UI migration using lib/format.ts::formatCents(envelope.value) — NOT <FinancialValue> component (deferred to Phase 1.3)",
+        "files": [
+          "components/player-sessions/start-from-previous.tsx (L35/36 type decl: total_buy_in: number \u2192 FinancialValue; L213/219 formatDollars(x) \u2192 formatCents(x.value))",
+          "components/player-sessions/start-from-previous-modal.tsx (paired consumer \u2014 same pattern)",
+          "components/player-sessions/__tests__/start-from-previous.test.tsx (if exists \u2014 verify + update mock)",
+          "components/player-sessions/__tests__/start-from-previous-modal.test.tsx (if exists \u2014 verify + update mock)"
+        ],
+        "excluded": [
+          "app/review/start-from-previous/page.tsx (per user directive 2026-04-24 \u2014 demo/design-review surface, not shipped consumer)"
+        ],
+        "change_type": "tier-2 UI migration using lib/format.ts::formatCents(envelope.value) \u2014 NOT <FinancialValue> component (deferred to Phase 1.3)",
         "render_pattern": "formatCents(dto.total_buy_in.value)  // replaces formatDollars(dto.total_buy_in)"
       },
       "WS6": {
-        "files": ["services/visit/dtos.ts (VisitLiveViewDTO shape change on session_total_buy_in/session_total_cash_out/session_net) — shared with WS5, MUST run serially", "services/rating-slip/mappers.ts (toVisitLiveViewDTO @ L317-358; remove /100 conversion; wrap into envelope)", "services/rating-slip/crud.ts (re-exports mapper output — type propagation)", "services/rating-slip/index.ts (service interface declares VisitLiveViewDTO return — verify propagation)", "app/api/v1/visits/[visitId]/live-view/route.ts (passthrough)", "app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts (NEW FILE — directory does not exist)", "services/rating-slip/__tests__/rating-slip-continuity.integration.test.ts (update expected envelope shapes; gated by RUN_INTEGRATION_TESTS)"],
-        "change_type": "tier-2 shape conversion — identical pattern to WS5",
+        "files": [
+          "services/visit/dtos.ts (VisitLiveViewDTO shape change on session_total_buy_in/session_total_cash_out/session_net) \u2014 shared with WS5, MUST run serially",
+          "services/rating-slip/mappers.ts (toVisitLiveViewDTO @ L317-358; remove /100 conversion; wrap into envelope)",
+          "services/rating-slip/crud.ts (re-exports mapper output \u2014 type propagation)",
+          "services/rating-slip/index.ts (service interface declares VisitLiveViewDTO return \u2014 verify propagation)",
+          "app/api/v1/visits/[visitId]/live-view/route.ts (passthrough)",
+          "app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts (NEW FILE \u2014 directory does not exist)",
+          "services/rating-slip/__tests__/rating-slip-continuity.integration.test.ts (update expected envelope shapes; gated by RUN_INTEGRATION_TESTS)"
+        ],
+        "change_type": "tier-2 shape conversion \u2014 identical pattern to WS5",
         "sequencing": "MUST run after WS5 because services/visit/dtos.ts is shared. Parallel execution = merge conflict + type-check breakage."
       },
       "WS7B": {
-        "files": ["services/shift-intelligence/mappers.ts (exhaustive MetricType routing helper)", "services/shift-intelligence/alerts.ts (mapShiftAlertRow must use shared helper, not bypass)", "services/shift-intelligence/__tests__/mappers.test.ts (routing rules per MetricType)", "services/shift-intelligence/__tests__/alerts-mappers.test.ts (persistent-alert path parity)", "services/shift-intelligence/__tests__/anomaly-evaluation.test.ts (non-anomaly behavior for cash_obs_total preserved)", "services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts (STALE — currently asserts gamingDay/computedAt; must be rewritten to baselineGamingDay/baselineCoverage)"],
+        "files": [
+          "services/shift-intelligence/mappers.ts (exhaustive MetricType routing helper)",
+          "services/shift-intelligence/alerts.ts (mapShiftAlertRow must use shared helper, not bypass)",
+          "services/shift-intelligence/__tests__/mappers.test.ts (routing rules per MetricType)",
+          "services/shift-intelligence/__tests__/alerts-mappers.test.ts (persistent-alert path parity)",
+          "services/shift-intelligence/__tests__/anomaly-evaluation.test.ts (non-anomaly behavior for cash_obs_total preserved)",
+          "services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts (STALE \u2014 currently asserts gamingDay/computedAt; must be rewritten to baselineGamingDay/baselineCoverage)"
+        ],
         "change_type": "tier-2 mapper implementation + test rewrites",
-        "routing_rules_frozen": "drop_total → estimated/table_session.drop; win_loss_cents → estimated/table_session.inventory_win; cash_obs_total → estimated/pit_cash_observation.extrapolated; hold_percent → bare ratio (never wrapped)"
+        "routing_rules_frozen": "drop_total \u2192 estimated/table_session.drop; win_loss_cents \u2192 estimated/table_session.inventory_win; cash_obs_total \u2192 estimated/pit_cash_observation.extrapolated; hold_percent \u2192 bare ratio (never wrapped)"
       },
       "WS9": {
-        "outputs": ["Phase 1.1 verification matrix run (12 commands in EXEC-SPEC §WS9 verification gates)", "grep gate: zero totalChipsOut — already satisfied as of WS4 close", "Rollback matrix completion per EXEC-SPEC rollback ownership table (must record 20260424024019_prd070_rename_modal_bff_total_cash_out.sql as WS4 revert dependency)", "Phase 1.2 handoff package enumerating deferred fields + paired consumer obligations + pinned dollar-to-cents rounding test reference for Wave 2"],
+        "outputs": [
+          "Phase 1.1 verification matrix run (12 commands in EXEC-SPEC \u00a7WS9 verification gates)",
+          "grep gate: zero totalChipsOut \u2014 already satisfied as of WS4 close",
+          "Rollback matrix completion per EXEC-SPEC rollback ownership table (must record 20260424024019_prd070_rename_modal_bff_total_cash_out.sql as WS4 revert dependency)",
+          "Phase 1.2 handoff package enumerating deferred fields + paired consumer obligations + pinned dollar-to-cents rounding test reference for Wave 2"
+        ],
         "change_type": "verification + handoff",
         "review_exclusion_note": "Phase 1.2 handoff must record that app/review/start-from-previous/page.tsx was excluded from Phase 1.1 scope per user directive; future content refresh is independent of envelope migration."
       }
+    },
+    "prd072_completion": {
+      "date": "2026-04-24",
+      "commit": "38d25cc1",
+      "scope": "Phase 1.1b semantic labeling only. /100 preserved. Dollar float.",
+      "fib_fin_cents_001_chain_status": "complete_at_phase_1_1b",
+      "ws9_runnable_items": [
+        1,
+        2,
+        3,
+        5,
+        6,
+        7,
+        8
+      ],
+      "ws9_blocked_items": [
+        4,
+        12
+      ],
+      "ws9_struck_items": [
+        9,
+        10,
+        11
+      ],
+      "phase_1_2_future_prd_owns": "remove /100, integer cents, formatCents migration, component test birth"
     }
   }
 }
