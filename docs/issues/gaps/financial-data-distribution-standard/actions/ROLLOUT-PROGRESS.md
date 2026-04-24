@@ -4,7 +4,7 @@ description: Live status board for Wave 1 (Surface Contract) and Wave 2 (Dual-La
 type: progress-tracker
 status: Active
 started: 2026-04-23
-last_updated: 2026-04-23
+last_updated: 2026-04-24
 tracks:
 - ROLLOUT-ROADMAP.md
 - ../decisions/ADR-FINANCIAL-FACT-MODEL.md
@@ -42,7 +42,7 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 | Wave  | Phase                         | PRD       | EXEC-SPEC | Build-pipeline exec | Exit gate |
 | ----- | ----------------------------- | --------- | --------- | ------------------- | --------- |
 | 1     | 1.0 Prep & Inventory          | ➖ Exempt | ➖ Exempt | ✅ Artifacts shipped | ✅ PASSED 2026-04-23 (SIGNOFF doc) |
-| 1     | 1.1 Service DTO Envelope      | 🟦 Drafted (PRD-070) | 🟦 Scaffolded (EXEC-070) | ⬜ **next** | —         |
+| 1     | 1.1 Service DTO Envelope      | ✅ PRD-070 | ✅ EXEC-070 (amended 2×) | 🟦 Partial — WS0–WS7A + WS5/WS6 via PRD-072; WS9 ⛔ WS7B | ⛔ WS7B (FIB-FIN-SHIFT-001 not drafted) |
 | 1     | 1.2 API Envelope at Wire      | 🟦 Drafted (PRD-071) | ⬜        | ⬜                  | —         |
 | 1     | 1.3 UI Split Display          | ⬜        | ⬜        | ⬜                  | —         |
 | 1     | 1.4 Validation + Lint + I5    | ⬜        | ⬜        | ⬜                  | —         |
@@ -81,28 +81,31 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 
 ---
 
-### Phase 1.1 — Service Layer: DTO Envelope  ⬜
+### Phase 1.1 — Service Layer: DTO Envelope  🟦 IN PROGRESS — WS9 blocked on WS7B
 
-Blocked on: ~~Phase 1.0 exit gate~~ ✅ + ~~**Phase 1.1 PRD**~~ 🟦 Drafted (PRD-070, 2026-04-23) + ~~**Phase 1.1 EXEC-SPEC**~~ 🟦 Scaffolded (EXEC-070, 2026-04-23). Next: `/build-pipeline`.
+~~Blocked on: Phase 1.0 exit gate ✅ + Phase 1.1 PRD ✅ + Phase 1.1 EXEC-SPEC ✅.~~
 
-**Pipeline chain (required before any code change):**
+**Active:** Build-pipeline executed. 13 workstreams shipped (WS0–WS7A + WS5/WS5_ROUTE/WS5_UI/WS6 via PRD-072 Phase 1.1b). WS9 (verification + handoff) blocked on WS7B (shift-intelligence authority routing). **Next action:** Draft FIB-FIN-SHIFT-001 intake.
+
+**Pipeline chain:**
 - [x] PRD-070 drafted via `/prd-writer` citing classification rules + surface inventory (2026-04-23)
-- [x] EXEC-SPEC scaffolded via `/lead-architect` (workstream IDs, dependencies, bounded contexts) — `docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md`
-- [ ] `/build-pipeline` executed; dispatches `/backend-service-builder` per workstream
+- [x] EXEC-SPEC scaffolded via `/lead-architect` — `docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md` (amended 2× — scope deferral + child-spec completion)
+- [x] `/build-pipeline` executed — WS0–WS7A shipped 2026-04-24; WS5/WS5_ROUTE/WS5_UI/WS6 delivered via PRD-072 Phase 1.1b child spec (commit 38d25cc1)
+- [ ] WS9 verification matrix + Phase 1.2 handoff package — **⛔ blocked on WS7B** (FIB-FIN-SHIFT-001 intake not drafted)
 
 | # | Deliverable | Status |
 |---|-------------|--------|
-| 1 | Extend DTOs for every financial-returning service to wrap currency fields | ⬜ |
-| 2 | Mappers populate `type`, `source`, `completeness` at service boundary | ⬜ |
-| 3 | Currency methods that cannot determine completeness emit `status: 'unknown'` explicitly | ⬜ |
-| 4 | Zod schemas validate envelope on both sides of service boundary | ⬜ |
-| 5 | No service returns bare `number` for currency | ⬜ |
+| 1 | Extend DTOs for every financial-returning service to wrap currency fields | 🟦 7/8 services done; shift-intelligence public fields deferred to Phase 1.2 |
+| 2 | Mappers populate `type`, `source`, `completeness` at service boundary | 🟦 Done for all except shift-intelligence authority routing (WS7B pending) |
+| 3 | Currency methods that cannot determine completeness emit `status: 'unknown'` explicitly | ✅ |
+| 4 | Zod schemas validate envelope on both sides of service boundary | 🟦 WS1 shared schema shipped; wire/DTO partition gap noted for Phase 1.2 |
+| 5 | No service returns bare `number` for currency | 🟦 7/8 done; shift-intelligence public DTO fields deferred to Phase 1.2 |
 
 **Exit gate:**
-- [ ] All financial service DTOs updated
-- [ ] Unit tests verify envelope shape + classification rules
-- [ ] INV-ERR-DETAILS retained, no `as any`
-- [ ] `npm run type-check` passes
+- [ ] All financial service DTOs updated — ⛔ shift-intelligence public fields deferred to Phase 1.2
+- [ ] Unit tests verify envelope shape + classification rules — ⛔ WS9 matrix blocked on WS7B
+- [x] INV-ERR-DETAILS retained, no `as any` (verified through WS1–WS6)
+- [x] `npm run type-check` passes (exit 0 throughout all workstreams)
 
 **Services in scope (confirmed inventory, Phase 1.0 close):**
 - `services/player-financial/`
@@ -289,3 +292,6 @@ Pulled from ROLLOUT-ROADMAP.md §7; update status as mitigations land.
 | 2026-04-23 | **Phase 1.0 EXIT GATE PASSED** (lead-architect sign-off). All 8 open decisions resolved: Q-A1 `average_bet` not wrapped (operator input); Q-A2 `observed`/`compliance` labels live for surfaces, no new authoring; Q-A3 source strings service-private (UI may display, must not branch); Q-A4 cash-obs always Pattern A split; Q-A5 shift-intelligence metric-kind routing principle approved (Phase 1.1 produces concrete map); Q-A6 dollar→cents mapper with pinned rounding test; Q-A7 theo renders envelope `unknown` + "Not computed" badge (UI treatment deferred to frontend-design-pt-2 in Phase 1.3); Q-A8 `totalChipsOut` → `totalCashOut` rename approved for Phase 1.1 with full consumer scope. Sign-off record: `actions/WAVE-1-PHASE-1.0-SIGNOFF.md`. Classification rules + inventory + forbidden-labels amended to `Accepted` status with rules promoted to normative. **Phase 1.1 PRD authoring unblocked** — next action is `/prd-writer` for Phase 1.1 Service DTO Envelope migration. |
 | 2026-04-23 | **Phase 1.1 PRD drafted** (`/prd-writer`). `docs/10-prd/PRD-070-financial-telemetry-wave1-phase1.1-service-dto-envelope-v0.md` — Status: Draft. Scope: envelope migration across 8 in-scope services (`player-financial`, `rating-slip`, `rating-slip-modal`, `visit`, `mtl`, `table-context`, `loyalty`, `shift-intelligence`) with a **bounded direct-coupling exception** for live pass-through route/UI/test consumers where Phase 1.1 DTO changes would otherwise leak or fail to compile. Two breaking changes — `totalChipsOut` → `totalCashOut` rename across the directly coupled modal-data flow + visit-facing cents canonicalization across verified producers in `services/visit/` and `services/rating-slip`; mandatory pinned dollar→cents rounding test; non-wrapping carve-outs documented (operator inputs, policy/config, points, `hold_percent` ratio). **Q-A5 resolved in principle:** `MetricType` discriminator verified present on `BaselineDTO` / `AnomalyAlertDTO` / `ShiftAlertDTO` (`drop_total` / `hold_percent` / `cash_obs_total` / `win_loss_cents`) — lookup-table path chosen, but public DTO shape remains gated by EXEC-SPEC. `cash_obs_total` RPC source verification deferred to EXEC-SPEC with `estimated` / extrapolated as safe default. Added pre-workstream gates for shift-intelligence Phase 1.1 vs 1.2 split and any `totalCashOut` compatibility alias, plus required blast-radius, test, and rollback matrices in EXEC-SPEC. **Phase 1.1 EXEC-SPEC scaffolding is next action** — `/lead-architect` per ROLLOUT-ROADMAP §2.5.2. |
 | 2026-04-23 | **Phase 1.1 EXEC-SPEC scaffolded** (`/lead-architect`). `docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md` — Workstreams frozen around a service-led migration with bounded exception slices: WS0 planning lock (GATE-070.6, GATE-070.7, blast-radius/test/rollback/deferral artifacts), WS1 shared contract foundation, WS2 internal service bundle (`player-financial`, `loyalty`, `mtl`, `table-context`), WS3 rating-slip core bundle, WS4 `totalCashOut` modal rename slice, WS5 recent-sessions cents canonicalization slice, WS6 live-view cents canonicalization slice, WS7 shift-intelligence split/authority routing decision, WS8 conditional shift-intelligence public-contract slice, WS9 cross-service verification and Phase 1.2 handoff. **Next action is `/build-pipeline`** — expand each workstream with domain-skill implementation detail and enforce the planning-lock gate before code changes begin. |
+| 2026-04-24 | **Phase 1.1 build-pipeline — WS0–WS7A shipped.** WS0 planning lock (GATE-070.6 defers shift-intelligence public fields to Phase 1.2; GATE-070.7 no-alias hard rename for `totalCashOut`). WS1 shared contract: `lib/financial/{schema,rounding}.ts` + 39 tests. WS2 internal service envelope: player-financial, loyalty, mtl, table-context (+ rundown-report, shift-checkpoint, shift-metrics submodules). WS3 rating-slip core. WS4/WS4_ROUTE/WS4_UI `totalCashOut` rename slice: full vertical (service + route handler + UI component + SQL migration `20260424024019_prd070_rename_modal_bff_total_cash_out.sql`). WS7A shift-intelligence Phase 1.1 split decision (JSDoc carve-outs, outbound-schema waiver). **EXEC-070 amended (scope deferral):** WS5/WS5_ROUTE/WS5_UI/WS6/WS7B deferred to FIB-FIN-CENTS-001 + FIB-FIN-SHIFT-001 child specs (blast-radius reality check). |
+| 2026-04-24 | **PRD-072 Phase 1.1b shipped** (commit `38d25cc1`). FIB-FIN-CENTS-001 child spec closed at semantic-labeling scope only. `RecentSessionDTO.total_buy_in/total_cash_out/net` and `VisitLiveViewDTO.session_total_*` wrapped in `FinancialValue` (dollar float — `/100` preserved, intentional Phase 1.1b). `components/player-sessions/start-from-previous.tsx` + modal consumer updated with `.value` access. Route smoke tests born for recent-sessions + live-view routes. Phase 1.2 canonicalization (remove `/100`, integer cents, `formatCents` migration) explicitly deferred. Implementation précis: `docs/issues/gaps/financial-data-distribution-standard/precis/PRD-072-implementation-precis.md`. |
+| 2026-04-24 | **EXEC-070 amended (child-spec completion).** WS5/WS5_ROUTE/WS5_UI/WS6 status changed to `completed_phase_1_1b_via_prd072` with Phase 1.2 obligations recorded per workstream. FIB-FIN-CENTS-001 blocker removed from WS9. **Sole remaining Phase 1.1 blocker: WS7B** (shift-intelligence authority routing — FIB-FIN-SHIFT-001 intake not yet drafted). WS9 test matrix amended: items 9/10/11 struck (component test dirs absent; review page excluded); items 4/12 remain blocked on WS7B. Checkpoint commit: `a89b5b20`. |
