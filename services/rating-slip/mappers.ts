@@ -11,13 +11,15 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 327-365
  */
 
+import { dollarsToCents } from '@/lib/financial/rounding';
 import { narrowRpcJson } from '@/lib/json/narrows';
 import type { VisitLiveViewDTO } from '@/services/visit/dtos';
-import type { Json } from '@/types/database.types';
+import type { Database, Json } from '@/types/database.types';
 
 import type {
   ActivePlayerForDashboardDTO,
   ClosedSlipForGamingDayDTO,
+  PitCashObservationDTO,
   RatingSlipDTO,
   RatingSlipPauseDTO,
   RatingSlipStatus,
@@ -483,4 +485,54 @@ export function toActivePlayerForDashboardDTOList(
   rows: RpcActivePlayerRow[],
 ): ActivePlayerForDashboardDTO[] {
   return rows.map(toActivePlayerForDashboardDTO);
+}
+
+// === Pit Cash Observation Mappers (PRD-OPS-CASH-OBS-001 + PRD-070) ===
+
+/**
+ * Row shape returned by `rpc_create_pit_cash_observation`.
+ * Mirrors the `pit_cash_observation` table row with the fields the RPC emits.
+ */
+type PitCashObservationSelectedRow =
+  Database['public']['Tables']['pit_cash_observation']['Row'];
+
+/**
+ * Maps a pit_cash_observation row to PitCashObservationDTO.
+ *
+ * PRD-070 Phase 1.1: Wraps `amount` in the canonical FinancialValue envelope.
+ * Per WAVE-1-SURFACE-INVENTORY §3.2:
+ *   - authority: `observed`
+ *   - source:    `"pit_cash_observation"`
+ *   - unit at boundary: cents (dollars × 100 via `dollarsToCents`)
+ *   - completeness.status: `complete` (single-row observation; aggregates are
+ *     `partial`/`unknown` and live in other services).
+ *
+ * The underlying database column is still dollars (numeric) — the conversion
+ * happens at this mapper boundary only. Schema unchanged in Wave 1.
+ */
+export function toPitCashObservationDTO(
+  row: PitCashObservationSelectedRow,
+): PitCashObservationDTO {
+  return {
+    id: row.id,
+    casinoId: row.casino_id,
+    gamingDay: row.gaming_day,
+    playerId: row.player_id,
+    visitId: row.visit_id,
+    ratingSlipId: row.rating_slip_id,
+    direction: row.direction,
+    amount: {
+      value: dollarsToCents(row.amount),
+      type: 'observed',
+      source: 'pit_cash_observation',
+      completeness: { status: 'complete' },
+    },
+    amountKind: row.amount_kind,
+    source: row.source,
+    observedAt: row.observed_at,
+    createdByStaffId: row.created_by_staff_id,
+    note: row.note,
+    idempotencyKey: row.idempotency_key,
+    createdAt: row.created_at,
+  };
 }

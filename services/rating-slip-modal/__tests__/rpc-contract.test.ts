@@ -94,7 +94,7 @@ const mockCompleteRpcResponse = {
   },
   financial: {
     totalCashIn: 100000,
-    totalChipsOut: 75000,
+    totalCashOut: 75000,
     netPosition: 25000,
   },
   tables: [
@@ -418,7 +418,7 @@ describe('RPC Contract - FinancialSectionDTO', () => {
 
     const expectedFinancial: FinancialSectionDTO = {
       totalCashIn: 100000,
-      totalChipsOut: 75000,
+      totalCashOut: 75000,
       netPosition: 25000,
     };
 
@@ -431,7 +431,7 @@ describe('RPC Contract - FinancialSectionDTO', () => {
     const result = await getModalDataViaRPC(supabase, SLIP_ID, CASINO_ID);
 
     expect(typeof result.financial.totalCashIn).toBe('number');
-    expect(typeof result.financial.totalChipsOut).toBe('number');
+    expect(typeof result.financial.totalCashOut).toBe('number');
     expect(typeof result.financial.netPosition).toBe('number');
   });
 
@@ -440,7 +440,7 @@ describe('RPC Contract - FinancialSectionDTO', () => {
       ...mockCompleteRpcResponse,
       financial: {
         totalCashIn: 0,
-        totalChipsOut: 0,
+        totalCashOut: 0,
         netPosition: 0,
       },
     };
@@ -449,7 +449,7 @@ describe('RPC Contract - FinancialSectionDTO', () => {
     const result = await getModalDataViaRPC(supabase, SLIP_ID, CASINO_ID);
 
     expect(result.financial.totalCashIn).toBe(0);
-    expect(result.financial.totalChipsOut).toBe(0);
+    expect(result.financial.totalCashOut).toBe(0);
     expect(result.financial.netPosition).toBe(0);
   });
 
@@ -458,7 +458,7 @@ describe('RPC Contract - FinancialSectionDTO', () => {
       ...mockCompleteRpcResponse,
       financial: {
         totalCashIn: 50000,
-        totalChipsOut: 100000,
+        totalCashOut: 100000,
         netPosition: -50000,
       },
     };
@@ -469,13 +469,13 @@ describe('RPC Contract - FinancialSectionDTO', () => {
     expect(result.financial.netPosition).toBe(-50000);
   });
 
-  it('validates netPosition calculation (totalCashIn - totalChipsOut)', async () => {
+  it('validates netPosition calculation (totalCashIn - totalCashOut)', async () => {
     const supabase = createMockSupabaseWithRpc(mockCompleteRpcResponse);
 
     const result = await getModalDataViaRPC(supabase, SLIP_ID, CASINO_ID);
 
     const expectedNet =
-      result.financial.totalCashIn - result.financial.totalChipsOut;
+      result.financial.totalCashIn - result.financial.totalCashOut;
     expect(result.financial.netPosition).toBe(expectedNet);
   });
 });
@@ -716,7 +716,7 @@ describe('RPC Contract - Edge Cases', () => {
       loyalty: null,
       financial: {
         totalCashIn: 0,
-        totalChipsOut: 0,
+        totalCashOut: 0,
         netPosition: 0,
       },
       tables: [],

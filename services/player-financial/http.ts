@@ -21,6 +21,7 @@ import type {
   VisitCashInWithAdjustmentsDTO,
   VisitFinancialSummaryDTO,
 } from './dtos';
+import { toVisitCashInWithAdjustmentsDTO } from './mappers';
 
 const BASE = '/api/v1/financial-transactions';
 
@@ -292,20 +293,7 @@ export async function getVisitCashInWithAdjustments(
   // RPC returns a single row (not an array)
   const row = Array.isArray(data) ? data[0] : data;
 
-  if (!row) {
-    // No transactions for this visit - return zeros
-    return {
-      original_total: 0,
-      adjustment_total: 0,
-      net_total: 0,
-      adjustment_count: 0,
-    };
-  }
-
-  return {
-    original_total: Number(row.original_total) || 0,
-    adjustment_total: Number(row.adjustment_total) || 0,
-    net_total: Number(row.net_total) || 0,
-    adjustment_count: Number(row.adjustment_count) || 0,
-  };
+  // Mapper handles both the "no row" zero-envelope case and the populated
+  // row → FinancialValue envelope wrapping (PRD-070 WS2 §3.1).
+  return toVisitCashInWithAdjustmentsDTO(row ?? null);
 }

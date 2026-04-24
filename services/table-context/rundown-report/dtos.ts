@@ -4,7 +4,18 @@
  * Pattern A (Contract-First): Manual interfaces derived from Database types.
  * Provides table rundown persistence and finalization lifecycle.
  *
+ * Financial envelope wrapping (PRD-070 WS2 — DEFERRED):
+ * All `_cents` fields here (`opening_bankroll_cents`, `closing_bankroll_cents`,
+ * `fills_total_cents`, `credits_total_cents`, `drop_total_cents`,
+ * `table_win_cents`, `par_target_cents`, `variance_from_par_cents`) cascade
+ * into `components/shift-dashboard-v3/*` and rundown-report UI surfaces.
+ * Blanket Phase 1.2 deferral — see `../dtos.ts` top-of-file block for
+ * classification targets (CLASSIFICATION-RULES §3.5). `par_target_cents` and
+ * `variance_from_par_cents` are derived operational bounds — treated as
+ * `estimated` per §3.5 derived Pattern B rules.
+ *
  * @see PRD-038 Shift Rundown Persistence
+ * @see PRD-070 Financial Telemetry Wave 1 Phase 1.1
  * @see EXEC-038 WS2 Service Layer
  */
 

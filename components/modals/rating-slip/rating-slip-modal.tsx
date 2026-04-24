@@ -557,7 +557,7 @@ export function RatingSlipModal({
   // computedChipsOut = server chips out + pending chips taken
   const pendingChipsTaken = Number(formState.chipsTaken) || 0;
   const computedChipsOut = modalData
-    ? (modalData.financial.totalChipsOut + pendingChipsTaken * 100) / 100
+    ? (modalData.financial.totalCashOut + pendingChipsTaken * 100) / 100
     : 0;
 
   // Net Position = Cash In - Chips Out (using computed chips out for reactivity)

@@ -1,6 +1,33 @@
 /**
  * ShiftIntelligenceService DTOs (PRD-055)
  * Pattern A: Contract-First — manual interfaces for baseline and anomaly alert contracts.
+ *
+ * ── Phase 1.1 Envelope Carve-Out (PRD-070 WS7A) ──────────────────────────────
+ * Per docs/10-prd/PRD-070-financial-telemetry-wave1-phase1.1-service-dto-envelope-v0.md
+ * and docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md
+ * § Phase 1.2 Deferral Register, the following fields on `AnomalyAlertDTO` and
+ * `ShiftAlertDTO` remain **bare numbers** in Phase 1.1 and DO NOT ship a
+ * `FinancialValue` envelope (GATE-070.6 kept internal authority routing in
+ * scope; public field-shape changes deferred):
+ *
+ *   AnomalyAlertDTO: observedValue, baselineMedian, baselineMad, thresholdValue
+ *   ShiftAlertDTO:   observedValue, baselineMedian, baselineMad
+ *
+ * Reason for deferral: these fields already cross live HTTP/UI boundaries (the
+ * anomaly-alerts route + admin-alerts dashboard + persistent-alerts feed), and
+ * the current metric set mixes currency metrics with the `hold_percent` ratio
+ * that is explicitly carved out as "bare ratio, never wrapped in Phase 1.1."
+ * Coordinating the envelope shape-change across route, UI, and component tests
+ * is a Phase 1.2 deliverable under the shift-intelligence API cleanup slice.
+ *
+ * Phase 1.2 obligation: bundle route + UI + contract-test updates for the
+ * deferred fields in a single coordinated slice, per the Phase 1.2 handoff
+ * package in EXEC-070 § WS9.
+ *
+ * `hold_percent` is permanently a bare ratio — never wrapped.
+ * `cash_obs_total` authority/source is fixed at `estimated / pit_cash_observation.extrapolated`
+ * in the WS7B mapper routing helper (pit_cash_observation reads through
+ * `rpc_compute_rolling_baseline` and `rpc_get_anomaly_alerts`).
  */
 
 // ── Enums ────────────────────────────────────────────────────────────────────

@@ -1,6 +1,24 @@
 /**
  * ShiftIntelligenceService Zod Schemas (PRD-055)
  * Validates API request payloads for baseline compute and anomaly alert endpoints.
+ *
+ * ── Phase 1.1 Outbound-Schema Waiver (PRD-070 WS7A) ──────────────────────────
+ * This file intentionally remains **request-only** in Phase 1.1. No outbound
+ * (response) Zod schemas for `AnomalyAlertDTO`, `BaselineDTO`, `ShiftAlertDTO`,
+ * or related envelopes are added in this phase.
+ *
+ * Per docs/10-prd/PRD-070-financial-telemetry-wave1-phase1.1-service-dto-envelope-v0.md
+ * and docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md
+ * § Planning Lock Resolution, GATE-070.6 deferred public shift-intelligence DTO
+ * field-shape changes to Phase 1.2 because those fields already cross live
+ * HTTP/UI boundaries and introducing outbound schema validation in this phase
+ * would entangle the internal authority-routing work (WS7B) with the deferred
+ * public-shape decisions.
+ *
+ * Reopen trigger: if leadership explicitly reopens a Phase 1.1 public
+ * shift-intelligence exception slice, outbound schema work must return in an
+ * amended EXEC-SPEC with explicit service/route/UI ownership — not as
+ * incidental mapper churn in this file.
  */
 import { z } from 'zod';
 

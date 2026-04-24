@@ -42,8 +42,8 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 | Wave  | Phase                         | PRD       | EXEC-SPEC | Build-pipeline exec | Exit gate |
 | ----- | ----------------------------- | --------- | --------- | ------------------- | --------- |
 | 1     | 1.0 Prep & Inventory          | ➖ Exempt | ➖ Exempt | ✅ Artifacts shipped | ✅ PASSED 2026-04-23 (SIGNOFF doc) |
-| 1     | 1.1 Service DTO Envelope      | ⬜ **next** | ⬜        | ⬜                  | —         |
-| 1     | 1.2 API Envelope at Wire      | ⬜        | ⬜        | ⬜                  | —         |
+| 1     | 1.1 Service DTO Envelope      | 🟦 Drafted (PRD-070) | 🟦 Scaffolded (EXEC-070) | ⬜ **next** | —         |
+| 1     | 1.2 API Envelope at Wire      | 🟦 Drafted (PRD-071) | ⬜        | ⬜                  | —         |
 | 1     | 1.3 UI Split Display          | ⬜        | ⬜        | ⬜                  | —         |
 | 1     | 1.4 Validation + Lint + I5    | ⬜        | ⬜        | ⬜                  | —         |
 | 1     | 1.5 Rollout & Sign-off        | ⬜        | ⬜        | ⬜                  | —         |
@@ -83,11 +83,11 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 
 ### Phase 1.1 — Service Layer: DTO Envelope  ⬜
 
-Blocked on: Phase 1.0 exit gate + **Phase 1.1 PRD** + **Phase 1.1 EXEC-SPEC**.
+Blocked on: ~~Phase 1.0 exit gate~~ ✅ + ~~**Phase 1.1 PRD**~~ 🟦 Drafted (PRD-070, 2026-04-23) + ~~**Phase 1.1 EXEC-SPEC**~~ 🟦 Scaffolded (EXEC-070, 2026-04-23). Next: `/build-pipeline`.
 
 **Pipeline chain (required before any code change):**
-- [ ] PRD-NNN drafted via `/prd-writer` citing classification rules + surface inventory
-- [ ] EXEC-SPEC scaffolded via `/lead-architect` (workstream IDs, dependencies, bounded contexts)
+- [x] PRD-070 drafted via `/prd-writer` citing classification rules + surface inventory (2026-04-23)
+- [x] EXEC-SPEC scaffolded via `/lead-architect` (workstream IDs, dependencies, bounded contexts) — `docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md`
 - [ ] `/build-pipeline` executed; dispatches `/backend-service-builder` per workstream
 
 | # | Deliverable | Status |
@@ -118,9 +118,13 @@ Blocked on: Phase 1.0 exit gate + **Phase 1.1 PRD** + **Phase 1.1 EXEC-SPEC**.
 
 ### Phase 1.2 — API Layer: Envelope at the Wire  ⬜
 
-Blocked on: Phase 1.1 exit gate + **Phase 1.2 PRD** + **Phase 1.2 EXEC-SPEC**.
+Blocked on: Phase 1.1 exit gate + ~~**Phase 1.2 PRD**~~ 🟦 Drafted (PRD-071, 2026-04-24) + **Phase 1.2 EXEC-SPEC**.
 
 **Pipeline chain:** `/prd-writer` → `/lead-architect` EXEC-SPEC → `/build-pipeline` dispatching `/api-builder` (+ `/backend-service-builder` for DTO contract touches).
+
+- [x] PRD-071 drafted via `/prd-writer` citing Phase 1.1 handoff, route inventory, OpenAPI baseline, and forbidden-label/deprecation rules (2026-04-24)
+- [ ] EXEC-SPEC scaffolded via `/lead-architect`
+- [ ] `/build-pipeline` executed; dispatches `/api-builder` (+ `/backend-service-builder` for residual contract touchpoints)
 
 | # | Deliverable | Status |
 |---|-------------|--------|
@@ -283,3 +287,5 @@ Pulled from ROLLOUT-ROADMAP.md §7; update status as mitigations land.
 | 2026-04-23 | **Phase 1.0 deliverables complete** (lead-architect). Shipped: (1) `types/financial.ts` — 3 exports, tsc clean; (2) `WAVE-1-SURFACE-INVENTORY.md` — 8 services enumerated, 4 confirmed SRC violations catalogued, shift-dashboard v3-vs-legacy split documented; (3) `WAVE-1-CLASSIFICATION-RULES.md` — source → authority mapping for ~40 sources, custody-chain resolved to `estimated` per FACT-MODEL §D1 (audit's proposed 5th `custody` class rejected as unnecessary), 8 open questions Q-A1…Q-A8 raised; (4) `WAVE-1-FORBIDDEN-LABELS.md` — regex-anchored denylist + replace-with + allowlist, ready for Phase 1.4 ESLint rule generation. Merged independent findings from `SURFACE-CLASSIFICATION-AUDIT.md` (added missed `services/rating-slip-modal/` + `Handle`/`Theo: 0`/`totalChipsOut` violations). **Exit gate NOT yet passed** — awaits lead-architect sign-off on Q-A1–Q-A8. |
 | 2026-04-23 | **Execution governance added** to `ROLLOUT-ROADMAP.md` (new §2.5) and this tracker (PRD/EXEC-SPEC columns). ADRs are decisions; they do not ship. PRDs do. No PRDs exist yet for any phase, so the roadmap is NOT directly implementable as-is. Every Phase ≥ 1.1 now requires `/prd-writer` → `/lead-architect` EXEC-SPEC scaffold → `/build-pipeline` before implementation. Phase 1.0 explicitly exempted as meta-phase (produces the governance docs every subsequent PRD cites). Skill-routing table in roadmap §9 clarified to indicate skills are dispatched by build-pipeline, not invoked directly. |
 | 2026-04-23 | **Phase 1.0 EXIT GATE PASSED** (lead-architect sign-off). All 8 open decisions resolved: Q-A1 `average_bet` not wrapped (operator input); Q-A2 `observed`/`compliance` labels live for surfaces, no new authoring; Q-A3 source strings service-private (UI may display, must not branch); Q-A4 cash-obs always Pattern A split; Q-A5 shift-intelligence metric-kind routing principle approved (Phase 1.1 produces concrete map); Q-A6 dollar→cents mapper with pinned rounding test; Q-A7 theo renders envelope `unknown` + "Not computed" badge (UI treatment deferred to frontend-design-pt-2 in Phase 1.3); Q-A8 `totalChipsOut` → `totalCashOut` rename approved for Phase 1.1 with full consumer scope. Sign-off record: `actions/WAVE-1-PHASE-1.0-SIGNOFF.md`. Classification rules + inventory + forbidden-labels amended to `Accepted` status with rules promoted to normative. **Phase 1.1 PRD authoring unblocked** — next action is `/prd-writer` for Phase 1.1 Service DTO Envelope migration. |
+| 2026-04-23 | **Phase 1.1 PRD drafted** (`/prd-writer`). `docs/10-prd/PRD-070-financial-telemetry-wave1-phase1.1-service-dto-envelope-v0.md` — Status: Draft. Scope: envelope migration across 8 in-scope services (`player-financial`, `rating-slip`, `rating-slip-modal`, `visit`, `mtl`, `table-context`, `loyalty`, `shift-intelligence`) with a **bounded direct-coupling exception** for live pass-through route/UI/test consumers where Phase 1.1 DTO changes would otherwise leak or fail to compile. Two breaking changes — `totalChipsOut` → `totalCashOut` rename across the directly coupled modal-data flow + visit-facing cents canonicalization across verified producers in `services/visit/` and `services/rating-slip`; mandatory pinned dollar→cents rounding test; non-wrapping carve-outs documented (operator inputs, policy/config, points, `hold_percent` ratio). **Q-A5 resolved in principle:** `MetricType` discriminator verified present on `BaselineDTO` / `AnomalyAlertDTO` / `ShiftAlertDTO` (`drop_total` / `hold_percent` / `cash_obs_total` / `win_loss_cents`) — lookup-table path chosen, but public DTO shape remains gated by EXEC-SPEC. `cash_obs_total` RPC source verification deferred to EXEC-SPEC with `estimated` / extrapolated as safe default. Added pre-workstream gates for shift-intelligence Phase 1.1 vs 1.2 split and any `totalCashOut` compatibility alias, plus required blast-radius, test, and rollback matrices in EXEC-SPEC. **Phase 1.1 EXEC-SPEC scaffolding is next action** — `/lead-architect` per ROLLOUT-ROADMAP §2.5.2. |
+| 2026-04-23 | **Phase 1.1 EXEC-SPEC scaffolded** (`/lead-architect`). `docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md` — Workstreams frozen around a service-led migration with bounded exception slices: WS0 planning lock (GATE-070.6, GATE-070.7, blast-radius/test/rollback/deferral artifacts), WS1 shared contract foundation, WS2 internal service bundle (`player-financial`, `loyalty`, `mtl`, `table-context`), WS3 rating-slip core bundle, WS4 `totalCashOut` modal rename slice, WS5 recent-sessions cents canonicalization slice, WS6 live-view cents canonicalization slice, WS7 shift-intelligence split/authority routing decision, WS8 conditional shift-intelligence public-contract slice, WS9 cross-service verification and Phase 1.2 handoff. **Next action is `/build-pipeline`** — expand each workstream with domain-skill implementation detail and enforce the planning-lock gate before code changes begin. |
