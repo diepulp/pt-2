@@ -90,6 +90,22 @@ describe('financialValueSchema', () => {
     expect(financialValueSchema.parse(value)).toEqual(value);
   });
 
+  it('freezes parsed envelopes to preserve service-authored classification downstream', () => {
+    const parsed = financialValueSchema.parse({
+      value: 100,
+      type: 'estimated',
+      source: 'table_session.drop',
+      completeness: { status: 'unknown' },
+    });
+
+    expect(Object.isFrozen(parsed)).toBe(true);
+    expect(Object.isFrozen(parsed.completeness)).toBe(true);
+    expect(() => {
+      (parsed as unknown as { type: 'actual' }).type = 'actual';
+    }).toThrow(TypeError);
+    expect(parsed.type).toBe('estimated');
+  });
+
   it('rejects non-integer value (dollars must be converted to cents)', () => {
     expect(() =>
       financialValueSchema.parse({
@@ -97,6 +113,45 @@ describe('financialValueSchema', () => {
         type: 'actual',
         source: 'pft.ledger',
         completeness: { status: 'complete' },
+      }),
+    ).toThrow();
+  });
+
+  it('rejects API/UI reclassification metadata added to the financial envelope', () => {
+    expect(() =>
+      financialValueSchema.parse({
+        value: 100,
+        type: 'estimated',
+        source: 'table_session.drop',
+        completeness: { status: 'unknown' },
+        displayTypeOverride: 'actual',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects Wave 2 event-envelope fields coupled into the financial envelope', () => {
+    expect(() =>
+      financialValueSchema.parse({
+        value: 100,
+        type: 'actual',
+        source: 'pft.ledger',
+        completeness: { status: 'complete' },
+        event_id: 'evt_123',
+        origin: 'pft',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects extra completeness metadata that could imply hidden truth state', () => {
+    expect(() =>
+      financialValueSchema.parse({
+        value: 100,
+        type: 'actual',
+        source: 'pft.ledger',
+        completeness: {
+          status: 'complete',
+          reconciled: true,
+        },
       }),
     ).toThrow();
   });

@@ -18,26 +18,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDollars } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import type { RecentSessionDTO } from '@/services/visit/dtos';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface SessionData {
-  visit_id: string;
-  visit_group_id: string;
-  started_at: string;
-  ended_at: string;
-  last_table_id: string;
-  last_table_name: string;
-  last_seat_number: number;
-  total_duration_seconds: number;
-  total_buy_in: number;
-  total_cash_out: number;
-  net: number;
-  points_earned: number;
-  segment_count: number;
-}
+// Phase 1.1: SessionData is now RecentSessionDTO. Financial fields are FinancialValue (dollar float).
+// Phase 1.2 will canonicalize to integer cents. Callers must pass FinancialValue shapes.
+export type SessionData = RecentSessionDTO;
 
 export interface PlayerInfo {
   player_id: string;
@@ -166,7 +155,7 @@ function ClosedSessionRow({
   session: SessionData;
   onStartFromPrevious?: (visitId: string) => void;
 }) {
-  const isPositive = session.net >= 0;
+  const isPositive = session.net.value >= 0;
 
   return (
     <div className="group relative p-4 rounded-lg border border-border/40 bg-card/50 hover:bg-card hover:border-border/60 hover:shadow-md transition-all duration-200">
@@ -176,7 +165,7 @@ function ClosedSessionRow({
           <History className="w-3.5 h-3.5" />
           <span>
             {formatDate(session.started_at)} {formatTime(session.started_at)} —{' '}
-            {formatTime(session.ended_at)}
+            {session.ended_at ? formatTime(session.ended_at) : '—'}
           </span>
         </div>
         <Badge variant="outline" className="text-xs font-mono tabular-nums">
@@ -210,13 +199,13 @@ function ClosedSessionRow({
           <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="text-muted-foreground">In:</span>
           <span className="font-medium tabular-nums">
-            {formatDollars(session.total_buy_in)}
+            {formatDollars(session.total_buy_in.value)}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-muted-foreground">Out:</span>
           <span className="font-medium tabular-nums">
-            {formatDollars(session.total_cash_out)}
+            {formatDollars(session.total_cash_out.value)}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -234,7 +223,7 @@ function ClosedSessionRow({
             )}
           >
             {isPositive ? '+' : ''}
-            {formatDollars(session.net)}
+            {formatDollars(session.net.value)}
           </span>
         </div>
         <Badge

@@ -19,10 +19,13 @@ export const completenessStatusSchema = z.enum([
   'unknown',
 ]) satisfies z.ZodType<CompletenessStatus>;
 
-export const completenessSchema = z.object({
-  status: completenessStatusSchema,
-  coverage: z.number().min(0).max(1).optional(),
-});
+export const completenessSchema = z
+  .object({
+    status: completenessStatusSchema,
+    coverage: z.number().min(0).max(1).optional(),
+  })
+  .strict()
+  .readonly();
 
 /**
  * Canonical validator for {@link FinancialValue}.
@@ -31,10 +34,16 @@ export const completenessSchema = z.object({
  * `source` is a non-empty provenance identifier (e.g. `table_session.drop`).
  * `completeness.status` is always present — mappers that cannot determine
  * completeness must set it to `'unknown'` explicitly, never omit it.
+ * The shape is exact and parsed values are frozen so API/UI/event layers cannot
+ * silently couple transport metadata to the presentation envelope or mutate the
+ * service-authored classification.
  */
-export const financialValueSchema = z.object({
-  value: z.number().int(),
-  type: financialAuthoritySchema,
-  source: z.string().min(1),
-  completeness: completenessSchema,
-}) satisfies z.ZodType<FinancialValue>;
+export const financialValueSchema = z
+  .object({
+    value: z.number().int(),
+    type: financialAuthoritySchema,
+    source: z.string().min(1),
+    completeness: completenessSchema,
+  })
+  .strict()
+  .readonly() satisfies z.ZodType<FinancialValue>;

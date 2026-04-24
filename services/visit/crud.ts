@@ -15,6 +15,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { DomainError } from '@/lib/errors/domain-errors';
 import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { Database } from '@/types/database.types';
+import type { FinancialValue } from '@/types/financial';
 
 import type {
   ActiveVisitDTO,
@@ -516,11 +517,32 @@ export async function getPlayerRecentSessions(
     T extends { total_buy_in: number; total_cash_out: number; net: number },
   >(
     s: T,
-  ): T => ({
+  ): Omit<T, 'total_buy_in' | 'total_cash_out' | 'net'> & {
+    total_buy_in: FinancialValue;
+    total_cash_out: FinancialValue;
+    net: FinancialValue;
+  } => ({
     ...s,
-    total_buy_in: s.total_buy_in / 100,
-    total_cash_out: s.total_cash_out / 100,
-    net: s.net / 100,
+    total_buy_in: {
+      value: s.total_buy_in / 100,
+      type: 'actual',
+      source: 'visit_financial_summary.total_in',
+      completeness: { status: s.total_buy_in != null ? 'complete' : 'unknown' },
+    },
+    total_cash_out: {
+      value: s.total_cash_out / 100,
+      type: 'actual',
+      source: 'visit_financial_summary.total_out',
+      completeness: {
+        status: s.total_cash_out != null ? 'complete' : 'unknown',
+      },
+    },
+    net: {
+      value: s.net / 100,
+      type: 'actual',
+      source: 'visit_financial_summary.net_amount',
+      completeness: { status: s.net != null ? 'complete' : 'unknown' },
+    },
   });
 
   return {
