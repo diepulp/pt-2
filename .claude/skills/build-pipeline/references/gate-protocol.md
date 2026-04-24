@@ -73,19 +73,18 @@ External Dependencies:
 
 Estimated Complexity: {low/medium/high}
 
-DA Review: [{VERDICT}] ({p0} P0, {p1} P1)
-  {If streamlined path: "Skipped — streamlined path"}
-  {If P0 > 0: list P0 findings}
+Validation: ✅ Structural + Intake-Traceability
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Approve execution plan? [y/n/edit]
+Approve execution plan? [y/n]
+  y — proceed with execution
+  n — save checkpoint; edit EXEC-SPEC manually, then `/build EXEC-### --resume`
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 **User Options**:
-- `y` - Proceed with execution
-- `n` - Abort pipeline
-- `edit` - Modify EXECUTION-SPEC before proceeding
+- `y` — Proceed with execution
+- `n` — Save checkpoint and stop. Human edits the EXEC-SPEC file directly (or re-scopes the PRD) and resumes with `/build EXEC-### --resume`. The pipeline does not re-run scaffold/expert stages on rejection — human owns the edit.
 
 ### Phase Completion Approval
 

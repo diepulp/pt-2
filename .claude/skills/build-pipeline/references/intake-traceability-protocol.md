@@ -1,7 +1,7 @@
 # Intake Traceability Protocol
 
 > Enforcement protocol for the FIB-H / FIB-S → PRD → EXEC-SPEC authority chain.
-> Referenced by `SKILL.md` (Intake Authority Chain) and `critic-checklist.md`.
+> Referenced by `SKILL.md` (Intake Authority Chain).
 
 ---
 
@@ -42,7 +42,7 @@ When generating a PRD from a FIB:
 4. Open questions must be preserved verbatim — not silently resolved
 5. PRD must not introduce capabilities absent from `zachman.how.capabilities`
 
-### At EXEC-SPEC Generation (build-pipeline Stage 3)
+### At EXEC-SPEC Generation (build-pipeline Stage 3 — Assemble & Validate)
 
 When FIB-S is loaded in the pipeline:
 
@@ -51,14 +51,10 @@ When FIB-S is loaded in the pipeline:
 3. **Anti-invention scan** — two-pass: (a) no workstream description introduces surfaces absent from FIB-S, (b) extract every `app/api/` path from workstream `outputs` arrays and verify each matches a declared `zachman.where.surfaces[kind=api]` entry
 4. **Hard rule visibility** — every `severity: "hard"` rule appears in workstream acceptance criteria
 5. **Open-question disposition** — every open question is resolved or carried forward; none silently absent
+6. **Bounded-context alignment** — workstream bounded contexts match FIB-S `zachman.where.bounded_contexts`
+7. **Output-surface alignment** — workstream outputs match FIB-S declared surfaces and entities
 
-### At DA Review (build-pipeline Stage 4)
-
-DA reviewers should validate intake traceability as part of their review:
-
-- **R2 (Architecture)**: Check that workstream bounded contexts match FIB-S `zachman.where.bounded_contexts`
-- **R3 (Implementation)**: Check that workstream outputs match FIB-S declared surfaces and entities
-- **R3 (Implementation)**: Check that `traces_to` fields are substantive, not pro-forma
+Violations block human review. Revise to remove the invention, or request an intake amendment.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: build-pipeline
-description: Orchestrate specification-to-production implementation with phased workstream execution, validation gates, and checkpoint-based resume. This skill should be used when the user asks to "build from a PRD", "execute a spec", "implement PRD-XXX", "run the build pipeline", "resume the build", "build this", "execute this EXEC-SPEC", or provides a path to any specification document (PRD, EXEC-SPEC, investigation doc, issue spec). Also triggers on requests to implement from a design document, execute findings, or run workstreams from an existing plan.
+description: Orchestrate specification-to-production builds from PRDs, EXEC-SPECs, FIB specs, or investigation docs — phased workstream execution with validation gates and checkpoint resume. Trigger on "build PRD-XXX", "execute this spec", "implement from EXEC-###", "resume the build", "run workstreams from", or any path under docs/10-prd/, docs/21-exec-spec/, or docs/issues/.
 ---
 
 # Build Pipeline Orchestrator
@@ -39,10 +39,10 @@ This skill accepts any specification document with implementation requirements �
 | `references/execution-spec-template.md` | YAML + markdown template for workstreams |
 | `references/gate-protocol.md` | Gate approval UX and validation commands |
 | `references/checkpoint-format.md` | Checkpoint schema and state management |
-| `references/critic-checklist.md` | EXECUTION-SPEC quality validation criteria |
 | `references/intake-traceability-protocol.md` | FIB-S enforcement: capability inventory, anti-invention, open questions |
 | `scripts/validate-execution-spec.py` | Validate EXECUTION-SPEC (structural + governance) |
-| `devils-advocate` skill | Single-pass adversarial EXEC-SPEC review |
+| `scripts/classify-write-path.py` | Deterministic write-path signal scan for E2E mandate |
+| `scripts/temporal-integrity.py` | Flag upstream PRD/ADRs modified after EXEC-SPEC generation |
 
 ---
 
@@ -85,10 +85,10 @@ After input resolution, a quick complexity check picks the path. This is the sin
 **If all true → Streamlined path:**
 1. Single-stage EXEC-SPEC (lead-architect scaffold only, no expert consultation)
 2. Structural + governance validation
-3. Approval gate (DA skipped — validation provides sufficient coverage)
+3. Approval gate
 4. Execution
 
-**If any false → Full path:** Stages 0–4 below, including a single DA pass.
+**If any false → Full path:** Stages 0–3 below, including per-workstream expert consultation.
 
 Display the pre-screen result:
 
@@ -125,27 +125,15 @@ See `references/intake-traceability-protocol.md` for the full enforcement rules 
 
 ### FIB Resolution
 
-When a PRD is the build input, check its frontmatter for `intake_ref` (FIB-H) and `structured_ref` (FIB-S):
+The pipeline trusts the PRD's frontmatter shape (verified upstream by `prd-writer`) and only performs integrity checks:
 
-**Admission rules:**
+1. If `structured_ref` is declared, verify the referenced file resolves on disk. If it doesn't → block on broken reference.
+2. If `structured_ref` resolves, load FIB-S into pipeline context; record `fib_h_ref`, `fib_s_ref`, `fib_s_loaded: true` in checkpoint.
+3. If `structured_ref` is absent, proceed in PRD-only mode (FIB-S gate checks become no-ops).
 
-- **New PRDs** (created after this policy): `structured_ref` is required. Missing → fail admission:
-  ```
-  [FIB-S MISSING] PRD-{ID} has intake_ref but no structured_ref.
-  ─────────────────────────────────────────────────────────────────
-  New PRDs must reference a FIB-S structured artifact for intake
-  traceability. Generate FIB-S from the intake brief, then add
-  structured_ref to the PRD frontmatter.
-  ─────────────────────────────────────────────────────────────────
-  ```
-- **Legacy PRDs** (no `intake_ref`): warn and proceed — PRD-only authority.
-- **Transitional PRDs** (`intake_ref` present, `structured_ref` missing): warn with recommendation.
+When FIB-S is loaded, anti-invention binds every downstream stage. Implementation plans are where "small" conveniences get introduced — an extra modal, a fallback endpoint, a silent DTO expansion, a helpful admin override. Each looks reasonable individually; collectively they erode the intake boundary. FIB-S is the machine-readable fence that catches these. EXEC-SPEC may introduce internal helpers, adapter DTOs, infrastructure workstreams, and implementation-detail choices — but not new operator-visible surfaces, public APIs, workflow side-paths, capabilities, or persisted shapes absent from FIB-S.
 
-If both are present: verify files exist, load FIB-S into pipeline context, record `fib_h_ref`, `fib_s_ref`, `fib_s_loaded: true` in checkpoint.
-
-When FIB-S is loaded, anti-invention binds every downstream stage. The reason this matters most at EXEC stage is that implementation plans are where "small" conveniences get introduced — an extra modal, a fallback endpoint, a silent DTO expansion, a helpful admin override. Each looks reasonable individually; collectively they erode the intake boundary. FIB-S is the machine-readable fence that catches these. EXEC-SPEC may introduce internal helpers, adapter DTOs, infrastructure workstreams, and implementation-detail choices — but not new operator-visible surfaces, public APIs, workflow side-paths, capabilities, or persisted shapes absent from FIB-S.
-
-See the intake-traceability reference for the full allowed/disallowed list and for the open-question decision record format.
+See `references/intake-traceability-protocol.md` for the allowed/disallowed list and the open-question decision record format.
 
 ---
 
@@ -176,16 +164,15 @@ Record `gov010_check` as `"passed"`, `"waived:{reason}"`, or `"pending"` in chec
 ## Pipeline Overview
 
 ```
-Spec → [GOV-010 + FIB] → [Pre-Screen] → EXECUTION-SPEC → [Validate] → [DA (full path only)] → [Approve] → Execution → DoD
+Spec → [GOV-010 + FIB] → [Pre-Screen] → EXECUTION-SPEC → [Validate] → [Approve] → Execution → DoD
 ```
 
 **Design principles:**
 - **Sequential thinking**: Use `mcp__sequential-thinking__sequentialthinking` for EXECUTION-SPEC generation
 - **Skills-only execution**: All workstreams dispatched via Skill tool (see `expert-routing.md`)
-- **Gate approval**: Pause after each phase for human review
+- **Human review is the sole gate**: No automated adversarial step in the pipeline — `y` executes, `n` pauses for manual edit + `/build --resume`.
 - **Preserve on failure**: Keep completed artifacts for manual fix and resume
 - **Parallel execution**: Run independent workstreams concurrently
-- **Single-pass adversarial review**: One DA reviewer on the full path. No team, no magnitude scoring, no auto-retry.
 
 ---
 
@@ -193,18 +180,11 @@ Spec → [GOV-010 + FIB] → [Pre-Screen] → EXECUTION-SPEC → [Validate] → 
 
 See `references/expert-routing.md` for the full expert consultation protocol.
 
-### Stage 0: Load Governance Context (Required)
+### Stage 0: Load Intake Authority (FIB-S only, when present)
 
-Before generation, load:
+The pipeline does not load governance/architecture/quality context files — domain experts own those rules in their own skills with current canonical citations. The only artifact this orchestrator loads at generation time is FIB-S, when the PRD references one.
 
-```
-references/architecture.context.md  # SRM ownership, DTO patterns, bounded context rules
-references/governance.context.md    # Service template, migration standards, test locations
-references/quality.context.md       # Test strategy, coverage targets, quality gates
-FIB-S (if resolved)                 # Traceability authority
-```
-
-These files contain deterministic rules that must be validated against during spec generation. When FIB-S is loaded, the EXEC generator uses it for capability inventory, rule/invariant enforcement, surface mapping, open-question handling, and workstream traceability.
+When FIB-S is loaded, the EXEC generator uses it for capability inventory, rule/invariant enforcement, surface mapping, open-question handling, and workstream traceability. See `references/intake-traceability-protocol.md`.
 
 ### Stage 1: Architectural Scaffolding
 
@@ -214,12 +194,11 @@ Delegate to `lead-architect` via Skill tool. The general agent lacks bounded con
 
 ### Stage 2: Expert Consultation (Full Path Only)
 
-Delegate each workstream to its domain expert via Skill tool. Each expert consultation must include governance context injection. The general agent lacks domain-specific pattern knowledge (ADR-015 RLS, DTO canonical, React 19 useTransition), which is why routing to experts matters.
+Delegate each workstream to its domain expert via Skill tool. Each expert receives only the workstream skeleton plus the FIB-S pointer (when loaded) and consults its own references for domain rules. The general agent lacks domain-specific pattern knowledge (ADR-015 RLS, DTO canonical, React 19 useTransition), which is why routing to experts matters — canonical rules live once, in the expert skill.
 
 See `references/expert-routing.md` for:
 - Full two-stage generation protocol
 - Domain-to-expert skill routing table
-- Context injection protocol (which context sections to inject per domain)
 - Expert consultation prompt template and response format
 - Parallel consultation dispatch pattern
 
@@ -231,7 +210,7 @@ See `references/expert-routing.md` for:
 
 2. **Upstream framing cross-check.** Verify the EXEC-SPEC Overview does not contradict upstream framing from the FIB or PRD. If the FIB characterizes the work as "not purely wiring" and the EXEC Overview reverts to "primarily wiring/integration", flag the contradiction — framing corrections must propagate downstream.
 
-3. **Intake Traceability Audit (FIB-S gate).** When FIB-S is loaded, run before DA:
+3. **Intake Traceability Audit (FIB-S gate).** When FIB-S is loaded, run before the approval gate:
 
    - **Workstream coverage**: every workstream has a `traces_to` field citing at least one FIB-S element (capability, rule, outcome, loop step) or `infrastructure`
    - **Capability coverage**: every capability in `zachman.how.capabilities` is referenced by at least one workstream
@@ -253,15 +232,26 @@ See `references/expert-routing.md` for:
    ─────────────────────────────────────────────────────
    ```
 
-   Violations block DA. Revise to remove the invention or request an intake amendment.
+   Violations block the approval gate. Revise to remove the invention or request an intake amendment.
 
-4. **Write-Path Classification (E2E Mandate).** Scan the PRD and assembled EXEC-SPEC for write-path indicators: `INSERT`, `UPDATE`, `DELETE`, `withServerAction`, mutating RPCs, form submissions. If the PRD ships writes and no `e2e-tests` workstream exists:
+4. **Write-Path Classification (E2E Mandate).** Run the classifier:
+
+   ```bash
+   python .claude/skills/build-pipeline/scripts/classify-write-path.py \
+       {prd_path} {exec_spec_path}
+   ```
+
+   The script emits JSON with `detected`, `signals[]`, and `has_e2e_workstream`. Branch on the verdict:
+
+   - `detected == false` → record `write_path_classification: "none"` in checkpoint; skip to step 5.
+   - `detected == true` and `has_e2e_workstream == true` → record `"detected"` in checkpoint; skip to step 5.
+   - `detected == true` and `has_e2e_workstream == false` → display the banner below and auto-inject `WS_E2E`:
 
    ```
    [E2E MANDATE] PRD-{ID} ships write paths but has no E2E workstream.
    ─────────────────────────────────────────────────────────────────────
    Write-path signals detected:
-     - {signal_1}: {evidence}
+     - {pattern} at {file}:{line} — {excerpt}
 
    Action: Adding E2E workstream (executor: e2e-testing) to EXEC-SPEC.
    Override: reply "skip-e2e" with justification to waive.
@@ -302,112 +292,18 @@ See `references/expert-routing.md` for:
 
 7. **Initialize checkpoint** (see `references/checkpoint-format.md`).
 
-### Stage 4: Adversarial Review (Single-Pass DA)
-
-**Skip entirely on streamlined path.** Structural + governance validation already checked executor names, dependencies, SRM ownership, test locations, and migration standards. The cross-workstream contradiction surface is too small to justify a DA pass.
-
-**On full path:** run one `devils-advocate` pass. One reviewer, one verdict, one decision point. No team, no magnitude scoring, no auto-retry — the human decides on BLOCK.
-
-#### Temporal Integrity Check (pre-DA)
-
-Before dispatching DA, compare the PRD's modified timestamp against the EXEC-SPEC's creation timestamp:
-
-```
-If prd.modified > exec_spec.created:
-  Flag: "[TEMPORAL WARNING] {PRD-ID} modified after EXEC-SPEC was generated.
-         EXEC-SPEC may not reflect current PRD state.
-         Recommend regeneration before DA."
-```
-
-Also check ADRs referenced in `prd.adr_refs`:
-```
-For each ADR in prd.adr_refs:
-  If adr.modified > exec_spec.created:
-    Flag: "[TEMPORAL WARNING] {ADR-ID} modified after EXEC-SPEC was generated.
-           EXEC-SPEC may reference stale ADR decisions."
-```
-
-If temporal warnings emit, present options:
-
-1. **Regenerate EXEC-SPEC** — re-run Stages 1–3 with current upstream artifacts
-2. **Proceed anyway** — acknowledge drift, let DA catch the delta
-3. **Abort** — investigate the upstream change first
-
-This check saves a DA cycle when upstream artifacts have changed since the EXEC-SPEC was generated.
-
-#### DA Dispatch
-
-```
-Skill(skill="devils-advocate", args="Adversarial review of EXEC-SPEC for {PRD_ID}.
-
-Specification: {exec_spec_path}
-Workstreams:   {workstream_summary}
-Bounded ctx:   {bounded_contexts}
-FIB-S:         {fib_s_path if loaded, else 'none'}
-
-Run in Focused Review Mode with full ground-truth verification.
-Attack all sections. Return:
-  - Verdict: Ship | Ship w/ gates | Do not ship
-  - P0 findings (each with file path, line, ADR reference)
-  - P1 findings
-  - Patch Delta (max 15 bullets, prioritized)
-")
-```
-
-The `devils-advocate` skill owns the review protocol — ADR-amendment rule, framing self-consistency, computation precision, ground-truth verification. Do not restate them here or in the dispatch prompt.
-
-#### Verdict Handling
-
-| Verdict | Action |
-|---------|--------|
-| **Ship** | PASS. Proceed to approval gate with verdict noted. |
-| **Ship w/ gates** (no P0) | WARN. Present findings in approval gate; human decides. |
-| **Do not ship** (P0 found) | BLOCK. Present findings to human — no automatic retry. |
-
-#### On BLOCK — Human Decides
-
-```
----------------------------------------------
-[BLOCK] DA Review: Do not ship
----------------------------------------------
-
-Verdict: Do not ship ({p0_count} P0, {p1_count} P1)
-
-P0 Findings:
-  1. {finding summary}
-  2. {finding summary}
-
-Patch Delta:
-  - {item}
-  - {item}
-
-Options:
-  1. Revise EXEC-SPEC (re-run Stages 1-3 with DA findings)
-  2. Override with reason (record waiver, proceed to approval)
-  3. Abort pipeline
----------------------------------------------
-```
-
-- **Revise:** re-run Stages 1–3 with DA findings as revision context. Increment `adversarial_review.attempt`. No automatic cap — each revision is a fresh human-driven decision.
-- **Override:** record `adversarial_review.verdict = "overridden"` with `override_reason`. Proceed to approval gate.
-- **Abort:** set checkpoint `status = "failed"`, record findings. Stop.
-
-Record in checkpoint (full schema in `references/checkpoint-format.md`):
-
-```typescript
-adversarial_review: {
-  verdict: "ship" | "ship_with_gates" | "do_not_ship" | "overridden" | "skipped";
-  p0_count: number;
-  p1_count: number;
-  attempt: number;              // increments on each revision
-  findings_path?: string;
-  override_reason?: string;
-}
-```
-
 ---
 
 ## Phase 2: Approval Gate
+
+Before presenting the summary, run the temporal integrity check:
+
+```bash
+python .claude/skills/build-pipeline/scripts/temporal-integrity.py \
+    {prd_path} {exec_spec_path}
+```
+
+The script emits JSON with `stale`, `stale_refs[]`, and `unresolved_adrs[]`. This is advisory — the human decides at the gate. If `stale == true`, append a `Temporal drift` block to the approval summary listing each stale ref (path, type, mtime) so the reviewer sees that upstream moved after the EXEC-SPEC was generated.
 
 Present EXECUTION-SPEC summary to user:
 
@@ -427,10 +323,13 @@ Execution Order:
   ...
 
 Validation: [PASS] Structural + Governance
+{If FIB-S loaded: "Intake Traceability: [PASS]"}
 
-DA Review: [{VERDICT}] ({p0} P0, {p1} P1)
-{If streamlined path: "Skipped — streamlined path"}
-{If P0 > 0: list P0 findings}
+{If temporal drift detected:
+Temporal drift: {N} upstream artifact(s) modified after EXEC-SPEC generation:
+  - {path} ({type}, modified {mtime})
+  Consider regenerating if the drift is material.
+}
 
 Approve execution plan? [y/n/edit]
 ---------------------------------------------
@@ -544,23 +443,25 @@ See `references/checkpoint-format.md` for the complete schema.
 
 **Lifecycle**:
 ```
-EXECUTION-SPEC Generated -> Initialize checkpoint (status: "initialized")
-Workstream Completes     -> Update checkpoint (move to completed_workstreams)
-Gate Passes              -> Update checkpoint (increment current_phase)
-Pipeline Completes       -> Update checkpoint (status: "complete")
+EXECUTION-SPEC Generated -> Initialize checkpoint (status: "initialized", set created_at + updated_at)
+Workstream Completes     -> Update checkpoint (move WS to completed_workstreams, refresh updated_at)
+Gate Passes              -> Update checkpoint (increment current_phase, refresh updated_at)
+Spec Amendment Defers WS -> Update checkpoint (move WS to dormant_workstreams, record reason in artifacts)
+Pipeline Completes       -> Update checkpoint (status: "complete", refresh updated_at)
 ```
+
+A workstream never disappears from the graph — deferring it means moving it into `dormant_workstreams` so it stays accounted for. Reactivating a dormant workstream requires a spec amendment that moves it back into `pending_workstreams`.
 
 **Resume**: When invoked with `--resume`:
 1. Load checkpoint from `.claude/skills/build-pipeline/checkpoints/{ID}.json`
-2. Display completed vs pending workstreams
-3. Continue from first incomplete phase
+2. Display completed, in-progress, pending, and dormant workstreams (with dormant reasons)
+3. Continue from first incomplete phase — dormant workstreams are tracked for accounting but excluded from the resume scan
 
 **Key fields:**
 - `gov010_check`: `"passed"` | `"waived:{reason}"` | `"pending"`
 - `complexity_prescreen`: `"streamlined"` | `"full"`
 - `fib_s_loaded`: boolean
 - `write_path_classification`: `"detected"` | `"none"`
-- `adversarial_review`: verdict, counts, attempt (schema in reference)
 
 ---
 
