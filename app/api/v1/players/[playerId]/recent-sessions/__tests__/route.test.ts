@@ -58,12 +58,16 @@ jest.mock('@/lib/supabase/server', () => ({
 }));
 
 jest.mock('@/lib/server-actions/middleware', () => ({
-  withServerAction: jest.fn((_supabase: unknown, handler: Function) =>
-    handler({
-      supabase: {},
-      correlationId: 'test-correlation-id',
-      rlsContext: { casinoId: 'casino-1', actorId: 'actor-1' },
-    }),
+  withServerAction: jest.fn(
+    (
+      _supabase: unknown,
+      handler: (ctx: Record<string, unknown>) => Promise<unknown>,
+    ) =>
+      handler({
+        supabase: {},
+        correlationId: 'test-correlation-id',
+        rlsContext: { casinoId: 'casino-1', actorId: 'actor-1' },
+      }),
   ),
 }));
 
