@@ -4,7 +4,49 @@
  * Tests RPC row → DTO transformations.
  */
 
-import { mapComputeResult, mapAnomalyAlertRow } from '../mappers';
+import {
+  mapComputeResult,
+  mapAnomalyAlertRow,
+  resolveShiftMetricAuthority,
+} from '../mappers';
+
+describe('resolveShiftMetricAuthority', () => {
+  it('drop_total → estimated / table_session.drop', () => {
+    expect(resolveShiftMetricAuthority('drop_total')).toEqual({
+      type: 'estimated',
+      source: 'table_session.drop',
+    });
+  });
+
+  it('win_loss_cents → estimated / table_session.inventory_win', () => {
+    expect(resolveShiftMetricAuthority('win_loss_cents')).toEqual({
+      type: 'estimated',
+      source: 'table_session.inventory_win',
+    });
+  });
+
+  it('cash_obs_total → estimated / pit_cash_observation.extrapolated (static-threshold metric)', () => {
+    // cash_obs_total uses static threshold evaluation — anomaly detection is disabled for this metric.
+    // Authority source confirms data comes from pit_cash_observation.extrapolated.
+    expect(resolveShiftMetricAuthority('cash_obs_total')).toEqual({
+      type: 'estimated',
+      source: 'pit_cash_observation.extrapolated',
+    });
+  });
+
+  it('hold_percent → null (bare ratio invariant — never wrapped in FinancialValue)', () => {
+    expect(resolveShiftMetricAuthority('hold_percent')).toBeNull(); // strict null — RULE-2
+  });
+
+  it('unknown MetricType → throws (fail-closed — no silent fallback)', () => {
+    // patch-delta §6: mapper must fail closed on unknown MetricType
+    expect(() =>
+      resolveShiftMetricAuthority(
+        'unknown_type' as Parameters<typeof resolveShiftMetricAuthority>[0],
+      ),
+    ).toThrow('Unhandled MetricType');
+  });
+});
 
 describe('ShiftIntelligence Mappers', () => {
   describe('mapComputeResult', () => {

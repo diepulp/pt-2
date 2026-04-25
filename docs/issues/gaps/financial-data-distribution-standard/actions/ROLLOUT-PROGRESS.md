@@ -4,7 +4,7 @@ description: Live status board for Wave 1 (Surface Contract) and Wave 2 (Dual-La
 type: progress-tracker
 status: Active
 started: 2026-04-23
-last_updated: 2026-04-24
+last_updated: 2026-04-25 (PRD-073 complete, WS7B closed)
 tracks:
 - ROLLOUT-ROADMAP.md
 - ../decisions/ADR-FINANCIAL-FACT-MODEL.md
@@ -42,7 +42,7 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 | Wave  | Phase                         | PRD       | EXEC-SPEC | Build-pipeline exec | Exit gate |
 | ----- | ----------------------------- | --------- | --------- | ------------------- | --------- |
 | 1     | 1.0 Prep & Inventory          | ➖ Exempt | ➖ Exempt | ✅ Artifacts shipped | ✅ PASSED 2026-04-23 (SIGNOFF doc) |
-| 1     | 1.1 Service DTO Envelope      | ✅ PRD-070 | ✅ EXEC-070 (amended 2×) | 🟦 Partial — WS0–WS7A + WS5/WS6 via PRD-072; WS9 ⛔ WS7B | ⛔ WS7B (FIB-FIN-SHIFT-001 not drafted) |
+| 1     | 1.1 Service DTO Envelope      | ✅ PRD-070 | ✅ EXEC-070 (amended 2×) | 🟦 Partial — WS0–WS7B shipped; WS9 unblocked | ⛔ WS9 (handoff package — now unblocked; WS7B closed 2026-04-25) |
 | 1     | 1.2 API Envelope at Wire      | 🟦 Drafted (PRD-071) | ⬜        | ⬜                  | —         |
 | 1     | 1.3 UI Split Display          | ⬜        | ⬜        | ⬜                  | —         |
 | 1     | 1.4 Validation + Lint + I5    | ⬜        | ⬜        | ⬜                  | —         |
@@ -81,17 +81,18 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 
 ---
 
-### Phase 1.1 — Service Layer: DTO Envelope  🟦 IN PROGRESS — WS9 blocked on WS7B
+### Phase 1.1 — Service Layer: DTO Envelope  🟦 IN PROGRESS — WS9 unblocked
 
 ~~Blocked on: Phase 1.0 exit gate ✅ + Phase 1.1 PRD ✅ + Phase 1.1 EXEC-SPEC ✅.~~
 
-**Active:** Build-pipeline executed. 13 workstreams shipped (WS0–WS7A + WS5/WS5_ROUTE/WS5_UI/WS6 via PRD-072 Phase 1.1b). WS9 (verification + handoff) blocked on WS7B (shift-intelligence authority routing). **Next action:** Draft FIB-FIN-SHIFT-001 intake.
+**Active:** Build-pipeline executed. All workstreams shipped (WS0–WS7B via PRD-070/072/073; WS5/WS5_ROUTE/WS5_UI/WS6 via PRD-072 Phase 1.1b; WS7B via PRD-073 Phase 1.1c — shipped 2026-04-25). WS9 (verification + handoff) **unblocked** — ready to execute. **Next action:** WS9 execution → Phase 1.2 handoff package.
 
 **Pipeline chain:**
 - [x] PRD-070 drafted via `/prd-writer` citing classification rules + surface inventory (2026-04-23)
 - [x] EXEC-SPEC scaffolded via `/lead-architect` — `docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md` (amended 2× — scope deferral + child-spec completion)
 - [x] `/build-pipeline` executed — WS0–WS7A shipped 2026-04-24; WS5/WS5_ROUTE/WS5_UI/WS6 delivered via PRD-072 Phase 1.1b child spec (commit 38d25cc1)
-- [ ] WS9 verification matrix + Phase 1.2 handoff package — **⛔ blocked on WS7B** (FIB-FIN-SHIFT-001 intake not drafted)
+- [x] WS7B PRD → EXEC-SPEC → build-pipeline — **✅ PRD-073 shipped 2026-04-25** (`resolveShiftMetricAuthority` + mapper unification + `getAlerts` delegation + test corrections; 95/95 tests PASS)
+- [ ] WS9 verification matrix + Phase 1.2 handoff package — **🟦 unblocked** (WS7B closed; next action)
 
 | # | Deliverable | Status |
 |---|-------------|--------|
@@ -295,3 +296,6 @@ Pulled from ROLLOUT-ROADMAP.md §7; update status as mitigations land.
 | 2026-04-24 | **Phase 1.1 build-pipeline — WS0–WS7A shipped.** WS0 planning lock (GATE-070.6 defers shift-intelligence public fields to Phase 1.2; GATE-070.7 no-alias hard rename for `totalCashOut`). WS1 shared contract: `lib/financial/{schema,rounding}.ts` + 39 tests. WS2 internal service envelope: player-financial, loyalty, mtl, table-context (+ rundown-report, shift-checkpoint, shift-metrics submodules). WS3 rating-slip core. WS4/WS4_ROUTE/WS4_UI `totalCashOut` rename slice: full vertical (service + route handler + UI component + SQL migration `20260424024019_prd070_rename_modal_bff_total_cash_out.sql`). WS7A shift-intelligence Phase 1.1 split decision (JSDoc carve-outs, outbound-schema waiver). **EXEC-070 amended (scope deferral):** WS5/WS5_ROUTE/WS5_UI/WS6/WS7B deferred to FIB-FIN-CENTS-001 + FIB-FIN-SHIFT-001 child specs (blast-radius reality check). |
 | 2026-04-24 | **PRD-072 Phase 1.1b shipped** (commit `38d25cc1`). FIB-FIN-CENTS-001 child spec closed at semantic-labeling scope only. `RecentSessionDTO.total_buy_in/total_cash_out/net` and `VisitLiveViewDTO.session_total_*` wrapped in `FinancialValue` (dollar float — `/100` preserved, intentional Phase 1.1b). `components/player-sessions/start-from-previous.tsx` + modal consumer updated with `.value` access. Route smoke tests born for recent-sessions + live-view routes. Phase 1.2 canonicalization (remove `/100`, integer cents, `formatCents` migration) explicitly deferred. Implementation précis: `docs/issues/gaps/financial-data-distribution-standard/precis/PRD-072-implementation-precis.md`. |
 | 2026-04-24 | **EXEC-070 amended (child-spec completion).** WS5/WS5_ROUTE/WS5_UI/WS6 status changed to `completed_phase_1_1b_via_prd072` with Phase 1.2 obligations recorded per workstream. FIB-FIN-CENTS-001 blocker removed from WS9. **Sole remaining Phase 1.1 blocker: WS7B** (shift-intelligence authority routing — FIB-FIN-SHIFT-001 intake not yet drafted). WS9 test matrix amended: items 9/10/11 struck (component test dirs absent; review page excluded); items 4/12 remain blocked on WS7B. Checkpoint commit: `a89b5b20`. |
+| 2026-04-24 | **FIB-FIN-SHIFT-001 intake drafted** (context-gathering session). Three defects catalogued: (1) no `resolveShiftMetricAuthority` helper — WS7A-frozen routing rules (`drop_total → estimated/table_session.drop`, `win_loss_cents → estimated/table_session.inventory_win`, `cash_obs_total → estimated/pit_cash_observation.extrapolated`, `hold_percent → null/bare`) not yet implemented; (2) `getAlerts` in `alerts.ts` assembles `ShiftAlertDTO` inline bypassing `mapShiftAlertRow` — divergent paths will require dual-site Phase 1.2 update; (3) `anomaly-alerts-route-boundary.test.ts` fixture and assertions reference legacy `gamingDay`/`computedAt` keys instead of current `AnomalyAlertsResponseDTO` shape (`baselineGamingDay`/`baselineCoverage`). Transitional Governance Caveat explicitly in scope: shift-intelligence bare-number fields are pre-migration state, not bridge DTOs. Intake artifacts: `FIB-H-FIN-SHIFT-001` + `FIB-S-FIN-SHIFT-001` in `intake/`. EXEC-070 WS7B child_fib pointers updated. **Next action: `/prd-writer` for FIB-FIN-SHIFT-001.** |
+| 2026-04-24 | **PRD-073 drafted** (`/prd-writer` from FIB-FIN-SHIFT-001). `docs/10-prd/PRD-073-financial-telemetry-wave1-phase1.1c-shift-intelligence-authority-routing-v0.md` — Status: Draft. Phase 1.1c child spec for WS7B. Scope: (1) `resolveShiftMetricAuthority(metricType: MetricType)` helper with all four WS7A-frozen routing rules; (2) mapper path unification — `mapAnomalyAlertRow` + `mapShiftAlertRow` both call the helper; `getAlerts` inline assembly deleted, delegates to `mapShiftAlertRow`; (3) `anomaly-alerts-route-boundary.test.ts` corrected — `gamingDay`/`computedAt` replaced with `baselineGamingDay`/`baselineCoverage`; (4) routing assertion suite in `mappers.test.ts` (4 MetricType values + `hold_percent → null` invariant + `cash_obs_total` static-threshold). No public DTO changes. No FinancialValue on alert numeric fields. No bridge DTO. No route/UI/SQL changes. Phase 1.2 deferrals explicit. WS9 items 4 + 12 unblock on impl close. **Next action: `/lead-architect` EXEC-SPEC for PRD-073 → `/build-pipeline` → WS9.** |
+| 2026-04-25 | **PRD-073 shipped — WS7B closed** (`/build-pipeline` via EXEC-073). Phase 1.1c complete. Delivered: (1) `resolveShiftMetricAuthority` exported from `services/shift-intelligence/mappers.ts` — exhaustive switch over all 4 MetricType values, `hold_percent → null` (RULE-2), `cash_obs_total → estimated/pit_cash_observation.extrapolated` (static-threshold invariant), `default` throws with `never` narrowing (compile-time exhaustiveness gate); (2) `void resolveShiftMetricAuthority(...)` call injected into both `mapAnomalyAlertRow` and `mapShiftAlertRow` (Phase 1.1 dead-read path unification, `void` prefix prevents linter removal); (3) `getAlerts` in `alerts.ts` refactored — 36-line `as any` inline assembly replaced with typed `AlertQueryRow` assertion + join normalization + `mapShiftAlertRow` delegation; (4) `anomaly-alerts-route-boundary.test.ts` fixture and assertions corrected (`baselineGamingDay`/`baselineCoverage`, no `gamingDay`/`computedAt`); (5) routing suite added to `mappers.test.ts` (5 cases including unknown→throw); (6) delegation suite added to `alerts-mappers.test.ts` (3 cases). Two patch deltas assessed against EXEC-073; §2 patch-01 and §1 patch-02 rejected; §4/§6 patch-01 and §3 patch-02 accepted. Gates: `npm run type-check` exit 0; 95/95 tests pass. Implementation précis: `intake/FIB-FIN-SHIFT-001/PRD-073-implementation-precis.md`. **WS9 now unblocked.** |

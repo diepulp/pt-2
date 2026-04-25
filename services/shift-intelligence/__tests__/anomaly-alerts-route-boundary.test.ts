@@ -45,8 +45,8 @@ const ALERTS_FIXTURE = {
       recommendedAction: null,
     },
   ],
-  gamingDay: '2026-03-22',
-  computedAt: '2026-03-22T12:00:00Z',
+  baselineGamingDay: '2026-03-22',
+  baselineCoverage: { withBaseline: 5, withoutBaseline: 2 },
 };
 
 // ---------------------------------------------------------------------------
@@ -121,8 +121,8 @@ describe('GET /api/v1/shift-intelligence/anomaly-alerts -- boundary test', () =>
       code: 'OK',
       data: {
         alerts: expect.any(Array),
-        gamingDay: '2026-03-22',
-        computedAt: expect.any(String),
+        baselineGamingDay: '2026-03-22',
+        baselineCoverage: { withBaseline: 5, withoutBaseline: 2 },
       },
       requestId: expect.any(String),
       timestamp: expect.any(String),

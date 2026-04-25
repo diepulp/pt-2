@@ -37,9 +37,10 @@ amendment_log:
         child_fib_h: "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-H-FIN-CENTS-001-visit-anchored-cents-envelope.md"
         child_fib_s: "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-S-FIN-CENTS-001-visit-anchored-cents-envelope.json"
       - id: "WS7B"
-        deferred_to: "Pending FIB (recommended ID: FIB-FIN-SHIFT-001) → child PRD (TBD) → child EXEC-SPEC (TBD)"
-        child_fib_h: "NOT YET DRAFTED — separate bounded context (shift-intelligence), different pattern (mapper helper + alert path parity, not shape conversion). Bundling with FIB-FIN-CENTS-001 would defeat the manageable-slice goal."
-        child_fib_s: "NOT YET DRAFTED"
+        deferred_to: "FIB-FIN-SHIFT-001 → PRD-073 (drafted 2026-04-24) → child EXEC-SPEC (TBD)"
+        child_prd: "docs/10-prd/PRD-073-financial-telemetry-wave1-phase1.1c-shift-intelligence-authority-routing-v0.md"
+        child_fib_h: "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-FIN-SHIFT-001/FIB-H-FIN-SHIFT-001-shift-intelligence-authority-routing.md"
+        child_fib_s: "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-FIN-SHIFT-001/FIB-S-FIN-SHIFT-001-shift-intelligence-authority-routing.json"
     retained_workstreams: ["WS0", "WS1", "WS2", "WS3", "WS4", "WS4_ROUTE", "WS4_UI", "WS7A", "WS9"]
     close_gate: "WS9 cannot run its verification matrix until the child specs complete. Phase 1.1 is not closed until: (a) FIB-FIN-CENTS-001 chain reaches implementation completion; (b) the WS7B equivalent FIB chain reaches completion; (c) WS9 runs the full verification matrix across all Phase 1.1 artifacts."
     amendment_rationale: >
@@ -298,7 +299,8 @@ workstreams:
 
   WS7B:
     status: "deferred_to_child_spec"
-    deferred_to: "Pending FIB (recommended ID: FIB-FIN-SHIFT-001) — separate bounded context from FIB-FIN-CENTS-001"
+    deferred_to: "FIB-FIN-SHIFT-001 → PRD-073 (drafted 2026-04-24) → child EXEC-SPEC (TBD)"
+    child_prd: "docs/10-prd/PRD-073-financial-telemetry-wave1-phase1.1c-shift-intelligence-authority-routing-v0.md"
     name: "Shift-Intelligence Authority Routing Implementation"
     description: >
       Land the internal shift-intelligence implementation that remains in scope regardless
@@ -332,8 +334,8 @@ workstreams:
     # The dependency list retains the original IDs for schema validity; deferred status is recorded
     # inline on each workstream definition and in the top-level amendment_log block.
     external_child_spec_dependencies:
-      - "FIB-FIN-CENTS-001 (docs/issues/gaps/financial-data-distribution-standard/intake/FIB-S-FIN-CENTS-001-visit-anchored-cents-envelope.json)"
-      - "FIB-FIN-SHIFT-001-pending (intake not yet drafted)"
+      - "FIB-FIN-CENTS-001 → PRD-072 (complete, commit 38d25cc1)"
+      - "FIB-FIN-SHIFT-001 → PRD-073 (drafted 2026-04-24; EXEC-SPEC pending)"
     outputs:
       - "Phase 1.1 verification bundle"
       - "Phase 1.2 handoff package"
@@ -463,23 +465,23 @@ Fixing these in-place would trigger per-workstream escalation per PRD-070 §2.3 
 | WS5_ROUTE — Visit Recent-Sessions Route Boundary Slice | FIB-FIN-CENTS-001 → PRD-072 | ✅ Phase 1.1b complete (1 smoke test; full matrix Phase 1.2) |
 | WS5_UI — Visit Recent-Sessions UI Consumer Slice (narrowed — `/review/` excluded) | FIB-FIN-CENTS-001 → PRD-072 | ✅ Phase 1.1b complete (formatDollars preserved; formatCents Phase 1.2) |
 | WS6 — Visit Live-View Cents Canonicalization Slice | FIB-FIN-CENTS-001 → PRD-072 | ✅ Phase 1.1b complete (labeling only; /100 preserved) |
-| WS7B — Shift-Intelligence Authority Routing Implementation | Pending FIB (recommended: FIB-FIN-SHIFT-001) | Intake NOT yet drafted |
+| WS7B — Shift-Intelligence Authority Routing Implementation | FIB-FIN-SHIFT-001 → PRD-073 | 🟦 PRD-073 drafted 2026-04-24 — EXEC-SPEC pending |
 
 ### Intake artifacts
 
 - FIB-H (prose): `docs/issues/gaps/financial-data-distribution-standard/intake/FIB-H-FIN-CENTS-001-visit-anchored-cents-envelope.md`
 - FIB-S (structured JSON): `docs/issues/gaps/financial-data-distribution-standard/intake/FIB-S-FIN-CENTS-001-visit-anchored-cents-envelope.json`
-- WS7B intake: not yet drafted; different bounded context and different pattern (mapper helper + alert path parity, not shape conversion). Bundling with FIB-FIN-CENTS-001 would defeat the manageable-slice goal.
+- WS7B intake + PRD: `FIB-H-FIN-SHIFT-001` / `FIB-S-FIN-SHIFT-001` under `docs/issues/gaps/financial-data-distribution-standard/intake/FIB-FIN-SHIFT-001/`. PRD-073 drafted 2026-04-24 under `docs/10-prd/`. Different bounded context and different pattern (mapper helper + alert path parity, not shape conversion).
 
 ### Phase 1.1 Close Dependency Chain
 
 Phase 1.1 does not close until all three of the following are true:
 
 1. ~~FIB-FIN-CENTS-001 → PRD (TBD) → EXEC-SPEC (TBD) → implementation completion for WS5, WS5_ROUTE, WS5_UI (narrowed), WS6~~ **✅ Complete — PRD-072 Phase 1.1b (commit 38d25cc1). Labeling-only scope; /100 preserved; dollar float.**
-2. Pending FIB (FIB-FIN-SHIFT-001 recommended) → PRD → EXEC-SPEC → implementation completion for WS7B
+2. ~~FIB-FIN-SHIFT-001 → PRD → EXEC-SPEC → implementation completion for WS7B~~ **🟦 PRD-073 drafted 2026-04-24. EXEC-SPEC and build-pipeline pending.**
 3. WS9 runs its amended verification matrix (items 1–3 ✅ runnable, item 4 blocked WS7B, items 5–8 ✅ runnable, items 9–11 struck, item 12 blocked WS7B) and produces the Phase 1.2 handoff package
 
-WS9's `depends_on` list has been rewritten to point at `child-spec:FIB-FIN-CENTS-001` and `child-spec:FIB-FIN-SHIFT-001-pending` in place of the deferred workstream IDs.
+WS9's `depends_on` list has been rewritten to point at `child-spec:FIB-FIN-CENTS-001 (complete)` and `child-spec:PRD-073 (EXEC-SPEC pending)` in place of the deferred workstream IDs.
 
 ## Amendment 2026-04-24 (2) — Child Spec Completion: PRD-072 Phase 1.1b
 
@@ -503,7 +505,7 @@ This is correct and intentional. Phase 1.2 owns canonicalization.
 
 Items 9, 10, 11 formally struck — component test directories do not exist (Phase 1.2 birth
 obligation) and the review page is excluded per user directive 2026-04-24.
-Items 4 and 12 remain blocked on WS7B (FIB-FIN-SHIFT-001 not yet drafted).
+Items 4 and 12 remain blocked on WS7B (PRD-073 drafted 2026-04-24; EXEC-SPEC + build-pipeline pending).
 
 | Item | Path / Command | Status |
 |---|---|---|
@@ -520,7 +522,7 @@ Items 4 and 12 remain blocked on WS7B (FIB-FIN-SHIFT-001 not yet drafted).
 Phase 1.1 does not close until:
 
 1. ~~FIB-FIN-CENTS-001 → PRD → EXEC-SPEC → implementation close~~ **✅ Complete via PRD-072**
-2. FIB-FIN-SHIFT-001 (pending) → FIB → PRD → EXEC-SPEC → implementation close for WS7B
+2. ~~FIB-FIN-SHIFT-001 → PRD → EXEC-SPEC → implementation close for WS7B~~ **🟦 PRD-073 drafted; EXEC-SPEC pending**
 3. WS9 runs its amended verification matrix and produces the Phase 1.2 handoff package
 
 ## Scope

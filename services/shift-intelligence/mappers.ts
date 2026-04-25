@@ -3,6 +3,7 @@
  * RPC return rows → camelCase DTOs.
  */
 import type { Database } from '@/types/database.types';
+import type { FinancialAuthority } from '@/types/financial';
 
 import type {
   AcknowledgeAlertResultDTO,
@@ -25,6 +26,27 @@ type ComputeRow =
 type AlertRow =
   Database['public']['Functions']['rpc_get_anomaly_alerts']['Returns'][number];
 
+// ── Frozen routing rules (WS7A, EXEC-070). DO NOT re-derive. ────────────────
+
+export function resolveShiftMetricAuthority(
+  metricType: MetricType,
+): { type: FinancialAuthority; source: string } | null {
+  switch (metricType) {
+    case 'drop_total':
+      return { type: 'estimated', source: 'table_session.drop' };
+    case 'win_loss_cents':
+      return { type: 'estimated', source: 'table_session.inventory_win' };
+    case 'cash_obs_total':
+      return { type: 'estimated', source: 'pit_cash_observation.extrapolated' };
+    case 'hold_percent':
+      return null; // bare ratio — never wrapped
+    default: {
+      const _exhaustive: never = metricType;
+      throw new Error(`Unhandled MetricType: ${String(_exhaustive)}`);
+    }
+  }
+}
+
 export function mapComputeResult(row: ComputeRow): BaselineComputeResultDTO {
   return {
     tablesProcessed: row.tables_processed,
@@ -34,6 +56,8 @@ export function mapComputeResult(row: ComputeRow): BaselineComputeResultDTO {
 }
 
 export function mapAnomalyAlertRow(row: AlertRow): AnomalyAlertDTO {
+  // eslint-disable-next-line custom-rules/no-dto-type-assertions -- RPC text column → union type
+  void resolveShiftMetricAuthority(row.metric_type as MetricType); // phase-1.1 path unification
   return {
     tableId: row.table_id,
     tableLabel: row.table_label,
@@ -72,6 +96,8 @@ export function mapShiftAlertRow(
       | null;
   },
 ): ShiftAlertDTO {
+  // eslint-disable-next-line custom-rules/no-dto-type-assertions -- RPC text column → union type
+  void resolveShiftMetricAuthority(row.metric_type as MetricType); // phase-1.1 path unification
   const ack = row.alert_acknowledgment?.[0] ?? null;
   return {
     id: row.id,
