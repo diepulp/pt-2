@@ -21,7 +21,15 @@ import type { ServiceResult } from '@/lib/http/service-response';
 
 // ---------------------------------------------------------------------------
 // Fixture: minimal AnomalyAlertsResponseDTO shape
+// Phase 1.2B-A: financial metrics carry FinancialValue, hold_percent is bare number
 // ---------------------------------------------------------------------------
+const FV = (value: number, source: string) => ({
+  value,
+  type: 'estimated' as const,
+  source,
+  completeness: { status: 'complete' as const },
+});
+
 const ALERTS_FIXTURE = {
   alerts: [
     {
@@ -29,19 +37,39 @@ const ALERTS_FIXTURE = {
       tableLabel: 'BJ-01',
       metricType: 'drop_total',
       readinessState: 'ready',
-      observedValue: 15000,
-      baselineMedian: 12000,
-      baselineMad: 1500,
+      observedValue: FV(15000, 'table_session.drop'),
+      baselineMedian: FV(12000, 'table_session.drop'),
+      baselineMad: FV(1500, 'table_session.drop'),
       deviationScore: 2.0,
       isAnomaly: false,
       severity: null,
       direction: 'above',
-      thresholdValue: 4500,
+      thresholdValue: FV(4500, 'table_session.drop'),
       baselineGamingDay: '2026-03-22',
       baselineSampleCount: 7,
       message: 'Within normal range',
       sessionCount: 3,
       peakDeviation: 2.5,
+      recommendedAction: null,
+    },
+    {
+      tableId: 'table-def',
+      tableLabel: 'BJ-02',
+      metricType: 'hold_percent',
+      readinessState: 'ready',
+      observedValue: 0.42,
+      baselineMedian: 0.38,
+      baselineMad: 0.04,
+      deviationScore: 1.1,
+      isAnomaly: false,
+      severity: null,
+      direction: null,
+      thresholdValue: 0.15,
+      baselineGamingDay: '2026-03-22',
+      baselineSampleCount: 7,
+      message: 'Hold within range',
+      sessionCount: 2,
+      peakDeviation: 1.1,
       recommendedAction: null,
     },
   ],
@@ -127,7 +155,7 @@ describe('GET /api/v1/shift-intelligence/anomaly-alerts -- boundary test', () =>
       requestId: expect.any(String),
       timestamp: expect.any(String),
     });
-    expect(body.data.alerts).toHaveLength(1);
+    expect(body.data.alerts).toHaveLength(2);
     expect(body.data.alerts[0].tableId).toBe('table-abc');
   });
 
@@ -212,13 +240,12 @@ describe('GET /api/v1/shift-intelligence/anomaly-alerts -- boundary test', () =>
     expect(response.status).toBeGreaterThanOrEqual(400);
   });
 
-  // ── DEC-5 (EXEC-071 WS3): bare number|null — not FinancialValue ─────────────
-  // DEC-5 active: observedValue, baselineMedian, baselineMad, thresholdValue are
-  // bare number|null at Phase 1.2A (WS7A waiver). FinancialValue wrapping deferred
-  // to Phase 1.2B.
-  // See: docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json
+  // ── DEC-5 (EXEC-074 WS3): discriminated shape — financial metrics → FinancialValue ──────────
+  // DEC-5 resolved: AnomalyAlertDTO is now a discriminated union on metricType.
+  // Financial metrics (drop_total, win_loss_cents, cash_obs_total) carry FinancialValue | null.
+  // hold_percent retains bare number | null (DEF-NEVER invariant).
 
-  it('DEC-5: numeric alert fields are bare number|null — not FinancialValue objects', async () => {
+  it('DEC-5 (EXEC-074): discriminated shape — financial metrics return FinancialValue, hold_percent retains bare number', async () => {
     const request = new NextRequest(
       new URL(
         '/api/v1/shift-intelligence/anomaly-alerts?window_start=2026-03-22T00:00:00Z&window_end=2026-03-22T23:59:59Z',
@@ -231,14 +258,30 @@ describe('GET /api/v1/shift-intelligence/anomaly-alerts -- boundary test', () =>
 
     expect(response.status).toBe(200);
 
-    const alert = body.data.alerts[0];
+    // Financial metric alert (drop_total) — FinancialValue envelope
+    const financialAlert = body.data.alerts[0];
+    expect(financialAlert.metricType).toBe('drop_total');
+    expect(typeof financialAlert.observedValue).toBe('object');
+    expect(financialAlert.observedValue).toHaveProperty('value', 15000);
+    expect(financialAlert.observedValue).toHaveProperty('type', 'estimated');
+    expect(financialAlert.observedValue).toHaveProperty(
+      'source',
+      'table_session.drop',
+    );
+    expect(financialAlert.baselineMedian).toHaveProperty('value', 12000);
+    expect(financialAlert.baselineMad).toHaveProperty('value', 1500);
+    expect(financialAlert.thresholdValue).toHaveProperty('value', 4500);
 
-    expect(typeof alert.observedValue).toBe('number');
-    expect(typeof alert.baselineMedian).toBe('number');
-    expect(typeof alert.baselineMad).toBe('number');
-    expect(typeof alert.thresholdValue).toBe('number');
+    // Ratio metric alert (hold_percent) — bare number, DEF-NEVER
+    const ratioAlert = body.data.alerts[1];
+    expect(ratioAlert.metricType).toBe('hold_percent');
+    expect(typeof ratioAlert.observedValue).toBe('number');
+    expect(ratioAlert.observedValue).toBe(0.42);
+    expect(typeof ratioAlert.baselineMedian).toBe('number');
+    expect(ratioAlert.baselineMedian).toBe(0.38);
 
     // DEF-NEVER: metricType is a string label, never a FinancialValue
-    expect(typeof alert.metricType).toBe('string');
+    expect(typeof financialAlert.metricType).toBe('string');
+    expect(typeof ratioAlert.metricType).toBe('string');
   });
 });

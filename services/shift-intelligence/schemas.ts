@@ -2,25 +2,15 @@
  * ShiftIntelligenceService Zod Schemas (PRD-055)
  * Validates API request payloads for baseline compute and anomaly alert endpoints.
  *
- * ── Phase 1.1 Outbound-Schema Waiver (PRD-070 WS7A) ──────────────────────────
- * This file intentionally remains **request-only** in Phase 1.1. No outbound
- * (response) Zod schemas for `AnomalyAlertDTO`, `BaselineDTO`, `ShiftAlertDTO`,
- * or related envelopes are added in this phase.
- *
- * Per docs/10-prd/PRD-070-financial-telemetry-wave1-phase1.1-service-dto-envelope-v0.md
- * and docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md
- * § Planning Lock Resolution, GATE-070.6 deferred public shift-intelligence DTO
- * field-shape changes to Phase 1.2 because those fields already cross live
- * HTTP/UI boundaries and introducing outbound schema validation in this phase
- * would entangle the internal authority-routing work (WS7B) with the deferred
- * public-shape decisions.
- *
- * Reopen trigger: if leadership explicitly reopens a Phase 1.1 public
- * shift-intelligence exception slice, outbound schema work must return in an
- * amended EXEC-SPEC with explicit service/route/UI ownership — not as
- * incidental mapper churn in this file.
+ * ── Phase 1.2B-A Outbound Schemas (PRD-074 WS2_SHIFT_INTEL) ─────────────────
+ * DEF-007 waiver lifted. Outbound schemas for `AnomalyAlertDTO` and
+ * `ShiftAlertDTO` are now active. These schemas validate mapper output at the
+ * service boundary via parse calls at the end of each mapper. Route handlers
+ * remain pass-through and do not call these schemas.
  */
 import { z } from 'zod';
+
+import { financialValueSchema } from '@/lib/financial/schema';
 
 /** POST /api/shift-intelligence/compute-baselines request body */
 export const computeBaselineInputSchema = z.object({
@@ -69,3 +59,92 @@ export type AcknowledgeAlertRequestBody = z.infer<
   typeof acknowledgeAlertSchema
 >;
 export type AlertsQueryParams = z.infer<typeof alertsQuerySchema>;
+
+// ── Phase 1.2B-A Outbound Schemas (PRD-074 WS2_SHIFT_INTEL) ─────────────────
+// DEF-007 waiver lifted. Parse calls at the end of mapAnomalyAlertRow and
+// mapShiftAlertRow validate the constructed DTO shape at the service boundary.
+
+const financialMetricTypeSchema = z.enum([
+  'drop_total',
+  'win_loss_cents',
+  'cash_obs_total',
+]);
+
+const alertBaseSchema = z.object({
+  tableId: z.string(),
+  tableLabel: z.string(),
+  readinessState: z.enum([
+    'ready',
+    'stale',
+    'missing',
+    'insufficient_data',
+    'compute_failed',
+  ]),
+  deviationScore: z.number().nullable(),
+  isAnomaly: z.boolean(),
+  severity: z.enum(['info', 'warn', 'critical']).nullable(),
+  direction: z.enum(['above', 'below']).nullable(),
+  baselineGamingDay: z.string().nullable(),
+  baselineSampleCount: z.number().int().nullable(),
+  message: z.string(),
+  sessionCount: z.number().int().nullable(),
+  peakDeviation: z.number().nullable(),
+  recommendedAction: z.string().nullable(),
+});
+
+export const anomalyAlertDTOSchema = z.union([
+  alertBaseSchema.extend({
+    metricType: financialMetricTypeSchema,
+    observedValue: financialValueSchema.nullable(),
+    baselineMedian: financialValueSchema.nullable(),
+    baselineMad: financialValueSchema.nullable(),
+    thresholdValue: financialValueSchema.nullable(),
+  }),
+  alertBaseSchema.extend({
+    metricType: z.literal('hold_percent'),
+    observedValue: z.number().nullable(),
+    baselineMedian: z.number().nullable(),
+    baselineMad: z.number().nullable(),
+    thresholdValue: z.number().nullable(),
+  }),
+]);
+
+const acknowledgmentSchema = z
+  .object({
+    acknowledgedBy: z.string(),
+    acknowledgedByName: z.string().nullable(),
+    notes: z.string().nullable(),
+    isFalsePositive: z.boolean(),
+    createdAt: z.string(),
+  })
+  .nullable();
+
+const shiftAlertBaseSchema = z.object({
+  id: z.string().uuid(),
+  tableId: z.string(),
+  tableLabel: z.string(),
+  gamingDay: z.string(),
+  status: z.enum(['open', 'acknowledged', 'resolved']),
+  severity: z.enum(['low', 'medium', 'high']),
+  deviationScore: z.number().nullable(),
+  direction: z.enum(['above', 'below']).nullable(),
+  message: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  acknowledgment: acknowledgmentSchema,
+});
+
+export const shiftAlertDTOSchema = z.union([
+  shiftAlertBaseSchema.extend({
+    metricType: financialMetricTypeSchema,
+    observedValue: financialValueSchema.nullable(),
+    baselineMedian: financialValueSchema.nullable(),
+    baselineMad: financialValueSchema.nullable(),
+  }),
+  shiftAlertBaseSchema.extend({
+    metricType: z.literal('hold_percent'),
+    observedValue: z.number().nullable(),
+    baselineMedian: z.number().nullable(),
+    baselineMad: z.number().nullable(),
+  }),
+]);

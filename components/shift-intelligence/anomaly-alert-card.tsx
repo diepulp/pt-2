@@ -14,6 +14,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { AnomalyAlertDTO } from '@/services/shift-intelligence/dtos';
+import type { FinancialValue } from '@/types/financial';
+
+function getBaselineNumber(v: FinancialValue | number): number {
+  return typeof v === 'number' ? v : v.value;
+}
 
 interface AnomalyAlertCardProps {
   alert: AnomalyAlertDTO;
@@ -107,8 +112,12 @@ export function AnomalyAlertCard({ alert }: AnomalyAlertCardProps) {
           alert.baselineMedian != null &&
           alert.baselineMad != null && (
             <div className="flex gap-3 text-xs text-muted-foreground">
-              <span>Median: {alert.baselineMedian.toFixed(1)}</span>
-              <span>MAD: {alert.baselineMad.toFixed(1)}</span>
+              <span>
+                Median: {getBaselineNumber(alert.baselineMedian).toFixed(1)}
+              </span>
+              <span>
+                MAD: {getBaselineNumber(alert.baselineMad).toFixed(1)}
+              </span>
               {alert.baselineSampleCount != null && (
                 <span>Samples: {alert.baselineSampleCount}</span>
               )}

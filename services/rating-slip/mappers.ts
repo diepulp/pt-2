@@ -12,10 +12,10 @@
  */
 
 import { dollarsToCents } from '@/lib/financial/rounding';
+import { financialValueSchema } from '@/lib/financial/schema';
 import { narrowRpcJson } from '@/lib/json/narrows';
 import type { VisitLiveViewDTO } from '@/services/visit/dtos';
 import type { Database, Json } from '@/types/database.types';
-import type { FinancialValue } from '@/types/financial';
 
 import type {
   ActivePlayerForDashboardDTO,
@@ -336,35 +336,31 @@ export function toVisitLiveViewDTO(
     current_segment_started_at: data.current_segment_started_at,
     current_segment_average_bet: data.current_segment_average_bet,
     session_total_duration_seconds: data.session_total_duration_seconds,
-    // Phase 1.1 label-only: wrap dollar float in FinancialValue. /100 stays. Phase 1.2 removes /100 and canonicalizes to integer cents.
-    session_total_buy_in: {
-      value:
-        data.session_total_buy_in != null ? data.session_total_buy_in / 100 : 0,
+    // Phase 1.2 canonicalization complete: /100 removed, integer cents, financialValueSchema.int() active.
+    session_total_buy_in: financialValueSchema.parse({
+      value: data.session_total_buy_in ?? 0,
       type: 'actual',
       source: 'visit_financial_summary.total_in',
       completeness: {
         status: data.session_total_buy_in != null ? 'complete' : 'unknown',
       },
-    } satisfies FinancialValue,
-    session_total_cash_out: {
-      value:
-        data.session_total_cash_out != null
-          ? data.session_total_cash_out / 100
-          : 0,
+    }),
+    session_total_cash_out: financialValueSchema.parse({
+      value: data.session_total_cash_out ?? 0,
       type: 'actual',
       source: 'visit_financial_summary.total_out',
       completeness: {
         status: data.session_total_cash_out != null ? 'complete' : 'unknown',
       },
-    } satisfies FinancialValue,
-    session_net: {
-      value: data.session_net != null ? data.session_net / 100 : 0,
+    }),
+    session_net: financialValueSchema.parse({
+      value: data.session_net ?? 0,
       type: 'actual',
       source: 'visit_financial_summary.net_amount',
       completeness: {
         status: data.session_net != null ? 'complete' : 'unknown',
       },
-    } satisfies FinancialValue,
+    }),
     session_points_earned: data.session_points_earned,
     session_segment_count: data.session_segment_count,
     segments: data.segments,

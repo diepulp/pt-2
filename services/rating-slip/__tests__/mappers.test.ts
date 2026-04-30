@@ -27,6 +27,7 @@ import {
   toRatingSlipWithPausesDTOOrNull,
   toRatingSlipWithPlayerDTO,
   toRatingSlipWithPlayerDTOList,
+  toVisitLiveViewDTO,
 } from '../mappers';
 
 // === Test Data ===
@@ -964,6 +965,94 @@ describe('Rating Slip Mappers', () => {
       expect(result[0].player).not.toBeNull();
       expect(result[1].player).toBeNull();
       expect(result[2].player).not.toBeNull();
+    });
+  });
+
+  // ===========================================================================
+  // toVisitLiveViewDTO — BRIDGE-001 retirement (PRD-074 WS1_BRIDGE001)
+  // ===========================================================================
+  // Verify unit semantics: DEC-3 — mapper fixtures with source value 7500 must
+  // return value: 7500 exactly (integer cents pass-through, not /100 dollar float).
+
+  describe('toVisitLiveViewDTO — integer-cents canonicalization', () => {
+    const baseRpcRow = {
+      visit_id: 'visit-001',
+      player_id: 'player-001',
+      player_first_name: 'Jane',
+      player_last_name: 'Smith',
+      visit_status: 'open' as const,
+      started_at: '2026-04-30T10:00:00Z',
+      current_segment_slip_id: 'slip-001',
+      current_segment_table_id: 'table-001',
+      current_segment_table_name: 'BJ-01',
+      current_segment_seat_number: '3',
+      current_segment_status: 'open' as const,
+      current_segment_started_at: '2026-04-30T10:00:00Z',
+      current_segment_average_bet: 50,
+      session_total_duration_seconds: 3600,
+      session_total_buy_in: 7500,
+      session_total_cash_out: 6000,
+      session_net: -1500,
+      session_points_earned: 15,
+      session_segment_count: 1,
+    };
+
+    it('emits integer cents verbatim — 7500 stays 7500, not 75 dollars', () => {
+      const result = toVisitLiveViewDTO(baseRpcRow);
+
+      expect(result.session_total_buy_in.value).toBe(7500);
+      expect(result.session_total_cash_out.value).toBe(6000);
+      expect(result.session_net.value).toBe(-1500);
+    });
+
+    it('financial envelopes pass financialValueSchema.parse() — int() constraint active', () => {
+      const result = toVisitLiveViewDTO(baseRpcRow);
+
+      expect(() =>
+        financialValueSchema.parse(result.session_total_buy_in),
+      ).not.toThrow();
+      expect(() =>
+        financialValueSchema.parse(result.session_total_cash_out),
+      ).not.toThrow();
+      expect(() =>
+        financialValueSchema.parse(result.session_net),
+      ).not.toThrow();
+    });
+
+    it('completeness is complete for non-null DB values', () => {
+      const result = toVisitLiveViewDTO(baseRpcRow);
+
+      expect(result.session_total_buy_in.completeness.status).toBe('complete');
+      expect(result.session_total_cash_out.completeness.status).toBe(
+        'complete',
+      );
+      expect(result.session_net.completeness.status).toBe('complete');
+    });
+
+    it('completeness is unknown for null DB values and value is 0', () => {
+      const result = toVisitLiveViewDTO({
+        ...baseRpcRow,
+        session_total_buy_in: null as unknown as number,
+        session_total_cash_out: null as unknown as number,
+        session_net: null as unknown as number,
+      });
+
+      expect(result.session_total_buy_in.value).toBe(0);
+      expect(result.session_total_buy_in.completeness.status).toBe('unknown');
+    });
+
+    it('source provenance is correctly set', () => {
+      const result = toVisitLiveViewDTO(baseRpcRow);
+
+      expect(result.session_total_buy_in.source).toBe(
+        'visit_financial_summary.total_in',
+      );
+      expect(result.session_total_cash_out.source).toBe(
+        'visit_financial_summary.total_out',
+      );
+      expect(result.session_net.source).toBe(
+        'visit_financial_summary.net_amount',
+      );
     });
   });
 

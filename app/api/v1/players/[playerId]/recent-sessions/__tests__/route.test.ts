@@ -1,23 +1,23 @@
 /** @jest-environment node */
 
 /**
- * Recent Sessions Route — Phase 1.1 Envelope Smoke Test
+ * Recent Sessions Route — Phase 1.2B-A Integer Cents Assertion
  *
  * Minimum: one success case asserting FinancialValue envelope shape.
- * Value is a dollar float (e.g. 500.00), NOT integer cents — Phase 1.1.
- * Full test matrix (unauthorized, invalid-params, 404) deferred to Phase 1.2.
+ * Value is integer cents after BRIDGE-001 retirement (Phase 1.2B-A).
+ * Full test matrix (unauthorized, invalid-params, 404) deferred to Phase 1.2B-B.
  *
- * @see EXEC-072 WS3 — route-boundary-tests-born gate
+ * @see EXEC-074 WS3 — BRIDGE-001 retirement
  */
 
 import { NextRequest } from 'next/server';
 
 // ---------------------------------------------------------------------------
-// Fixtures — FinancialValue dollar floats, not cents
+// Fixtures — FinancialValue integer cents (BRIDGE-001 retired, Phase 1.2B-A)
 // ---------------------------------------------------------------------------
 
 const FINANCIAL_VALUE_FIXTURE = {
-  value: 500.0,
+  value: 50000,
   type: 'actual' as const,
   source: 'visit_financial_summary.total_in',
   completeness: { status: 'complete' as const },
@@ -34,13 +34,13 @@ const SESSION_FIXTURE = {
   total_duration_seconds: 7200,
   total_buy_in: FINANCIAL_VALUE_FIXTURE,
   total_cash_out: {
-    value: 450.0,
+    value: 45000,
     type: 'actual' as const,
     source: 'visit_financial_summary.total_out',
     completeness: { status: 'complete' as const },
   },
   net: {
-    value: -50.0,
+    value: -5000,
     type: 'actual' as const,
     source: 'visit_financial_summary.net_amount',
     completeness: { status: 'complete' as const },
@@ -100,7 +100,7 @@ describe('GET /api/v1/players/[playerId]/recent-sessions', () => {
     });
   });
 
-  it('returns FinancialValue envelope on session financial fields (dollar float, Phase 1.2A)', async () => {
+  it('returns FinancialValue envelope on session financial fields with integer cents (Phase 1.2B-A)', async () => {
     const request = new NextRequest(
       `http://localhost:3000/api/v1/players/${PLAYER_ID}/recent-sessions`,
     );
@@ -115,22 +115,20 @@ describe('GET /api/v1/players/[playerId]/recent-sessions', () => {
     const session = body.data.sessions[0];
     expect(session).toBeDefined();
 
-    // BRIDGE-001 active: value is dollar-float at Phase 1.2A.
-    // Integer value assertion added in Phase 1.2B after BRIDGE-001 retirement.
-    // See: docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json
-    expect(typeof session.total_buy_in.value).toBe('number');
+    // BRIDGE-001 retired (Phase 1.2B-A): value is integer cents.
+    expect(session.total_buy_in.value).toBe(50000);
     expect(session.total_buy_in.type).toBe('actual');
     expect(typeof session.total_buy_in.source).toBe('string');
-    expect(session.total_buy_in.completeness.status).toBeDefined();
+    expect(session.total_buy_in.completeness.status).toBe('complete');
 
-    expect(typeof session.total_cash_out.value).toBe('number');
+    expect(session.total_cash_out.value).toBe(45000);
     expect(session.total_cash_out.type).toBe('actual');
     expect(typeof session.total_cash_out.source).toBe('string');
-    expect(session.total_cash_out.completeness.status).toBeDefined();
+    expect(session.total_cash_out.completeness.status).toBe('complete');
 
-    expect(typeof session.net.value).toBe('number');
+    expect(session.net.value).toBe(-5000);
     expect(session.net.type).toBe('actual');
     expect(typeof session.net.source).toBe('string');
-    expect(session.net.completeness.status).toBeDefined();
+    expect(session.net.completeness.status).toBe('complete');
   });
 });

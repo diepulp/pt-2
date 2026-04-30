@@ -1,19 +1,19 @@
 /** @jest-environment node */
 
 /**
- * Visit Live View Route — Phase 1.1 Envelope Smoke Test
+ * Visit Live View Route — Phase 1.2B-A Integer Cents Assertion
  *
  * Minimum: one success case asserting FinancialValue envelope shape.
- * Value is a dollar float (e.g. 75.00), NOT integer cents — Phase 1.1.
- * Full test matrix (unauthorized, invalid-params, 404) deferred to Phase 1.2.
+ * Value is integer cents after BRIDGE-001 retirement (Phase 1.2B-A).
+ * Full test matrix (unauthorized, invalid-params, 404) deferred to Phase 1.2B-B.
  *
- * @see EXEC-072 WS3 — route-boundary-tests-born gate
+ * @see EXEC-074 WS3 — BRIDGE-001 retirement
  */
 
 import { NextRequest } from 'next/server';
 
 // ---------------------------------------------------------------------------
-// Fixture — FinancialValue dollar floats, not cents
+// Fixture — FinancialValue integer cents (BRIDGE-001 retired, Phase 1.2B-A)
 // ---------------------------------------------------------------------------
 
 const LIVE_VIEW_FIXTURE = {
@@ -32,19 +32,19 @@ const LIVE_VIEW_FIXTURE = {
   current_segment_average_bet: null,
   session_total_duration_seconds: 3600,
   session_total_buy_in: {
-    value: 75.0,
+    value: 7500,
     type: 'actual' as const,
     source: 'visit_financial_summary.total_in',
     completeness: { status: 'complete' as const },
   },
   session_total_cash_out: {
-    value: 0.0,
+    value: 0,
     type: 'actual' as const,
     source: 'visit_financial_summary.total_out',
     completeness: { status: 'complete' as const },
   },
   session_net: {
-    value: -75.0,
+    value: -7500,
     type: 'actual' as const,
     source: 'visit_financial_summary.net_amount',
     completeness: { status: 'complete' as const },
@@ -100,7 +100,7 @@ describe('GET /api/v1/visits/[visitId]/live-view', () => {
     mockGetVisitLiveView.mockResolvedValue(LIVE_VIEW_FIXTURE);
   });
 
-  it('returns FinancialValue envelope on session financial fields (dollar float, Phase 1.2A)', async () => {
+  it('returns FinancialValue envelope on session financial fields with integer cents (Phase 1.2B-A)', async () => {
     const request = new NextRequest(
       `http://localhost:3000/api/v1/visits/${VISIT_ID}/live-view`,
     );
@@ -115,22 +115,22 @@ describe('GET /api/v1/visits/[visitId]/live-view', () => {
     const liveView = body.data;
     expect(liveView).toBeDefined();
 
-    // BRIDGE-001 active: value is dollar-float at Phase 1.2A.
-    // Integer value assertion added in Phase 1.2B after BRIDGE-001 retirement.
-    // See: docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json
-    expect(typeof liveView.session_total_buy_in.value).toBe('number');
+    // BRIDGE-001 retired (Phase 1.2B-A): value is integer cents.
+    expect(liveView.session_total_buy_in.value).toBe(7500);
     expect(liveView.session_total_buy_in.type).toBe('actual');
     expect(typeof liveView.session_total_buy_in.source).toBe('string');
-    expect(liveView.session_total_buy_in.completeness.status).toBeDefined();
+    expect(liveView.session_total_buy_in.completeness.status).toBe('complete');
 
-    expect(typeof liveView.session_total_cash_out.value).toBe('number');
+    expect(liveView.session_total_cash_out.value).toBe(0);
     expect(liveView.session_total_cash_out.type).toBe('actual');
     expect(typeof liveView.session_total_cash_out.source).toBe('string');
-    expect(liveView.session_total_cash_out.completeness.status).toBeDefined();
+    expect(liveView.session_total_cash_out.completeness.status).toBe(
+      'complete',
+    );
 
-    expect(typeof liveView.session_net.value).toBe('number');
+    expect(liveView.session_net.value).toBe(-7500);
     expect(liveView.session_net.type).toBe('actual');
     expect(typeof liveView.session_net.source).toBe('string');
-    expect(liveView.session_net.completeness.status).toBeDefined();
+    expect(liveView.session_net.completeness.status).toBe('complete');
   });
 });

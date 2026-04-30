@@ -102,22 +102,28 @@ describe('ShiftIntelligence Mappers', () => {
       recommended_action: null as string | null,
     };
 
-    it('maps snake_case alert row to camelCase DTO', () => {
+    it('maps snake_case alert row to camelCase DTO — financial metric FinancialValue construction', () => {
       const result = mapAnomalyAlertRow(baseRow);
 
+      const fv = (value: number) => ({
+        value,
+        type: 'estimated',
+        source: 'table_session.drop',
+        completeness: { status: 'complete' },
+      });
       expect(result).toEqual({
         tableId: 'table-abc',
         tableLabel: 'BJ-01',
         metricType: 'drop_total',
         readinessState: 'ready',
-        observedValue: 15000,
-        baselineMedian: 12000,
-        baselineMad: 1500,
+        observedValue: fv(15000),
+        baselineMedian: fv(12000),
+        baselineMad: fv(1500),
         deviationScore: 2.0,
         isAnomaly: false,
         severity: null,
         direction: 'above',
-        thresholdValue: 4500,
+        thresholdValue: fv(4500),
         baselineGamingDay: '2026-03-22',
         baselineSampleCount: 7,
         message: 'Within normal range',
@@ -125,6 +131,26 @@ describe('ShiftIntelligence Mappers', () => {
         peakDeviation: 2.5,
         recommendedAction: null,
       });
+    });
+
+    it('hold_percent carve-out — retains bare number | null (DEF-NEVER)', () => {
+      const row = {
+        ...baseRow,
+        metric_type: 'hold_percent',
+        observed_value: 0.42,
+        baseline_median: 0.38,
+        baseline_mad: 0.04,
+        threshold_value: 0.15,
+      };
+      const result = mapAnomalyAlertRow(row);
+
+      expect(result.metricType).toBe('hold_percent');
+      expect(result.observedValue).toBe(0.42);
+      expect(result.baselineMedian).toBe(0.38);
+      expect(result.baselineMad).toBe(0.04);
+      expect(result.thresholdValue).toBe(0.15);
+      // Confirm no FinancialValue wrapping
+      expect(typeof result.observedValue).toBe('number');
     });
 
     it('maps anomaly alert with severity', () => {

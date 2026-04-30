@@ -1071,9 +1071,9 @@ paths:
     get:
       summary: Get visit live-view session aggregates
       description: >
-        BRIDGE-001 surface. Session totals (session_total_buy_in, session_total_cash_out,
-        session_net) are FinancialValue envelopes carrying dollar-float values at Phase 1.2A.
-        Phase 1.2B will canonicalize these to integer cents after BRIDGE-001 retirement.
+        BRIDGE-001 retired (Phase 1.2B-A). Session totals (session_total_buy_in,
+        session_total_cash_out, session_net) are FinancialValue envelopes with
+        integer-cent values.
         current_segment_average_bet is bare number — operator input (WAVE-1-CLASSIFICATION-RULES §6.2 carve-out).
         session_points_earned is bare number — points unit system (§6.3 carve-out).
       tags: [Visits]
@@ -1111,20 +1111,17 @@ paths:
                             allOf:
                               - $ref: '#/components/schemas/FinancialValue'
                             description: >
-                              BRIDGE-001 active — value is dollar-float at Phase 1.2A.
-                              Integer cents after Phase 1.2B canonicalization.
+                              BRIDGE-001 retired (Phase 1.2B-A). Value is integer cents.
                           session_total_cash_out:
                             allOf:
                               - $ref: '#/components/schemas/FinancialValue'
                             description: >
-                              BRIDGE-001 active — value is dollar-float at Phase 1.2A.
-                              Integer cents after Phase 1.2B canonicalization.
+                              BRIDGE-001 retired (Phase 1.2B-A). Value is integer cents.
                           session_net:
                             allOf:
                               - $ref: '#/components/schemas/FinancialValue'
                             description: >
-                              BRIDGE-001 active — value is dollar-float at Phase 1.2A.
-                              Integer cents after Phase 1.2B canonicalization.
+                              BRIDGE-001 retired (Phase 1.2B-A). Value is integer cents.
                           current_segment_average_bet:
                             type: number
                             nullable: true
@@ -1144,9 +1141,8 @@ paths:
     get:
       summary: Get player recent sessions
       description: >
-        BRIDGE-001 surface. Session totals (total_buy_in, total_cash_out, net) are
-        FinancialValue envelopes carrying dollar-float values at Phase 1.2A.
-        Phase 1.2B will canonicalize to integer cents after BRIDGE-001 retirement.
+        BRIDGE-001 retired (Phase 1.2B-A). Session totals (total_buy_in,
+        total_cash_out, net) are FinancialValue envelopes with integer-cent values.
         points_earned is bare number — points unit system (§6.3 carve-out).
       tags: [Players]
       security:
@@ -1183,20 +1179,17 @@ paths:
                                   allOf:
                                     - $ref: '#/components/schemas/FinancialValue'
                                   description: >
-                                    BRIDGE-001 active — value is dollar-float at Phase 1.2A.
-                                    Integer cents after Phase 1.2B canonicalization.
+                                    BRIDGE-001 retired (Phase 1.2B-A). Value is integer cents.
                                 total_cash_out:
                                   allOf:
                                     - $ref: '#/components/schemas/FinancialValue'
                                   description: >
-                                    BRIDGE-001 active — value is dollar-float at Phase 1.2A.
-                                    Integer cents after Phase 1.2B canonicalization.
+                                    BRIDGE-001 retired (Phase 1.2B-A). Value is integer cents.
                                 net:
                                   allOf:
                                     - $ref: '#/components/schemas/FinancialValue'
                                   description: >
-                                    BRIDGE-001 active — value is dollar-float at Phase 1.2A.
-                                    Integer cents after Phase 1.2B canonicalization.
+                                    BRIDGE-001 retired (Phase 1.2B-A). Value is integer cents.
                                 points_earned:
                                   type: number
                                   description: >
@@ -1384,16 +1377,16 @@ paths:
                             tables_active: { type: integer }
                             created_at: { type: string }
 
-  # ── Family 7: Shift intelligence — anomaly alerts (EXEC-071 WS2, Phase 1.2A representative) ─
+  # ── Family 7: Shift intelligence — anomaly alerts (EXEC-074 WS3, Phase 1.2B-A canonicalized) ─
   /shift-intelligence/anomaly-alerts:
     get:
       summary: Get shift anomaly alerts
       description: >
         Baseline-aware anomaly alerts per table/metric pair.
-        DEC-5 (EXEC-071): observedValue, baselineMedian, baselineMad, thresholdValue are
-        bare number|null — Phase 1.2B will promote to FinancialValue after AnomalyAlertDTO/ShiftAlertDTO
-        type promotion. When metricType is 'hold_percent', all numeric fields are dimensionless ratios —
-        Dimensionless ratio. Never FinancialValue. DEF-NEVER invariant applies across all phases.
+        BRIDGE-001 retired (Phase 1.2B-A). observedValue, baselineMedian, baselineMad,
+        thresholdValue are FinancialValue | null when metricType is drop_total |
+        win_loss_cents | cash_obs_total. When metricType is hold_percent, these fields
+        are bare number | null (DEF-NEVER invariant — never FinancialValue).
       tags: [ShiftIntelligence]
       security:
         - bearerAuth: []
@@ -1436,29 +1429,41 @@ paths:
                                   type: string
                                   enum: [ready, stale, missing, insufficient_data, compute_failed]
                                 observedValue:
-                                  type: number
+                                  oneOf:
+                                    - $ref: '#/components/schemas/FinancialValue'
+                                    - type: number
                                   nullable: true
                                   description: >
-                                    Bare numeric field. Phase 1.2B will promote to FinancialValue after
-                                    AnomalyAlertDTO/ShiftAlertDTO type promotion.
+                                    BRIDGE-001 retired (Phase 1.2B-A). FinancialValue (integer cents)
+                                    when metricType is drop_total | win_loss_cents | cash_obs_total.
+                                    Bare number | null when metricType is hold_percent (DEF-NEVER).
                                 baselineMedian:
-                                  type: number
+                                  oneOf:
+                                    - $ref: '#/components/schemas/FinancialValue'
+                                    - type: number
                                   nullable: true
                                   description: >
-                                    Bare numeric field. Phase 1.2B will promote to FinancialValue after
-                                    AnomalyAlertDTO/ShiftAlertDTO type promotion.
+                                    BRIDGE-001 retired (Phase 1.2B-A). FinancialValue (integer cents)
+                                    when metricType is drop_total | win_loss_cents | cash_obs_total.
+                                    Bare number | null when metricType is hold_percent (DEF-NEVER).
                                 baselineMad:
-                                  type: number
+                                  oneOf:
+                                    - $ref: '#/components/schemas/FinancialValue'
+                                    - type: number
                                   nullable: true
                                   description: >
-                                    Bare numeric field. Phase 1.2B will promote to FinancialValue after
-                                    AnomalyAlertDTO/ShiftAlertDTO type promotion.
+                                    BRIDGE-001 retired (Phase 1.2B-A). FinancialValue (integer cents)
+                                    when metricType is drop_total | win_loss_cents | cash_obs_total.
+                                    Bare number | null when metricType is hold_percent (DEF-NEVER).
                                 thresholdValue:
-                                  type: number
+                                  oneOf:
+                                    - $ref: '#/components/schemas/FinancialValue'
+                                    - type: number
                                   nullable: true
                                   description: >
-                                    Bare numeric field. Phase 1.2B will promote to FinancialValue after
-                                    AnomalyAlertDTO/ShiftAlertDTO type promotion.
+                                    BRIDGE-001 retired (Phase 1.2B-A). FinancialValue (integer cents)
+                                    when metricType is drop_total | win_loss_cents | cash_obs_total.
+                                    Bare number | null when metricType is hold_percent (DEF-NEVER).
                                 deviationScore: { type: number, nullable: true }
                                 isAnomaly: { type: boolean }
                                 severity: { type: string, nullable: true, enum: [info, warn, critical] }
