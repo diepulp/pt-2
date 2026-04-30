@@ -211,4 +211,34 @@ describe('GET /api/v1/shift-intelligence/anomaly-alerts -- boundary test', () =>
 
     expect(response.status).toBeGreaterThanOrEqual(400);
   });
+
+  // ── DEC-5 (EXEC-071 WS3): bare number|null — not FinancialValue ─────────────
+  // DEC-5 active: observedValue, baselineMedian, baselineMad, thresholdValue are
+  // bare number|null at Phase 1.2A (WS7A waiver). FinancialValue wrapping deferred
+  // to Phase 1.2B.
+  // See: docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json
+
+  it('DEC-5: numeric alert fields are bare number|null — not FinancialValue objects', async () => {
+    const request = new NextRequest(
+      new URL(
+        '/api/v1/shift-intelligence/anomaly-alerts?window_start=2026-03-22T00:00:00Z&window_end=2026-03-22T23:59:59Z',
+        'http://localhost:3000',
+      ),
+      { method: 'GET' },
+    );
+    const response = await GET(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+
+    const alert = body.data.alerts[0];
+
+    expect(typeof alert.observedValue).toBe('number');
+    expect(typeof alert.baselineMedian).toBe('number');
+    expect(typeof alert.baselineMad).toBe('number');
+    expect(typeof alert.thresholdValue).toBe('number');
+
+    // DEF-NEVER: metricType is a string label, never a FinancialValue
+    expect(typeof alert.metricType).toBe('string');
+  });
 });

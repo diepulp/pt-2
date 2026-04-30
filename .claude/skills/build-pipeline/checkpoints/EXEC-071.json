@@ -1,0 +1,110 @@
+{
+  "id": "EXEC-071",
+  "prd": "PRD-071",
+  "exec_spec": "docs/21-exec-spec/PRD-071/EXEC-071-financial-telemetry-wave1-phase1.2a-api-transport-stabilization.md",
+  "status": "complete",
+  "created_at": "2026-04-29T22:00:00Z",
+  "updated_at": "2026-04-30T02:00:00Z",
+  "complexity_prescreen": "streamlined",
+  "complexity_override": null,
+  "gov010_check": "passed",
+  "write_path_classification": "none",
+  "e2e_mandate_waiver": null,
+  "fib_s_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2/FIB-S-FINANCIAL-TELEMETRY-PHASE-1-2-API-ENVELOPE.json",
+  "fib_s_version": "1.1.0",
+  "fib_s_loaded": true,
+  "current_phase": 4,
+  "completed_workstreams": ["WS1", "WS2", "WS3"],
+  "pending_workstreams": ["WS4"],
+  "dormant_workstreams": [],
+  "artifacts": {
+    "WS1": {
+      "completed_at": "2026-04-29T23:45:00Z",
+      "gate": "PASS",
+      "casino_id_classification": {
+        "financial-transactions/route.ts": "OUT-OF-SCOPE-WITH-RATIONALE — casino_id only in service call via mwCtx.rlsContext!.casinoId; not in request contract",
+        "financial-transactions/[id]/route.ts": "OUT-OF-SCOPE-WITH-RATIONALE — same pattern; request schema clean",
+        "mtl/gaming-day-summary/route.ts": "REMOVE — implemented; always mwCtx.rlsContext!.casinoId",
+        "mtl/entries/route.ts": "REMOVE — implemented; query.casino_id override removed",
+        "loyalty/balances/route.ts": "REMOVE — no active consumer passing casino_id found in hooks/components/app; casino_id removed from schema and route; derives from mwCtx.rlsContext!.casinoId",
+        "visits/[visitId]/live-view/route.ts": "OUT-OF-SCOPE-WITH-RATIONALE — no casino_id in request contract",
+        "players/[playerId]/recent-sessions/route.ts": "OUT-OF-SCOPE-WITH-RATIONALE — no casino_id in request contract",
+        "shift-checkpoints/route.ts": "OUT-OF-SCOPE-WITH-RATIONALE — no casino_id in request contract",
+        "shift-intelligence/anomaly-alerts/route.ts": "OUT-OF-SCOPE-WITH-RATIONALE — no casino_id in request contract",
+        "all other representative routes": "OUT-OF-SCOPE-WITH-RATIONALE — casino_id absent from request contracts"
+      },
+      "spot_checks": {
+        "q2_100_math_in_routes": "CLEAN — 0 hits (grep /100 app/api/v1 --include=route.ts)",
+        "q5_total_chips_out": "CLEAN — pre-resolved at EXEC-SPEC generation",
+        "type_source_completeness_assignment": "CLEAN — 0 hits in route handlers",
+        "hold_percent_bare_at_shift_routes": "CONFIRMED — no FinancialValue construction in shift route handlers"
+      },
+      "files_changed": [
+        "services/mtl/schemas.ts",
+        "services/loyalty/schemas.ts",
+        "app/api/v1/mtl/gaming-day-summary/route.ts",
+        "app/api/v1/mtl/entries/route.ts",
+        "app/api/v1/loyalty/balances/route.ts",
+        "services/mtl/http.ts",
+        "hooks/mtl/use-mtl-entries.ts",
+        "hooks/mtl/use-gaming-day-summary.ts",
+        "hooks/mtl/use-patron-daily-total.ts"
+      ],
+      "type_check": "PASS — exit 0"
+    },
+    "WS3": {
+      "completed_at": "2026-04-30T01:30:00Z",
+      "gate": "PASS",
+      "tests_passing": 47,
+      "files_written": [
+        "app/api/v1/mtl/gaming-day-summary/__tests__/route.test.ts",
+        "app/api/v1/mtl/entries/__tests__/route.test.ts",
+        "app/api/v1/loyalty/balances/__tests__/route.test.ts",
+        "app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts",
+        "app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts",
+        "services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts"
+      ],
+      "dec1_remove_tests": "PASS — gaming-day-summary + entries: spoofed casino_id stripped, service receives rlsContext.casinoId",
+      "dec3_remove_tests": "PASS — loyalty/balances: getBalance called with rlsContext.casinoId ('c1'), not spoofed query param",
+      "bridge001_spot_checks": "PASS — live-view + recent-sessions: all 3 FinancialValue fields (value, type, source, completeness.status) asserted; typeof value === 'number' (dollar-float correct); BRIDGE-001 comment present; no integer assertions",
+      "dec5_bare_number_tests": "PASS — anomaly-alerts: observedValue, baselineMedian, baselineMad, thresholdValue typeof === 'number'; metricType typeof === 'string' (DEF-NEVER)",
+      "integer_guard": "CLEAN — grep confirmed no integer assertions on BRIDGE-001 value fields"
+    },
+    "WS2": {
+      "completed_at": "2026-04-30T00:30:00Z",
+      "gate": "PASS",
+      "financial_value_component": "DEFINED — components/schemas/FinancialValue at line 2181; value: number, type: enum[actual|estimated|observed|compliance], source: string, completeness.status: enum[complete|partial|unknown]",
+      "path_families_covered": [
+        "Family 1: /financial-transactions (GET list + POST), /financial-transactions/{transaction_id} (GET detail)",
+        "Family 2: /visits/{visit_id}/financial-summary (GET), /visits/{visit_id}/live-view (GET, BRIDGE-001)",
+        "Family 3: /players/{player_id}/recent-sessions (GET, BRIDGE-001)",
+        "Family 4: /rating-slips/{rating_slip_id}/modal-data (GET, average_bet carve-out)",
+        "Family 5: /table-sessions (GET), /table-sessions/{id}/rundown (GET)",
+        "Family 6: /shift-checkpoints (GET, DEF-NEVER annotated)",
+        "Family 7: /shift-intelligence/anomaly-alerts (GET, DEC-5 bare number|null)",
+        "Family 8: /shift-dashboards/metrics/tables (GET, hold_percent DEF-NEVER)",
+        "Family 9: /shift-dashboards/cash-observations/summary (GET)",
+        "Family 10: /mtl/gaming-day-summary (GET, casino_id REMOVE), /mtl/entries (casino_id REMOVE applied)",
+        "Family 11: /loyalty/balances (casino_id REMOVE, from first edit), /loyalty/issue (POST)"
+      ],
+      "bridge_001_check": "PASS — recent-sessions and live-view use $ref FinancialValue; value: type: number NOT integer",
+      "dec5_check": "PASS — anomaly-alerts observedValue/baselineMedian/baselineMad/thresholdValue: bare number|null with Phase 1.2B upgrade note",
+      "def_never_check": "PASS — hold_percent annotated as dimensionless ratio, DEF-NEVER invariant, across shift-checkpoints, anomaly-alerts, shift-dashboards/metrics/tables",
+      "carve_out_annotations": "PASS — average_bet (operator input §6), loyalty points (§6.3), deferred bare-number fields (DEFERRED Phase 1.2)",
+      "casino_id_mtl_entries_removed": "PASS — casino_id param removed from /mtl/entries GET",
+      "casino_id_mtl_gaming_day_summary_absent": "PASS — /mtl/gaming-day-summary new path entry has no casino_id param",
+      "no_duplicate_loyalty_balances": "PASS — existing path updated in-place in WS2 first edit; no duplicate introduced",
+      "files_changed": [
+        "docs/25-api-data/api-surface.openapi.yaml"
+      ],
+      "annotation_instances": 33
+    }
+  },
+  "open_question_resolutions": {
+    "Q-1": "casino_id pre-classified per route from code inspection; WS1 finalizes per DEC-1/DEC-3",
+    "Q-2": "CLEAN — no /100 or dollarsToCents math in any route file (grep confirmed)",
+    "Q-3": "All 11 families get representative path entries; 2 routes per family where both collection and aggregate exist",
+    "Q-4": "REMOVE — no active consumer of casino_id at loyalty/balances found in hooks/components/app",
+    "Q-5": "CLEAN — zero totalChipsOut references (GATE-070.7 confirmed)"
+  }
+}

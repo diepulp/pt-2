@@ -4,7 +4,7 @@ description: Live status board for Wave 1 (Surface Contract) and Wave 2 (Dual-La
 type: progress-tracker
 status: Active
 started: 2026-04-23
-last_updated: 2026-04-25 (Phase 1.1 closed — WS9 complete, Phase 1.2 handoff package produced)
+last_updated: 2026-04-30 (Phase 1.2A closed — EXEC-071 WS1/WS2/WS3 complete, DoD gates passed)
 tracks:
 - ROLLOUT-ROADMAP.md
 - ../decisions/ADR-FINANCIAL-FACT-MODEL.md
@@ -20,6 +20,8 @@ tracks:
 
 > Single source of truth for Wave 1/Wave 2 execution status.
 > Update inline as deliverables ship. Do not patch the frozen decision docs — use the supersession process.
+
+> **Machine-readable projection:** `ROLLOUT-TRACKER.json` (same directory) mirrors this file in a structured format for `/financial-model-authority` skill orientation. Keep both in sync when phase state changes.
 
 > ⚠️ **Governance:** Every phase ≥ 1.1 requires PRD → EXEC-SPEC → `/build-pipeline`. See `ROLLOUT-ROADMAP.md §2.5`. Checkbox completion in this tracker does NOT authorize starting the next phase; Phase N+1's PRD must land first.
 
@@ -43,7 +45,7 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 | ----- | ----------------------------- | --------- | --------- | ------------------- | --------- |
 | 1     | 1.0 Prep & Inventory          | ➖ Exempt | ➖ Exempt | ✅ Artifacts shipped | ✅ PASSED 2026-04-23 (SIGNOFF doc) |
 | 1     | 1.1 Service DTO Envelope      | ✅ PRD-070 | ✅ EXEC-070 (amended 3×) | ✅ All WS0–WS9 closed | ✅ PASSED 2026-04-25 (WS9 + DoD gates) |
-| 1     | 1.2 API Envelope at Wire      | 🟦 Drafted (PRD-071) | ⬜        | ⬜                  | —         |
+| 1     | 1.2A API Transport Stabilization | ✅ PRD-071 | ✅ EXEC-071 | ✅ WS1–WS3 closed | ✅ PASSED 2026-04-30 |
 | 1     | 1.3 UI Split Display          | ⬜        | ⬜        | ⬜                  | —         |
 | 1     | 1.4 Validation + Lint + I5    | ⬜        | ⬜        | ⬜                  | —         |
 | 1     | 1.5 Rollout & Sign-off        | ⬜        | ⬜        | ⬜                  | —         |
@@ -123,28 +125,42 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 
 ---
 
-### Phase 1.2 — API Layer: Envelope at the Wire  ⬜
+### Phase 1.2A — API Transport Stabilization  ✅ PASSED 2026-04-30
 
-Blocked on: Phase 1.1 exit gate + ~~**Phase 1.2 PRD**~~ 🟦 Drafted (PRD-071, 2026-04-24) + **Phase 1.2 EXEC-SPEC**.
+~~Blocked on: Phase 1.1 exit gate + Phase 1.2 PRD + Phase 1.2 EXEC-SPEC.~~
 
-**Pipeline chain:** `/prd-writer` → `/lead-architect` EXEC-SPEC → `/build-pipeline` dispatching `/api-builder` (+ `/backend-service-builder` for DTO contract touches).
+**Complete:** EXEC-071 all workstreams closed (WS1–WS3). DoD gates passed 2026-04-30. Phase 1.2B (canonicalization) is the successor phase.
 
+**Pipeline chain:**
 - [x] PRD-071 drafted via `/prd-writer` citing Phase 1.1 handoff, route inventory, OpenAPI baseline, and forbidden-label/deprecation rules (2026-04-24)
-- [ ] EXEC-SPEC scaffolded via `/lead-architect`
-- [ ] `/build-pipeline` executed; dispatches `/api-builder` (+ `/backend-service-builder` for residual contract touchpoints)
+- [x] EXEC-071 scaffolded via `/lead-architect` + guardrail audit (`OVERENGINEERING_GUARDRAIL_FIN_TELEMETRY.md`) — transport-stabilization scope enforced (2026-04-29)
+- [x] `/build-pipeline` executed — WS1–WS3 shipped 2026-04-30
+
+**Decisions resolved in Phase 1.2A:**
+- **DEC-1:** `casino_id` REMOVE — MTL routes (`gaming-day-summary`, `entries`) always use `mwCtx.rlsContext!.casinoId`; client-provided `casino_id` stripped from schema and handler
+- **DEC-3:** `casino_id` REMOVE on `loyalty/balances` — no active consumer found; `getBalance` receives `mwCtx.rlsContext!.casinoId` only
+- **DEC-4:** BRIDGE-001 surfaces (`recent-sessions`, `live-view`) — `value` type: `number` (dollar-float correct at Phase 1.2A); integer assertion deferred to Phase 1.2B after BRIDGE-001 retirement
+- **DEC-5 / WS7A waiver:** Shift-intelligence `anomaly-alerts` — bare `number | null` fields; no `FinancialValue` wrapping; Phase 1.2B scope
+- **DEF-NEVER:** `hold_percent` — dimensionless ratio, never `FinancialValue` in any phase
 
 | # | Deliverable | Status |
 |---|-------------|--------|
-| 1 | Route handlers serialize envelope verbatim | ⬜ |
-| 2 | OpenAPI specs under `docs/` updated to envelope schema | ⬜ |
-| 3 | Contract tests enforce envelope shape | ⬜ |
-| 4 | Raw-total endpoints split or deprecated with dated sunset | ⬜ |
-| 5 | No endpoint returns forbidden-label aggregates (SRC §L3 / §F1) | ⬜ |
+| 1 | Route handlers stripped of spoofable `casino_id` on in-scope routes | ✅ DEC-1 (MTL) + DEC-3 (loyalty/balances) — service always receives RLS context `casinoId` |
+| 2 | OpenAPI `FinancialValue` component defined; representative path entries for all 11 families | ✅ `api-surface.openapi.yaml` — component at line 2181; 14 representative path entries; BRIDGE-001 + DEC-5 + DEF-NEVER annotated |
+| 3 | Route-boundary contract tests enforce `casino_id` REMOVE, BRIDGE-001 envelope shape, and DEC-5 bare-number carve-out | ✅ 47 tests passing across 6 test files |
+| 4 | Phase 1.2A close documentation | ✅ ROLLOUT-PROGRESS.md, PRD-071 Appendix A, EXEC-071 checkpoint |
 
-**Exit gate:**
-- [ ] Contract tests green for every financial endpoint
-- [ ] OpenAPI diff reviewed
-- [ ] Deprecations have dated sunsets in OpenAPI descriptions
+**Exit gate (all passed 2026-04-30):**
+- [x] DEC-1/DEC-3 contract tests green — spoofed `casino_id` stripped; service receives `rlsContext.casinoId`
+- [x] BRIDGE-001 spot-check tests green — `value`, `type`, `source`, `completeness.status` present; `typeof value === 'number'`; no integer assertions
+- [x] DEC-5 bare-number tests green — `observedValue`, `baselineMedian`, `baselineMad`, `thresholdValue` are bare `number`, not `FinancialValue` objects
+- [x] OpenAPI diff coherent — single `FinancialValue` component; representative families covered
+- [x] No test asserts dollar-float as integer (BRIDGE-001 guard: `grep integer` CLEAN on BRIDGE-001 files)
+
+**Phase 1.2B pending scope** (successor PRD-074):
+- BRIDGE-001 retirement: remove `/100` from service mappers; enforce `financialValueSchema.int()`; `formatCents` migration
+- Shift-intelligence DTO field type promotion: `number | null` → `FinancialValue | null`
+- Full 34-route OpenAPI + contract test coverage
 
 ---
 
@@ -302,4 +318,5 @@ Pulled from ROLLOUT-ROADMAP.md §7; update status as mitigations land.
 | 2026-04-24 | **FIB-FIN-SHIFT-001 intake drafted** (context-gathering session). Three defects catalogued: (1) no `resolveShiftMetricAuthority` helper — WS7A-frozen routing rules (`drop_total → estimated/table_session.drop`, `win_loss_cents → estimated/table_session.inventory_win`, `cash_obs_total → estimated/pit_cash_observation.extrapolated`, `hold_percent → null/bare`) not yet implemented; (2) `getAlerts` in `alerts.ts` assembles `ShiftAlertDTO` inline bypassing `mapShiftAlertRow` — divergent paths will require dual-site Phase 1.2 update; (3) `anomaly-alerts-route-boundary.test.ts` fixture and assertions reference legacy `gamingDay`/`computedAt` keys instead of current `AnomalyAlertsResponseDTO` shape (`baselineGamingDay`/`baselineCoverage`). Transitional Governance Caveat explicitly in scope: shift-intelligence bare-number fields are pre-migration state, not bridge DTOs. Intake artifacts: `FIB-H-FIN-SHIFT-001` + `FIB-S-FIN-SHIFT-001` in `intake/`. EXEC-070 WS7B child_fib pointers updated. **Next action: `/prd-writer` for FIB-FIN-SHIFT-001.** |
 | 2026-04-24 | **PRD-073 drafted** (`/prd-writer` from FIB-FIN-SHIFT-001). `docs/10-prd/PRD-073-financial-telemetry-wave1-phase1.1c-shift-intelligence-authority-routing-v0.md` — Status: Draft. Phase 1.1c child spec for WS7B. Scope: (1) `resolveShiftMetricAuthority(metricType: MetricType)` helper with all four WS7A-frozen routing rules; (2) mapper path unification — `mapAnomalyAlertRow` + `mapShiftAlertRow` both call the helper; `getAlerts` inline assembly deleted, delegates to `mapShiftAlertRow`; (3) `anomaly-alerts-route-boundary.test.ts` corrected — `gamingDay`/`computedAt` replaced with `baselineGamingDay`/`baselineCoverage`; (4) routing assertion suite in `mappers.test.ts` (4 MetricType values + `hold_percent → null` invariant + `cash_obs_total` static-threshold). No public DTO changes. No FinancialValue on alert numeric fields. No bridge DTO. No route/UI/SQL changes. Phase 1.2 deferrals explicit. WS9 items 4 + 12 unblock on impl close. **Next action: `/lead-architect` EXEC-SPEC for PRD-073 → `/build-pipeline` → WS9.** |
 | 2026-04-25 | **Phase 1.1 closed — WS9 complete.** Verification matrix executed in full (amended set): items 1–4 (service slices) PASS; items 5–7 + 12 (route boundary + anomaly boundary) PASS; item 8 struck (complex client component — type-check + service/route tests cover rename equivalently; Phase 1.2 birth obligation); items 9–11 previously struck. DoD gates all PASS: type-check exit 0, lint exit 0 (fixed two `Function` type lint errors in PRD-072 route tests), build exit 0, `totalChipsOut` grep CLEAN. Phase 1.2 handoff package produced at `actions/PHASE-1.2-HANDOFF.md` — deferred field register, rollback matrix, cents canonicalization obligations, and Phase 1.2 skill routing recorded. EXEC-070 amended (ws9-completion). **Phase 1.2 entry: PRD-071 is drafted; EXEC-071 + build-pipeline next.** |
+| 2026-04-30 | **Phase 1.2A closed — EXEC-071 WS1–WS3 complete.** Delivered: (1) WS1 route audit + `casino_id` REMOVE — MTL `gaming-day-summary`/`entries` and `loyalty/balances` stripped of client-supplied `casino_id`; `mwCtx.rlsContext!.casinoId` is now the sole casino scope on those routes (DEC-1, DEC-3); loyalty schemas updated, MTL query/service schemas updated; hooks patched to drop `casino_id` from client calls; (2) WS2 OpenAPI `FinancialValue` component defined once at line 2181 in `api-surface.openapi.yaml`; 14 new representative path entries covering all 11 in-scope route families; BRIDGE-001 surfaces (`recent-sessions`, `live-view`) reference `$ref FinancialValue` with `value: type: number`; DEC-5 (`anomaly-alerts`) and DEF-NEVER (`hold_percent`) annotated explicitly; (3) WS3 route-boundary contract tests — 47 tests passing across 6 files; DEC-1/DEC-3 REMOVE assertions verify spoofed `casino_id` is stripped; BRIDGE-001 spot-checks assert all 4 `FinancialValue` keys on all 3 financial fields; DEC-5 asserts bare `number`, not objects; no integer assertions on BRIDGE-001 value fields (guard CLEAN); (4) WS4 close documentation (this entry). **Phase 1.2B pending:** BRIDGE-001 retirement + shift-intelligence DTO type promotion + full 34-route coverage → PRD-074. |
 | 2026-04-25 | **PRD-073 shipped — WS7B closed** (`/build-pipeline` via EXEC-073). Phase 1.1c complete. Delivered: (1) `resolveShiftMetricAuthority` exported from `services/shift-intelligence/mappers.ts` — exhaustive switch over all 4 MetricType values, `hold_percent → null` (RULE-2), `cash_obs_total → estimated/pit_cash_observation.extrapolated` (static-threshold invariant), `default` throws with `never` narrowing (compile-time exhaustiveness gate); (2) `void resolveShiftMetricAuthority(...)` call injected into both `mapAnomalyAlertRow` and `mapShiftAlertRow` (Phase 1.1 dead-read path unification, `void` prefix prevents linter removal); (3) `getAlerts` in `alerts.ts` refactored — 36-line `as any` inline assembly replaced with typed `AlertQueryRow` assertion + join normalization + `mapShiftAlertRow` delegation; (4) `anomaly-alerts-route-boundary.test.ts` fixture and assertions corrected (`baselineGamingDay`/`baselineCoverage`, no `gamingDay`/`computedAt`); (5) routing suite added to `mappers.test.ts` (5 cases including unknown→throw); (6) delegation suite added to `alerts-mappers.test.ts` (3 cases). Two patch deltas assessed against EXEC-073; §2 patch-01 and §1 patch-02 rejected; §4/§6 patch-01 and §3 patch-02 accepted. Gates: `npm run type-check` exit 0; 95/95 tests pass. Implementation précis: `intake/FIB-FIN-SHIFT-001/PRD-073-implementation-precis.md`. **WS9 now unblocked.** |

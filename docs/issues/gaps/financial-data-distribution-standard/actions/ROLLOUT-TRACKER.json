@@ -1,0 +1,435 @@
+{
+  "meta": {
+    "artifact_type": "rollout_progress_tracker",
+    "version": "1.2.0",
+    "source_of_truth": "ROLLOUT-PROGRESS.md",
+    "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md",
+    "last_updated": "2026-04-30",
+    "update_rule": "Update both this file and ROLLOUT-PROGRESS.md together when phase state changes. This file is the machine-readable projection of the .md; it does not own truth.",
+    "reading_order": "cursor → direction (principles + non_goals) → phases → deferred_register → active_bridges. Read roadmap_ref for full narrative, §2.5 for execution protocol, §9 for skill routing."
+  },
+
+  "direction": {
+    "roadmap": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md",
+    "principles": [
+      "Surface before schema — Wave 1 ships the label envelope on the existing backend; Wave 2 changes the stores. UI/API contract is stable across the boundary.",
+      "Additive only in Wave 1 — no deletions, no migrations, no new tables. Everything is a tightening of output shape.",
+      "Parity from day one — even Wave 1 (single store) must already distinguish Class A and Class B in the envelope. Wave 2 wires a second authoring path without reshaping surfaces.",
+      "Gates are pass/fail, not 'mostly ready' — each phase has a hard exit condition. No partial advancement.",
+      "Freeze discipline holds — if Wave 1 or Wave 2 surfaces a real conflict with the frozen ADR set, write a superseding ADR before changing code. Do not patch frozen docs silently."
+    ],
+    "execution_protocol": "Every phase ≥ 1.1 runs: /prd-writer → /lead-architect (EXEC-SPEC scaffold) → /build-pipeline. Skills in §9 of the roadmap are dispatched *by* /build-pipeline, not invoked directly. Phase 1.0 is the only exception (meta-phase, PRD/EXEC-SPEC exempt). See ROLLOUT-ROADMAP.md §2.5.",
+    "phase_transition_rule": "Exiting Phase N → Opening Phase N+1 requires two documents: (1) Phase N exit gate met, (2) Phase N+1 PRD drafted and approved. No code written for Phase N+1 before its PRD lands.",
+    "non_goals": [
+      "No schema changes in Wave 1",
+      "No new tables in Wave 1",
+      "No outbox, no consumer, no projections refactor in Wave 1",
+      "No performance optimization of the envelope itself in Wave 1",
+      "No external integration (reconciliation layer) — deferred past Wave 2",
+      "No Compliance domain work — parallel, out of pilot scope",
+      "No pit_cash_observation authoring — taxonomy only in Wave 1"
+    ],
+    "wave_1_exit_criteria": [
+      "SRC envelope present on every production financial surface (API + UI)",
+      "Lint rule red on violations, active in CI",
+      "Truth-telling test suite passes (harness I5 subset)",
+      "No 'Total'/'Handle'/'Chips Out' in production code",
+      "Attribution Ratio renders correctly, distinct from completeness",
+      "Operator sign-off on interpretability",
+      "Open questions Q1–Q4 resolved or explicitly deferred with documented rationale"
+    ],
+    "wave_2_entry_criteria": [
+      "Wave 1 complete",
+      "Q1–Q4 open questions resolved",
+      "WAVE-2-ROADMAP.md drafted",
+      "Failure harness verified against stubs"
+    ]
+  },
+
+  "cursor": {
+    "wave": 1,
+    "active_phase": "1.2B",
+    "phase_status": "not_started",
+    "phase_label": "API Canonicalization (BRIDGE-001 retirement + shift-intelligence DTO wrapping)",
+    "blocker": "Phase 1.2B PRD (PRD-074) not yet drafted",
+    "next_action": "/prd-writer for PRD-074 → /lead-architect scaffold EXEC-074 → /build-pipeline",
+    "next_action_prd": "docs/10-prd/PRD-074-financial-telemetry-wave1-phase1.2b-canonicalization-v0.md",
+    "last_closed_phase": "1.2A",
+    "last_closed_date": "2026-04-30",
+    "last_closed_exec": "EXEC-071",
+    "last_closed_handoff": null
+  },
+
+  "phases": [
+    {
+      "id": "1.0",
+      "label": "Prep & Inventory",
+      "wave": 1,
+      "status": "complete",
+      "prd": null,
+      "exec_spec": null,
+      "prd_exec_exempt": true,
+      "exit_date": "2026-04-23",
+      "signoff": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-PHASE-1.0-SIGNOFF.md",
+      "artifacts": [
+        "types/financial.ts",
+        "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-SURFACE-INVENTORY.md",
+        "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-FORBIDDEN-LABELS.md",
+        "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-CLASSIFICATION-RULES.md"
+      ]
+    },
+    {
+      "id": "1.1",
+      "label": "Service Layer: DTO Envelope",
+      "wave": 1,
+      "status": "complete",
+      "prd": "PRD-070",
+      "exec_spec": "EXEC-070",
+      "exec_spec_path": "docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md",
+      "exit_date": "2026-04-25",
+      "handoff": "docs/issues/gaps/financial-data-distribution-standard/actions/PHASE-1.2-HANDOFF.md",
+      "services": {
+        "player-financial": { "status": "complete" },
+        "rating-slip": { "status": "complete" },
+        "rating-slip-modal": {
+          "status": "complete",
+          "note": "totalCashOut rename (was totalChipsOut) via WS4"
+        },
+        "visit": {
+          "status": "complete_bridge",
+          "note": "FinancialValue wrapping done; value is dollar-float. /100 preserved. See BRIDGE-001."
+        },
+        "mtl": { "status": "complete" },
+        "table-context": { "status": "complete" },
+        "loyalty": { "status": "complete" },
+        "shift-intelligence": {
+          "status": "complete_partial",
+          "done": "resolveShiftMetricAuthority + mapper path unification + test correction (PRD-073)",
+          "deferred_to_1_2b": "AnomalyAlertDTO/ShiftAlertDTO public numeric fields (observedValue, baselineMedian, baselineMad, thresholdValue). GATE-070.6."
+        }
+      },
+      "child_specs": [
+        {
+          "id": "PRD-072",
+          "scope": "Visit surface label-only envelope (WS5/WS5_ROUTE/WS5_UI/WS6)",
+          "status": "complete",
+          "commit": "38d25cc1"
+        },
+        {
+          "id": "PRD-073",
+          "scope": "Shift-intelligence authority routing WS7B",
+          "status": "complete"
+        }
+      ],
+      "exit_gates_passed": [
+        "All financial service DTOs updated (shift-intelligence public fields explicitly deferred per GATE-070.6)",
+        "Unit tests verify envelope shape + classification rules (WS9 matrix complete)",
+        "INV-ERR-DETAILS retained, no as any",
+        "npm run type-check exit 0",
+        "npm run lint exit 0",
+        "npm run build exit 0",
+        "totalChipsOut grep CLEAN — zero live-code references"
+      ]
+    },
+    {
+      "id": "1.2A",
+      "label": "API Transport Stabilization",
+      "wave": 1,
+      "status": "complete",
+      "prd": "PRD-071",
+      "prd_path": "docs/10-prd/PRD-071-financial-telemetry-wave1-phase1.2-api-envelope-at-wire-v0.md",
+      "exec_spec": "EXEC-071",
+      "exec_spec_path": "docs/21-exec-spec/PRD-071/EXEC-071-financial-telemetry-wave1-phase1.2a-api-transport-stabilization.md",
+      "exit_date": "2026-04-30",
+      "workstreams_closed": ["WS1", "WS2", "WS3", "WS4"],
+      "decisions_resolved": {
+        "DEC-1": "casino_id REMOVE — MTL routes (gaming-day-summary, entries) always use mwCtx.rlsContext!.casinoId; client param stripped from schema and handler",
+        "DEC-3": "casino_id REMOVE — loyalty/balances; no active consumer found; getBalance receives RLS casinoId only",
+        "DEC-4": "BRIDGE-001 pass-through — recent-sessions + live-view value is dollar-float at Phase 1.2A; integer assertion deferred to Phase 1.2B",
+        "DEC-5": "WS7A waiver — anomaly-alerts numeric fields are bare number|null; no FinancialValue wrapping; Phase 1.2B scope",
+        "DEF-NEVER": "hold_percent is never FinancialValue — dimensionless ratio, hard invariant, all phases"
+      },
+      "representative_routes_executed": [
+        "app/api/v1/mtl/gaming-day-summary/route.ts — DEC-1 REMOVE",
+        "app/api/v1/mtl/entries/route.ts — DEC-1 REMOVE",
+        "app/api/v1/loyalty/balances/route.ts — DEC-3 REMOVE",
+        "app/api/v1/visits/[visitId]/live-view/route.ts — BRIDGE-001 pass-through + DEC-4",
+        "app/api/v1/players/[playerId]/recent-sessions/route.ts — BRIDGE-001 pass-through + DEC-4",
+        "app/api/v1/shift-intelligence/anomaly-alerts/route.ts — DEC-5 bare-number carve-out"
+      ],
+      "test_count": 47,
+      "test_files": [
+        "app/api/v1/mtl/gaming-day-summary/__tests__/route.test.ts",
+        "app/api/v1/mtl/entries/__tests__/route.test.ts",
+        "app/api/v1/loyalty/balances/__tests__/route.test.ts",
+        "app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts",
+        "app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts",
+        "services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts"
+      ],
+      "openapi_changes": {
+        "component_defined": "FinancialValue at components/schemas/FinancialValue (line 2181)",
+        "path_families_covered": 11,
+        "new_path_entries": 14
+      },
+      "exit_gates_passed": [
+        "DEC-1/DEC-3 contract tests green — spoofed casino_id stripped; service receives rlsContext.casinoId",
+        "BRIDGE-001 spot-check tests green — value, type, source, completeness.status present; typeof value === 'number'; no integer assertions",
+        "DEC-5 bare-number tests green — observedValue, baselineMedian, baselineMad, thresholdValue are bare number, not FinancialValue objects",
+        "OpenAPI diff coherent — single FinancialValue component; representative families covered",
+        "BRIDGE-001 guard: grep integer CLEAN on all BRIDGE-001 test files"
+      ]
+    },
+    {
+      "id": "1.2B",
+      "label": "API Canonicalization (BRIDGE-001 retirement + shift-intelligence DTO wrapping)",
+      "wave": 1,
+      "status": "not_started",
+      "prd": "PRD-074",
+      "prd_status": "referenced_in_prd071_appendix_d",
+      "prd_path": "docs/10-prd/PRD-074-financial-telemetry-wave1-phase1.2b-canonicalization-v0.md",
+      "exec_spec": null,
+      "exec_spec_status": "not_started",
+      "entry_gate": "Phase 1.2A exit ✅ + PRD-074 drafted + EXEC-074 via /lead-architect + /build-pipeline",
+      "skills_dispatched": ["/api-builder", "/backend-service-builder"],
+      "pending_scope": [
+        "BRIDGE-001 retirement: remove /100 in services/visit/crud.ts + services/rating-slip/mappers.ts",
+        "Enforce financialValueSchema.int() at DTO outbound boundary for RecentSessionDTO / VisitLiveViewDTO",
+        "UI render migration: formatDollars(field.value) → formatCents(field.value) on start-from-previous.tsx + modal",
+        "AnomalyAlertDTO/ShiftAlertDTO field type promotion: number|null → FinancialValue|null",
+        "Full 34-route OpenAPI coverage and contract test matrices",
+        "Deprecation observability: structured log events per deprecated-field usage",
+        "Component tests: rating-slip-modal.test.tsx, start-from-previous.test.tsx, start-from-previous-modal.test.tsx"
+      ]
+    },
+    {
+      "id": "1.3",
+      "label": "UI Layer: Split Display + Labels",
+      "wave": 1,
+      "status": "not_started",
+      "prd": null,
+      "exec_spec": null,
+      "entry_gate": "Phase 1.2B exit + Phase 1.3 PRD + EXEC-SPEC",
+      "skills_dispatched": ["/frontend-design-pt-2", "/web-design-guidelines"],
+      "known_targets": [
+        "app/(landing)/floor-oversight/page.tsx — 'Coverage quality' → 'Attribution Ratio'",
+        "components/pit-panels/analytics-panel.tsx:169 — label: 'Handle' → 'Estimated Drop'",
+        "components/player-360/summary/summary-band.tsx — theo row render status: 'unknown'",
+        "components/shift-dashboard-v3/** — formalize under <FinancialValue>",
+        "components/shift-dashboard/** (legacy) — migrate or deprecate in favour of v3",
+        "lib/format.ts + 18+ local formatDollars/formatCents variants"
+      ]
+    },
+    {
+      "id": "1.4",
+      "label": "Validation: Lint + Truth-Telling Tests",
+      "wave": 1,
+      "status": "not_started",
+      "prd": null,
+      "exec_spec": null,
+      "entry_gate": "Phase 1.3 exit + Phase 1.4 PRD + EXEC-SPEC",
+      "skills_dispatched": ["/qa-specialist", "/e2e-testing"]
+    },
+    {
+      "id": "1.5",
+      "label": "Rollout & Sign-off",
+      "wave": 1,
+      "status": "not_started",
+      "prd": null,
+      "exec_spec": null,
+      "entry_gate": "Phase 1.4 exit + Phase 1.5 PRD + EXEC-SPEC",
+      "skills_dispatched": ["/devops-pt2", "/qa-specialist"]
+    },
+    {
+      "id": "2",
+      "label": "Dual-Layer + Outbox",
+      "wave": 2,
+      "status": "not_started",
+      "entry_gate": "Wave 1 sign-off + Q1–Q4 resolved",
+      "roadmap_note": "WAVE-2-ROADMAP.md not yet created. Scope outline in ROLLOUT-PROGRESS.md §5."
+    }
+  ],
+
+  "active_bridges": [
+    {
+      "id": "BRIDGE-001",
+      "label": "Visit Surface Dollar-Float Bridge",
+      "status": "active",
+      "owner_prd": "PRD-072",
+      "governance": "docs/issues/gaps/financial-data-distribution-standard/decisions/TRANSITIONAL-GOVERNANCE-CAVEAT.md",
+      "affected_dtos": [
+        "RecentSessionDTO.total_buy_in",
+        "RecentSessionDTO.total_cash_out",
+        "RecentSessionDTO.net",
+        "VisitLiveViewDTO.session_total_buy_in",
+        "VisitLiveViewDTO.session_total_cash_out",
+        "VisitLiveViewDTO.session_net"
+      ],
+      "bridge_invariants": [
+        "value is dollar-float (NOT canonical integer cents)",
+        "Use formatDollars(field.value), NOT formatCents",
+        "Do NOT enforce financialValueSchema (z.number().int() rejects dollar floats)",
+        "Do NOT remove /100 conversions in visit/crud.ts or rating-slip/mappers.ts",
+        "Phase 1.2A contract tests assert typeof value === 'number' — no integer assertion (correct for bridge state)"
+      ],
+      "sunset_trigger": "Phase 1.2B canonicalization (PRD-074)",
+      "sunset_actions": [
+        "Remove /100 in services/visit/crud.ts centsToDollars",
+        "Remove /100 in services/rating-slip/mappers.ts toVisitLiveViewDTO",
+        "Canonicalize FinancialValue.value to integer cents",
+        "Apply financialValueSchema z.number().int() enforcement",
+        "Migrate UI renders from formatDollars(field.value) to formatCents(field.value)",
+        "Update ROLLOUT-TRACKER.json active_bridges BRIDGE-001 status to 'retired'"
+      ]
+    }
+  ],
+
+  "deferred_register": [
+    {
+      "id": "DEF-001",
+      "item": "shift-intelligence public DTO field wrapping (AnomalyAlertDTO/ShiftAlertDTO numeric fields)",
+      "fields": [
+        "observedValue",
+        "baselineMedian",
+        "baselineMad",
+        "thresholdValue"
+      ],
+      "deferred_to": "Phase 1.2B",
+      "gate": "GATE-070.6",
+      "note": "resolveShiftMetricAuthority already returns { type, source } for Phase 1.2B to assign into FinancialValue. Phase 1.2A documented bare-number carve-out (DEC-5) and added test asserting typeof === 'number'."
+    },
+    {
+      "id": "DEF-002",
+      "item": "/100 removal (services/visit/crud.ts + services/rating-slip/mappers.ts)",
+      "deferred_to": "Phase 1.2B",
+      "note": "Prohibited while BRIDGE-001 is active. Canonicalizes FinancialValue.value from dollar-float to integer cents."
+    },
+    {
+      "id": "DEF-003",
+      "item": "financialValueSchema z.number().int() enforcement at DTO outbound boundary",
+      "deferred_to": "Phase 1.2B",
+      "note": "Validator rejects dollar floats. Only applicable after DEF-002 cents canonicalization lands."
+    },
+    {
+      "id": "DEF-004",
+      "item": "UI render migration: formatDollars(field.value) → formatCents(field.value)",
+      "deferred_to": "Phase 1.2B",
+      "note": "Render must match value unit. Only switch after DEF-002 makes value integer cents."
+    },
+    {
+      "id": "DEF-005",
+      "item": "Full 4-case route-boundary test suites (recent-sessions, live-view routes)",
+      "deferred_to": "Phase 1.2B",
+      "note": "Phase 1.2A expanded to all-field BRIDGE-001 assertions (3 fields × 4 keys). Full case matrices (auth, 404, pagination) deferred until cents canonicalization stabilizes contract."
+    },
+    {
+      "id": "DEF-006",
+      "item": "Component tests: rating-slip-modal.test.tsx, start-from-previous.test.tsx, start-from-previous-modal.test.tsx",
+      "deferred_to": "Phase 1.3",
+      "note": "Test dirs absent in Phase 1.1. Phase 1.3 birth obligation on UI DTO shape change."
+    },
+    {
+      "id": "DEF-007",
+      "item": "Outbound Zod schemas for AnomalyAlertDTO / ShiftAlertDTO",
+      "deferred_to": "Phase 1.2B",
+      "gate": "WS7A waiver — requires lead-architect EXEC-SPEC amendment to reopen"
+    },
+    {
+      "id": "DEF-NEVER",
+      "item": "hold_percent FinancialValue wrapping",
+      "deferred_to": "NEVER",
+      "note": "HARD invariant. hold_percent is a bare ratio, not a currency. resolveShiftMetricAuthority returns null for it. The exhaustive switch throws on unknown MetricType. This rule survives ALL phases."
+    }
+  ],
+
+  "api_contract_delta": {
+    "description": "Service-layer changes from Phase 1.1 that were or still need to be propagated at the HTTP wire. Phase 1.2A addressed casino_id REMOVE items; Phase 1.2B must canonicalize cents and wrap shift-intelligence fields.",
+    "items": [
+      {
+        "service_change": "casino_id REMOVE from MTL routes (gaming-day-summary, entries)",
+        "routes": [
+          "GET /api/v1/mtl/gaming-day-summary",
+          "GET /api/v1/mtl/entries",
+          "POST /api/v1/mtl/entries"
+        ],
+        "phase_1_2a_action": "COMPLETE — DEC-1 applied; client param stripped from schema; handler always uses mwCtx.rlsContext!.casinoId",
+        "phase_1_2b_wire": null
+      },
+      {
+        "service_change": "casino_id REMOVE from loyalty/balances",
+        "route": "GET /api/v1/loyalty/balances",
+        "phase_1_2a_action": "COMPLETE — DEC-3 applied; no active consumer found; getBalance receives RLS casinoId",
+        "phase_1_2b_wire": null
+      },
+      {
+        "service_change": "RecentSessionDTO.total_buy_in/total_cash_out/net → FinancialValue (dollar-float)",
+        "route": "GET /api/v1/players/[playerId]/recent-sessions",
+        "current_wire": "Serializing FinancialValue dollar-float (Phase 1.1b). Phase 1.2A: OpenAPI documented + BRIDGE-001 spot-check test added.",
+        "phase_1_2b_wire": "Canonicalize to integer cents (BRIDGE-001 retirement)"
+      },
+      {
+        "service_change": "VisitLiveViewDTO.session_total_* → FinancialValue (dollar-float)",
+        "route": "GET /api/v1/visits/[visitId]/live-view",
+        "current_wire": "Serializing FinancialValue dollar-float (Phase 1.1b). Phase 1.2A: OpenAPI documented + BRIDGE-001 spot-check test added.",
+        "phase_1_2b_wire": "Canonicalize to integer cents (BRIDGE-001 retirement)"
+      },
+      {
+        "service_change": "AnomalyAlertDTO numeric fields — deferred (bare number | null)",
+        "route": "GET /api/v1/shift-intelligence/anomaly-alerts",
+        "current_wire": "Bare number | null. Phase 1.2A: DEC-5 waiver applied; bare-number test added; OpenAPI annotated.",
+        "phase_1_2b_wire": "Wrap in FinancialValue (except hold_percent)"
+      },
+      {
+        "service_change": "ShiftAlertDTO numeric fields — deferred (bare number | null)",
+        "route": "GET /api/v1/shift-intelligence/alerts",
+        "current_wire": "Bare number | null. Phase 1.2A: DEF-NEVER (hold_percent) annotated in OpenAPI.",
+        "phase_1_2b_wire": "Wrap in FinancialValue"
+      }
+    ]
+  },
+
+  "validation_matrix": {
+    "I1_atomicity": { "wave": 2, "status": "not_wave_1" },
+    "I2_durability": { "wave": 2, "status": "not_wave_1" },
+    "I3_idempotency": { "wave": 2, "status": "not_wave_1" },
+    "I4_replayability": { "wave": 2, "status": "not_wave_1" },
+    "I5_truthfulness": { "wave": 1, "phase": "1.4", "status": "not_started" }
+  },
+
+  "open_questions": [
+    {
+      "id": "Q1",
+      "question": "PFT schema expand for table-only events, or Class B stays in a separate authoring store?",
+      "gates": "Wave 2",
+      "status": "open",
+      "resolution_path": "Post-Wave 1 design review + prod data input"
+    },
+    {
+      "id": "Q2",
+      "question": "Grind normalized under shared parent with discriminator, or fully separate?",
+      "gates": "Wave 2",
+      "status": "open",
+      "resolution_path": "Same review as Q1"
+    },
+    {
+      "id": "Q3",
+      "question": "External reconciliation consumer contract?",
+      "gates": "Wave 2",
+      "status": "open",
+      "resolution_path": "External stakeholder discovery"
+    },
+    {
+      "id": "Q4",
+      "question": "Outbox emission: trigger-based, shared RPC, or both?",
+      "gates": "Wave 2",
+      "status": "open",
+      "resolution_path": "Performance testing under literal-same-txn constraint (ADR-PROP D2)"
+    }
+  ],
+
+  "governance_rules": {
+    "phase_entry": "Every phase ≥ 1.1 requires PRD drafted & approved → EXEC-SPEC scaffolded → /build-pipeline executed to exit criteria. Tracker checkbox completion does NOT authorize starting the next phase.",
+    "skill_dispatch": "Skills are dispatched by /build-pipeline, not invoked directly. See ROLLOUT-ROADMAP.md §9.",
+    "frozen_docs": "ADR-052–055 are frozen. Violations require a superseding ADR — not patches to frozen docs. Use supersession process.",
+    "child_spec_rule": "Child specs (PRD-072, PRD-073) supersede named parent workstream scope. Their obligations propagate into the parent's exit gate."
+  }
+}

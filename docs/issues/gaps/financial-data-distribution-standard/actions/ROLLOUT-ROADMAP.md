@@ -186,25 +186,57 @@ Each PRD cites ADR-FINANCIAL-FACT-MODEL, ADR-FINANCIAL-SYSTEM-SCOPE, ADR-FINANCI
 
 ---
 
-## Phase 1.2 — API Layer: Envelope at the Wire
+## Phase 1.2A — API Layer: Envelope Pass-Through (Transport Stabilization)
 
-**Scope:** route handlers serialize the envelope; OpenAPI specs updated.
+**Scope:** route handlers verified as pass-through; shared OpenAPI component defined; representative routes documented and tested. No unit normalization, no DTO type changes, no UI changes.
 
-**Skill to invoke:** `api-builder` for each affected route.
+**PRD:** `docs/10-prd/PRD-071-financial-telemetry-wave1-phase1.2-api-envelope-at-wire-v0.md`
+
+**Skill to invoke:** `api-builder` for each representative route.
 
 ### Deliverables
 
-- [ ] Route handlers in `app/api/**/route.ts` return the envelope verbatim (no flattening back to bare numbers)
-- [ ] OpenAPI specs under `docs/` updated to reflect the envelope schema
-- [ ] Response validation (contract tests) enforces envelope shape
-- [ ] Any endpoint currently returning a raw "total" is either: (a) split into labeled components, or (b) deprecated with a migration note pointing to the split variant
-- [ ] No endpoint returns `Total Drop`, `Handle`, or other forbidden-label aggregates (SRC §L3 / §F1)
+- [ ] Route handlers in `app/api/**/route.ts` confirmed to return the service envelope verbatim — no route-local type/source inference, no flattening
+- [ ] Shared `FinancialValue` component defined once in `docs/25-api-data/api-surface.openapi.yaml`
+- [ ] OpenAPI path entries authored for 1–2 representative routes per family (Bucket A amendment or Bucket B authoring)
+- [ ] Shape + pass-through contract tests for each representative route
+- [ ] Deprecated fields on representative routes annotated in OpenAPI with dated sunset and replacement pointer (annotation only — no runtime log events)
+- [ ] `casino_id` classified per representative route: removed, deprecated-and-ignored, or out-of-scope-with-rationale
 
 ### Exit gate
 
-- Contract tests pass for every financial endpoint
-- OpenAPI spec diff reviewed
-- Any deprecated endpoint has a dated sunset in its OpenAPI description
+- Representative route contract tests pass (shape: `value`, `type`, `source`, `completeness.status` present; no flattening)
+- Shared `FinancialValue` OpenAPI component reviewed
+- Deprecated fields on representative routes have dated sunset annotations; no TBD sunsets
+
+---
+
+## Phase 1.2B — Service Canonicalization
+
+**Scope:** unit normalization at the service layer; DTO type promotion for deferred fields; full-breadth OpenAPI expansion; runtime deprecation observability wired. No route-handler logic changes — Phase 1.2A proved routes are pass-through; Phase 1.2B fixes what passes through.
+
+**PRD:** `docs/10-prd/PRD-074-financial-telemetry-wave1-phase1.2b-canonicalization-v0.md`
+
+**Skill to invoke:** `backend-service-builder` (service canonicalization) + `api-builder` (OpenAPI expansion).
+
+### Deliverables
+
+- [ ] BRIDGE-001 retired: `/100` removed from `services/visit/crud.ts` and `services/rating-slip/mappers.ts`; `financialValueSchema.int()` enforced at DTO outbound boundary for `RecentSessionDTO` / `VisitLiveViewDTO`
+- [ ] `AnomalyAlertDTO` / `ShiftAlertDTO` public numeric fields (`observedValue`, `baselineMedian`, `baselineMad`, `thresholdValue`) typed as `FinancialValue | null`; `resolveShiftMetricAuthority` void-read promoted to assignment
+- [ ] `hold_percent` confirmed bare `number | null` in all touched files (DEF-NEVER invariant)
+- [ ] `financialValueSchema.int()` enforced at all financial DTO outbound boundaries
+- [ ] Full-breadth OpenAPI expansion: remaining routes (beyond Phase 1.2A representative set) authored; schemas updated to reflect integer-cents `value` after BRIDGE-001 retirement
+- [ ] Contract tests expanded to full route coverage; integer-value assertions added
+- [ ] Runtime deprecation observability: structured log event emitted per deprecated-field usage (route path, field name, replacement, correlation ID, sunset date)
+- [ ] `ROLLOUT-TRACKER.json` updated: BRIDGE-001 recorded as retired with commit SHA
+
+### Exit gate
+
+- `financialValueSchema.int()` passes for all canonicalized DTO fields; no dollar floats at any financial wire boundary
+- `AnomalyAlertDTO` / `ShiftAlertDTO` fields emit `FinancialValue` at the wire for all MetricType values except `hold_percent`
+- Contract tests pass for every financial endpoint (full coverage, integer assertions)
+- OpenAPI spec diff reviewed; all in-scope routes documented
+- Any deprecated field emits structured log event on usage
 
 ---
 
@@ -369,7 +401,8 @@ Track resolutions in a `WAVE-2-PREP-DECISIONS.md` accumulated during Wave 1.
 |-------|--------------------------------------------------|-----------|
 | 1.0 Prep | `/lead-architect` — **direct invocation permitted** (meta-phase, see §2.5.3) | — |
 | 1.1 Service DTOs | `/backend-service-builder` | — |
-| 1.2 API | `/api-builder` | `/backend-service-builder` for DTO contract updates |
+| 1.2A API Transport | `/api-builder` | — |
+| 1.2B Canonicalization | `/backend-service-builder` (service layer) + `/api-builder` (OpenAPI expansion) | — |
 | 1.3 UI | `/frontend-design-pt-2` | `/web-design-guidelines` for review |
 | 1.4 Validation | `/qa-specialist` | `/e2e-testing` for Playwright assertions |
 | 1.5 Rollout | `/devops-pt2` | `/qa-specialist` for final gate |

@@ -64,7 +64,7 @@ Each stream produced a uniform `(file:line, field, source, classification, label
 | components/shift-dashboard-v3/left-rail/secondary-kpi-stack.tsx:74 | Fills | `table_session.fills_total_cents` | Actual | No | Correct but unlabeled custody-chain origin |
 | components/shift-dashboard-v3/left-rail/secondary-kpi-stack.tsx:80 | Credits | `table_session.credits_total_cents` | Actual | No | Correct but unlabeled custody-chain origin |
 | components/shift-dashboard-v3/left-rail/secondary-kpi-stack.tsx:86 | Est. Drop | `table_buyin_telemetry` | Estimated | Yes ("ESTIMATE") | Correctly labeled |
-| components/shift-dashboard-v3/center/metrics-table.tsx:95 | Win/Loss (table) | `table_session` inventory formula | Actual | Yes (metric_grade badge) | Depends on snapshot posting |
+| components/shift-dashboard-v3/center/metrics-table.tsx:95 | Win/Loss (table) | `table_session.win_loss_estimated_cents` | **Actual or Estimated (context-dependent)** | Partial — `OpeningSourceBadge` switches between AUTHORITATIVE/ESTIMATE at render time; `MetricGradeBadge` shows grade but does not name the classification class | Field name says "estimated" but value is authoritative when drop is posted; single field carries both states without a stable classification |
 | components/shift-dashboard-v3/center/metrics-table.tsx:100–103 | Fills / Credits | `table_session.*_total_cents` | Actual | No | Unlabeled |
 | components/shift-dashboard-v3/right-rail/telemetry-rail-panel.tsx:87 | Cash Out (Observed Est.) | `pit_cash_observation` | Observed | Yes (TELEMETRY) | Correct |
 | components/shift-dashboard-v3/right-rail/telemetry-rail-panel.tsx:93 | Cash Out (Observed Confirmed) | `pit_cash_observation` | Observed | Yes (TELEMETRY) | Correct |
@@ -80,7 +80,7 @@ Each stream produced a uniform `(file:line, field, source, classification, label
 
 **Stream A — Hot Findings**
 
-1. Shift-dashboard-v3 is the most matrix-conformant surface today — most labeled values are correct. The legacy `components/shift-dashboard/` variant lags behind.
+1. Shift-dashboard-v3 is the most matrix-conformant surface today — most labeled values are correct. The legacy `components/shift-dashboard/` variant lags behind. **Caveat:** `metrics-table.tsx` renders `win_loss_estimated_cents` via `OpeningSourceBadge` (switches AUTHORITATIVE/ESTIMATE at runtime) — classification is context-dependent, not statically Actual. This is partial conformance, not full.
 2. `analytics-panel.tsx:170` labels Estimated data as "Handle" with no origin badge; high visibility panel.
 3. Custody-chain Actuals (`fills`, `credits`, `drop_total_cents`) are pervasively unlabeled — users cannot distinguish from Estimated drop metrics at glance.
 4. Win/Loss nullability (drop-not-posted) is surfaced inconsistently across legacy vs. v3 dashboards.

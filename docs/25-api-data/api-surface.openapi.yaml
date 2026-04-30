@@ -655,16 +655,12 @@ paths:
   /loyalty/balances:
     get:
       summary: Get player loyalty balance
+      description: Casino scope derived from RLS context — casino_id is not a request parameter (DEC-3, EXEC-071 WS1).
       tags: [Loyalty]
       security:
         - bearerAuth: []
       parameters:
         - name: player_id
-          in: query
-          required: true
-          schema:
-            $ref: '#/components/schemas/UUID'
-        - name: casino_id
           in: query
           required: true
           schema:
@@ -823,15 +819,11 @@ paths:
                         $ref: '#/components/schemas/MtlEntry'
     get:
       summary: List MTL entries
+      description: Casino scope derived from RLS context — casino_id is not a request parameter (DEC-1, EXEC-071 WS1).
       tags: [MTL]
       security:
         - bearerAuth: []
       parameters:
-        - name: casino_id
-          in: query
-          required: true
-          schema:
-            $ref: '#/components/schemas/UUID'
         - name: patron_uuid
           in: query
           schema:
@@ -901,6 +893,781 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/MtlAuditNote'
+  # ── Family 1: Financial Transactions (EXEC-071 WS2, Phase 1.2A representative) ──────────────
+  /financial-transactions:
+    get:
+      summary: List financial transactions
+      description: >
+        Lists player financial transactions with optional filters.
+        Casino scope derived from RLS context — no casino_id request parameter.
+        amount field is bare number (cents). Phase 1.2 classification target: actual / PFT.
+      tags: [Financial]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: player_id
+          in: query
+          schema: { $ref: '#/components/schemas/UUID' }
+        - name: visit_id
+          in: query
+          schema: { $ref: '#/components/schemas/UUID' }
+        - name: direction
+          in: query
+          schema: { type: string, enum: [in, out] }
+        - name: gaming_day
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id: { $ref: '#/components/schemas/UUID' }
+                                player_id: { $ref: '#/components/schemas/UUID' }
+                                visit_id: { $ref: '#/components/schemas/UUID', nullable: true }
+                                amount:
+                                  type: number
+                                  description: >
+                                    Transaction amount in cents. DEFERRED Phase 1.2 —
+                                    classification target: actual / PFT / complete.
+                                direction: { type: string, enum: [in, out] }
+                                source: { type: string, enum: [pit, cage, system] }
+                                tender_type: { type: string }
+                                txn_kind: { type: string, enum: [original, adjustment, reversal] }
+                                gaming_day: { type: string, nullable: true }
+                                created_at: { type: string }
+                          cursor: { type: string, nullable: true }
+    post:
+      summary: Create financial transaction
+      tags: [Financial]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [player_id, amount, direction, source, tender_type]
+              properties:
+                player_id: { $ref: '#/components/schemas/UUID' }
+                visit_id: { $ref: '#/components/schemas/UUID' }
+                amount:
+                  type: number
+                  description: Amount in cents. Operator input — bare number (WAVE-1-CLASSIFICATION-RULES §6.1 carve-out).
+                direction: { type: string, enum: [in, out] }
+                source: { type: string, enum: [pit, cage, system] }
+                tender_type: { type: string }
+      responses:
+        '200':
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { $ref: '#/components/schemas/UUID' }
+  /financial-transactions/{transaction_id}:
+    get:
+      summary: Get financial transaction
+      tags: [Financial]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: transaction_id
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/UUID' }
+      responses:
+        '200':
+          description: Transaction detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { $ref: '#/components/schemas/UUID' }
+                          player_id: { $ref: '#/components/schemas/UUID' }
+                          amount:
+                            type: number
+                            description: >
+                              Transaction amount in cents. DEFERRED Phase 1.2 —
+                              classification target: actual / PFT / complete.
+                          direction: { type: string, enum: [in, out] }
+                          source: { type: string }
+                          tender_type: { type: string }
+                          txn_kind: { type: string }
+                          gaming_day: { type: string, nullable: true }
+                          created_at: { type: string }
+
+  # ── Family 2: Visit financial-summary + live-view (EXEC-071 WS2, Phase 1.2A representative) ──
+  /visits/{visit_id}/financial-summary:
+    get:
+      summary: Get visit financial summary
+      description: >
+        Aggregated financial totals for a visit. Currency fields (total_in, total_out, net_amount)
+        are bare number (cents). DEFERRED Phase 1.2 — classification target: actual / PFT /
+        partial (open visit) or complete (closed visit).
+      tags: [Visits]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: visit_id
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/UUID' }
+      responses:
+        '200':
+          description: Visit financial summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          visit_id: { $ref: '#/components/schemas/UUID' }
+                          total_in:
+                            type: number
+                            description: Total buy-ins in cents. DEFERRED Phase 1.2.
+                          total_out:
+                            type: number
+                            description: Total cash-outs in cents. DEFERRED Phase 1.2.
+                          net_amount:
+                            type: number
+                            description: Net (total_in − total_out) in cents. DEFERRED Phase 1.2.
+                          event_count: { type: integer }
+                          first_transaction_at: { type: string, nullable: true }
+                          last_transaction_at: { type: string, nullable: true }
+  /visits/{visit_id}/live-view:
+    get:
+      summary: Get visit live-view session aggregates
+      description: >
+        BRIDGE-001 surface. Session totals (session_total_buy_in, session_total_cash_out,
+        session_net) are FinancialValue envelopes carrying dollar-float values at Phase 1.2A.
+        Phase 1.2B will canonicalize these to integer cents after BRIDGE-001 retirement.
+        current_segment_average_bet is bare number — operator input (WAVE-1-CLASSIFICATION-RULES §6.2 carve-out).
+        session_points_earned is bare number — points unit system (§6.3 carve-out).
+      tags: [Visits]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: visit_id
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/UUID' }
+        - name: include_segments
+          in: query
+          schema: { type: boolean }
+        - name: segments_limit
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Visit live-view with session aggregates
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          visit_id: { $ref: '#/components/schemas/UUID' }
+                          player_id: { $ref: '#/components/schemas/UUID' }
+                          visit_status: { type: string, enum: [open, closed] }
+                          started_at: { type: string }
+                          session_total_buy_in:
+                            allOf:
+                              - $ref: '#/components/schemas/FinancialValue'
+                            description: >
+                              BRIDGE-001 active — value is dollar-float at Phase 1.2A.
+                              Integer cents after Phase 1.2B canonicalization.
+                          session_total_cash_out:
+                            allOf:
+                              - $ref: '#/components/schemas/FinancialValue'
+                            description: >
+                              BRIDGE-001 active — value is dollar-float at Phase 1.2A.
+                              Integer cents after Phase 1.2B canonicalization.
+                          session_net:
+                            allOf:
+                              - $ref: '#/components/schemas/FinancialValue'
+                            description: >
+                              BRIDGE-001 active — value is dollar-float at Phase 1.2A.
+                              Integer cents after Phase 1.2B canonicalization.
+                          current_segment_average_bet:
+                            type: number
+                            nullable: true
+                            description: >
+                              Operator input. Not a committed financial fact.
+                              Bare number per WAVE-1-CLASSIFICATION-RULES §6 carve-out.
+                          session_points_earned:
+                            type: number
+                            description: >
+                              Points balance, not currency-denominated.
+                              Bare number per WAVE-1-CLASSIFICATION-RULES §6 carve-out.
+                          session_segment_count: { type: integer }
+                          session_total_duration_seconds: { type: integer }
+
+  # ── Family 3: Player recent sessions (EXEC-071 WS2, Phase 1.2A representative) ─────────────
+  /players/{player_id}/recent-sessions:
+    get:
+      summary: Get player recent sessions
+      description: >
+        BRIDGE-001 surface. Session totals (total_buy_in, total_cash_out, net) are
+        FinancialValue envelopes carrying dollar-float values at Phase 1.2A.
+        Phase 1.2B will canonicalize to integer cents after BRIDGE-001 retirement.
+        points_earned is bare number — points unit system (§6.3 carve-out).
+      tags: [Players]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: player_id
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/UUID' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Recent sessions list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          sessions:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                visit_id: { $ref: '#/components/schemas/UUID' }
+                                started_at: { type: string }
+                                ended_at: { type: string, nullable: true }
+                                total_buy_in:
+                                  allOf:
+                                    - $ref: '#/components/schemas/FinancialValue'
+                                  description: >
+                                    BRIDGE-001 active — value is dollar-float at Phase 1.2A.
+                                    Integer cents after Phase 1.2B canonicalization.
+                                total_cash_out:
+                                  allOf:
+                                    - $ref: '#/components/schemas/FinancialValue'
+                                  description: >
+                                    BRIDGE-001 active — value is dollar-float at Phase 1.2A.
+                                    Integer cents after Phase 1.2B canonicalization.
+                                net:
+                                  allOf:
+                                    - $ref: '#/components/schemas/FinancialValue'
+                                  description: >
+                                    BRIDGE-001 active — value is dollar-float at Phase 1.2A.
+                                    Integer cents after Phase 1.2B canonicalization.
+                                points_earned:
+                                  type: number
+                                  description: >
+                                    Points balance, not currency-denominated.
+                                    Bare number per WAVE-1-CLASSIFICATION-RULES §6 carve-out.
+                                segment_count: { type: integer }
+                                total_duration_seconds: { type: integer }
+                          next_cursor: { type: string, nullable: true }
+                          open_visit:
+                            nullable: true
+                            description: Current open visit, if any.
+
+  # ── Family 4: Rating-slip modal data (EXEC-071 WS2, Phase 1.2A representative) ─────────────
+  /rating-slips/{rating_slip_id}/modal-data:
+    get:
+      summary: Get rating-slip modal data
+      description: >
+        Composite BFF response for rating-slip detail modal.
+        averageBet is bare number — operator input (WAVE-1-CLASSIFICATION-RULES §6 carve-out).
+        totalCashOut is FinancialValue where the service emits it.
+      tags: [RatingSlips]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: rating_slip_id
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/UUID' }
+      responses:
+        '200':
+          description: Rating-slip modal data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          slip_id: { $ref: '#/components/schemas/UUID' }
+                          visit_id: { $ref: '#/components/schemas/UUID' }
+                          averageBet:
+                            type: number
+                            nullable: true
+                            description: >
+                              Operator input. Not a committed financial fact.
+                              Bare number per WAVE-1-CLASSIFICATION-RULES §6 carve-out.
+                          totalCashOut:
+                            allOf:
+                              - $ref: '#/components/schemas/FinancialValue'
+                            description: Total cash-out. FinancialValue envelope from service.
+                          started_at: { type: string, nullable: true }
+                          ended_at: { type: string, nullable: true }
+
+  # ── Family 5: Table sessions (EXEC-071 WS2, Phase 1.2A representative) ───────────────────
+  /table-sessions:
+    get:
+      summary: List table sessions
+      description: >
+        Lists table sessions. Casino scope from RLS context.
+        Currency raw-total fields (drop_total_cents etc.) are bare number (cents). DEFERRED Phase 1.2.
+      tags: [TableSessions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: table_id
+          in: query
+          schema: { $ref: '#/components/schemas/UUID' }
+        - name: gaming_day
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Table session list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id: { $ref: '#/components/schemas/UUID' }
+                                table_id: { $ref: '#/components/schemas/UUID' }
+                                gaming_day: { type: string, nullable: true }
+                                opened_at: { type: string }
+                                closed_at: { type: string, nullable: true }
+                          next_cursor: { type: string, nullable: true }
+  /table-sessions/{id}/rundown:
+    get:
+      summary: Get table session rundown
+      description: >
+        Detailed rundown for a table session. Declared derived values are envelope fields.
+        Raw-total deprecations noted where present.
+      tags: [TableSessions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/UUID' }
+      responses:
+        '200':
+          description: Table session rundown
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          session_id: { $ref: '#/components/schemas/UUID' }
+                          table_id: { $ref: '#/components/schemas/UUID' }
+                          gaming_day: { type: string, nullable: true }
+                          fills_total: { type: number, description: 'Fills total in cents. DEFERRED Phase 1.2.' }
+                          credits_total: { type: number, description: 'Credits total in cents. DEFERRED Phase 1.2.' }
+                          drop_total: { type: number, nullable: true, description: 'Drop total in cents. DEFERRED Phase 1.2.' }
+
+  # ── Family 6: Shift checkpoints (EXEC-071 WS2, Phase 1.2A representative) ────────────────
+  /shift-checkpoints:
+    get:
+      summary: List shift checkpoints by gaming day
+      description: >
+        Immutable metric snapshots for mid-shift delta comparisons.
+        All _cents fields are bare number (cents). DEFERRED Phase 1.2 —
+        classification target per CLASSIFICATION-RULES §3.5.
+        hold_percent is not a field on ShiftCheckpointDTO —
+        it is a dimensionless ratio (DEF-NEVER invariant) and never appears as a FinancialValue here or in any phase.
+      tags: [ShiftCheckpoints]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: gaming_day
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Shift checkpoint list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { $ref: '#/components/schemas/UUID' }
+                            gaming_day: { type: string }
+                            checkpoint_type: { type: string }
+                            window_start: { type: string }
+                            window_end: { type: string }
+                            win_loss_cents:
+                              type: number
+                              nullable: true
+                              description: Win/loss in cents. DEFERRED Phase 1.2.
+                            drop_total_cents:
+                              type: number
+                              nullable: true
+                              description: Drop total in cents. DEFERRED Phase 1.2.
+                            fills_total_cents:
+                              type: number
+                              description: Fills total in cents. DEFERRED Phase 1.2.
+                            credits_total_cents:
+                              type: number
+                              description: Credits total in cents. DEFERRED Phase 1.2.
+                            tables_active: { type: integer }
+                            created_at: { type: string }
+
+  # ── Family 7: Shift intelligence — anomaly alerts (EXEC-071 WS2, Phase 1.2A representative) ─
+  /shift-intelligence/anomaly-alerts:
+    get:
+      summary: Get shift anomaly alerts
+      description: >
+        Baseline-aware anomaly alerts per table/metric pair.
+        DEC-5 (EXEC-071): observedValue, baselineMedian, baselineMad, thresholdValue are
+        bare number|null — Phase 1.2B will promote to FinancialValue after AnomalyAlertDTO/ShiftAlertDTO
+        type promotion. When metricType is 'hold_percent', all numeric fields are dimensionless ratios —
+        Dimensionless ratio. Never FinancialValue. DEF-NEVER invariant applies across all phases.
+      tags: [ShiftIntelligence]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: window_start
+          in: query
+          required: true
+          schema: { type: string }
+        - name: window_end
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Anomaly alerts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          alerts:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                tableId: { $ref: '#/components/schemas/UUID' }
+                                tableLabel: { type: string }
+                                metricType:
+                                  type: string
+                                  enum: [drop_total, hold_percent, cash_obs_total, win_loss_cents]
+                                  description: >
+                                    When hold_percent: all numeric fields below are dimensionless ratios.
+                                    Dimensionless ratio. Never FinancialValue. DEF-NEVER invariant applies across all phases.
+                                readinessState:
+                                  type: string
+                                  enum: [ready, stale, missing, insufficient_data, compute_failed]
+                                observedValue:
+                                  type: number
+                                  nullable: true
+                                  description: >
+                                    Bare numeric field. Phase 1.2B will promote to FinancialValue after
+                                    AnomalyAlertDTO/ShiftAlertDTO type promotion.
+                                baselineMedian:
+                                  type: number
+                                  nullable: true
+                                  description: >
+                                    Bare numeric field. Phase 1.2B will promote to FinancialValue after
+                                    AnomalyAlertDTO/ShiftAlertDTO type promotion.
+                                baselineMad:
+                                  type: number
+                                  nullable: true
+                                  description: >
+                                    Bare numeric field. Phase 1.2B will promote to FinancialValue after
+                                    AnomalyAlertDTO/ShiftAlertDTO type promotion.
+                                thresholdValue:
+                                  type: number
+                                  nullable: true
+                                  description: >
+                                    Bare numeric field. Phase 1.2B will promote to FinancialValue after
+                                    AnomalyAlertDTO/ShiftAlertDTO type promotion.
+                                deviationScore: { type: number, nullable: true }
+                                isAnomaly: { type: boolean }
+                                severity: { type: string, nullable: true, enum: [info, warn, critical] }
+                                message: { type: string }
+                          baselineGamingDay: { type: string }
+
+  # ── Family 8: Shift dashboard metrics (EXEC-071 WS2, Phase 1.2A representative) ───────────
+  /shift-dashboards/metrics/tables:
+    get:
+      summary: Get shift dashboard table metrics
+      description: >
+        Table-level metrics for the shift dashboard.
+        hold_percent is a dimensionless ratio — never FinancialValue.
+        DEF-NEVER invariant applies across all phases.
+        Currency metrics (drop_total, win_loss) are serialized as envelope fields
+        where the service emits them.
+      tags: [ShiftDashboards]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: gaming_day
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Table metrics summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          tables:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                table_id: { $ref: '#/components/schemas/UUID' }
+                                table_label: { type: string }
+                                hold_percent:
+                                  type: number
+                                  nullable: true
+                                  description: >
+                                    Dimensionless ratio. Never FinancialValue.
+                                    DEF-NEVER invariant applies across all phases.
+                                drop_total: { type: number, nullable: true, description: 'Drop total in cents. DEFERRED Phase 1.2.' }
+                                win_loss: { type: number, nullable: true, description: 'Win/loss in cents. DEFERRED Phase 1.2.' }
+
+  # ── Family 9: Shift dashboard cash-observations (EXEC-071 WS2, Phase 1.2A representative) ──
+  /shift-dashboards/cash-observations/summary:
+    get:
+      summary: Get cash observation aggregate summary
+      description: >
+        Cash observation rollup for the shift dashboard.
+        cash_out_observed_estimate_total and cash_out_observed_confirmed_total
+        are serialized as envelope fields where the service emits FinancialValue.
+      tags: [ShiftDashboards]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: gaming_day
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Cash observation summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          gaming_day: { type: string }
+                          cash_out_observed_estimate_total:
+                            type: number
+                            nullable: true
+                            description: 'Estimated cash-out total in cents. DEFERRED Phase 1.2.'
+                          cash_out_observed_confirmed_total:
+                            type: number
+                            nullable: true
+                            description: 'Confirmed cash-out total in cents. DEFERRED Phase 1.2.'
+
+  # ── Family 10: MTL gaming-day-summary (EXEC-071 WS2, Phase 1.2A representative) ────────────
+  /mtl/gaming-day-summary:
+    get:
+      summary: Get MTL gaming day summary (compliance authority)
+      description: >
+        Aggregates per patron per gaming day with Tier 2 compliance badges.
+        Authoritative compliance trigger surface per 31 CFR § 1021.311.
+        Casino scope derived from RLS context — casino_id is not a request parameter (DEC-1, EXEC-071 WS1).
+        Currency aggregate fields (total_in, total_out, etc.) are bare number (cents). DEFERRED Phase 1.2 —
+        classification target: compliance / mtl_entry / partial (open day) or complete (closed day).
+      tags: [MTL]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: gaming_day
+          in: query
+          schema: { type: string }
+        - name: patron_uuid
+          in: query
+          schema: { $ref: '#/components/schemas/UUID' }
+        - name: agg_badge_in
+          in: query
+          schema: { type: string, enum: [none, agg_watchlist, agg_ctr_near, agg_ctr_met] }
+        - name: agg_badge_out
+          in: query
+          schema: { type: string, enum: [none, agg_watchlist, agg_ctr_near, agg_ctr_met] }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Gaming day compliance summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                patron_uuid: { $ref: '#/components/schemas/UUID' }
+                                gaming_day: { type: string }
+                                total_in:
+                                  type: number
+                                  description: >
+                                    Total cash-in in cents. DEFERRED Phase 1.2 —
+                                    classification target: compliance / mtl_entry.
+                                total_out:
+                                  type: number
+                                  description: >
+                                    Total cash-out in cents. DEFERRED Phase 1.2 —
+                                    classification target: compliance / mtl_entry.
+                                entry_count: { type: integer }
+                                agg_badge_in:
+                                  type: string
+                                  enum: [none, agg_watchlist, agg_ctr_near, agg_ctr_met]
+                                  description: Tier 2 aggregate badge (COMPLIANCE AUTHORITY) for cash-in.
+                                agg_badge_out:
+                                  type: string
+                                  enum: [none, agg_watchlist, agg_ctr_near, agg_ctr_met]
+                                  description: Tier 2 aggregate badge (COMPLIANCE AUTHORITY) for cash-out.
+                          next_cursor: { type: string, nullable: true }
+
+  # ── Family 11: Loyalty issue (EXEC-071 WS2, Phase 1.2A representative) ───────────────────
+  /loyalty/issue:
+    post:
+      summary: Issue comp or entitlement reward
+      description: >
+        Issues comp or entitlement from reward catalog.
+        All numeric fields are points (§6.3 carve-out — separate unit system, not currency).
+        Points balance, not currency-denominated. Bare number per WAVE-1-CLASSIFICATION-RULES §6 carve-out.
+        Role gate: pit_boss and admin only.
+      tags: [Loyalty]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [player_id, reward_catalog_id]
+              properties:
+                player_id: { $ref: '#/components/schemas/UUID' }
+                reward_catalog_id: { $ref: '#/components/schemas/UUID' }
+                visit_id: { $ref: '#/components/schemas/UUID' }
+      responses:
+        '200':
+          description: Reward issued
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          kind:
+                            type: string
+                            enum: [comp, entitlement]
+                          pointsDelta:
+                            type: number
+                            description: >
+                              Points balance, not currency-denominated.
+                              Bare number per WAVE-1-CLASSIFICATION-RULES §6 carve-out.
+                          balanceAfter:
+                            type: number
+                            description: >
+                              Points balance, not currency-denominated.
+                              Bare number per WAVE-1-CLASSIFICATION-RULES §6 carve-out.
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1411,3 +2178,27 @@ components:
         staff_id: { $ref: '#/components/schemas/UUID', nullable: true }
         note: { type: string }
         created_at: { type: string }
+    FinancialValue:
+      type: object
+      description: >
+        Currency amount in Phase 1.2A. Dollar-float values present on BRIDGE-001 surfaces
+        (recent-sessions, live-view). Phase 1.2B canonicalizes all in-scope values to integer cents.
+      required: [value, type, source, completeness]
+      properties:
+        value:
+          type: number
+          description: >
+            Monetary amount. Dollar-float on BRIDGE-001 surfaces (recent-sessions, live-view)
+            at Phase 1.2A. Integer cents after Phase 1.2B canonicalization.
+        type:
+          type: string
+          enum: [actual, estimated, observed, compliance]
+        source:
+          type: string
+        completeness:
+          type: object
+          required: [status]
+          properties:
+            status:
+              type: string
+              enum: [complete, partial, unknown]

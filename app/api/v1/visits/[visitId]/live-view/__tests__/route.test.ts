@@ -100,7 +100,7 @@ describe('GET /api/v1/visits/[visitId]/live-view', () => {
     mockGetVisitLiveView.mockResolvedValue(LIVE_VIEW_FIXTURE);
   });
 
-  it('returns FinancialValue envelope on session financial fields (dollar float, Phase 1.1)', async () => {
+  it('returns FinancialValue envelope on session financial fields (dollar float, Phase 1.2A)', async () => {
     const request = new NextRequest(
       `http://localhost:3000/api/v1/visits/${VISIT_ID}/live-view`,
     );
@@ -115,10 +115,22 @@ describe('GET /api/v1/visits/[visitId]/live-view', () => {
     const liveView = body.data;
     expect(liveView).toBeDefined();
 
-    // FinancialValue shape: type, source, completeness.status, value is number
-    expect(liveView.session_total_buy_in.type).toBe('actual');
-    expect(liveView.session_total_buy_in.source).toBeTruthy();
-    expect(liveView.session_total_buy_in.completeness.status).toBeDefined();
+    // BRIDGE-001 active: value is dollar-float at Phase 1.2A.
+    // Integer value assertion added in Phase 1.2B after BRIDGE-001 retirement.
+    // See: docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json
     expect(typeof liveView.session_total_buy_in.value).toBe('number');
+    expect(liveView.session_total_buy_in.type).toBe('actual');
+    expect(typeof liveView.session_total_buy_in.source).toBe('string');
+    expect(liveView.session_total_buy_in.completeness.status).toBeDefined();
+
+    expect(typeof liveView.session_total_cash_out.value).toBe('number');
+    expect(liveView.session_total_cash_out.type).toBe('actual');
+    expect(typeof liveView.session_total_cash_out.source).toBe('string');
+    expect(liveView.session_total_cash_out.completeness.status).toBeDefined();
+
+    expect(typeof liveView.session_net.value).toBe('number');
+    expect(liveView.session_net.type).toBe('actual');
+    expect(typeof liveView.session_net.source).toBe('string');
+    expect(liveView.session_net.completeness.status).toBeDefined();
   });
 });

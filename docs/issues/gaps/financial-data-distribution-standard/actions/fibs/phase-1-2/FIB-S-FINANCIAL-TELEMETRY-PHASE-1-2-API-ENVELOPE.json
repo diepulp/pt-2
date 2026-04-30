@@ -1,0 +1,511 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.1.0",
+    "source_of_truth": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2-API-ENVELOPE (AMENDED 2026-04-29)",
+    "status": "amended",
+    "amendment_authority": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2/PRD-071-AUDIT.md",
+    "amendment_summary": "Guardrail audit split original Phase 1.2 into Phase 1.2A (transport stabilization, this FIB) and Phase 1.2B (canonicalization, PRD-074). BRIDGE-001 sunset, shift-intelligence DTO type promotion, formatCents UI migration, component tests, full 34-route OpenAPI expansion, and structured log observability are now Phase 1.2B scope. This FIB governs Phase 1.2A only.",
+    "feature_id": "FIB-S-FIN-PHASE-1-2-API-ENVELOPE",
+    "feature_name": "Financial Telemetry Phase 1.2A — API Transport Stabilization",
+    "priority": "P1",
+    "decision_horizon": "phase-1-2a-close",
+    "owner": "Vladimir Ivanov",
+    "opened_on": "2026-04-29",
+    "amended_on": "2026-04-29",
+    "parent_prd": "PRD-071",
+    "successor_prd": "PRD-074"
+  },
+
+  "phase_boundary": {
+    "one_line_invariant": "If a change carries existing service semantics faithfully to the wire and proves them there, it is in scope. If it changes what the semantics are (unit, type, format), it is Phase 1.2B.",
+    "prohibited": [
+      "type/source/completeness assigned inside any route handler",
+      "hold_percent wrapped in FinancialValue — DEF-NEVER, no phase exceptions",
+      "unit canonicalization — BRIDGE-001 /100 removal, integer cents enforcement, financialValueSchema.int() changes (Phase 1.2B scope)",
+      "shift-intelligence DTO type promotion — wrapping AnomalyAlertDTO/ShiftAlertDTO numeric fields (Phase 1.2B scope)",
+      "formatDollars to formatCents UI render migration (Phase 1.2B scope)",
+      "full 34-route Bucket B OpenAPI authoring in Phase 1.2A — representative coverage per family is the scope; full expansion is Phase 1.2B",
+      "runtime structured log observability for deprecated-field usage (Phase 1.2B scope)",
+      "component tests for rating-slip-modal, start-from-previous, start-from-previous-modal (Phase 1.2B scope)",
+      "Phase 1.3 UI components (FinancialValue.tsx, AttributionRatio.tsx, CompletenessBadge.tsx)",
+      "Phase 1.4 ESLint rules",
+      "Wave 2 infrastructure (outbox DDL, schema migrations, projection refactors)",
+      "casino_id silently preserved on any in-scope route contract",
+      "deprecated field left without dated sunset annotation and replacement pointer in OpenAPI",
+      "route scope expanded beyond §4.1 inventory without EXEC-SPEC amendment"
+    ]
+  },
+
+  "intent": {
+    "operator_problem": "Phase 1.1 made services honest; the HTTP wire is not — visit routes carry BRIDGE-001 dollar floats, shift-intelligence routes return bare numbers, and all 34 in-scope routes are absent from OpenAPI. Phase 1.2A proves the transport layer passes service envelopes faithfully and documents the current state in OpenAPI; Phase 1.2B will then canonicalize units.",
+    "pilot_fit": "Phase 1.2B canonicalization cannot safely change units without first proving the transport layer passes envelopes unchanged. Phase 1.2A is that proof step — it establishes a tested, OpenAPI-documented wire shape that Phase 1.2B can then safely modify.",
+    "success_outcomes": [
+      "OUT-1: Route handlers in all representative in-scope families confirmed as faithful pass-through — no route-local type/source/completeness inference",
+      "OUT-2: OpenAPI defines the shared FinancialValue component and has representative path entries per major route family",
+      "OUT-3: Contract tests pass for every representative in-scope route family; pass-through correctness proven",
+      "OUT-4: casino_id classified per route — remove, deprecated-and-ignored with sunset annotation, or out-of-scope-with-rationale; none silently preserved",
+      "OUT-5: Every in-scope deprecated field has dated sunset annotation, replacement pointer, and removal milestone in OpenAPI (structured log event in Phase 1.2B)",
+      "OUT-6: Phase 1.2B can expand canonicalization on a proven transport base; the representative pattern is established"
+    ],
+    "explicit_exclusions": [
+      "BRIDGE-001 retirement — /100 removal from services/visit/crud.ts and services/rating-slip/mappers.ts — Phase 1.2B",
+      "financialValueSchema.int() enforcement at DTO outbound boundary — Phase 1.2B",
+      "AnomalyAlertDTO/ShiftAlertDTO numeric field wrapping via resolveShiftMetricAuthority — Phase 1.2B",
+      "formatDollars to formatCents UI render migration on BRIDGE-001 surfaces — Phase 1.2B",
+      "Full 34-route Bucket B OpenAPI authoring — Phase 1.2B (Phase 1.2A delivers representative pattern)",
+      "Runtime structured log observability for deprecated-field usage — Phase 1.2B",
+      "Component tests for rating-slip-modal, start-from-previous, start-from-previous-modal — Phase 1.2B",
+      "Full 4-case route test matrices for recent-sessions and live-view — Phase 1.2B",
+      "components/financial/FinancialValue.tsx — Phase 1.3",
+      "ESLint no-unlabeled-financial-value, no-forbidden-financial-label — Phase 1.4",
+      "Playwright DOM assertions — Phase 1.4",
+      "I5 truth-telling test suite — Phase 1.4",
+      "Broad formatDollars/formatCents formatter consolidation — Phase 1.3",
+      "finance_outbox DDL, consumer workers, projection refactors — Wave 2",
+      "pit_cash_observation.amount column migration — Wave 2",
+      "New service mapper logic — Phase 1.1 closed the service layer",
+      "Policy/config-only routes with no committed financial facts"
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Route handlers infer type/source for unwrapped fields",
+        "why_considered": "Some routes may still return bare numbers from services not yet updated",
+        "why_rejected_now": "Route is transport only; unwrapped fields are Phase 1.1 gaps, not Phase 1.2 licenses to invent semantics"
+      },
+      {
+        "idea": "Defer BRIDGE-001 sunset to Phase 1.3 (carry dollar floats through two more phases)",
+        "why_considered": "Reduces Phase 1.2A blast radius",
+        "why_rejected_now": "BRIDGE-001 is deferred to Phase 1.2B — not Phase 1.3. Phase 1.3 UI must not build on an unstable unit contract. The 1.2A/1.2B decomposition is the correct split; skipping 1.2B entirely is the rejected path."
+      },
+      {
+        "idea": "Bundle BRIDGE-001 sunset (unit canonicalization) into Phase 1.2A",
+        "why_considered": "BRIDGE-001 sunset was original Phase 1.2 scope",
+        "why_rejected_now": "BRIDGE-001 is a unit change, not a transport change. Bundling it creates cross-layer coupling — service, API, and UI must land atomically. Non-decomposable; the failure mode documented in the PRD-070 postmortem. Phase 1.2B is the correct container."
+      },
+      {
+        "idea": "Build FinancialValue.tsx component in Phase 1.2A",
+        "why_considered": "Contract is nearly stable",
+        "why_rejected_now": "Component must build on a proven and canonicalized contract (Phase 1.2B exit). Building before Phase 1.2B completes inverts the dependency."
+      },
+      {
+        "idea": "Wrap hold_percent in FinancialValue with an is_ratio flag",
+        "why_considered": "hold_percent is a financial metric like the others",
+        "why_rejected_now": "Dimensionless ratio, not currency; resolveShiftMetricAuthority returns null for it; exhaustive switch throws on unknown MetricType — compile-time gate; DEF-NEVER"
+      },
+      {
+        "idea": "Big-bang authoring of all 34 Bucket B routes in Phase 1.2A",
+        "why_considered": "All 34 routes are in scope",
+        "why_rejected_now": "Surface explosion and coordination overhead. Phase 1.2A establishes the pattern with representative routes per family. Full 34-route authoring follows in Phase 1.2B after the pattern is proven."
+      },
+      {
+        "idea": "Consolidate all 30+ local format helpers in Phase 1.2A",
+        "why_considered": "Phase 1.2B will already touch format call sites for BRIDGE-001",
+        "why_rejected_now": "Consolidation requires the Phase 1.3 FinancialValue component as canonical render path; migrating before it exists requires a second migration"
+      }
+    ]
+  },
+
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "FinancialValue",
+          "kind": "primitive",
+          "description": "Currency envelope; value passes through from service DTO unchanged at the wire boundary in Phase 1.2A (unit canonicalization to integer cents is Phase 1.2B)",
+          "stateful": false,
+          "system_of_record": "types/financial.ts",
+          "fields_hint": [
+            "value: number (dollar-float current state; integer cents after Phase 1.2B)",
+            "type: FinancialAuthority",
+            "source: string",
+            "completeness.status: complete|partial|unknown"
+          ]
+        },
+        {
+          "name": "OpenAPI FinancialValue component",
+          "kind": "artifact",
+          "description": "Shared schema component defined once in api-surface.openapi.yaml; referenced by representative in-scope route schemas in Phase 1.2A; expanded to all 34 routes in Phase 1.2B",
+          "stateful": false,
+          "system_of_record": "docs/25-api-data/api-surface.openapi.yaml",
+          "fields_hint": [
+            "components/schemas/FinancialValue",
+            "value: number (dollar-float documented accurately for BRIDGE-001 state)",
+            "type: enum",
+            "source: string",
+            "completeness.status: enum"
+          ]
+        },
+        {
+          "name": "RouteContractTest",
+          "kind": "artifact",
+          "description": "Route-boundary test file per representative route family; asserts envelope key presence and pass-through correctness (integer value enforcement is Phase 1.2B)",
+          "stateful": false,
+          "system_of_record": "app/api/v1/**/__tests__/route.test.ts",
+          "fields_hint": [
+            "value: present assertion",
+            "type: valid enum assertion",
+            "source: non-empty string assertion",
+            "completeness.status: present assertion"
+          ]
+        }
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "route-pass-through-verification",
+          "verb": "read",
+          "description": "Confirm representative route handlers contain no type/source inference, /100 math, or casino_id forwarding; classify casino_id per route per EXEC-SPEC",
+          "served_outcomes": ["OUT-1", "OUT-3", "OUT-4"],
+          "loop_steps": ["STEP-1"]
+        },
+        {
+          "id": "CAP-2",
+          "name": "openapi-authoring",
+          "verb": "create",
+          "description": "Define shared FinancialValue component; author representative Bucket B path entries per major route family (not all 34); annotate carve-outs; add dated deprecation sunset annotations",
+          "served_outcomes": ["OUT-2", "OUT-5"],
+          "loop_steps": ["STEP-2"]
+        },
+        {
+          "id": "CAP-3",
+          "name": "contract-test-coverage",
+          "verb": "create",
+          "description": "Write route-boundary contract tests per representative family; assert envelope key presence and pass-through correctness",
+          "served_outcomes": ["OUT-3"],
+          "loop_steps": ["STEP-3"]
+        },
+        {
+          "id": "CAP-4",
+          "name": "casino-id-triage",
+          "verb": "update",
+          "description": "Classify casino_id per route as remove / deprecated-and-ignored / out-of-scope-with-rationale; write contract test per classification",
+          "served_outcomes": ["OUT-4"],
+          "loop_steps": ["STEP-1"]
+        }
+      ]
+    },
+    "where": {
+      "primary_surface": "HTTP API wire boundary (app/api/v1/)",
+      "surfaces": [
+        { "name": "representative financial route handlers", "kind": "api" },
+        { "name": "api-surface.openapi.yaml", "kind": "artifact" },
+        { "name": "route contract test files", "kind": "artifact" }
+      ],
+      "touchpoints": {
+        "inbound": [
+          {
+            "name": "GET /api/v1/players/[playerId]/recent-sessions",
+            "type": "api_call"
+          },
+          {
+            "name": "GET /api/v1/visits/[visitId]/live-view",
+            "type": "api_call"
+          },
+          {
+            "name": "GET /api/v1/shift-intelligence/anomaly-alerts",
+            "type": "api_call"
+          },
+          {
+            "name": "GET /api/v1/shift-intelligence/alerts",
+            "type": "api_call"
+          },
+          {
+            "name": "representative financial route calls across other in-scope families",
+            "type": "api_call"
+          }
+        ],
+        "outbound": [
+          {
+            "name": "FinancialValue envelope in JSON response (dollar-float in Phase 1.2A; integer cents after Phase 1.2B)",
+            "type": "api_response"
+          },
+          {
+            "name": "OpenAPI spec with representative path entries and shared FinancialValue component",
+            "type": "artifact"
+          }
+        ]
+      },
+      "bounded_contexts": [
+        "visit",
+        "rating-slip",
+        "shift-intelligence",
+        "player-financial",
+        "mtl",
+        "table-context",
+        "loyalty"
+      ]
+    },
+    "who": {
+      "primary_actor": "api-engineer",
+      "actors": [
+        {
+          "role": "api-engineer",
+          "permissions": [
+            "verify route pass-through on representative families",
+            "write representative route contract tests",
+            "author representative OpenAPI path entries",
+            "classify casino_id per route"
+          ],
+          "restrictions": [
+            "may not assign type/source/completeness inside route handler",
+            "may not perform canonicalization (BRIDGE-001, int enforcement)",
+            "may not expand route scope without EXEC-SPEC amendment"
+          ]
+        },
+        {
+          "role": "lead-architect",
+          "permissions": [
+            "classify casino_id per route",
+            "scaffold EXEC-071",
+            "gate scope expansion"
+          ],
+          "restrictions": [
+            "scope changes require FIB amendment before EXEC-SPEC update"
+          ]
+        },
+        {
+          "role": "qa-specialist",
+          "permissions": [
+            "review contract test coverage for representative families"
+          ],
+          "restrictions": []
+        }
+      ],
+      "ownership": {
+        "business_owner": "Vladimir Ivanov",
+        "domain_owner": "Lead Architect (EXEC-071 spec steward)"
+      }
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "name": "phase-1-1-exit-gate-passed",
+          "source": "system",
+          "preconditions": [
+            "Phase 1.1 exit gate ✅ 2026-04-25",
+            "PHASE-1.2-HANDOFF.md produced"
+          ]
+        },
+        {
+          "name": "exec-071-scaffolded",
+          "source": "system",
+          "preconditions": [
+            "PRD-071 drafted ✅",
+            "/lead-architect invoked",
+            "open questions Q-1 through Q-5 resolved"
+          ]
+        },
+        {
+          "name": "financial-route-called",
+          "source": "user",
+          "preconditions": [
+            "route is representative in-scope route",
+            "service emits FinancialValue"
+          ]
+        },
+        {
+          "name": "contract-test-run",
+          "source": "system",
+          "preconditions": [
+            "CI pipeline executing",
+            "route-boundary test files present"
+          ]
+        }
+      ],
+      "lifecycle_events": [
+        "Bucket B route (no OpenAPI) → representative path entry authored per family",
+        "Route handler unverified → route handler confirmed as pass-through",
+        "casino_id unclassified → casino_id explicitly classified per route"
+      ],
+      "timing_constraints": [
+        "Phase 1.2B may not begin before Phase 1.2A exit gate passes",
+        "Phase 1.3 may not begin before Phase 1.2B exit gate passes"
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "statement": "Route handlers are transport only — no type, source, or completeness assigned inside any route file",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-2",
+          "statement": "Phase 1.2A documents the current BRIDGE-001 state accurately in OpenAPI (dollar-float) — it does not fix it; unit canonicalization is Phase 1.2B scope",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-3",
+          "statement": "hold_percent is never wrapped in FinancialValue — dimensionless ratio, all phases, no exceptions (DEF-NEVER)",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-4",
+          "statement": "casino_id classification mandatory per route — remove, deprecated-and-ignored with dated sunset annotation, or out-of-scope-with-rationale; silent preservation forbidden",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-5",
+          "statement": "Deprecated field/endpoint in Phase 1.2A requires: OpenAPI dated sunset annotation, replacement pointer, and removal milestone — runtime structured log event is Phase 1.2B",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-6",
+          "statement": "Phase 1.2A delivers representative Bucket B path entries per major route family — full 34-route coverage is Phase 1.2B; pattern first, then scale",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-7",
+          "statement": "Contract tests assert envelope shape (key presence and pass-through correctness) — they do not assert integer values because the BRIDGE-001 dollar-float is the current correct state",
+          "severity": "hard"
+        }
+      ],
+      "invariants": [
+        "hold_percent is a bare number|null at every layer — DEF-NEVER, survives all phases",
+        "FinancialValue.value passes through from service unchanged in Phase 1.2A — no unit conversion at the route or transport layer",
+        "No route handler may be the authority for type, source, or completeness",
+        "resolveShiftMetricAuthority exhaustive switch throws on unknown MetricType — compile-time gate must not be removed"
+      ],
+      "decision_notes": [
+        "BRIDGE-001 was created in Phase 1.1b as a deliberately temporary bridge — its sunset is Phase 1.2B scope per PRD-071-AUDIT.md guardrail ruling",
+        "The guardrail audit split the original Phase 1.2 at the transport/canonicalization boundary — Phase 1.2A proves transport faithfulness; Phase 1.2B changes what passes through",
+        "OpenAPI Bucket B authoring is not deferred cleanup — without the shared FinancialValue component and representative path entries, no machine-readable contract exists"
+      ]
+    }
+  },
+
+  "containment": {
+    "loop": [
+      {
+        "id": "STEP-1",
+        "actor": "api-engineer",
+        "action": "Grep representative routes for /100, type/source assignment, casino_id; confirm pass-through; classify casino_id per route per EXEC-SPEC; annotate deprecated fields",
+        "system_response": "Representative routes confirmed as faithful pass-through; casino_id contracts explicit; deprecated field annotations staged"
+      },
+      {
+        "id": "STEP-2",
+        "actor": "api-engineer",
+        "action": "Define FinancialValue component in api-surface.openapi.yaml; author representative Bucket B path entries per major route family; annotate carve-outs; add dated deprecation sunset annotations",
+        "system_response": "Machine-readable wire contract exists for representative in-scope routes; pattern established for Phase 1.2B expansion"
+      },
+      {
+        "id": "STEP-3",
+        "actor": "api-engineer + qa-specialist",
+        "action": "Write route-boundary contract tests per representative family; assert envelope key presence and pass-through correctness; verify casino_id classification",
+        "system_response": "CI fails on envelope regression or pass-through violation; pattern ready for Phase 1.2B expansion to full 34-route coverage"
+      }
+    ],
+    "frozen": false,
+    "amended": true,
+    "amendment_note": "Original STEP-1 (BRIDGE-001 sunset) and STEP-2 (shift-intelligence wrapping) moved to Phase 1.2B per PRD-071-AUDIT.md guardrail ruling. Original 6-step loop reduced to 3-step Phase 1.2A scope.",
+    "expansion_requires_amendment": true
+  },
+
+  "dependencies": {
+    "required_existing": [
+      "Phase 1.1 exit gate ✅ 2026-04-25",
+      "types/financial.ts — FinancialValue, FinancialAuthority, CompletenessStatus",
+      "lib/financial/schema.ts — financialValueSchema",
+      "services/shift-intelligence/mappers.ts — resolveShiftMetricAuthority (PRD-073, implemented; used in Phase 1.2B for DTO promotion)",
+      "PRD-071 drafted ✅ 2026-04-24 (amended to Phase 1.2A scope)"
+    ],
+    "missing_dependencies": [
+      "EXEC-071 — not yet scaffolded; blocked on /lead-architect"
+    ],
+    "assumptions": [
+      "Route handlers are pass-through for service DTO values — no route-local financial math",
+      "34 routes in PRD-071 Appendix A are the complete in-scope set; EXEC-SPEC may amend with rationale",
+      "Dollar-to-cents rounding behavior is settled for Phase 1.2B by pinned tests in lib/financial/__tests__/schema.test.ts"
+    ]
+  },
+
+  "traceability": {
+    "outcomes": [
+      {
+        "id": "OUT-1",
+        "statement": "Route handlers in all representative in-scope families confirmed as faithful pass-through; no route-local type/source/completeness inference"
+      },
+      {
+        "id": "OUT-2",
+        "statement": "OpenAPI defines shared FinancialValue component; representative path entries authored per major route family"
+      },
+      {
+        "id": "OUT-3",
+        "statement": "Contract tests pass for representative in-scope route families; pass-through correctness proven"
+      },
+      {
+        "id": "OUT-4",
+        "statement": "casino_id classified per route; no silent preservation"
+      },
+      {
+        "id": "OUT-5",
+        "statement": "Every in-scope deprecated field has dated sunset annotation, replacement pointer, and removal milestone in OpenAPI"
+      },
+      {
+        "id": "OUT-6",
+        "statement": "Phase 1.2B can expand canonicalization on a proven transport base"
+      }
+    ],
+    "capability_to_outcome": [
+      { "capability": "CAP-1", "outcomes": ["OUT-1", "OUT-3", "OUT-4"] },
+      { "capability": "CAP-2", "outcomes": ["OUT-2", "OUT-5"] },
+      { "capability": "CAP-3", "outcomes": ["OUT-3"] },
+      { "capability": "CAP-4", "outcomes": ["OUT-4"] }
+    ],
+    "rule_to_loop_step": [
+      { "rule_id": "RULE-1", "loop_steps": ["STEP-1"] },
+      { "rule_id": "RULE-2", "loop_steps": ["STEP-2"] },
+      { "rule_id": "RULE-3", "loop_steps": ["STEP-1"] },
+      { "rule_id": "RULE-4", "loop_steps": ["STEP-1"] },
+      { "rule_id": "RULE-5", "loop_steps": ["STEP-1", "STEP-2"] },
+      { "rule_id": "RULE-6", "loop_steps": ["STEP-2"] },
+      { "rule_id": "RULE-7", "loop_steps": ["STEP-3"] }
+    ]
+  },
+
+  "governance": {
+    "scope_authority": {
+      "artifact": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2-API-ENVELOPE",
+      "version": "v1 (AMENDED 2026-04-29)",
+      "frozen": false,
+      "amended": true,
+      "amendment_authority": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2/PRD-071-AUDIT.md"
+    },
+    "open_questions_allowed_at_scaffold": [
+      {
+        "id": "Q-1",
+        "question": "Which routes expose casino_id as a request field, and what is the correct classification for each?",
+        "owner": "lead-architect"
+      },
+      {
+        "id": "Q-2",
+        "question": "Do any of the 34 routes contain /100 or dollarsToCents math that was not identified in Phase 1.1?",
+        "owner": "api-engineer"
+      },
+      {
+        "id": "Q-3",
+        "question": "Which route families should receive representative OpenAPI path entries in Phase 1.2A vs. deferred to full 1.2B authoring?",
+        "owner": "api-engineer + lead-architect"
+      },
+      {
+        "id": "Q-4",
+        "question": "Do any loyalty routes have active consumers relying on casino_id in the request, requiring deprecated-and-ignored rather than immediate removal?",
+        "owner": "api-engineer + lead-architect"
+      },
+      {
+        "id": "Q-5",
+        "question": "Did any totalChipsOut alias survive Phase 1.1 GATE-070.7 that requires explicit deprecation treatment in Phase 1.2?",
+        "owner": "api-engineer"
+      }
+    ],
+    "downstream_expansion_allowed_without_amendment": false,
+    "companion_fib_h": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2/FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2-API-ENVELOPE.md",
+    "parent_prd": "docs/10-prd/PRD-071-financial-telemetry-wave1-phase1.2-api-envelope-at-wire-v0.md",
+    "successor_fib": "Phase 1.2B (PRD-074) — BRIDGE-001 sunset, shift-intelligence DTO promotion, full OpenAPI expansion",
+    "rollout_tracker": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json",
+    "phase_1_1_fib_s": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-1/FIB-S-FINANCIAL-TELEMETRY-PHASE-1-1-SLICE.json"
+  }
+}
