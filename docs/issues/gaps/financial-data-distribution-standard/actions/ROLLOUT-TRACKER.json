@@ -5,6 +5,7 @@
     "source_of_truth": "ROLLOUT-PROGRESS.md",
     "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md",
     "last_updated": "2026-04-30",
+    "exec_074_closed": "2026-04-30",
     "update_rule": "Update both this file and ROLLOUT-PROGRESS.md together when phase state changes. This file is the machine-readable projection of the .md; it does not own truth.",
     "reading_order": "cursor → direction (principles + non_goals) → phases → deferred_register → active_bridges. Read roadmap_ref for full narrative, §2.5 for execution protocol, §9 for skill routing."
   },
@@ -49,14 +50,15 @@
   "cursor": {
     "wave": 1,
     "active_phase": "1.2B",
-    "phase_status": "not_started",
-    "phase_label": "API Canonicalization (BRIDGE-001 retirement + shift-intelligence DTO wrapping)",
-    "blocker": "Phase 1.2B PRD (PRD-074) not yet drafted",
-    "next_action": "/prd-writer for PRD-074 → /lead-architect scaffold EXEC-074 → /build-pipeline",
-    "next_action_prd": "docs/10-prd/PRD-074-financial-telemetry-wave1-phase1.2b-canonicalization-v0.md",
-    "last_closed_phase": "1.2A",
+    "phase_status": "partial_complete",
+    "phase_label": "API Canonicalization — Phase 1.2B-A complete; Phase 1.2B-B (UI render + full OpenAPI) pending",
+    "blocker": null,
+    "next_action": "Phase 1.2B-B: formatDollars → formatCents UI render migration + full 28-route OpenAPI expansion",
+    "next_action_prd": null,
+    "last_closed_phase": "1.2B-A",
     "last_closed_date": "2026-04-30",
-    "last_closed_exec": "EXEC-071",
+    "last_closed_exec": "EXEC-074",
+    "last_closed_commit": "e83a2c125cf24e33c0c533b9f8bc8e516154cec0",
     "last_closed_handoff": null
   },
 
@@ -183,22 +185,33 @@
       "id": "1.2B",
       "label": "API Canonicalization (BRIDGE-001 retirement + shift-intelligence DTO wrapping)",
       "wave": 1,
-      "status": "not_started",
+      "status": "partial_complete",
       "prd": "PRD-074",
-      "prd_status": "referenced_in_prd071_appendix_d",
+      "prd_status": "active",
       "prd_path": "docs/10-prd/PRD-074-financial-telemetry-wave1-phase1.2b-canonicalization-v0.md",
-      "exec_spec": null,
-      "exec_spec_status": "not_started",
-      "entry_gate": "Phase 1.2A exit ✅ + PRD-074 drafted + EXEC-074 via /lead-architect + /build-pipeline",
-      "skills_dispatched": ["/api-builder", "/backend-service-builder"],
-      "pending_scope": [
-        "BRIDGE-001 retirement: remove /100 in services/visit/crud.ts + services/rating-slip/mappers.ts",
-        "Enforce financialValueSchema.int() at DTO outbound boundary for RecentSessionDTO / VisitLiveViewDTO",
+      "exec_spec": "EXEC-074",
+      "exec_spec_path": "docs/21-exec-spec/PRD-074/EXEC-074-financial-telemetry-wave1-phase1.2b-canonicalization.md",
+      "exec_spec_status": "complete",
+      "phase_1_2b_a_exit_date": "2026-04-30",
+      "phase_1_2b_a_commit": "e83a2c125cf24e33c0c533b9f8bc8e516154cec0",
+      "phase_1_2b_a_closed": [
+        "BRIDGE-001 retired: /100 removed from services/visit/crud.ts + services/rating-slip/mappers.ts",
+        "financialValueSchema.int() enforcement active at DTO outbound boundary",
+        "AnomalyAlertDTO/ShiftAlertDTO promoted to discriminated union — financial metrics carry FinancialValue|null",
+        "hold_percent confirmed bare number|null (DEF-NEVER)",
+        "Outbound Zod schemas for AnomalyAlertDTO and ShiftAlertDTO (DEF-007 lifted)",
+        "Three named OpenAPI path entries shape-aligned to integer cents",
+        "BRIDGE-001 key-presence assertions replaced with integer-value assertions",
+        "DEC-5 bare-number boundary test replaced with discriminated-shape assertion"
+      ],
+      "pending_scope_1_2b_b": [
         "UI render migration: formatDollars(field.value) → formatCents(field.value) on start-from-previous.tsx + modal",
-        "AnomalyAlertDTO/ShiftAlertDTO field type promotion: number|null → FinancialValue|null",
-        "Full 34-route OpenAPI coverage and contract test matrices",
-        "Deprecation observability: structured log events per deprecated-field usage",
-        "Component tests: rating-slip-modal.test.tsx, start-from-previous.test.tsx, start-from-previous-modal.test.tsx"
+        "Full 28-route OpenAPI expansion",
+        "Full 4-case route-boundary test matrices",
+        "Deprecation observability: structured log events per deprecated-field usage"
+      ],
+      "scope_notes": [
+        "Component test births (rating-slip-modal.test.tsx, start-from-previous.test.tsx, start-from-previous-modal.test.tsx) are Phase 1.3 scope per PRD-071 Appendix D / DEF-006 and PRD-074."
       ]
     },
     {
@@ -249,11 +262,16 @@
     }
   ],
 
-  "active_bridges": [
+  "active_bridges": [],
+
+  "retired_bridges": [
     {
       "id": "BRIDGE-001",
       "label": "Visit Surface Dollar-Float Bridge",
-      "status": "active",
+      "status": "retired",
+      "retired_in": "EXEC-074",
+      "retired_date": "2026-04-30",
+      "commit_sha": "e83a2c125cf24e33c0c533b9f8bc8e516154cec0",
       "owner_prd": "PRD-072",
       "governance": "docs/issues/gaps/financial-data-distribution-standard/decisions/TRANSITIONAL-GOVERNANCE-CAVEAT.md",
       "affected_dtos": [
@@ -264,21 +282,12 @@
         "VisitLiveViewDTO.session_total_cash_out",
         "VisitLiveViewDTO.session_net"
       ],
-      "bridge_invariants": [
-        "value is dollar-float (NOT canonical integer cents)",
-        "Use formatDollars(field.value), NOT formatCents",
-        "Do NOT enforce financialValueSchema (z.number().int() rejects dollar floats)",
-        "Do NOT remove /100 conversions in visit/crud.ts or rating-slip/mappers.ts",
-        "Phase 1.2A contract tests assert typeof value === 'number' — no integer assertion (correct for bridge state)"
-      ],
-      "sunset_trigger": "Phase 1.2B canonicalization (PRD-074)",
-      "sunset_actions": [
-        "Remove /100 in services/visit/crud.ts centsToDollars",
-        "Remove /100 in services/rating-slip/mappers.ts toVisitLiveViewDTO",
-        "Canonicalize FinancialValue.value to integer cents",
-        "Apply financialValueSchema z.number().int() enforcement",
-        "Migrate UI renders from formatDollars(field.value) to formatCents(field.value)",
-        "Update ROLLOUT-TRACKER.json active_bridges BRIDGE-001 status to 'retired'"
+      "retirement_actions_completed": [
+        "Removed /100 in services/visit/crud.ts centsToDollars",
+        "Removed /100 in services/rating-slip/mappers.ts toVisitLiveViewDTO",
+        "FinancialValue.value is now integer cents at service boundary",
+        "financialValueSchema z.number().int() enforcement active",
+        "UI render migration (formatDollars → formatCents) deferred to Phase 1.2B-B"
       ]
     }
   ],
@@ -293,21 +302,33 @@
         "baselineMad",
         "thresholdValue"
       ],
+      "status": "closed",
+      "closed_in": "EXEC-074",
+      "closed_date": "2026-04-30",
+      "commit_sha": "e83a2c125cf24e33c0c533b9f8bc8e516154cec0",
       "deferred_to": "Phase 1.2B",
       "gate": "GATE-070.6",
-      "note": "resolveShiftMetricAuthority already returns { type, source } for Phase 1.2B to assign into FinancialValue. Phase 1.2A documented bare-number carve-out (DEC-5) and added test asserting typeof === 'number'."
+      "note": "AnomalyAlertDTO and ShiftAlertDTO promoted to discriminated union on metricType. Financial metrics carry FinancialValue|null. hold_percent retains bare number|null (DEF-NEVER)."
     },
     {
       "id": "DEF-002",
       "item": "/100 removal (services/visit/crud.ts + services/rating-slip/mappers.ts)",
+      "status": "closed",
+      "closed_in": "EXEC-074",
+      "closed_date": "2026-04-30",
+      "commit_sha": "e83a2c125cf24e33c0c533b9f8bc8e516154cec0",
       "deferred_to": "Phase 1.2B",
-      "note": "Prohibited while BRIDGE-001 is active. Canonicalizes FinancialValue.value from dollar-float to integer cents."
+      "note": "/100 removed from both mapper sites. FinancialValue.value is now integer cents."
     },
     {
       "id": "DEF-003",
       "item": "financialValueSchema z.number().int() enforcement at DTO outbound boundary",
+      "status": "closed",
+      "closed_in": "EXEC-074",
+      "closed_date": "2026-04-30",
+      "commit_sha": "e83a2c125cf24e33c0c533b9f8bc8e516154cec0",
       "deferred_to": "Phase 1.2B",
-      "note": "Validator rejects dollar floats. Only applicable after DEF-002 cents canonicalization lands."
+      "note": "financialValueSchema.int() active after /100 removal. Parse calls in visit/crud.ts and rating-slip/mappers.ts enforce integer cents at service boundary."
     },
     {
       "id": "DEF-004",
@@ -330,8 +351,12 @@
     {
       "id": "DEF-007",
       "item": "Outbound Zod schemas for AnomalyAlertDTO / ShiftAlertDTO",
+      "status": "closed",
+      "closed_in": "EXEC-074",
+      "closed_date": "2026-04-30",
+      "commit_sha": "e83a2c125cf24e33c0c533b9f8bc8e516154cec0",
       "deferred_to": "Phase 1.2B",
-      "gate": "WS7A waiver — requires lead-architect EXEC-SPEC amendment to reopen"
+      "gate": "WS7A waiver lifted — anomalyAlertDTOSchema and shiftAlertDTOSchema added to services/shift-intelligence/schemas.ts"
     },
     {
       "id": "DEF-NEVER",
