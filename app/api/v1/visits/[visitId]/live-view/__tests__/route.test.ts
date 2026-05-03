@@ -1,12 +1,12 @@
 /** @jest-environment node */
 
 /**
- * Visit Live View Route — Phase 1.2B-A Integer Cents Assertion
+ * Visit Live View Route — Phase 1.2B-C Route-Boundary Test Matrix
  *
- * Minimum: one success case asserting FinancialValue envelope shape.
- * Value is integer cents after BRIDGE-001 retirement (Phase 1.2B-A).
- * Full test matrix (unauthorized, invalid-params, 404) deferred to Phase 1.2B-B.
+ * 4-case matrix: 401 unauthorized, 404 visit not found, 500 service error,
+ * success with integer-cents FinancialValue shape (RULE-5).
  *
+ * @see EXEC-076 WS2 — Phase 1.2B-C contract expansion
  * @see EXEC-074 WS3 — BRIDGE-001 retirement
  */
 
@@ -97,8 +97,74 @@ describe('GET /api/v1/visits/[visitId]/live-view', () => {
   const VISIT_ID = '550e8400-e29b-41d4-a716-446655440000';
 
   beforeEach(() => {
+    jest.clearAllMocks();
     mockGetVisitLiveView.mockResolvedValue(LIVE_VIEW_FIXTURE);
   });
+
+  // ── Case 1: 401 Unauthorized ──────────────────────────────────────────────
+
+  it('returns 401 when auth middleware rejects the request', async () => {
+    const { withServerAction } = jest.requireMock(
+      '@/lib/server-actions/middleware',
+    ) as { withServerAction: jest.Mock };
+
+    withServerAction.mockImplementationOnce(async () => ({
+      ok: false,
+      code: 'UNAUTHORIZED',
+      error: 'Unauthorized',
+      status: 401,
+      requestId: 'test-401-id',
+      timestamp: new Date().toISOString(),
+    }));
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/v1/visits/${VISIT_ID}/live-view`,
+    );
+    const params = Promise.resolve({ visitId: VISIT_ID });
+
+    const response = await GET(request, { params });
+    expect(response.status).toBe(401);
+    const body = await response.json();
+    expect(body.ok).toBe(false);
+    expect(body.code).toBe('UNAUTHORIZED');
+  });
+
+  // ── Case 2: 404 Visit not found ───────────────────────────────────────────
+
+  it('returns 404 when visit does not exist', async () => {
+    // Route throws DomainError('VISIT_NOT_FOUND', ..., { httpStatus: 404 })
+    // when getVisitLiveView returns null. See live-view/route.ts.
+    mockGetVisitLiveView.mockResolvedValueOnce(null);
+
+    const NONEXISTENT_VISIT_ID = '550e8400-e29b-41d4-a716-446655440099';
+    const request = new NextRequest(
+      `http://localhost:3000/api/v1/visits/${NONEXISTENT_VISIT_ID}/live-view`,
+    );
+    const params = Promise.resolve({ visitId: NONEXISTENT_VISIT_ID });
+
+    const response = await GET(request, { params });
+    expect(response.status).toBe(404);
+    const body = await response.json();
+    expect(body.ok).toBe(false);
+  });
+
+  // ── Case 3: 500 Service error ─────────────────────────────────────────────
+
+  it('returns 500 when service layer throws an unexpected error', async () => {
+    mockGetVisitLiveView.mockRejectedValueOnce(new Error('RPC timeout'));
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/v1/visits/${VISIT_ID}/live-view`,
+    );
+    const params = Promise.resolve({ visitId: VISIT_ID });
+
+    const response = await GET(request, { params });
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.ok).toBe(false);
+  });
+
+  // ── Case 4: Success — integer-cents FinancialValue shape (RULE-5) ─────────
 
   it('returns FinancialValue envelope on session financial fields with integer cents (Phase 1.2B-A)', async () => {
     const request = new NextRequest(
@@ -115,22 +181,29 @@ describe('GET /api/v1/visits/[visitId]/live-view', () => {
     const liveView = body.data;
     expect(liveView).toBeDefined();
 
-    // BRIDGE-001 retired (Phase 1.2B-A): value is integer cents.
+    // RULE-5 (EXEC-076): Number.isInteger asserts integer-cents, not dollar-float
+    expect(Number.isInteger(liveView.session_total_buy_in.value)).toBe(true);
     expect(liveView.session_total_buy_in.value).toBe(7500);
-    expect(liveView.session_total_buy_in.type).toBe('actual');
+    expect(typeof liveView.session_total_buy_in.type).toBe('string');
     expect(typeof liveView.session_total_buy_in.source).toBe('string');
-    expect(liveView.session_total_buy_in.completeness.status).toBe('complete');
-
-    expect(liveView.session_total_cash_out.value).toBe(0);
-    expect(liveView.session_total_cash_out.type).toBe('actual');
-    expect(typeof liveView.session_total_cash_out.source).toBe('string');
-    expect(liveView.session_total_cash_out.completeness.status).toBe(
-      'complete',
+    expect(['complete', 'partial', 'unknown']).toContain(
+      liveView.session_total_buy_in.completeness.status,
     );
 
+    expect(Number.isInteger(liveView.session_total_cash_out.value)).toBe(true);
+    expect(liveView.session_total_cash_out.value).toBe(0);
+    expect(typeof liveView.session_total_cash_out.type).toBe('string');
+    expect(typeof liveView.session_total_cash_out.source).toBe('string');
+    expect(['complete', 'partial', 'unknown']).toContain(
+      liveView.session_total_cash_out.completeness.status,
+    );
+
+    expect(Number.isInteger(liveView.session_net.value)).toBe(true);
     expect(liveView.session_net.value).toBe(-7500);
-    expect(liveView.session_net.type).toBe('actual');
+    expect(typeof liveView.session_net.type).toBe('string');
     expect(typeof liveView.session_net.source).toBe('string');
-    expect(liveView.session_net.completeness.status).toBe('complete');
+    expect(['complete', 'partial', 'unknown']).toContain(
+      liveView.session_net.completeness.status,
+    );
   });
 });

@@ -131,6 +131,97 @@ describe('GET /api/v1/shift-intelligence/anomaly-alerts -- boundary test', () =>
     mockSupabase = {};
   });
 
+  // ── Case 1: 401 Unauthorized (Phase 1.2B-C expansion) ────────────────────
+
+  it('returns 401 when auth middleware rejects the request', async () => {
+    const { withServerAction } = jest.requireMock(
+      '@/lib/server-actions/middleware',
+    ) as { withServerAction: jest.Mock };
+
+    withServerAction.mockImplementationOnce(async () => ({
+      ok: false,
+      code: 'UNAUTHORIZED',
+      error: 'Unauthorized',
+      status: 401,
+      requestId: 'test-401-id',
+      timestamp: new Date().toISOString(),
+    }));
+
+    const request = new NextRequest(
+      new URL(
+        '/api/v1/shift-intelligence/anomaly-alerts?window_start=2026-03-22T00:00:00Z&window_end=2026-03-22T23:59:59Z',
+        'http://localhost:3000',
+      ),
+      { method: 'GET' },
+    );
+
+    const response = await GET(request);
+    expect(response.status).toBe(401);
+    const body = await response.json();
+    expect(body.ok).toBe(false);
+    expect(body.code).toBe('UNAUTHORIZED');
+  });
+
+  // ── Case 2: 400 Invalid window params (Phase 1.2B-C expansion) ───────────
+
+  it('returns 400 when window_start is missing', async () => {
+    // anomalyAlertsQuerySchema requires both window_start and window_end as datetime strings
+    const request = new NextRequest(
+      new URL(
+        '/api/v1/shift-intelligence/anomaly-alerts?window_end=2026-03-22T23:59:59Z',
+        'http://localhost:3000',
+      ),
+      { method: 'GET' },
+    );
+
+    const response = await GET(request);
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.ok).toBe(false);
+    expect(body.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns 400 when window_start is not a valid datetime string', async () => {
+    const request = new NextRequest(
+      new URL(
+        '/api/v1/shift-intelligence/anomaly-alerts?window_start=not-a-datetime&window_end=2026-03-22T23:59:59Z',
+        'http://localhost:3000',
+      ),
+      { method: 'GET' },
+    );
+
+    const response = await GET(request);
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.ok).toBe(false);
+    expect(body.code).toBe('VALIDATION_ERROR');
+  });
+
+  // ── Case 3: 200 Empty alerts array (Phase 1.2B-C expansion) ──────────────
+
+  it('returns 200 with empty alerts array when no anomalies exist', async () => {
+    mockGetAnomalyAlerts.mockResolvedValueOnce({
+      alerts: [],
+      baselineGamingDay: '2026-03-22',
+      baselineCoverage: { withBaseline: 0, withoutBaseline: 0 },
+    });
+
+    const request = new NextRequest(
+      new URL(
+        '/api/v1/shift-intelligence/anomaly-alerts?window_start=2026-03-22T00:00:00Z&window_end=2026-03-22T23:59:59Z',
+        'http://localhost:3000',
+      ),
+      { method: 'GET' },
+    );
+
+    const response = await GET(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.alerts).toEqual([]);
+  });
+
   it('returns 200 with alerts shape when casino context is set', async () => {
     const request = new NextRequest(
       new URL(
@@ -240,12 +331,12 @@ describe('GET /api/v1/shift-intelligence/anomaly-alerts -- boundary test', () =>
     expect(response.status).toBeGreaterThanOrEqual(400);
   });
 
-  // ── DEC-5 (EXEC-074 WS3): discriminated shape — financial metrics → FinancialValue ──────────
+  // ── Case 4: DEC-5 discriminated shape — both branches (Phase 1.2B-C: RULE-5 + null variants) ─
   // DEC-5 resolved: AnomalyAlertDTO is now a discriminated union on metricType.
   // Financial metrics (drop_total, win_loss_cents, cash_obs_total) carry FinancialValue | null.
   // hold_percent retains bare number | null (DEF-NEVER invariant).
 
-  it('DEC-5 (EXEC-074): discriminated shape — financial metrics return FinancialValue, hold_percent retains bare number', async () => {
+  it('DEC-5 (EXEC-074): financial metrics return FinancialValue with integer cents; hold_percent retains bare number', async () => {
     const request = new NextRequest(
       new URL(
         '/api/v1/shift-intelligence/anomaly-alerts?window_start=2026-03-22T00:00:00Z&window_end=2026-03-22T23:59:59Z',
@@ -272,6 +363,12 @@ describe('GET /api/v1/shift-intelligence/anomaly-alerts -- boundary test', () =>
     expect(financialAlert.baselineMad).toHaveProperty('value', 1500);
     expect(financialAlert.thresholdValue).toHaveProperty('value', 4500);
 
+    // RULE-5 (EXEC-076): value is integer cents — Number.isInteger assertion
+    expect(Number.isInteger(financialAlert.observedValue.value)).toBe(true);
+    expect(Number.isInteger(financialAlert.baselineMedian.value)).toBe(true);
+    expect(Number.isInteger(financialAlert.baselineMad.value)).toBe(true);
+    expect(Number.isInteger(financialAlert.thresholdValue.value)).toBe(true);
+
     // Ratio metric alert (hold_percent) — bare number, DEF-NEVER
     const ratioAlert = body.data.alerts[1];
     expect(ratioAlert.metricType).toBe('hold_percent');
@@ -279,9 +376,80 @@ describe('GET /api/v1/shift-intelligence/anomaly-alerts -- boundary test', () =>
     expect(ratioAlert.observedValue).toBe(0.42);
     expect(typeof ratioAlert.baselineMedian).toBe('number');
     expect(ratioAlert.baselineMedian).toBe(0.38);
+    expect(typeof ratioAlert.thresholdValue).toBe('number');
 
     // DEF-NEVER: metricType is a string label, never a FinancialValue
     expect(typeof financialAlert.metricType).toBe('string');
     expect(typeof ratioAlert.metricType).toBe('string');
+  });
+
+  it('DEC-5 null variants: nullable FinancialValue and number|null fields both serialize correctly', async () => {
+    const nullVariantFixture = {
+      alerts: [
+        {
+          // Financial branch — all metric fields null
+          tableId: 'table-null-fin',
+          tableLabel: 'BJ-NULL',
+          metricType: 'drop_total',
+          readinessState: 'insufficient_data',
+          observedValue: null,
+          baselineMedian: null,
+          baselineMad: null,
+          thresholdValue: null,
+          deviationScore: null,
+          isAnomaly: false,
+          severity: null,
+          direction: null,
+          message: 'Insufficient data',
+        },
+        {
+          // Ratio branch — all metric fields null
+          tableId: 'table-null-ratio',
+          tableLabel: 'BJ-NULL2',
+          metricType: 'hold_percent',
+          readinessState: 'stale',
+          observedValue: null,
+          baselineMedian: null,
+          baselineMad: null,
+          thresholdValue: null,
+          deviationScore: null,
+          isAnomaly: false,
+          severity: null,
+          direction: null,
+          message: 'Stale data',
+        },
+      ],
+      baselineGamingDay: '2026-03-22',
+      baselineCoverage: { withBaseline: 0, withoutBaseline: 2 },
+    };
+
+    mockGetAnomalyAlerts.mockResolvedValueOnce(nullVariantFixture);
+
+    const request = new NextRequest(
+      new URL(
+        '/api/v1/shift-intelligence/anomaly-alerts?window_start=2026-03-22T00:00:00Z&window_end=2026-03-22T23:59:59Z',
+        'http://localhost:3000',
+      ),
+      { method: 'GET' },
+    );
+    const response = await GET(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+
+    const [finNull, ratioNull] = body.data.alerts;
+
+    // Financial null variant: null fields are null (not FinancialValue objects)
+    expect(finNull.metricType).toBe('drop_total');
+    expect(finNull.observedValue).toBeNull();
+    expect(finNull.baselineMedian).toBeNull();
+    expect(finNull.baselineMad).toBeNull();
+    expect(finNull.thresholdValue).toBeNull();
+
+    // Ratio null variant: null fields are null (not FinancialValue objects)
+    expect(ratioNull.metricType).toBe('hold_percent');
+    expect(ratioNull.observedValue).toBeNull();
+    expect(ratioNull.baselineMedian).toBeNull();
+    expect(ratioNull.thresholdValue).toBeNull();
   });
 });
