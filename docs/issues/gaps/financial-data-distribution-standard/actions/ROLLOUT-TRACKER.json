@@ -341,8 +341,7 @@
       "status": "closed",
       "closed_in": "EXEC-075",
       "closed_date": "2026-05-03",
-      "commit_sha_pending": true,
-      "follow_up_required": "Replace commit_sha_pending with real SHA before Phase 1.2B-C planning begins"
+      "commit_sha": "2d68dcedb9c4c43e433c1c832c5881fe8c19a7b3"
     },
     {
       "id": "DEF-005",
