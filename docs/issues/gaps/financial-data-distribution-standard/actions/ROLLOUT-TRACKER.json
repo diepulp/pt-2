@@ -4,7 +4,7 @@
     "version": "1.2.0",
     "source_of_truth": "ROLLOUT-PROGRESS.md",
     "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md",
-    "last_updated": "2026-04-30",
+    "last_updated": "2026-05-03",
     "exec_074_closed": "2026-04-30",
     "update_rule": "Update both this file and ROLLOUT-PROGRESS.md together when phase state changes. This file is the machine-readable projection of the .md; it does not own truth.",
     "reading_order": "cursor → direction (principles + non_goals) → phases → deferred_register → active_bridges. Read roadmap_ref for full narrative, §2.5 for execution protocol, §9 for skill routing."
@@ -49,17 +49,16 @@
 
   "cursor": {
     "wave": 1,
-    "active_phase": "1.2B",
-    "phase_status": "partial_complete",
-    "phase_label": "API Canonicalization — Phase 1.2B-A and 1.2B-B complete; Phase 1.2B-C contract expansion pending",
+    "active_phase": "1.3",
+    "phase_status": "not_started",
+    "phase_label": "Phase 1.2B complete. Phase 1.3 (UI Layer: Split Display + Labels) pending PRD + EXEC-SPEC.",
     "blocker": null,
-    "next_action": "Phase 1.2B-C: full 28-route OpenAPI expansion + 4-case route-boundary test matrices + DEC-6 + deprecation observability",
+    "next_action": "Draft Phase 1.3 PRD. Phase 1.3 entry gate: Phase 1.2B exit confirmed + Phase 1.3 PRD approved + EXEC-SPEC scaffolded.",
     "next_action_prd": null,
-    "last_closed_phase": "1.2B-B",
+    "last_closed_phase": "1.2B-C",
     "last_closed_date": "2026-05-03",
-    "last_closed_exec": "EXEC-075",
-    "last_closed_commit": "e83a2c125cf24e33c0c533b9f8bc8e516154cec0",
-    "last_closed_handoff": null
+    "last_closed_exec": "EXEC-076",
+    "last_closed_commit": "e73879f46990a9b6aeae8b4832a226ccfa24b58b"
   },
 
   "phases": [
@@ -185,7 +184,7 @@
       "id": "1.2B",
       "label": "API Canonicalization (BRIDGE-001 retirement + shift-intelligence DTO wrapping)",
       "wave": 1,
-      "status": "partial_complete",
+      "status": "complete",
       "prd": "PRD-074",
       "prd_status": "active",
       "prd_path": "docs/10-prd/PRD-074-financial-telemetry-wave1-phase1.2b-canonicalization-v0.md",
@@ -210,11 +209,24 @@
         "UI render migration: formatDollars(field.value) → formatCents(field.value) on start-from-previous.tsx (EXEC-075)",
         "Q-4 runtime UI consumer audit clean — no undeclared FinancialValue.value consumers"
       ],
-      "pending_scope_1_2b_c": [
-        "Q-5-audited OpenAPI expansion for financially-relevant route fields",
-        "Route-appropriate boundary test matrices for recent-sessions and live-view",
-        "DEC-6 shift-intelligence/alerts OpenAPI path entry and route-boundary test"
+      "pending_scope_1_2b_c": [],
+      "phase_1_2b_c_exit_date": "2026-05-03",
+      "phase_1_2b_c_commit_sha": "e73879f46990a9b6aeae8b4832a226ccfa24b58b",
+      "phase_1_2b_c_ws1_complete": true,
+      "phase_1_2b_c_ws1_closed": [
+        "Q-5 inventory recorded and reconciled (all financially-relevant fields classified with rationale)",
+        "FinancialValue component value.type corrected from number to integer; stale Dollar-float/BRIDGE-001 wording removed",
+        "anomaly-alerts converted from field-level oneOf to branch-valid oneOf discriminated on metricType",
+        "GET /shift-intelligence/alerts path entry born (DEC-6): metricType discriminant, both branches, thresholdValue absent, status query param documented"
       ],
+      "decisions_resolved_1_2b_c": {
+        "DEC-6": {
+          "question": "GET /shift-intelligence/alerts OpenAPI path entry and route-boundary test",
+          "resolution": "Path entry born in api-surface.openapi.yaml (EXEC-076 WS1). Route test born with 6-case matrix (EXEC-076 WS2). ShiftAlertDTO discriminated union on metricType documented.",
+          "closed_in": "EXEC-076",
+          "commit_sha": "e73879f46990a9b6aeae8b4832a226ccfa24b58b"
+        }
+      },
       "scope_notes": [
         "Component test births (rating-slip-modal.test.tsx, start-from-previous.test.tsx, start-from-previous-modal.test.tsx) are Phase 1.3 scope per PRD-071 Appendix D / DEF-006 and PRD-074."
       ]
@@ -347,8 +359,13 @@
     },
     {
       "id": "DEF-005",
-      "item": "Full 4-case route-boundary test suites (recent-sessions, live-view routes)",
+      "item": "Full 4-case route-boundary test suites (recent-sessions, live-view routes) + 6-case alerts test birth + 4-case anomaly-alerts expansion",
       "deferred_to": "Phase 1.2B",
+      "note": "Phase 1.2A expanded to all-field BRIDGE-001 assertions (3 fields × 4 keys). Full case matrices (auth, 404, pagination) deferred until cents canonicalization stabilizes contract. EXEC-076 WS2 (qa-specialist) will close this item — pending execution.",
+      "status": "closed",
+      "closed_in": "EXEC-076",
+      "commit_sha": "e73879f46990a9b6aeae8b4832a226ccfa24b58b",
+      "resolution": "4-case route-boundary test matrices added for recent-sessions (401, invalid params, empty cross-tenant, integer-cents success) and live-view (401, 404, service error, integer-cents success); alerts route test born with 6-case matrix (401, invalid gaming_day, empty, ratio-branch, financial-branch, status query); anomaly-alerts expanded to 4-case matrix plus null variants and Number.isInteger assertions.",
       "note": "Phase 1.2A expanded to all-field BRIDGE-001 assertions (3 fields × 4 keys). Full case matrices (auth, 404, pagination) deferred until cents canonicalization stabilizes contract."
     },
     {
