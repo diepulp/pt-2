@@ -51,13 +51,13 @@
     "wave": 1,
     "active_phase": "1.2B",
     "phase_status": "partial_complete",
-    "phase_label": "API Canonicalization — Phase 1.2B-A complete; Phase 1.2B-B (UI render + full OpenAPI) pending",
+    "phase_label": "API Canonicalization — Phase 1.2B-A and 1.2B-B complete; Phase 1.2B-C contract expansion pending",
     "blocker": null,
-    "next_action": "Phase 1.2B-B: formatDollars → formatCents UI render migration + full 28-route OpenAPI expansion",
+    "next_action": "Phase 1.2B-C: full 28-route OpenAPI expansion + 4-case route-boundary test matrices + DEC-6 + deprecation observability",
     "next_action_prd": null,
-    "last_closed_phase": "1.2B-A",
-    "last_closed_date": "2026-04-30",
-    "last_closed_exec": "EXEC-074",
+    "last_closed_phase": "1.2B-B",
+    "last_closed_date": "2026-05-03",
+    "last_closed_exec": "EXEC-075",
     "last_closed_commit": "e83a2c125cf24e33c0c533b9f8bc8e516154cec0",
     "last_closed_handoff": null
   },
@@ -205,10 +205,13 @@
         "DEC-5 bare-number boundary test replaced with discriminated-shape assertion"
       ],
       "pending_scope_1_2b_b": [
-        "UI render migration: formatDollars(field.value) → formatCents(field.value) on start-from-previous.tsx + modal",
-        "Full 28-route OpenAPI expansion",
-        "Full 4-case route-boundary test matrices",
-        "Deprecation observability: structured log events per deprecated-field usage"
+        "UI render migration: formatDollars(field.value) → formatCents(field.value) on start-from-previous.tsx",
+        "Q-4 runtime UI consumer audit for formatDollars(FinancialValue.value)"
+      ],
+      "pending_scope_1_2b_c": [
+        "Q-5-audited OpenAPI expansion for financially-relevant route fields",
+        "Route-appropriate boundary test matrices for recent-sessions and live-view",
+        "DEC-6 shift-intelligence/alerts OpenAPI path entry and route-boundary test"
       ],
       "scope_notes": [
         "Component test births (rating-slip-modal.test.tsx, start-from-previous.test.tsx, start-from-previous-modal.test.tsx) are Phase 1.3 scope per PRD-071 Appendix D / DEF-006 and PRD-074."
@@ -334,7 +337,12 @@
       "id": "DEF-004",
       "item": "UI render migration: formatDollars(field.value) → formatCents(field.value)",
       "deferred_to": "Phase 1.2B",
-      "note": "Render must match value unit. Only switch after DEF-002 makes value integer cents."
+      "note": "Render must match value unit. Only switch after DEF-002 makes value integer cents.",
+      "status": "closed",
+      "closed_in": "EXEC-075",
+      "closed_date": "2026-05-03",
+      "commit_sha_pending": true,
+      "follow_up_required": "Replace commit_sha_pending with real SHA before Phase 1.2B-C planning begins"
     },
     {
       "id": "DEF-005",

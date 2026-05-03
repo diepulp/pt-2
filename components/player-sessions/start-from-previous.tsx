@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatDollars } from '@/lib/format';
+import { formatCents } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { RecentSessionDTO } from '@/services/visit/dtos';
 
@@ -24,8 +24,7 @@ import type { RecentSessionDTO } from '@/services/visit/dtos';
 // Types
 // ============================================================================
 
-// Phase 1.1: SessionData is now RecentSessionDTO. Financial fields are FinancialValue (dollar float).
-// Phase 1.2 will canonicalize to integer cents. Callers must pass FinancialValue shapes.
+// SessionData is RecentSessionDTO. FinancialValue.value is integer cents (canonicalized in Phase 1.2B-A / EXEC-074).
 export type SessionData = RecentSessionDTO;
 
 export interface PlayerInfo {
@@ -199,13 +198,13 @@ function ClosedSessionRow({
           <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="text-muted-foreground">In:</span>
           <span className="font-medium tabular-nums">
-            {formatDollars(session.total_buy_in.value)}
+            {formatCents(session.total_buy_in.value)}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-muted-foreground">Out:</span>
           <span className="font-medium tabular-nums">
-            {formatDollars(session.total_cash_out.value)}
+            {formatCents(session.total_cash_out.value)}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -223,7 +222,7 @@ function ClosedSessionRow({
             )}
           >
             {isPositive ? '+' : ''}
-            {formatDollars(session.net.value)}
+            {formatCents(session.net.value)}
           </span>
         </div>
         <Badge
