@@ -47,12 +47,13 @@ Start at `docs/INDEX.md` for full navigation. Key docs:
 - **Over-Engineering Guardrail** (`docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md`) - Complexity rules
 
 Use `docs/patterns/SDLC_DOCS_TAXONOMY.md` to locate docs by SDLC category.
+- **Transitional DTO Governance Caveat** (`docs/issues/gaps/financial-data-distribution-standard/decisions/TRANSITIONAL-GOVERNANCE-CAVEAT.md`) - Bridge DTOs may temporarily supersede canonical DTO guidance during active migration slices.
 
 ## Critical Guardrails
 
 1. **Types**: Import from `types/remote/database.types.ts` only. Run `npm run db:types` after migrations.
 2. **Services**: Functional factories, not classes. Explicit interfaces, no `ReturnType<>`.
-3. **DTOs**: Derive from `Database` types using Pick/Omit/Partial. Cross-context consumption via published DTOs only.
+3. **DTOs**: Derive from `Database` types using Pick/Omit/Partial. Cross-context consumption via published DTOs only. During active migration slices, check the Transitional DTO Governance Caveat for any bridge DTO exceptions declared by the active PRD / EXEC-SPEC.
 4. **Code Quality**: No `as any`, no `console.*` in production code.
 5. **Complexity**: See Over-Engineering Guardrail before adding abstractions. YAGNI applies.
 6. **Migrations**: Follow `docs/60-release/MIGRATION_NAMING_STANDARD.md` (`YYYYMMDDHHMMSS_description.sql`).

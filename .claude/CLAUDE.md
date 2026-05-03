@@ -48,6 +48,7 @@ Start at `docs/INDEX.md` for full navigation. Key docs:
 - **Over-Engineering Guardrail** (`docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md`) - Complexity rules
 
 Use `docs/patterns/SDLC_DOCS_TAXONOMY.md` to locate docs by SDLC category.
+- **Transitional DTO Governance Caveat** (`docs/issues/gaps/financial-data-distribution-standard/decisions/TRANSITIONAL-GOVERNANCE-CAVEAT.md`) - Bridge DTOs may temporarily supersede canonical DTO guidance during active migration slices.
 - **CI/CD Pipeline** (`docs/deployments/CICD-PIPELINE-SPEC.md`) - Pipeline gates and workflow topology
 - **Environment Flow** (`docs/deployments/ENVIRONMENT-FLOW.md`) - Supabase remote flow and environment architecture
 
@@ -55,7 +56,7 @@ Use `docs/patterns/SDLC_DOCS_TAXONOMY.md` to locate docs by SDLC category.
 
 1. **Types**: Import from `@/types/database.types` for all application code. Run `npm run db:types-local` after local migrations. Run `npm run db:types` for remote validation only.
 2. **Services**: Functional factories, not classes. Explicit interfaces, no `ReturnType<>`.
-3. **DTOs**: Derive from `Database` types using Pick/Omit/Partial. Cross-context consumption via published DTOs only.
+3. **DTOs**: Derive from `Database` types using Pick/Omit/Partial. Cross-context consumption via published DTOs only. During active migration slices, check the Transitional DTO Governance Caveat for any bridge DTO exceptions declared by the active PRD / EXEC-SPEC.
 4. **Code Quality**: No `as any`, no `console.*` in production code. No `details: error` (raw Error objects) in DomainError — use `safeErrorDetails(error)` from `@/lib/errors/safe-error-details` (INV-ERR-DETAILS).
 5. **Complexity**: See Over-Engineering Guardrail before adding abstractions. YAGNI applies.
 6. **Migrations**: Follow `docs/60-release/MIGRATION_NAMING_STANDARD.md` strictly:

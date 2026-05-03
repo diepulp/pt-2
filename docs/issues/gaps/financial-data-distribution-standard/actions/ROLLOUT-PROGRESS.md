@@ -4,7 +4,7 @@ description: Live status board for Wave 1 (Surface Contract) and Wave 2 (Dual-La
 type: progress-tracker
 status: Active
 started: 2026-04-23
-last_updated: 2026-04-30 (Phase 1.2A closed — EXEC-071 WS1/WS2/WS3 complete, DoD gates passed)
+last_updated: 2026-04-30 (Phase 1.2B PRD-074 drafted; EXEC-074 next)
 tracks:
 - ROLLOUT-ROADMAP.md
 - ../decisions/ADR-FINANCIAL-FACT-MODEL.md
@@ -46,6 +46,7 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 | 1     | 1.0 Prep & Inventory          | ➖ Exempt | ➖ Exempt | ✅ Artifacts shipped | ✅ PASSED 2026-04-23 (SIGNOFF doc) |
 | 1     | 1.1 Service DTO Envelope      | ✅ PRD-070 | ✅ EXEC-070 (amended 3×) | ✅ All WS0–WS9 closed | ✅ PASSED 2026-04-25 (WS9 + DoD gates) |
 | 1     | 1.2A API Transport Stabilization | ✅ PRD-071 | ✅ EXEC-071 | ✅ WS1–WS3 closed | ✅ PASSED 2026-04-30 |
+| 1     | 1.2B Service Canonicalization | ✅ PRD-074 Draft | ⬜ EXEC-074 | ⬜                  | —         |
 | 1     | 1.3 UI Split Display          | ⬜        | ⬜        | ⬜                  | —         |
 | 1     | 1.4 Validation + Lint + I5    | ⬜        | ⬜        | ⬜                  | —         |
 | 1     | 1.5 Rollout & Sign-off        | ⬜        | ⬜        | ⬜                  | —         |
@@ -157,16 +158,30 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 - [x] OpenAPI diff coherent — single `FinancialValue` component; representative families covered
 - [x] No test asserts dollar-float as integer (BRIDGE-001 guard: `grep integer` CLEAN on BRIDGE-001 files)
 
-**Phase 1.2B pending scope** (successor PRD-074):
+---
+
+### Phase 1.2B — Service Canonicalization  🟦 PRD DRAFTED
+
+Blocked on: **EXEC-074** via `/lead-architect`, then `/build-pipeline`.
+
+**Pipeline chain:**
+- [x] PRD-074 drafted via `/prd-writer` — `docs/10-prd/PRD-074-financial-telemetry-wave1-phase1.2b-canonicalization-v0.md` (2026-04-30)
+- [ ] EXEC-074 scaffolded via `/lead-architect`
+- [ ] `/build-pipeline` executed — dispatching `/backend-service-builder` and `/api-builder`
+
+**Pending scope** (governed by PRD-074):
 - BRIDGE-001 retirement: remove `/100` from service mappers; enforce `financialValueSchema.int()`; `formatCents` migration
 - Shift-intelligence DTO field type promotion: `number | null` → `FinancialValue | null`
 - Full 34-route OpenAPI + contract test coverage
+- Runtime deprecation observability: structured log events per deprecated-field usage
+
+**Scope note:** Component test births for `rating-slip-modal.test.tsx`, `start-from-previous.test.tsx`, and `start-from-previous-modal.test.tsx` are Phase 1.3, not Phase 1.2B, per PRD-071 Appendix D / DEF-006 and PRD-074.
 
 ---
 
 ### Phase 1.3 — UI Layer: Split Display + Labels  ⬜
 
-Blocked on: Phase 1.2 exit gate + **Phase 1.3 PRD** + **Phase 1.3 EXEC-SPEC**.
+Blocked on: Phase 1.2B exit gate + **Phase 1.3 PRD** + **Phase 1.3 EXEC-SPEC**.
 
 **Pipeline chain:** `/prd-writer` → `/lead-architect` EXEC-SPEC → `/build-pipeline` dispatching `/frontend-design-pt-2` (+ `/web-design-guidelines` review).
 
@@ -319,4 +334,5 @@ Pulled from ROLLOUT-ROADMAP.md §7; update status as mitigations land.
 | 2026-04-24 | **PRD-073 drafted** (`/prd-writer` from FIB-FIN-SHIFT-001). `docs/10-prd/PRD-073-financial-telemetry-wave1-phase1.1c-shift-intelligence-authority-routing-v0.md` — Status: Draft. Phase 1.1c child spec for WS7B. Scope: (1) `resolveShiftMetricAuthority(metricType: MetricType)` helper with all four WS7A-frozen routing rules; (2) mapper path unification — `mapAnomalyAlertRow` + `mapShiftAlertRow` both call the helper; `getAlerts` inline assembly deleted, delegates to `mapShiftAlertRow`; (3) `anomaly-alerts-route-boundary.test.ts` corrected — `gamingDay`/`computedAt` replaced with `baselineGamingDay`/`baselineCoverage`; (4) routing assertion suite in `mappers.test.ts` (4 MetricType values + `hold_percent → null` invariant + `cash_obs_total` static-threshold). No public DTO changes. No FinancialValue on alert numeric fields. No bridge DTO. No route/UI/SQL changes. Phase 1.2 deferrals explicit. WS9 items 4 + 12 unblock on impl close. **Next action: `/lead-architect` EXEC-SPEC for PRD-073 → `/build-pipeline` → WS9.** |
 | 2026-04-25 | **Phase 1.1 closed — WS9 complete.** Verification matrix executed in full (amended set): items 1–4 (service slices) PASS; items 5–7 + 12 (route boundary + anomaly boundary) PASS; item 8 struck (complex client component — type-check + service/route tests cover rename equivalently; Phase 1.2 birth obligation); items 9–11 previously struck. DoD gates all PASS: type-check exit 0, lint exit 0 (fixed two `Function` type lint errors in PRD-072 route tests), build exit 0, `totalChipsOut` grep CLEAN. Phase 1.2 handoff package produced at `actions/PHASE-1.2-HANDOFF.md` — deferred field register, rollback matrix, cents canonicalization obligations, and Phase 1.2 skill routing recorded. EXEC-070 amended (ws9-completion). **Phase 1.2 entry: PRD-071 is drafted; EXEC-071 + build-pipeline next.** |
 | 2026-04-30 | **Phase 1.2A closed — EXEC-071 WS1–WS3 complete.** Delivered: (1) WS1 route audit + `casino_id` REMOVE — MTL `gaming-day-summary`/`entries` and `loyalty/balances` stripped of client-supplied `casino_id`; `mwCtx.rlsContext!.casinoId` is now the sole casino scope on those routes (DEC-1, DEC-3); loyalty schemas updated, MTL query/service schemas updated; hooks patched to drop `casino_id` from client calls; (2) WS2 OpenAPI `FinancialValue` component defined once at line 2181 in `api-surface.openapi.yaml`; 14 new representative path entries covering all 11 in-scope route families; BRIDGE-001 surfaces (`recent-sessions`, `live-view`) reference `$ref FinancialValue` with `value: type: number`; DEC-5 (`anomaly-alerts`) and DEF-NEVER (`hold_percent`) annotated explicitly; (3) WS3 route-boundary contract tests — 47 tests passing across 6 files; DEC-1/DEC-3 REMOVE assertions verify spoofed `casino_id` is stripped; BRIDGE-001 spot-checks assert all 4 `FinancialValue` keys on all 3 financial fields; DEC-5 asserts bare `number`, not objects; no integer assertions on BRIDGE-001 value fields (guard CLEAN); (4) WS4 close documentation (this entry). **Phase 1.2B pending:** BRIDGE-001 retirement + shift-intelligence DTO type promotion + full 34-route coverage → PRD-074. |
+| 2026-04-30 | **PRD-074 drafted** (`/prd-writer` from Phase 1.2B FIB-H/FIB-S). `docs/10-prd/PRD-074-financial-telemetry-wave1-phase1.2b-canonicalization-v0.md` — Status: Draft. Scope: BRIDGE-001 retirement, integer-cents validation, shift-intelligence DTO field promotion, BRIDGE-001 `formatCents` render migration, full 34-route OpenAPI coverage, full route contract coverage, and runtime deprecation log events. Component test births explicitly moved to Phase 1.3 per PRD-071 Appendix D / DEF-006. **Next action: `/lead-architect` scaffold EXEC-074 → `/build-pipeline`.** |
 | 2026-04-25 | **PRD-073 shipped — WS7B closed** (`/build-pipeline` via EXEC-073). Phase 1.1c complete. Delivered: (1) `resolveShiftMetricAuthority` exported from `services/shift-intelligence/mappers.ts` — exhaustive switch over all 4 MetricType values, `hold_percent → null` (RULE-2), `cash_obs_total → estimated/pit_cash_observation.extrapolated` (static-threshold invariant), `default` throws with `never` narrowing (compile-time exhaustiveness gate); (2) `void resolveShiftMetricAuthority(...)` call injected into both `mapAnomalyAlertRow` and `mapShiftAlertRow` (Phase 1.1 dead-read path unification, `void` prefix prevents linter removal); (3) `getAlerts` in `alerts.ts` refactored — 36-line `as any` inline assembly replaced with typed `AlertQueryRow` assertion + join normalization + `mapShiftAlertRow` delegation; (4) `anomaly-alerts-route-boundary.test.ts` fixture and assertions corrected (`baselineGamingDay`/`baselineCoverage`, no `gamingDay`/`computedAt`); (5) routing suite added to `mappers.test.ts` (5 cases including unknown→throw); (6) delegation suite added to `alerts-mappers.test.ts` (3 cases). Two patch deltas assessed against EXEC-073; §2 patch-01 and §1 patch-02 rejected; §4/§6 patch-01 and §3 patch-02 accepted. Gates: `npm run type-check` exit 0; 95/95 tests pass. Implementation précis: `intake/FIB-FIN-SHIFT-001/PRD-073-implementation-precis.md`. **WS9 now unblocked.** |

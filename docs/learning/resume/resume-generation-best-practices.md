@@ -211,6 +211,20 @@ When you cannot use a hard number, use a proxy:
 
 ---
 
+**Consolidated STAR-K and Standford GSB rule for AI-native SWE bullets**
+### STAR-K raw form
+
+---
+[Action] + [What] + [How] + [Result]
+---
+
+ **Stanford GSB rule:** *"Make the most interesting fact at the beginning of the bullet; it will entice the reader to read the rest."*
+
+### Stanford-optimized STAR-K:
+---
+[Result / strongest signal] + by [Action] + through [How]
+---
+
 ## 5. Skills Section Strategy
 
 ### Structure

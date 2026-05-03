@@ -211,32 +211,74 @@ Each PRD cites ADR-FINANCIAL-FACT-MODEL, ADR-FINANCIAL-SYSTEM-SCOPE, ADR-FINANCI
 
 ---
 
-## Phase 1.2B — Service Canonicalization
+## Phase 1.2B — Service Canonicalization + Surface Alignment
 
-**Scope:** unit normalization at the service layer; DTO type promotion for deferred fields; full-breadth OpenAPI expansion; runtime deprecation observability wired. No route-handler logic changes — Phase 1.2A proved routes are pass-through; Phase 1.2B fixes what passes through.
+**Scope:** Three sequential sub-phases following the GOV-FIB-001 sequencing requirement: cause (service semantics) → immediate presentation consequence (render correction) → contract enforcement (OpenAPI + tests). Runtime observability belongs to Phase 1.4 validation.
+
+---
+
+### Phase 1.2B-A — Service Canonicalization  ✅ COMPLETE 2026-04-30
 
 **PRD:** `docs/10-prd/PRD-074-financial-telemetry-wave1-phase1.2b-canonicalization-v0.md`
+**EXEC:** `docs/21-exec-spec/PRD-074/EXEC-074-financial-telemetry-wave1-phase1.2b-canonicalization.md`
+**Commit:** `e83a2c12`
 
-**Skill to invoke:** `backend-service-builder` (service canonicalization) + `api-builder` (OpenAPI expansion).
+**Deliverables — all complete:**
+
+- [x] BRIDGE-001 retired: `/100` removed from `services/visit/crud.ts` and `services/rating-slip/mappers.ts`; `financialValueSchema.int()` enforced at DTO outbound boundary for `RecentSessionDTO` / `VisitLiveViewDTO`
+- [x] `AnomalyAlertDTO` / `ShiftAlertDTO` public numeric fields promoted to `FinancialValue | null` via `resolveShiftMetricAuthority`; outbound Zod schemas added (DEF-007 lifted)
+- [x] `hold_percent` confirmed bare `number | null` (DEF-NEVER) — grep + test assertion
+- [x] Three named OpenAPI path entries shape-aligned to integer-cents contract
+- [x] Named BRIDGE-001 route test assertions updated to integer-value assertions
+- [x] `anomaly-alert-card.tsx` mechanical compatibility fix (metric-type-aware property access)
+- [x] `ROLLOUT-TRACKER.json`: DEF-001, DEF-002, DEF-003, DEF-007 closed; BRIDGE-001 retired with commit SHA
+
+---
+
+### Phase 1.2B-B — Render Migration
+
+**Scope:** Fix live display bug introduced by Phase 1.2B-A. `formatDollars` calls on `FinancialValue.value` integer-cents fields in `start-from-previous.tsx` must become `formatCents`. No route, service, OpenAPI, or test changes. Primary change class: Presentation.
+
+**FIB-H:** `docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2b-b/FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-B-RENDER-MIGRATION.md`
+**FIB-S:** `docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2b-b/FIB-S-FINANCIAL-TELEMETRY-PHASE-1-2B-B-RENDER-MIGRATION.json`
+**PRD:** pending — `/prd-writer` next action
+**Skill to invoke:** `frontend-design-pt-2`
 
 ### Deliverables
 
-- [ ] BRIDGE-001 retired: `/100` removed from `services/visit/crud.ts` and `services/rating-slip/mappers.ts`; `financialValueSchema.int()` enforced at DTO outbound boundary for `RecentSessionDTO` / `VisitLiveViewDTO`
-- [ ] `AnomalyAlertDTO` / `ShiftAlertDTO` public numeric fields (`observedValue`, `baselineMedian`, `baselineMad`, `thresholdValue`) typed as `FinancialValue | null`; `resolveShiftMetricAuthority` void-read promoted to assignment
-- [ ] `hold_percent` confirmed bare `number | null` in all touched files (DEF-NEVER invariant)
-- [ ] `financialValueSchema.int()` enforced at all financial DTO outbound boundaries
-- [ ] Full-breadth OpenAPI expansion: remaining routes (beyond Phase 1.2A representative set) authored; schemas updated to reflect integer-cents `value` after BRIDGE-001 retirement
-- [ ] Contract tests expanded to full route coverage; integer-value assertions added
-- [ ] Runtime deprecation observability: structured log event emitted per deprecated-field usage (route path, field name, replacement, correlation ID, sunset date)
-- [ ] `ROLLOUT-TRACKER.json` updated: BRIDGE-001 recorded as retired with commit SHA
+- [ ] `formatDollars` → `formatCents` at `start-from-previous.tsx` lines 202, 208, 226; import updated
+- [ ] Q-4 consumer audit: grep confirms no other `formatDollars` call site reads a `FinancialValue.value` integer-cents field
+- [ ] `npm run type-check`, `npm run lint`, `npm run build` exit 0
+- [ ] DEF-004 closed in `ROLLOUT-TRACKER.json` with implementation commit SHA
 
 ### Exit gate
 
-- `financialValueSchema.int()` passes for all canonicalized DTO fields; no dollar floats at any financial wire boundary
-- `AnomalyAlertDTO` / `ShiftAlertDTO` fields emit `FinancialValue` at the wire for all MetricType values except `hold_percent`
-- Contract tests pass for every financial endpoint (full coverage, integer assertions)
-- OpenAPI spec diff reviewed; all in-scope routes documented
-- Any deprecated field emits structured log event on usage
+- `formatDollars` absent from all `FinancialValue.value` reads in `start-from-previous.tsx`
+- Q-4 audit clean (only the three named call sites affected)
+- All build gates pass
+
+---
+
+### Phase 1.2B-C — Contract Expansion
+
+**Scope:** Q-5-audited OpenAPI expansion for financially-relevant route fields + route-appropriate boundary test matrices for `recent-sessions` and `live-view` + DEC-6 `shift-intelligence/alerts` coverage. Primary change class: Enforcement/Transport. Runtime deprecation observability is Phase 1.4 scope.
+
+**FIB-H/FIB-S:** pending — own FIB pair required
+**PRD:** pending
+**Skills to invoke:** `api-builder` (OpenAPI + DEC-6 route test) + `qa-specialist` (4-case test matrices)
+
+### Deliverables
+
+- [ ] Q-5 OpenAPI audit recorded: all financially-relevant fields discovered by the audit are annotated with `$ref FinancialValue`, or explicitly documented as deferred / DEF-NEVER bare-number fields
+- [ ] DEC-6: `GET /api/v1/shift-intelligence/alerts` OpenAPI path entry + route-boundary test asserting discriminated union shape (`FinancialValue | null` for financial metric branches, bare `number | null` for `metricType: 'hold_percent'` ratio branch)
+- [ ] Route-appropriate boundary test matrices for `recent-sessions` and `live-view`: `recent-sessions` covers authenticated success, unauthenticated (401), invalid params, and empty / no-prior-session; `live-view` covers authenticated success, unauthenticated (401), not-found (404), and service error
+- [ ] DEF-005 closed in `ROLLOUT-TRACKER.json` with implementation commit SHA
+
+### Exit gate
+
+- Q-5 audit output confirms no remaining financially-relevant bare-number fields where `FinancialValue` is the correct type
+- DEC-6 OpenAPI path entry and route-boundary test live and passing
+- 4-case route-boundary test matrices pass for `recent-sessions` and `live-view`
 
 ---
 
@@ -402,7 +444,9 @@ Track resolutions in a `WAVE-2-PREP-DECISIONS.md` accumulated during Wave 1.
 | 1.0 Prep | `/lead-architect` — **direct invocation permitted** (meta-phase, see §2.5.3) | — |
 | 1.1 Service DTOs | `/backend-service-builder` | — |
 | 1.2A API Transport | `/api-builder` | — |
-| 1.2B Canonicalization | `/backend-service-builder` (service layer) + `/api-builder` (OpenAPI expansion) | — |
+| 1.2B-A Canonicalization ✅ | `/backend-service-builder` (service layer) + `/api-builder` (contract alignment) | — |
+| 1.2B-B Render Migration | `/frontend-design-pt-2` | — |
+| 1.2B-C Contract Expansion | `/api-builder` (OpenAPI expansion + DEC-6 route test) | `/qa-specialist` (4-case test matrices) |
 | 1.3 UI | `/frontend-design-pt-2` | `/web-design-guidelines` for review |
 | 1.4 Validation | `/qa-specialist` | `/e2e-testing` for Playwright assertions |
 | 1.5 Rollout | `/devops-pt2` | `/qa-specialist` for final gate |

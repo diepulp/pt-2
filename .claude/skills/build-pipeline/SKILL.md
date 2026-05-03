@@ -39,7 +39,7 @@ This skill accepts any specification document with implementation requirements �
 | `references/execution-spec-template.md` | YAML + markdown template for workstreams |
 | `references/gate-protocol.md` | Gate approval UX and validation commands |
 | `references/checkpoint-format.md` | Checkpoint schema and state management |
-| `references/intake-traceability-protocol.md` | FIB-S enforcement: capability inventory, anti-invention, open questions |
+| `references/intake-traceability-protocol.md` | FIB generation and FIB-S enforcement: scope guardrail, capability inventory, anti-invention, open questions |
 | `scripts/validate-execution-spec.py` | Validate EXECUTION-SPEC (structural + governance) |
 | `scripts/classify-write-path.py` | Deterministic write-path signal scan for E2E mandate |
 | `scripts/temporal-integrity.py` | Flag upstream PRD/ADRs modified after EXEC-SPEC generation |
@@ -121,7 +121,7 @@ PRD                   → product requirements constrained by both
 EXEC-SPEC             → implementation plan constrained by all three
 ```
 
-See `references/intake-traceability-protocol.md` for the full enforcement rules (traceability syntax, anti-invention boundaries, open-question decision records, behavior-assertion verification).
+See `references/intake-traceability-protocol.md` for the full enforcement rules (FIB generation scope guardrail, traceability syntax, anti-invention boundaries, open-question decision records, behavior-assertion verification).
 
 ### FIB Resolution
 

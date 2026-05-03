@@ -11,6 +11,8 @@ The FIB-S (Feature Intake Brief — Structured) is the machine-readable scope au
 
 The protocol exists because implementation plans are where scope erosion happens. An extra modal, a fallback endpoint, a silent DTO expansion, a helpful admin override, a temporary bypass — each individually looks reasonable. Collectively they produce a system that does not match what was approved. The FIB-S is the fence.
 
+Before that fence is frozen, FIB authors must apply `docs/70-governance/FIB_GENERATION_SCOPE_GUARDRAIL.md`. That guardrail catches phase compression at generation time: transport plus semantics, semantics plus UI, pattern proof plus full inventory, contract definition plus enforcement, or any other bundle where a FIB tries to land the consequences of a change in the same slice as the cause.
+
 ---
 
 ## FIB-S Structure Reference
@@ -31,6 +33,22 @@ governance.open_questions_allowed_at_scaffold[]  → unresolved items
 ---
 
 ## Enforcement Points
+
+### At FIB Generation
+
+Before approving a FIB-H/FIB-S pair:
+
+1. Declare exactly one primary change class from `FIB_GENERATION_SCOPE_GUARDRAIL.md`: Transport, Semantics, Presentation, Enforcement, Observability, or Infrastructure.
+2. Add a one-line boundary in the FIB-H: `This FIB changes <one thing> at <one boundary>; it does not change <next boundary>.`
+3. Apply the cross-class leakage rule: any `MUST` item that requires logic in another change class is out of scope unless the primary boundary would be incorrect without it.
+4. Declare coverage mode as `Representative` or `Full`. Representative mode must name exact concrete surfaces, not categories, and prohibit expansion. Full mode must be Enforcement or a dedicated rollout/inventory slice.
+5. Declare one primary layer: Service/Data, API, UI, Enforcement, Observability, or Infrastructure. Secondary layers may only be pass-through with no logic added. DTO shape changes are Service/Data unless they strictly pass through an existing upstream contract.
+6. Add an adjacent consequence ledger that names likely temptations and their destination phase/FIB. At least one ledger item must represent cross-class work explicitly removed from `MUST` scope.
+7. Run the atomicity test: the FIB must ship without deferred downstream work, deferred work must follow without rewriting this FIB, and the shipped FIB must remain internally consistent and truthful, not merely compilable.
+8. Run the diff-size sanity check: expected implementation touching more than 5-7 files with logic changes, more than one directory boundary, or more than one bounded context requires re-evaluation for hidden multi-class scope.
+9. Encode the same scope boundary in FIB-S, preferably under `scope_guardrail`; if the schema cannot add that field, encode it in `governance`, `intent.explicit_exclusions`, and `coherence.deferred_items`.
+
+Generation-time violations block approval. Split the FIB or amend the parent roadmap before producing PRD/EXEC artifacts.
 
 ### At PRD Generation (prd-writer skill)
 
@@ -137,3 +155,11 @@ The test: would an operator notice this addition? If yes, it needs FIB authoriza
 | `silent-oq-resolution` | Open question absent from both decisions and risks | Add explicit decision record or carry forward in risks |
 | `hard-rule-invisible` | Hard rule not in any workstream acceptance criteria | Add to relevant workstream constraints |
 | `scope-expanding-decision` | Decision marked `impact_on_scope: none` but actually expands scope | Reclassify as `amendment_required` |
+| `consequence-bundling` | FIB combines a primary boundary change with downstream alignment or enforcement needed only after that boundary exists | Split FIB by primary change class and move consequences to the adjacent consequence ledger |
+| `cross-class-leakage` | FIB declares one primary change class but includes logic work from another class | Move leaked work to adjacent consequence ledger or prove the primary boundary would be incorrect without it |
+| `coverage-mode-drift` | FIB claims representative coverage but uses category names, full-inventory language, or expands unnamed surfaces | Name exact concrete surfaces or reclassify as a Full enforcement/rollout slice |
+| `layer-budget-overrun` | More than one layer requires logic changes in the same FIB | Split by layer unless secondary work is strictly pass-through |
+| `dto-layer-smuggling` | DTO shape, mapper, or semantic changes are framed as API-only work | Reclassify as Service/Data or prove the DTO is strict pass-through of an existing upstream contract |
+| `atomicity-half-truth` | FIB can compile or merge without deferred work but leaves a misleading or internally inconsistent contract | Redraw the boundary so the shipped FIB is truthful on its own |
+| `ledger-underfill` | Adjacent consequence ledger contains only trivial, same-class, or unrelated future items | Add at least one cross-class item explicitly removed from `MUST` scope |
+| `diff-size-drift` | Expected implementation scale exceeds file, directory, or bounded-context thresholds | Re-evaluate for hidden multi-class scope and split if needed |
