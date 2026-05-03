@@ -204,9 +204,11 @@
         "BRIDGE-001 key-presence assertions replaced with integer-value assertions",
         "DEC-5 bare-number boundary test replaced with discriminated-shape assertion"
       ],
-      "pending_scope_1_2b_b": [
-        "UI render migration: formatDollars(field.value) → formatCents(field.value) on start-from-previous.tsx",
-        "Q-4 runtime UI consumer audit for formatDollars(FinancialValue.value)"
+      "phase_1_2b_b_exit_date": "2026-05-03",
+      "phase_1_2b_b_commit": "2d68dcedb9c4c43e433c1c832c5881fe8c19a7b3",
+      "phase_1_2b_b_closed": [
+        "UI render migration: formatDollars(field.value) → formatCents(field.value) on start-from-previous.tsx (EXEC-075)",
+        "Q-4 runtime UI consumer audit clean — no undeclared FinancialValue.value consumers"
       ],
       "pending_scope_1_2b_c": [
         "Q-5-audited OpenAPI expansion for financially-relevant route fields",
