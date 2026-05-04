@@ -3,9 +3,9 @@
 import { ChevronDownIcon, ChevronRightIcon, EyeIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { FinancialValue } from '@/components/financial';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatCents } from '@/lib/format';
 import type {
   CashObsCasinoRollupDTO,
   CashObsPitRollupDTO,
@@ -83,15 +83,31 @@ export function TelemetryRailPanel({
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <p className="text-xs text-muted-foreground">Estimated</p>
-                  <p className="font-mono tabular-nums text-amber-500">
-                    {formatCents(casinoData.cash_out_observed_estimate_total)}
-                  </p>
+                  <div className="text-amber-500">
+                    <FinancialValue
+                      variant="compact"
+                      label="Estimated"
+                      value={{
+                        value: casinoData.cash_out_observed_estimate_total ?? 0,
+                        type: 'observed',
+                        source: 'cash_obs_telemetry',
+                        completeness: { status: 'complete' },
+                      }}
+                    />
+                  </div>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Confirmed</p>
-                  <p className="font-mono tabular-nums">
-                    {formatCents(casinoData.cash_out_observed_confirmed_total)}
-                  </p>
+                  <FinancialValue
+                    variant="compact"
+                    label="Confirmed"
+                    value={{
+                      value: casinoData.cash_out_observed_confirmed_total ?? 0,
+                      type: 'observed',
+                      source: 'cash_obs_telemetry',
+                      completeness: { status: 'complete' },
+                    }}
+                  />
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -124,8 +140,17 @@ export function TelemetryRailPanel({
                       className="flex items-center justify-between rounded bg-muted/20 px-2 py-1 text-[10px]"
                     >
                       <span className="font-mono">{pit.pit}</span>
-                      <span className="font-mono text-amber-500">
-                        {formatCents(pit.cash_out_observed_estimate_total)}
+                      <span className="text-amber-500">
+                        <FinancialValue
+                          variant="compact"
+                          label="Estimated"
+                          value={{
+                            value: pit.cash_out_observed_estimate_total ?? 0,
+                            type: 'observed',
+                            source: 'cash_obs_telemetry',
+                            completeness: { status: 'complete' },
+                          }}
+                        />
                       </span>
                     </div>
                   ))}

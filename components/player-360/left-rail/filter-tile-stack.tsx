@@ -30,7 +30,8 @@ export interface FilterTileStackProps {
 }
 
 // === Formatters ===
-
+// Dollar-denominated: PlayerSummaryDTO uses float dollars, not integer cents.
+// Deleted when PlayerSummaryDTO migrates to FinancialValue envelopes (WS4 future slice).
 function formatDollars(value: number): string {
   const absValue = Math.abs(value);
   const prefix = value < 0 ? '-' : '';
@@ -82,9 +83,11 @@ export const FilterTileStack = memo(function FilterTileStack({
       className={cn('flex flex-col gap-1.5', className)}
       data-testid="filter-tile-stack"
     >
+      {/* WS4 migration boundary: PlayerSummaryDTO.netWinLoss is dollar-denominated plain number;
+          FilterTile.value is string — cannot embed <FinancialValue>. Authority labeled in string. */}
       <FilterTile
         title="Session"
-        value={formatDollars(data.sessionValue.netWinLoss)}
+        value={`Actual: ${formatDollars(data.sessionValue.netWinLoss)}`}
         delta={
           data.sessionValue.trendPercent !== 0
             ? `${data.sessionValue.trendPercent > 0 ? '+' : ''}${data.sessionValue.trendPercent.toFixed(0)}%`
@@ -98,7 +101,7 @@ export const FilterTileStack = memo(function FilterTileStack({
 
       <FilterTile
         title="Financial"
-        value={formatDollars(data.cashVelocity.sessionTotal)}
+        value={`Actual: ${formatDollars(data.cashVelocity.sessionTotal)}`}
         category="financial"
         isActive={activeCategory === 'financial'}
         onFilter={() => onCategoryChange('financial')}

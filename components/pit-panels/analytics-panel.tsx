@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
+import { FinancialValue } from '@/components/financial';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTableCoverage } from '@/hooks/dashboard/use-table-coverage';
@@ -166,8 +167,21 @@ export function AnalyticsPanel({
       grade: tableMetrics?.metric_grade,
     },
     {
-      label: 'Handle',
-      value: formatCentsUnsigned(tableMetrics?.estimated_drop_buyins_cents),
+      label: 'Estimated Drop',
+      value: (
+        <FinancialValue
+          variant="compact"
+          label="Estimated Drop"
+          value={{
+            value: tableMetrics?.estimated_drop_buyins_cents ?? 0,
+            type: 'estimated',
+            source: 'shift_metrics',
+            completeness: {
+              status: tableMetrics == null ? 'unknown' : 'complete',
+            },
+          }}
+        />
+      ),
       icon: BarChart3,
       positive: true,
     },

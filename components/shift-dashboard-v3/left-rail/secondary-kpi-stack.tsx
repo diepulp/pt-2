@@ -1,9 +1,8 @@
 'use client';
 
-import { MetricGradeBadge } from '@/components/shift-dashboard-v3/trust';
+import { FinancialValue } from '@/components/financial';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatCents } from '@/lib/format';
 import type { ShiftCasinoMetricsDTO } from '@/services/table-context/shift-metrics/dtos';
 
 export interface SecondaryKpiStackProps {
@@ -42,18 +41,26 @@ function CompactKpi({
     <Card className="relative overflow-hidden">
       <div className={`absolute left-0 top-0 h-full w-1 ${accentColor}`} />
       <div className="py-2.5 pl-4 pr-3">
-        <div className="flex items-center gap-1">
-          <p
-            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
-            style={{ fontFamily: 'monospace' }}
-          >
-            {title}
-          </p>
-          {metricGrade && <MetricGradeBadge grade={metricGrade} size="sm" />}
-        </div>
-        <p className="mt-1 text-lg font-semibold font-mono tabular-nums">
-          {formatCents(valueCents)}
+        <p
+          className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
+          {title}
         </p>
+        <div className="mt-1">
+          <FinancialValue
+            variant="compact"
+            label={title}
+            value={{
+              value: valueCents ?? 0,
+              type: metricGrade === 'ESTIMATE' ? 'estimated' : 'actual',
+              source: 'shift_metrics',
+              completeness: {
+                status: valueCents == null ? 'unknown' : 'complete',
+              },
+            }}
+          />
+        </div>
       </div>
     </Card>
   );

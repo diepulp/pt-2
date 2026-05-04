@@ -4,7 +4,7 @@
     "version": "1.2.0",
     "source_of_truth": "ROLLOUT-PROGRESS.md",
     "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md",
-    "last_updated": "2026-05-03",
+    "last_updated": "2026-05-04",
     "exec_074_closed": "2026-04-30",
     "update_rule": "Update both this file and ROLLOUT-PROGRESS.md together when phase state changes. This file is the machine-readable projection of the .md; it does not own truth.",
     "reading_order": "cursor → direction (principles + non_goals) → phases → deferred_register → active_bridges. Read roadmap_ref for full narrative, §2.5 for execution protocol, §9 for skill routing."
@@ -49,16 +49,16 @@
 
   "cursor": {
     "wave": 1,
-    "active_phase": "1.3",
+    "active_phase": "1.4",
     "phase_status": "not_started",
-    "phase_label": "Phase 1.2B complete. Phase 1.3 (UI Layer: Split Display + Labels) pending PRD + EXEC-SPEC.",
+    "phase_label": "Phase 1.3 complete. Phase 1.4 (Validation: Lint + Truth-Telling Tests) pending PRD + EXEC-SPEC.",
     "blocker": null,
-    "next_action": "Draft Phase 1.3 PRD. Phase 1.3 entry gate: Phase 1.2B exit confirmed + Phase 1.3 PRD approved + EXEC-SPEC scaffolded.",
+    "next_action": "Phase 1.4 FIB pair → /prd-writer → /lead-architect EXEC-SPEC → /build-pipeline dispatching /qa-specialist + /e2e-testing",
     "next_action_prd": null,
-    "last_closed_phase": "1.2B-C",
-    "last_closed_date": "2026-05-03",
-    "last_closed_exec": "EXEC-076",
-    "last_closed_commit": "e73879f46990a9b6aeae8b4832a226ccfa24b58b"
+    "last_closed_phase": "1.3",
+    "last_closed_date": "2026-05-04",
+    "last_closed_exec": "EXEC-077",
+    "last_closed_commit": "pending"
   },
 
   "phases": [
@@ -235,18 +235,37 @@
       "id": "1.3",
       "label": "UI Layer: Split Display + Labels",
       "wave": 1,
-      "status": "not_started",
-      "prd": null,
-      "exec_spec": null,
-      "entry_gate": "Phase 1.2B exit + Phase 1.3 PRD + EXEC-SPEC",
+      "status": "complete",
+      "prd": "PRD-077",
+      "prd_path": "docs/10-prd/PRD-077-financial-telemetry-wave1-phase1.3-ui-split-display-v0.md",
+      "exec_spec": "EXEC-077",
+      "exec_spec_path": "docs/21-exec-spec/PRD-077/EXEC-077-financial-telemetry-wave1-phase1.3-ui-split-display.md",
+      "exit_date": "2026-05-04",
+      "entry_gate": "Phase 1.2B exit ✅ (commit ad6d1748 / e73879f4, 2026-05-03) + Phase 1.3 PRD + EXEC-SPEC",
+      "fib_pair": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-3/",
       "skills_dispatched": ["/frontend-design-pt-2", "/web-design-guidelines"],
-      "known_targets": [
-        "app/(landing)/floor-oversight/page.tsx — 'Coverage quality' → 'Attribution Ratio'",
-        "components/pit-panels/analytics-panel.tsx:169 — label: 'Handle' → 'Estimated Drop'",
-        "components/player-360/summary/summary-band.tsx — theo row render status: 'unknown'",
-        "components/shift-dashboard-v3/** — formalize under <FinancialValue>",
-        "components/shift-dashboard/** (legacy) — migrate or deprecate in favour of v3",
-        "lib/format.ts + 18+ local formatDollars/formatCents variants"
+      "workstreams_closed": [
+        "WS1_COMPONENTS",
+        "WS2_SHIFT_V3",
+        "WS3_PIT_TABLE_FLOOR",
+        "WS4_PLAYER",
+        "WS5_TRANSACTIONS",
+        "WS6_COMPLIANCE",
+        "WS7_DEF006",
+        "WS8_GATES"
+      ],
+      "exit_gates_passed": [
+        "FinancialValue, AttributionRatio, CompletenessBadge components born (WS1)",
+        "Shift Dashboard v3 surfaces migrated to Phase 1.3 FinancialValue display (WS2)",
+        "Pit/Table/Floor surfaces migrated — 'Handle' → 'Estimated Drop', 'Coverage quality' → 'Attribution Ratio' (WS3)",
+        "Player 360 surfaces: string-level authority labeling at WS4 boundary (WS4)",
+        "Transaction surfaces: buy-in-threshold-indicator callers migrated (WS5)",
+        "Compliance surfaces: gaming-day-summary + admin-alerts migrated (WS6)",
+        "DEF-006 closed: three component test files born — 18 tests total (WS7)",
+        "Forbidden-label sentinel grep CLEAN — zero rendered UI matches",
+        "npm run type-check exit 0",
+        "npm run lint exit 0",
+        "npm run build exit 0"
       ]
     },
     {
@@ -372,7 +391,11 @@
       "id": "DEF-006",
       "item": "Component tests: rating-slip-modal.test.tsx, start-from-previous.test.tsx, start-from-previous-modal.test.tsx",
       "deferred_to": "Phase 1.3",
-      "note": "Test dirs absent in Phase 1.1. Phase 1.3 birth obligation on UI DTO shape change."
+      "note": "Test dirs absent in Phase 1.1. Phase 1.3 birth obligation on UI DTO shape change.",
+      "status": "closed",
+      "closed_in": "EXEC-077",
+      "closed_date": "2026-05-04",
+      "resolution": "Three component test files born (18 tests total): rating-slip-modal.test.tsx (13 assertions — FinancialSectionDTO integer-cents contract + RatingSlipModal rendering), start-from-previous.test.tsx (10 assertions — RecentSessionDTO FinancialValue contract + StartFromPreviousPanel rendering), start-from-previous-modal.test.tsx (8 assertions — modal Dialog context, unknown completeness handling, no bare integers). DEF-004 non-regression: formatCents(FinancialValue.value) verified — formatDollars(150000)=$150,000 would fail the assertion."
     },
     {
       "id": "DEF-007",
