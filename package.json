@@ -48,6 +48,7 @@
     "test:slice:floor-layout": "jest --config jest.node.config.js --testPathPatterns='services/floor-layout/__tests__/.*\\.test\\.ts$'",
     "test:slice:rating-slip-modal": "jest --config jest.node.config.js --testPathPatterns='services/rating-slip-modal/__tests__/.*\\.test\\.ts$'",
     "test:slice:recognition": "jest --config jest.node.config.js --testPathPatterns='services/recognition/__tests__/.*\\.test\\.ts$'",
+    "test:surface": "jest --config jest.node.config.js --testPathPatterns='(components/financial/__tests__|components/player-sessions/__tests__|components/modals/rating-slip/__tests__|__tests__/financial-surface/)' --passWithNoTests",
     "test:infra:lib-supabase": "jest --config jest.node.config.js --testPathPatterns='lib/supabase/__tests__/.*\\.test\\.ts$'",
     "test:infra:server-actions": "jest --config jest.node.config.js --testPathPatterns='lib/server-actions/middleware/__tests__/.*\\.test\\.ts$'",
     "test:infra:root-tests": "jest --config jest.node.config.js --testPathPatterns='pt-2/__tests__/.*\\.test\\.ts$'",

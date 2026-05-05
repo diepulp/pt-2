@@ -4,7 +4,7 @@ description: Live status board for Wave 1 (Surface Contract) and Wave 2 (Dual-La
 type: progress-tracker
 status: Active
 started: 2026-04-23
-last_updated: 2026-04-30 (Phase 1.2B PRD-074 drafted; EXEC-074 next)
+last_updated: 2026-05-05 (Phase 1.4 complete — EXEC-078; cursor → 1.5)
 tracks:
 - ROLLOUT-ROADMAP.md
 - ../decisions/ADR-FINANCIAL-FACT-MODEL.md
@@ -46,9 +46,9 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 | 1     | 1.0 Prep & Inventory          | ➖ Exempt | ➖ Exempt | ✅ Artifacts shipped | ✅ PASSED 2026-04-23 (SIGNOFF doc) |
 | 1     | 1.1 Service DTO Envelope      | ✅ PRD-070 | ✅ EXEC-070 (amended 3×) | ✅ All WS0–WS9 closed | ✅ PASSED 2026-04-25 (WS9 + DoD gates) |
 | 1     | 1.2A API Transport Stabilization | ✅ PRD-071 | ✅ EXEC-071 | ✅ WS1–WS3 closed | ✅ PASSED 2026-04-30 |
-| 1     | 1.2B Service Canonicalization | ✅ PRD-074 Draft | ⬜ EXEC-074 | ⬜                  | —         |
-| 1     | 1.3 UI Split Display          | ⬜        | ⬜        | ⬜                  | —         |
-| 1     | 1.4 Validation + Lint + I5    | ⬜        | ⬜        | ⬜                  | —         |
+| 1     | 1.2B Service Canonicalization | ✅ PRD-074 | ✅ EXEC-074/075/076 | ✅ WS1–WS3 closed | ✅ PASSED 2026-05-03 |
+| 1     | 1.3 UI Split Display          | ✅ PRD-077 | ✅ EXEC-077 | ✅ All WS closed | ✅ PASSED 2026-05-04 |
+| 1     | 1.4 Validation + Lint + I5    | ✅ PRD-078 | ✅ EXEC-078 | ✅ WS1–WS5 closed | ✅ PASSED 2026-05-05 |
 | 1     | 1.5 Rollout & Sign-off        | ⬜        | ⬜        | ⬜                  | —         |
 | 2     | Schema + Outbox + Consumer    | ⬜        | ⬜        | ⬜                  | —         |
 

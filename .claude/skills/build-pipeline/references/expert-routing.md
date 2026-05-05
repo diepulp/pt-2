@@ -243,6 +243,12 @@ All workstreams use Skills as executors.
 
 Expert skills serve two roles in the pipeline: design consultation (Phase 1) and execution (Phase 3). No other executor types are dispatched by the pipeline.
 
+> **ANTI-PATTERN**: `executor_type: skill` in the EXEC-SPEC YAML means "dispatch via the `Skill` tool" — it does NOT mean "pass the executor name as `subagent_type` to the `Agent` tool". The `Agent` tool's `subagent_type` parameter only accepts built-in types (`general-purpose`, `Explore`, `typescript-pro`). Project skill names are never valid `subagent_type` values.
+> ```
+> ✓ Skill(skill="qa-specialist", args="...")          ← correct
+> ✗ Agent(subagent_type="qa-specialist", ...)         ← qa-specialist is not a built-in type
+> ```
+
 ### Validation
 
 Run the validation script before execution:

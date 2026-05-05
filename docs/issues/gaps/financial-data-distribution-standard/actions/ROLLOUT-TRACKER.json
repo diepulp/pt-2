@@ -49,16 +49,16 @@
 
   "cursor": {
     "wave": 1,
-    "active_phase": "1.4",
+    "active_phase": "1.5",
     "phase_status": "not_started",
-    "phase_label": "Phase 1.3 complete. Phase 1.4 (Validation: Lint + Truth-Telling Tests) pending PRD + EXEC-SPEC.",
+    "phase_label": "Phase 1.4 complete. Phase 1.5 (Rollout & Sign-off) pending PRD + EXEC-SPEC.",
     "blocker": null,
-    "next_action": "Phase 1.4 FIB pair → /prd-writer → /lead-architect EXEC-SPEC → /build-pipeline dispatching /qa-specialist + /e2e-testing",
+    "next_action": "Phase 1.5 FIB pair → /prd-writer → /lead-architect EXEC-SPEC → /build-pipeline dispatching /devops-pt2 + /qa-specialist",
     "next_action_prd": null,
-    "last_closed_phase": "1.3",
-    "last_closed_date": "2026-05-04",
-    "last_closed_exec": "EXEC-077",
-    "last_closed_commit": "d453e2cf"
+    "last_closed_phase": "1.4",
+    "last_closed_date": "2026-05-05",
+    "last_closed_exec": "EXEC-078",
+    "last_closed_commit": null
   },
 
   "phases": [
@@ -272,11 +272,42 @@
       "id": "1.4",
       "label": "Validation: Lint + Truth-Telling Tests",
       "wave": 1,
-      "status": "not_started",
-      "prd": null,
-      "exec_spec": null,
-      "entry_gate": "Phase 1.3 exit + Phase 1.4 PRD + EXEC-SPEC",
-      "skills_dispatched": ["/qa-specialist", "/e2e-testing"]
+      "status": "complete",
+      "prd": "PRD-078",
+      "prd_path": "docs/10-prd/PRD-078-financial-telemetry-wave1-phase1.4-validation-lint-truth-v0.md",
+      "exec_spec": "EXEC-078",
+      "exec_spec_path": "docs/21-exec-spec/PRD-078/EXEC-078-financial-telemetry-wave1-phase1.4-validation-lint-truth.md",
+      "exit_date": "2026-05-05",
+      "entry_gate": "Phase 1.3 exit ✅ (commit d453e2cf, 2026-05-04) + Phase 1.4 PRD + EXEC-SPEC",
+      "skills_dispatched": ["/qa-specialist", "/e2e-testing"],
+      "workstreams_closed": ["WS1", "WS2", "WS3", "WS4", "WS5"],
+      "artifacts": [
+        ".eslint-rules/no-forbidden-financial-label.js",
+        ".eslint-rules/no-unlabeled-financial-value.js",
+        "eslint.config.mjs (financial-enforcement plugin blocks)",
+        "__tests__/financial-surface/financial-api-envelope.test.ts",
+        "e2e/financial-enforcement.spec.ts"
+      ],
+      "exit_gates_passed": [
+        "WS1: no-forbidden-financial-label ESLint rule authored — §4.1 Handle, §4.2 Win, §4.3 Coverage, §4.4 Theo:0, §4.5 DTO chip identifiers",
+        "WS2: no-unlabeled-financial-value ESLint rule authored — denylist approach (DEC-1), DEF-NEVER carve-out for shift-intelligence RatioAnomalyAlertDTO",
+        "WS2: eslint.config.mjs wired — financial-enforcement plugin active on components/**/* and services/**/dtos.ts",
+        "WS2: lint gate PASS — npm run lint exit 0 with zero financial-enforcement violations",
+        "WS3: financial-api-envelope.test.ts born — 13 tests (ServiceHttpResult envelope, FinancialValue shape, DEF-NEVER guard)",
+        "WS3: test:surface gate PASS — 13/13 tests pass",
+        "WS4: financial-enforcement.spec.ts born — Mode A Local Verification, I5-1 (rating slip panel) + I5-2 (player-360 summary-band Theo-unknown)",
+        "WS4: E2E spec tsc --noEmit exit 0",
+        "WS5: npm run lint exit 0",
+        "WS5: npm run test:surface exit 0 (13/13)",
+        "WS5: npm run type-check exit 0",
+        "I5_truthfulness validation_matrix → complete"
+      ],
+      "decisions_resolved": {
+        "DEC-1": "denylist-approach — only flag known-financial fields in visit/dtos.ts, player-financial/dtos.ts, loyalty/dtos.ts; rating-slip/dtos.ts and shift-intelligence/dtos.ts excluded",
+        "DEC-2": "jest-node-mocked-supabase — ADR-044 S4 node environment for API envelope tests",
+        "DEC-3": "no-ws0-required — seed Players 1/3/4 have open slips with null computed_theo_cents for I5-2 Theo-unknown scenario",
+        "DEC-4": "explicit-pattern — test:surface uses --testPathPatterns=(components/financial/__tests__|...)|__tests__/financial-surface/"
+      }
     },
     {
       "id": "1.5",
@@ -466,7 +497,13 @@
     "I2_durability": { "wave": 2, "status": "not_wave_1" },
     "I3_idempotency": { "wave": 2, "status": "not_wave_1" },
     "I4_replayability": { "wave": 2, "status": "not_wave_1" },
-    "I5_truthfulness": { "wave": 1, "phase": "1.4", "status": "not_started" }
+    "I5_truthfulness": {
+      "wave": 1,
+      "phase": "1.4",
+      "status": "complete",
+      "closed_date": "2026-05-05",
+      "closed_in": "EXEC-078"
+    }
   },
 
   "open_questions": [

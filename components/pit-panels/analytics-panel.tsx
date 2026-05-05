@@ -224,7 +224,7 @@ export function AnalyticsPanel({
           <div className="flex items-center gap-2 mb-3">
             <ShieldCheck className="h-4 w-4 text-accent" />
             <span className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-              Rating Coverage
+              Attribution Ratio
             </span>
             <Badge
               variant="outline"
@@ -244,10 +244,10 @@ export function AnalyticsPanel({
             </div>
           ) : tableCoverage ? (
             <div className="space-y-3">
-              {/* Coverage Tier */}
+              {/* Attribution Tier */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
-                  Coverage Tier
+                  Attribution Tier
                 </span>
                 <Badge
                   variant="outline"
@@ -291,7 +291,7 @@ export function AnalyticsPanel({
           ) : (
             <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
               <AlertCircle className="h-4 w-4" />
-              <span>No coverage data for this table</span>
+              <span>No attribution data for this table</span>
             </div>
           )}
         </div>

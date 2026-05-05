@@ -391,7 +391,7 @@ export function RundownSummaryPanel({
 
         {/* Formula reference */}
         <p className="mt-4 text-xs text-muted-foreground text-center">
-          Win = Closing + Credits + Drop − Opening − Fills
+          Inventory Win = Closing + Credits + Drop − Opening − Fills
         </p>
       </CardContent>
     </Card>

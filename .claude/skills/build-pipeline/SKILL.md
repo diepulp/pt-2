@@ -344,6 +344,14 @@ Approve execution plan? [y/n/edit]
 > skill via `Skill(skill="{executor}", args="...")`. The general agent orchestrates
 > (parse, dispatch, collect, validate) but does not write implementation code itself.
 
+> **ANTI-PATTERN — Do NOT use `Agent(subagent_type: "qa-specialist")` or any project skill name as a `subagent_type`.**
+> `subagent_type` only accepts built-in agent types (`general-purpose`, `Explore`, `typescript-pro`, etc.).
+> Project skills (`qa-specialist`, `backend-service-builder`, `api-builder`, `rls-expert`, `frontend-design-pt-2`, `e2e-testing`, `performance-engineer`, etc.) are dispatched exclusively via the `Skill` tool:
+> ```
+> ✓ CORRECT:  Skill(skill="qa-specialist", args="...")
+> ✗ WRONG:    Agent(subagent_type="qa-specialist", ...)   ← subagent_type is not a skill name
+> ```
+
 For each execution phase:
 
 1. Parse workstreams from EXECUTION-SPEC YAML frontmatter
