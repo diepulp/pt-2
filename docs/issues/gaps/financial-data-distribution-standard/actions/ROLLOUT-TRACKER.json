@@ -4,7 +4,7 @@
     "version": "1.2.0",
     "source_of_truth": "ROLLOUT-PROGRESS.md",
     "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md",
-    "last_updated": "2026-05-04",
+    "last_updated": "2026-05-05",
     "exec_074_closed": "2026-04-30",
     "update_rule": "Update both this file and ROLLOUT-PROGRESS.md together when phase state changes. This file is the machine-readable projection of the .md; it does not own truth.",
     "reading_order": "cursor → direction (principles + non_goals) → phases → deferred_register → active_bridges. Read roadmap_ref for full narrative, §2.5 for execution protocol, §9 for skill routing."
@@ -317,7 +317,50 @@
       "prd": null,
       "exec_spec": null,
       "entry_gate": "Phase 1.4 exit + Phase 1.5 PRD + EXEC-SPEC",
-      "skills_dispatched": ["/devops-pt2", "/qa-specialist"]
+      "skills_dispatched": ["/devops-pt2", "/qa-specialist"],
+      "posture": "pre-production Wave 1 sign-off — not a CI/CD remediation effort",
+      "cicd_reality": {
+        "verified_date": "2026-05-05",
+        "deployment_model": "Vercel native Git webhook — push to main auto-deploys to production in ~4 min. GitHub Actions deploy-staging.yml broken (workflow_call missing in ci.yml) and has never executed a job.",
+        "production_url": "https://pt-2-weld.vercel.app",
+        "production_supabase": "vaicxfihdldgepzryhpd (single hosted project — no staging isolation)",
+        "preview_env_gap": "NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY absent from Preview environment — PR previews cannot authenticate. Fix A required before operator walkthrough.",
+        "blocking_ci_gates": [
+          "lint (financial-enforcement rules included)",
+          "type-check",
+          "build",
+          "migration-lint",
+          "security-gates"
+        ],
+        "advisory_ci_gates": [
+          "unit tests (continue-on-error: true)",
+          "e2e (continue-on-error: true)"
+        ],
+        "branch_protection": "none",
+        "custom_domains": "none — pt2.app and staging.pt2.app do not exist"
+      },
+      "phase_1_5_scope": {
+        "only_infra_fix": "Fix Preview env vars (vercel env add for 3 missing keys). All other CI/CD gaps deferred to Wave 2.",
+        "procedure": [
+          "1. Fix Vercel Preview env vars (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY)",
+          "2. Open PR: ref/financial-standard → main",
+          "3. Run blocking checks: lint, type-check, build — must be green",
+          "4. Run advisory suite manually and record results (npm run test:surface, E2E I5-1/I5-2 local)",
+          "5. Operator walkthrough on PR Preview URL — pit boss interpretability sign-off",
+          "6. Merge to main",
+          "7. Smoke-check hosted app at pt-2-weld.vercel.app after Vercel auto-deploy",
+          "8. Record CI/CD caveats in Wave 1 retrospective as Wave 2 prerequisites"
+        ],
+        "no_migration_needed": "Wave 1 is surface-only. No schema changes in Phases 1.1–1.5.",
+        "cicd_gaps_deferred_to_wave_2": [
+          "Staging Supabase project (pt-2-staging)",
+          "Preview database isolation",
+          "Branch protection on main",
+          "Fix workflow_call in ci.yml to unblock deploy-staging.yml",
+          "Automated migration pipeline",
+          "Advisory → blocking promotion for test/e2e CI jobs"
+        ]
+      }
     },
     {
       "id": "2",
@@ -325,7 +368,13 @@
       "wave": 2,
       "status": "not_started",
       "entry_gate": "Wave 1 sign-off + Q1–Q4 resolved",
-      "roadmap_note": "WAVE-2-ROADMAP.md not yet created. Scope outline in ROLLOUT-PROGRESS.md §5."
+      "roadmap_note": "WAVE-2-ROADMAP.md not yet created. Scope outline in ROLLOUT-PROGRESS.md §5.",
+      "wave_2_cicd_prerequisites": [
+        "Staging Supabase project provisioned (schema migrations cannot go unverified when outbox and dual-layer stores are involved)",
+        "Branch protection on main enabled",
+        "deploy-staging.yml repaired and migration automation active",
+        "Preview environment isolation (separate Supabase project per preview or branch)"
+      ]
     }
   ],
 

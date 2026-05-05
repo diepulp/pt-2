@@ -4,7 +4,7 @@ description: Live status board for Wave 1 (Surface Contract) and Wave 2 (Dual-La
 type: progress-tracker
 status: Active
 started: 2026-04-23
-last_updated: 2026-05-05 (Phase 1.4 complete — EXEC-078; cursor → 1.5)
+last_updated: 2026-05-05 (Phase 1.4 complete — EXEC-078; Phase 1.5 posture confirmed — pre-prod sign-off, CI/CD gaps deferred to Wave 2)
 tracks:
 - ROLLOUT-ROADMAP.md
 - ../decisions/ADR-FINANCIAL-FACT-MODEL.md
@@ -238,22 +238,41 @@ Blocked on: Phase 1.3 exit gate + **Phase 1.4 PRD** + **Phase 1.4 EXEC-SPEC**.
 
 Blocked on: Phase 1.4 exit gate + **Phase 1.5 PRD** + **Phase 1.5 EXEC-SPEC**.
 
+**Posture (confirmed 2026-05-05):** Pre-production Wave 1 sign-off. Not a CI/CD remediation effort. The application is not yet production-facing. CI/CD gaps are real but non-blocking at this stage — they become Wave 2 prerequisites where schema/migration-bearing work makes the current posture materially unsafe.
+
 **Pipeline chain:** `/prd-writer` → `/lead-architect` EXEC-SPEC → `/build-pipeline` dispatching `/devops-pt2` (+ `/qa-specialist` for final gate).
 
-| # | Deliverable | Status |
-|---|-------------|--------|
-| 1 | Staged deploy preview → staging → prod | ⬜ |
-| 2 | Release notes referencing SRC + 5 frozen ADRs | ⬜ |
-| 3 | Operator UX validation (pit boss sign-off on interpretability) | ⬜ |
-| 4 | Supabase advisors clean (no regression from envelope marshaling) | ⬜ |
-| 5 | Wave 1 retrospective captured | ⬜ |
+**Verified deployment model:** Vercel native Git webhook. Push to `main` → auto-deploy to `https://pt-2-weld.vercel.app` (~4 min). No custom domain. No staging environment. Single hosted Supabase project (`vaicxfihdldgepzryhpd`) for both production and preview deployments. `deploy-staging.yml` and `deploy-production.yml` GitHub Actions workflows are broken (missing `on: workflow_call` in `ci.yml`) and have never executed a job.
+
+| # | Deliverable | Status | Notes |
+|---|-------------|--------|-------|
+| 1 | Fix Vercel Preview env vars | ⬜ | Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` to Preview env — required for operator walkthrough. 3× `vercel env add` or Vercel dashboard. |
+| 2 | Open PR `ref/financial-standard` → `main` | ⬜ | Triggers Vercel Preview deployment automatically |
+| 3 | Blocking CI gates pass | ⬜ | lint (financial-enforcement active), type-check, build — all must be green |
+| 4 | Advisory validation suite run manually | ⬜ | `npm run test:surface` (13/13), E2E I5-1/I5-2 locally — results recorded in EXEC-SPEC |
+| 5 | Operator UX walkthrough on PR Preview URL | ⬜ | Pit boss interpretability sign-off on FinancialValue, AttributionRatio, CompletenessBadge |
+| 6 | Merge to main | ⬜ | Vercel auto-deploys to `pt-2-weld.vercel.app` in ~4 min |
+| 7 | Smoke-check hosted app | ⬜ | Hit 5 financial API routes, verify envelope shape on production URL |
+| 8 | Wave 1 retrospective + CI/CD gap register | ⬜ | Document all CI/CD caveats as Wave 2 prerequisites; Q1–Q4 deferral rationale; release notes citing SRC + ADR-052–055 |
+
+**No migration push needed.** Wave 1 is surface-only. No schema changes across Phases 1.1–1.5.
 
 **Exit gate (Wave 1 → Wave 2 handoff):**
-- [ ] SRC envelope live on every production financial surface
-- [ ] Lint rule active, CI red on violations
-- [ ] No regressions in existing features
+- [ ] SRC envelope live on every production financial surface (`pt-2-weld.vercel.app`)
+- [ ] Lint rule active — financial enforcement rules in blocking `checks` CI job (confirmed Phase 1.4)
+- [ ] Blocking CI gates green (lint, type-check, build)
+- [ ] Advisory suite results recorded (not required to be green, required to be documented)
 - [ ] Operator sign-off on interpretability
-- [ ] §6 open questions resolved or explicitly deferred with rationale
+- [ ] Q1–Q4 open questions explicitly deferred with rationale in retrospective
+- [ ] CI/CD gap register complete in retrospective as Wave 2 prerequisite list
+
+**CI/CD gaps deferred to Wave 2 (do not solve in Phase 1.5):**
+- No staging Supabase project (`pt-2-staging` does not exist)
+- No preview database isolation (preview deployments hit production Supabase)
+- Branch protection absent from `main`
+- `deploy-staging.yml` / `deploy-production.yml` broken (workflow_call issue)
+- Advisory test jobs not promoted to blocking
+- Manual migration process (no automated `supabase db push` on merge)
 
 ---
 
@@ -265,7 +284,7 @@ Blocked on: Phase 1.4 exit gate + **Phase 1.5 PRD** + **Phase 1.5 EXEC-SPEC**.
 | I2 Durability | 2     | Harness TEST 2  | ➖ Wave 1 |
 | I3 Idempotency| 2     | Harness TEST 3  | ➖ Wave 1 |
 | I4 Replayability | 2  | Harness TEST 5  | ➖ Wave 1 |
-| **I5 Truthfulness** | **1** | **Phase 1.4 truth-telling tests** | ⬜ |
+| **I5 Truthfulness** | **1** | **Phase 1.4 truth-telling tests** | ✅ Complete (EXEC-078) |
 
 Harness smoke check (Wave 2 prep): run against stubs in CI nightly to prevent bit-rot — not yet scheduled.
 
@@ -307,13 +326,15 @@ Pulled from ROLLOUT-ROADMAP.md §7; update status as mitigations land.
 
 | Risk | Likelihood | Impact | Mitigation status |
 |------|-----------|--------|-------------------|
-| Surface inventory misses a financial value | Medium | High | ⬜ Phase 1.0 audit |
-| Type-level envelope drift across layers | Medium | Medium | ⬜ Single source-of-truth in `types/financial.ts` |
+| Surface inventory misses a financial value | Medium | High | ✅ Phase 1.0 audit + Phase 1.4 lint rules enforce |
+| Type-level envelope drift across layers | Medium | Medium | ✅ `financialValueSchema` + lint gates enforce |
 | Operator complaints on UI verbosity | Medium | Low | ⬜ Phase 1.5 walkthrough (non-negotiable) |
-| Load-bearing "Total Drop" feature for a stakeholder | Low | Medium | ⬜ Deprecation path per endpoint |
+| Load-bearing "Total Drop" feature for a stakeholder | Low | Medium | ✅ Replaced with "Estimated Drop" in Phase 1.3 |
 | Wave 2 harness rots during Wave 1 | Medium | Low | ⬜ Nightly stub-run (not scheduled) |
 | Freeze-rule pressure (patch instead of supersede) | Medium | High | 🟦 Lead-architect gate |
-| Attribution Ratio misread as completeness | Medium | Medium | ⬜ Phase 1.3 visual design brief |
+| Attribution Ratio misread as completeness | Medium | Medium | ✅ Distinct component + label (Phase 1.3) |
+| CI/CD posture unsafe for schema-bearing work | High (Wave 2) | High | ⬜ Deferred — Wave 2 prerequisite list in retrospective. Non-blocking for Wave 1 sign-off (surface-only, pre-production). |
+| Preview deployments broken (missing Supabase env vars) | High | Medium | ⬜ Fix A: `vercel env add` ×3 — Phase 1.5 WS1 |
 
 ---
 

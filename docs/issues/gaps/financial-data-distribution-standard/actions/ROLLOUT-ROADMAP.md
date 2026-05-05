@@ -332,23 +332,62 @@ Each PRD cites ADR-FINANCIAL-FACT-MODEL, ADR-FINANCIAL-SYSTEM-SCOPE, ADR-FINANCI
 
 ## Phase 1.5 — Rollout & Sign-Off
 
-**Scope:** Wave 1 goes to production.
+**Scope:** Wave 1 Preview validation, operator sign-off, merge, production smoke, and Wave 2 handoff documentation. This is not a CI/CD remediation phase.
 
 ### Deliverables
 
-- [ ] Staged deploy: preview → staging → prod (following `docs/deployments/CICD-PIPELINE-SPEC.md`)
-- [ ] Release notes referencing SRC + all 5 frozen ADRs
-- [ ] Operator UX validation: pit bosses confirm surfaces are interpretable (not just correct)
-- [ ] Supabase advisors clean (no performance regression from envelope marshaling)
-- [ ] Wave 1 retrospective: what surfaced that the frozen set didn't anticipate? Open a superseding ADR if warranted.
+- [ ] Gate 0 Preview validation surface: real Vercel Preview deployment is labeled/metadata-confirmed as Preview, no middleware HTTP 500, Supabase auth works, financial routes return data.
+- [ ] Required Vercel Preview env vars added: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server-only secret; no logs/screenshots/PR comments/client bundles).
+- [ ] Blocking gates green before merge: `npm run lint`, `npm run type-check`, `npm run build`.
+- [ ] Advisory validation recorded: `npm run test:surface` and I5 E2E checks; every advisory failure has explicit engineering-lead disposition.
+- [ ] Operator UX validation on confirmed Preview: pit bosses/floor supervisors confirm authority labels, completeness states, non-authoritative totals, and split displays are interpretable.
+- [ ] Authoritative sign-off artifact created: `docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-PHASE-1.5-SIGNOFF.md`.
+- [ ] Production smoke after merge: three envelope-bearing API routes checked for `FinancialValue` shape and two bare-number sanity routes checked without envelope assertions.
+- [ ] Release notes referencing SRC + ADR-052/053/054/055.
+- [ ] Wave 1 retrospective: CI/CD gap register, shared-database caveat, Q1–Q4 deferral rationale, release notes, and pre-Wave-2 surface-debt register.
 
 ### Exit gate (Wave 1 → Wave 2 handoff)
 
-- SRC envelope live on every production financial surface
+- SRC envelope live on all Phase 1.5 envelope-bearing production smoke routes; known residual bare-number surfaces are explicitly recorded in the pre-Wave-2 surface-debt register below.
 - Lint rule active, CI red on violations
 - No regressions in existing features
 - Operator sign-off on interpretability
-- Open questions from ADR-FACT-MODEL §5 resolved (see §6 of this roadmap) — these gate Wave 2 schema design
+- Open questions from ADR-FACT-MODEL §5 resolved or explicitly deferred with rationale (see §6 of this roadmap) — these gate Wave 2 schema design
+- CI/CD gap register complete as Wave 2 prerequisite list
+
+### Phase 1.5 Cut Surfaces
+
+The following routes are cut from Phase 1.5 `FinancialValue` envelope assertions. They remain valid deployed-route sanity checks only. Phase 1.5 must not wrap these DTOs to satisfy rollout smoke checks.
+
+| Surface | Current fields | Phase 1.5 disposition | Required follow-up |
+|---|---|---|---|
+| `GET /api/v1/rating-slips/[id]/modal-data` / `RatingSlipModalDTO.financial` | `totalCashIn`, `totalCashOut`, `netPosition` are bare-number cents fields | Bare-number sanity check only | Pre-Wave-2 decision: wrap as `FinancialValue`, or formally classify as internal BFF carve-out with UI-only labeling guarantees |
+| `GET /api/v1/visits/[visitId]/financial-summary` / `VisitFinancialSummaryDTO` | `total_in`, `total_out`, `net_amount` are deferred bare-number cents fields | Bare-number sanity check only | Pre-Wave-2 decision: wrap as `FinancialValue`, or retire/replace public consumption before schema/outbox work |
+
+### Recommended Pre-Wave-2 Surface-Debt Review
+
+Before Wave 2 schema/outbox implementation begins, run a bounded prep slice to decide whether the remaining deferred financial DTO surfaces become wrapped contracts or documented permanent/internal carve-outs. Do not bury this inside generic outbox work.
+
+**Minimum required review (2 surfaces / 6 fields):**
+
+- `RatingSlipModalDTO.financial.totalCashIn`
+- `RatingSlipModalDTO.financial.totalCashOut`
+- `RatingSlipModalDTO.financial.netPosition`
+- `VisitFinancialSummaryDTO.total_in`
+- `VisitFinancialSummaryDTO.total_out`
+- `VisitFinancialSummaryDTO.net_amount`
+
+**Recommended full residual review (4 surfaces / 12 fields):**
+
+- Minimum required review above.
+- `MtlEntryDTO.amount` — deferred compliance value; classification target `compliance / mtl_entry / complete`.
+- `MtlGamingDaySummaryDTO.total_in`
+- `MtlGamingDaySummaryDTO.total_out`
+- `MtlGamingDaySummaryDTO.max_single_in`
+- `MtlGamingDaySummaryDTO.max_single_out`
+- `MtlGamingDaySummaryDTO.total_volume`
+
+**Do not count as surface debt:** `hold_percent`, `average_bet`, operator inputs, policy/config thresholds, loyalty points, or other non-currency unit systems. These remain bare-number carve-outs unless a new PRD supersedes the classification rules.
 
 ---
 

@@ -78,6 +78,7 @@ VALID_SKILLS = {
     "qa-specialist",
     "performance-engineer",
     "lead-architect",
+    "devops-pt2",  # Release/infra workstreams (deploy, env config, smoke checks)
 }
 
 VALID_GATES = {
@@ -89,6 +90,13 @@ VALID_GATES = {
     "pft-rls-isolation-check",
     "playwright-reconciliation",
     "e2e-write-path",  # Test-per-PRD mandate gate (workflows-gaps.md §3); prescribed by build-pipeline/SKILL.md
+    # Release-validation gate taxonomy (sdlc_category: Release Validation / OPS)
+    "gate-0-preview-surface",
+    "gate-1-preview-auth",
+    "gate-2-validation",
+    "gate-3-operator-signoff",
+    "gate-4-production-smoke",
+    "gate-4-production",
 }
 
 REQUIRED_WORKSTREAM_FIELDS = {"name", "executor", "executor_type", "depends_on", "outputs", "gate"}

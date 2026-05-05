@@ -1,0 +1,74 @@
+{
+  "id": "PRD-079",
+  "exec_spec": "docs/21-exec-spec/PRD-079/EXEC-079-financial-telemetry-wave1-phase1.5-rollout-signoff.md",
+  "prd": "docs/10-prd/PRD-079-financial-telemetry-wave1-phase1.5-rollout-signoff-v0.md",
+  "fib_h_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-5/FIB-H-FINANCIAL-TELEMETRY-PHASE-1-5-ROLLOUT-SIGNOFF.md",
+  "fib_s_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-5/FIB-S-FINANCIAL-TELEMETRY-PHASE-1-5-ROLLOUT-SIGNOFF.json",
+  "fib_s_loaded": true,
+  "status": "approved",
+  "gov010_check": "waived:release-validation-no-new-arch",
+  "complexity_prescreen": "streamlined",
+  "complexity_override": "user-override from full",
+  "write_path_classification": "none",
+  "temporal_integrity": "clean",
+  "intake_traceability": "pass",
+  "approval": {
+    "granted_by": "Vladimir Ivanov",
+    "granted_at": "2026-05-05T06:42:01Z",
+    "note": "EXEC-SPEC patched post-generation (gate-0 checks expanded); final approval granted"
+  },
+  "current_phase": 1,
+  "created_at": "2026-05-05T06:42:01Z",
+  "updated_at": "2026-05-05T06:45:00Z",
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5"],
+  "in_progress_workstreams": [],
+  "completed_workstreams": [],
+  "dormant_workstreams": [],
+  "execution_phases": [
+    {
+      "phase": 1,
+      "label": "Preview Authentication Unblock",
+      "workstreams": ["WS1"],
+      "gate": "gate-1-preview-auth",
+      "status": "pending"
+    },
+    {
+      "phase": 2,
+      "label": "Blocking and Advisory Validation",
+      "workstreams": ["WS2"],
+      "gate": "gate-2-validation",
+      "status": "pending"
+    },
+    {
+      "phase": 3,
+      "label": "Operator Walkthrough Sign-off",
+      "workstreams": ["WS3"],
+      "gate": "gate-3-operator-signoff",
+      "status": "pending"
+    },
+    {
+      "phase": 4,
+      "label": "Production Release and Smoke Check",
+      "workstreams": ["WS4"],
+      "gate": "gate-4-production-smoke",
+      "status": "pending"
+    },
+    {
+      "phase": 5,
+      "label": "Retrospective and Rollout Closure",
+      "workstreams": ["WS5"],
+      "gate": "gate-4-production",
+      "status": "pending"
+    }
+  ],
+  "artifacts": {
+    "exec_spec": "docs/21-exec-spec/PRD-079/EXEC-079-financial-telemetry-wave1-phase1.5-rollout-signoff.md",
+    "signoff_artifact": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-PHASE-1.5-SIGNOFF.md",
+    "validator_patch": ".claude/skills/build-pipeline/scripts/validate-execution-spec.py"
+  },
+  "open_question_decisions": {
+    "SMOKE_IDS": "at-execution-time — executor queries vaicxfihdldgepzryhpd",
+    "BLOCKING_GATE_EVIDENCE": "local-command-with-sha — per PRD §5.1 FR-3"
+  },
+  "resume_instructions": "Next: execute Phase 1 by dispatching WS1 via Skill(skill='devops-pt2'). WS1 adds three Supabase env vars to Vercel Preview, verifies Gate 0 (deployment identity + auth viability), and creates WAVE-1-PHASE-1.5-SIGNOFF.md. Gate 1 (human approval) required before Phase 2 begins."
+}
