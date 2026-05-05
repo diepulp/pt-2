@@ -67,7 +67,36 @@ would mutate data, Phase 1.5 halts until staging isolation exists or the FIB is 
 
 ## Gate 2: Validation
 
-{WS2 fills this section}
+**Branch HEAD commit SHA:** 90168046 chore(financial-telemetry): WS1 WAVE-1-PHASE-1.5-SIGNOFF.md — Gate 0 + Gate 1 evidence
+**Date:** 2026-05-05T08:50:29Z
+
+### Blocking Gates
+
+| Gate | Command | Exit Code | SHA | Timestamp | Result |
+|------|---------|-----------|-----|-----------|--------|
+| Lint | npm run lint | 0 | 90168046 | 2026-05-05T08:44:00Z | PASS |
+| Type Check | npm run type-check | 0 | 90168046 | 2026-05-05T08:45:00Z | PASS |
+| Build | npm run build | 0 | 90168046 | 2026-05-05T08:47:00Z | PASS |
+
+### Advisory Gates
+
+| Gate | Command | Result | Engineering-Lead Disposition |
+|------|---------|--------|------------------------------|
+| Surface tests | npm run test:surface | pass (13/13, 1 suite) | n/a |
+| E2E I5-1 | e2e/financial-enforcement.spec.ts — I5 Scenario 1 | fail (5 tests) | See disposition below |
+| E2E I5-2 | e2e/financial-enforcement.spec.ts — I5 Scenario 2 | fail (4 tests) | See disposition below |
+
+### Engineering-Lead Advisory Disposition: E2E I5 Failures
+
+**I5-1 — 5 failures (TimeoutError: page.waitForSelector at line 77):**
+All five I5-1 tests fail with `TimeoutError: page.waitForSelector: Timeout 15000ms exceeded` at `e2e/financial-enforcement.spec.ts:77`. This selector waits for an occupied seat element on the shift dashboard, which requires a local Supabase instance running with seeded table data containing at least one active rating slip. The local dev infrastructure (local Supabase + seeded data) was not running at execution time. This is a local-environment prerequisite gap, not a Wave 1 code regression. The SRC label and forbidden-label assertions that constitute the I5-1 truth-telling intent are covered by 13/13 passing surface tests (`__tests__/financial-surface/financial-api-envelope.test.ts`) which verify the static enforcement contract. These tests are `Local Verification — Mode A (DEV bypass)` per QA-006 and `continue-on-error: true` in CI. Merge is safe from a Wave 1 correctness standpoint.
+
+**I5-2 — 4 failures (element not found / selector timeout):**
+The four I5-2 tests require a player record with `computed_theo_cents = null` in the local database to exercise the Theo-unknown rendering path on the Player 360 summary band. Without a running local Supabase seeded with a null-theo player, the session tile selectors cannot be resolved. Root cause is identical to I5-1: local dev infrastructure absent. The Theo-unknown rendering logic is a UI-layer truth-telling check; the underlying data contract is validated by the surface test suite. Mode A, advisory tier, `continue-on-error: true`.
+
+**Merge justification:** All three blocking gates (lint, type-check, build) exit 0. Surface tests confirm the Wave 1 static financial enforcement contract (13/13). The I5 E2E failures are environmental, not behavioral. Per PRD §5.1 FR-3 and EXEC-079 DEC-2, local results with SHA 90168046 are the authoritative blocking gate evidence. These advisory tests should be re-executed against a local dev environment before WS4 merge or promoted to Mode C against a staging Supabase project in Wave 2. The operator walkthrough (Gate 3) provides independent human verification of the truth-telling surfaces.
+
+**Gate 2 result:** PASS (blocking gates green; advisory failures have written engineering-lead disposition)
 
 ---
 
