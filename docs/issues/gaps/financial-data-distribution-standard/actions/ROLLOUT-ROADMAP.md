@@ -2,8 +2,11 @@
 
 ---
 
-status: Active
-date: 2026-04-23
+status: Wave 1 Complete — Pre-Wave-2 Surface Debt Closed. Wave 2 NOT STARTED.
+date: 2026-05-06
+wave_1_closed: 2026-05-06
+pre_wave_2_closed: 2026-05-06
+wave_2_status: not_started — blocked on Q1–Q4 resolution and WAVE-2-ROADMAP.md
 scope: PT-2 pilot, from decision-freeze (2026-04-23) to production-hardened dual-layer outbox
 purpose: Execution plan from the current point through Wave 1 (surface contract) and Wave 2 (dual-layer outbox), with explicit gates and validation tie-ins.
 derived_from:
@@ -18,7 +21,7 @@ derived_from:
 
 ---
 
-# 1. Status Snapshot (as of 2026-04-23)
+# 1. Status Snapshot (as of 2026-05-06)
 
 ## Frozen (decision-level)
 
@@ -40,7 +43,21 @@ derived_from:
 
 ## Implementation
 
-**Zero.** No production code has been touched against the frozen set. This roadmap starts from the current `main` branch.
+**Complete (Wave 1 + Pre-Wave-2 Surface Debt).** All Wave 1 phases (1.0–1.5) and the pre-Wave-2 surface debt slice (PRD-080) are merged to `main`. 112 tests passing. Wave 2 has not started.
+
+| Phase | Status | Closed |
+|-------|--------|--------|
+| 1.0 Prep & Inventory | ✅ Complete | 2026-04-23 |
+| 1.1 Service Layer DTO Envelope | ✅ Complete | 2026-04-25 |
+| 1.2A API Transport Stabilization | ✅ Complete | 2026-04-30 |
+| 1.2B-A Service Canonicalization | ✅ Complete | 2026-04-30 |
+| 1.2B-B Render Migration | ✅ Complete | 2026-05-03 |
+| 1.2B-C Contract Expansion | ✅ Complete | 2026-05-03 |
+| 1.3 UI Layer: Split Displays + Labels | ✅ Complete | 2026-05-04 |
+| 1.4 Validation: Lint + Truth-Telling Tests | ✅ Complete | 2026-05-05 |
+| 1.5 Rollout & Sign-Off | ✅ Complete | 2026-05-06 |
+| Pre-Wave-2 Surface Debt Closure (PRD-080) | ✅ Complete | 2026-05-06 |
+| Wave 2 Dual-Layer + Outbox | 🔴 Not Started | Q1–Q4 open; WAVE-2-ROADMAP.md not drafted |
 
 ---
 
@@ -130,7 +147,7 @@ Each PRD cites ADR-FINANCIAL-FACT-MODEL, ADR-FINANCIAL-SYSTEM-SCOPE, ADR-FINANCI
 
 ---
 
-## Phase 1.0 — Prep & Inventory
+## Phase 1.0 — Prep & Inventory  ✅ COMPLETE 2026-04-23
 
 **Scope:** align terminology, define types, audit existing surfaces.
 
@@ -163,7 +180,7 @@ Each PRD cites ADR-FINANCIAL-FACT-MODEL, ADR-FINANCIAL-SYSTEM-SCOPE, ADR-FINANCI
 
 ---
 
-## Phase 1.1 — Service Layer: DTO Envelope
+## Phase 1.1 — Service Layer: DTO Envelope  ✅ COMPLETE 2026-04-25
 
 **Scope:** backend services emit the envelope instead of bare numbers.
 
@@ -186,7 +203,7 @@ Each PRD cites ADR-FINANCIAL-FACT-MODEL, ADR-FINANCIAL-SYSTEM-SCOPE, ADR-FINANCI
 
 ---
 
-## Phase 1.2A — API Layer: Envelope Pass-Through (Transport Stabilization)
+## Phase 1.2A — API Layer: Envelope Pass-Through (Transport Stabilization)  ✅ COMPLETE 2026-04-30
 
 **Scope:** route handlers verified as pass-through; shared OpenAPI component defined; representative routes documented and tested. No unit normalization, no DTO type changes, no UI changes.
 
@@ -235,7 +252,7 @@ Each PRD cites ADR-FINANCIAL-FACT-MODEL, ADR-FINANCIAL-SYSTEM-SCOPE, ADR-FINANCI
 
 ---
 
-### Phase 1.2B-B — Render Migration
+### Phase 1.2B-B — Render Migration  ✅ COMPLETE 2026-05-03
 
 **Scope:** Fix live display bug introduced by Phase 1.2B-A. `formatDollars` calls on `FinancialValue.value` integer-cents fields in `start-from-previous.tsx` must become `formatCents`. No route, service, OpenAPI, or test changes. Primary change class: Presentation.
 
@@ -259,7 +276,7 @@ Each PRD cites ADR-FINANCIAL-FACT-MODEL, ADR-FINANCIAL-SYSTEM-SCOPE, ADR-FINANCI
 
 ---
 
-### Phase 1.2B-C — Contract Expansion
+### Phase 1.2B-C — Contract Expansion  ✅ COMPLETE 2026-05-03
 
 **Scope:** Q-5-audited OpenAPI expansion for financially-relevant route fields + route-appropriate boundary test matrices for `recent-sessions` and `live-view` + DEC-6 `shift-intelligence/alerts` coverage. Primary change class: Enforcement/Transport. Runtime deprecation observability is Phase 1.4 scope.
 
@@ -282,7 +299,7 @@ Each PRD cites ADR-FINANCIAL-FACT-MODEL, ADR-FINANCIAL-SYSTEM-SCOPE, ADR-FINANCI
 
 ---
 
-## Phase 1.3 — UI Layer: Split Displays + Label Component
+## Phase 1.3 — UI Layer: Split Displays + Label Component  ✅ COMPLETE 2026-05-04
 
 **Scope:** frontend renders the envelope with mandatory labels.
 
@@ -307,7 +324,7 @@ Each PRD cites ADR-FINANCIAL-FACT-MODEL, ADR-FINANCIAL-SYSTEM-SCOPE, ADR-FINANCI
 
 ---
 
-## Phase 1.4 — Validation: Lint Rules + Truth-Telling Tests
+## Phase 1.4 — Validation: Lint Rules + Truth-Telling Tests  ✅ COMPLETE 2026-05-05
 
 **Scope:** make SRC violations impossible to land via CI.
 
@@ -330,7 +347,7 @@ Each PRD cites ADR-FINANCIAL-FACT-MODEL, ADR-FINANCIAL-SYSTEM-SCOPE, ADR-FINANCI
 
 ---
 
-## Phase 1.5 — Rollout & Sign-Off
+## Phase 1.5 — Rollout & Sign-Off  ✅ COMPLETE 2026-05-06
 
 **Scope:** Wave 1 Preview validation, operator sign-off, merge, production smoke, and Wave 2 handoff documentation. This is not a CI/CD remediation phase.
 
@@ -364,9 +381,13 @@ The following routes are cut from Phase 1.5 `FinancialValue` envelope assertions
 | `GET /api/v1/rating-slips/[id]/modal-data` / `RatingSlipModalDTO.financial` | `totalCashIn`, `totalCashOut`, `netPosition` are bare-number cents fields | Bare-number sanity check only | Pre-Wave-2 decision: wrap as `FinancialValue`, or formally classify as internal BFF carve-out with UI-only labeling guarantees |
 | `GET /api/v1/visits/[visitId]/financial-summary` / `VisitFinancialSummaryDTO` | `total_in`, `total_out`, `net_amount` are deferred bare-number cents fields | Bare-number sanity check only | Pre-Wave-2 decision: wrap as `FinancialValue`, or retire/replace public consumption before schema/outbox work |
 
-### Recommended Pre-Wave-2 Surface-Debt Review
+### Pre-Wave-2 Surface-Debt Review  ✅ COMPLETE 2026-05-06 (PRD-080 / EXEC-080)
 
-Before Wave 2 schema/outbox implementation begins, run a bounded prep slice to decide whether the remaining deferred financial DTO surfaces become wrapped contracts or documented permanent/internal carve-outs. Do not bury this inside generic outbox work.
+All 12 fields closed. 112 tests passing. Commit `20df161b`. DEC-1 remains open — completeness stays `'unknown'` on all visit-level and MTL gaming-day aggregates until Wave 2 introduces lifecycle-aware projection. See `ROLLOUT-TRACKER.json → phases[id="pre_wave_2"]` for field-level closure detail.
+
+---
+
+**Historical context** (pre-closure): Before Wave 2 schema/outbox implementation begins, run a bounded prep slice to decide whether the remaining deferred financial DTO surfaces become wrapped contracts or documented permanent/internal carve-outs. Do not bury this inside generic outbox work.
 
 **Minimum required review (2 surfaces / 6 fields):**
 
@@ -507,10 +528,15 @@ Track resolutions in a `WAVE-2-PREP-DECISIONS.md` accumulated during Wave 1.
 
 ## Ready to start Wave 2 when
 
-1. Wave 1 complete
-2. §6 open questions resolved
-3. `WAVE-2-ROADMAP.md` drafted
-4. Failure harness verified against stubs
+| Criterion | Status | Notes |
+|-----------|--------|-------|
+| Wave 1 complete | ✅ Met | Phases 1.0–1.5 closed 2026-04-23 — 2026-05-06. Sign-off: WAVE-1-PHASE-1.5-SIGNOFF.md |
+| Pre-Wave-2 surface debt closed | ✅ Met | PRD-080 / EXEC-080, 2026-05-06. 12 fields wrapped across 4 DTOs in 3 bounded contexts. |
+| §6 open questions (Q1–Q4) resolved | ❌ Open | All 4 unresolved. See §6. No design review scheduled. |
+| `WAVE-2-ROADMAP.md` drafted | ❌ Not created | Blocked on Q1–Q4 resolution. Do not pre-plan Wave 2 phases. |
+| Failure harness verified against stubs | ❌ Not confirmed | FAILURE-SIMULATION-HARNESS.md is EXEC-READY but has not been run against a stub implementation. |
+
+**Wave 2 readiness: NOT READY.** Three of five criteria unmet. Unblocking sequence: (1) schedule post-Wave-1 design review to resolve Q1–Q4, (2) external stakeholder discovery for Q3 (reconciliation consumer contract), (3) draft WAVE-2-ROADMAP.md, (4) verify failure harness against stub.
 
 ---
 

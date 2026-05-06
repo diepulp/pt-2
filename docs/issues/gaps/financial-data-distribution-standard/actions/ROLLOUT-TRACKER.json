@@ -61,7 +61,51 @@
     "last_closed_commit": "20df161b6aadc3f236106bdc84dc96b415815d48",
     "wave_1_status": "closed",
     "wave_1_closed_date": "2026-05-06",
-    "wave_1_signoff_artifact": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-PHASE-1.5-SIGNOFF.md"
+    "wave_1_signoff_artifact": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-PHASE-1.5-SIGNOFF.md",
+    "wave_2_readiness": {
+      "assessed_date": "2026-05-06",
+      "overall": "NOT_READY",
+      "criteria": [
+        {
+          "id": "W2-C1",
+          "criterion": "Wave 1 complete",
+          "status": "met",
+          "detail": "All phases 1.0–1.5 closed. Sign-off: WAVE-1-PHASE-1.5-SIGNOFF.md. 2026-05-06."
+        },
+        {
+          "id": "W2-C2",
+          "criterion": "Pre-Wave-2 surface debt closed",
+          "status": "met",
+          "detail": "PRD-080 / EXEC-080 complete 2026-05-06. 12 fields wrapped across 4 DTOs in 3 bounded contexts. Commit 20df161b."
+        },
+        {
+          "id": "W2-C3",
+          "criterion": "Q1–Q4 open questions resolved",
+          "status": "not_met",
+          "detail": "All 4 questions open. Resolution requires post-Wave-1 design review + external stakeholder discovery (Q3)."
+        },
+        {
+          "id": "W2-C4",
+          "criterion": "WAVE-2-ROADMAP.md drafted",
+          "status": "not_met",
+          "detail": "Not created. Blocked on Q1–Q4 resolution. Do not pre-plan Wave 2 phases before open questions resolve."
+        },
+        {
+          "id": "W2-C5",
+          "criterion": "Failure harness verified against stubs",
+          "status": "not_met",
+          "detail": "FAILURE-SIMULATION-HARNESS.md is EXEC-READY but has not been run against a stub implementation. I1–I4 are Wave 2 invariants; I5 is complete."
+        }
+      ],
+      "unblocking_sequence": [
+        "1. Schedule post-Wave-1 design review — resolve Q1 (PFT schema vs separate authoring store) and Q2 (grind normalization)",
+        "2. External stakeholder discovery — resolve Q3 (reconciliation consumer contract)",
+        "3. Performance testing under literal-same-txn constraint — resolve Q4 (outbox emission strategy)",
+        "4. Draft WAVE-2-ROADMAP.md after Q1–Q4 resolved",
+        "5. Verify FAILURE-SIMULATION-HARNESS.md against stub implementation",
+        "6. Run /prd-writer for Wave 2 Phase 1"
+      ]
+    }
   },
 
   "phases": [
@@ -475,6 +519,13 @@
       "wave": 2,
       "status": "not_started",
       "entry_gate": "Wave 1 sign-off + Q1–Q4 resolved",
+      "readiness_assessed": "2026-05-06",
+      "readiness_overall": "NOT_READY",
+      "readiness_blockers": [
+        "Q1–Q4 open questions unresolved (all 4) — no design review scheduled",
+        "WAVE-2-ROADMAP.md not drafted — blocked on Q1–Q4",
+        "Failure harness not verified against stubs — I1–I4 untested"
+      ],
       "roadmap_note": "WAVE-2-ROADMAP.md not yet created. Scope outline in ROLLOUT-PROGRESS.md §5.",
       "wave_2_cicd_prerequisites": [
         "Staging Supabase project provisioned (schema migrations cannot go unverified when outbox and dual-layer stores are involved)",
@@ -672,6 +723,7 @@
       "question": "PFT schema expand for table-only events, or Class B stays in a separate authoring store?",
       "gates": "Wave 2",
       "status": "open",
+      "wave_2_blocks": true,
       "resolution_path": "Post-Wave 1 design review + prod data input"
     },
     {
@@ -679,6 +731,7 @@
       "question": "Grind normalized under shared parent with discriminator, or fully separate?",
       "gates": "Wave 2",
       "status": "open",
+      "wave_2_blocks": true,
       "resolution_path": "Same review as Q1"
     },
     {
@@ -686,6 +739,7 @@
       "question": "External reconciliation consumer contract?",
       "gates": "Wave 2",
       "status": "open",
+      "wave_2_blocks": true,
       "resolution_path": "External stakeholder discovery"
     },
     {
@@ -693,6 +747,7 @@
       "question": "Outbox emission: trigger-based, shared RPC, or both?",
       "gates": "Wave 2",
       "status": "open",
+      "wave_2_blocks": true,
       "resolution_path": "Performance testing under literal-same-txn constraint (ADR-PROP D2)"
     }
   ],
