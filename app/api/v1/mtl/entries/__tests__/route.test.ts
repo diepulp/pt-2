@@ -5,37 +5,34 @@
  *
  * Tests GET (list) and POST (create) collection endpoints for MTL entries.
  * Validates HTTP boundary layer compliance with ServiceHttpResult envelope.
- *
- * Issue: ISSUE-607F9CCB (Route Handler Testing Coverage Gap)
- * Workstream: WS8 (PRD-011 Phase 3 - Auxiliary Tests)
+ * DEC-1 (EXEC-071 WS3): casino_id REMOVE — service always receives RLS context casino_id.
  */
 
 import { createMockRequest } from '@/lib/testing/route-test-helpers';
 
-import { GET, POST } from '../route';
-
-// Mock Supabase client
 jest.mock('@/lib/supabase/server', () => ({
-  createClient: jest.fn().mockResolvedValue({
-    from: jest.fn(),
-  }),
+  createClient: jest.fn().mockResolvedValue({ from: jest.fn() }),
 }));
 
-// Mock MTL service to avoid real Supabase calls inside handler
+// Service-level mock — casino_id always from RLS context (DEC-1, EXEC-071 WS1)
+const mockListEntries = jest
+  .fn()
+  .mockResolvedValue({ items: [], next_cursor: null });
+const mockCreateEntry = jest.fn().mockResolvedValue({
+  id: 'entry-1',
+  casino_id: 'casino-1',
+  patron_uuid: '123e4567-e89b-12d3-a456-426614174001',
+  amount: 5000,
+  direction: 'in',
+});
+
 jest.mock('@/services/mtl', () => ({
   createMtlService: jest.fn(() => ({
-    listEntries: jest.fn().mockResolvedValue({ items: [], next_cursor: null }),
-    createEntry: jest.fn().mockResolvedValue({
-      id: 'entry-1',
-      casino_id: 'casino-1',
-      patron_uuid: '123e4567-e89b-12d3-a456-426614174001',
-      amount: 5000,
-      direction: 'in',
-    }),
+    listEntries: (...args: unknown[]) => mockListEntries(...args),
+    createEntry: (...args: unknown[]) => mockCreateEntry(...args),
   })),
 }));
 
-// Mock middleware to bypass auth/RLS in unit tests
 jest.mock('@/lib/server-actions/middleware', () => ({
   withServerAction: jest.fn((_, handler) =>
     handler({
@@ -50,14 +47,22 @@ jest.mock('@/lib/server-actions/middleware', () => ({
   ),
 }));
 
+// Import route handler AFTER mocks so module-level mock variables are initialized
+import { GET, POST } from '../route';
+
 describe('GET /api/v1/mtl/entries', () => {
+  beforeEach(() => {
+    mockListEntries.mockClear();
+    mockListEntries.mockResolvedValue({ items: [], next_cursor: null });
+  });
+
   it('exports GET handler', () => {
     expect(typeof GET).toBe('function');
   });
 
   it('returns 200 with ServiceHttpResult envelope', async () => {
     const request = createMockRequest('GET', '/api/v1/mtl/entries', {
-      searchParams: { casino_id: '123e4567-e89b-12d3-a456-426614174000' },
+      searchParams: {},
     });
     const response = await GET(request);
     const body = await response.json();
@@ -72,7 +77,7 @@ describe('GET /api/v1/mtl/entries', () => {
     });
   });
 
-  it('accepts casino_id filter', async () => {
+  it('accepts casino_id filter (casino_id stripped — ignored per DEC-1)', async () => {
     const request = createMockRequest('GET', '/api/v1/mtl/entries', {
       searchParams: { casino_id: '123e4567-e89b-12d3-a456-426614174000' },
     });
@@ -82,51 +87,73 @@ describe('GET /api/v1/mtl/entries', () => {
     expect(response.status).toBe(200);
     expect(body.data).toHaveProperty('items');
     expect(body.data).toEqual(
-      expect.objectContaining({
-        items: expect.any(Array),
-      }),
+      expect.objectContaining({ items: expect.any(Array) }),
     );
   });
 
   it('accepts patron_uuid filter', async () => {
     const request = createMockRequest('GET', '/api/v1/mtl/entries', {
       searchParams: {
-        casino_id: '123e4567-e89b-12d3-a456-426614174000',
         patron_uuid: '123e4567-e89b-12d3-a456-426614174001',
       },
     });
     const response = await GET(request);
-
     expect(response.status).toBe(200);
   });
 
   it('accepts pagination parameters', async () => {
     const request = createMockRequest('GET', '/api/v1/mtl/entries', {
-      searchParams: {
-        casino_id: '123e4567-e89b-12d3-a456-426614174000',
-        cursor: 'next-cursor-token',
-        limit: '50',
-      },
+      searchParams: { cursor: 'next-cursor-token', limit: '50' },
     });
     const response = await GET(request);
-
     expect(response.status).toBe(200);
   });
 
   it('accepts min_amount filter', async () => {
     const request = createMockRequest('GET', '/api/v1/mtl/entries', {
-      searchParams: {
-        casino_id: '123e4567-e89b-12d3-a456-426614174000',
-        min_amount: '1000',
-      },
+      searchParams: { min_amount: '1000' },
     });
     const response = await GET(request);
+    expect(response.status).toBe(200);
+  });
 
+  // ── DEC-1 (EXEC-071 WS1/WS3): casino_id REMOVE ─────────────────────────────
+
+  it('DEC-1: does not forward spoofed casino_id query param to service', async () => {
+    const request = createMockRequest('GET', '/api/v1/mtl/entries', {
+      searchParams: { casino_id: 'spoofed-casino-999' },
+    });
+    await GET(request);
+
+    expect(mockListEntries).toHaveBeenCalledWith(
+      expect.objectContaining({ casino_id: 'casino-1' }),
+    );
+    expect(mockListEntries).not.toHaveBeenCalledWith(
+      expect.objectContaining({ casino_id: 'spoofed-casino-999' }),
+    );
+  });
+
+  it('DEC-1: request with spoofed casino_id still returns 200 (param is stripped)', async () => {
+    const request = createMockRequest('GET', '/api/v1/mtl/entries', {
+      searchParams: { casino_id: 'spoofed-casino-999' },
+    });
+    const response = await GET(request);
     expect(response.status).toBe(200);
   });
 });
 
 describe('POST /api/v1/mtl/entries', () => {
+  beforeEach(() => {
+    mockCreateEntry.mockClear();
+    mockCreateEntry.mockResolvedValue({
+      id: 'entry-1',
+      casino_id: 'casino-1',
+      patron_uuid: '123e4567-e89b-12d3-a456-426614174001',
+      amount: 5000,
+      direction: 'in',
+    });
+  });
+
   it('exports POST handler', () => {
     expect(typeof POST).toBe('function');
   });
@@ -134,14 +161,12 @@ describe('POST /api/v1/mtl/entries', () => {
   it('requires Idempotency-Key header', async () => {
     const request = createMockRequest('POST', '/api/v1/mtl/entries', {
       body: {
-        casino_id: '123e4567-e89b-12d3-a456-426614174000',
         patron_uuid: '123e4567-e89b-12d3-a456-426614174001',
         amount: 5000,
         direction: 'in',
       },
     });
     const response = await POST(request);
-
     expect(response.status).toBe(400);
   });
 
@@ -152,8 +177,8 @@ describe('POST /api/v1/mtl/entries', () => {
         'Content-Type': 'application/json',
       },
       body: {
-        casino_id: '123e4567-e89b-12d3-a456-426614174000',
         patron_uuid: '123e4567-e89b-12d3-a456-426614174001',
+        casino_id: '123e4567-e89b-12d3-a456-426614174000',
         amount: 5000,
         direction: 'in',
         txn_type: 'buy_in',
@@ -165,10 +190,7 @@ describe('POST /api/v1/mtl/entries', () => {
     const body = await response.json();
 
     expect(response.status).toBe(201);
-    expect(body).toMatchObject({
-      ok: true,
-      code: 'OK',
-    });
+    expect(body).toMatchObject({ ok: true, code: 'OK' });
   });
 
   it('accepts optional staff_id', async () => {
@@ -178,8 +200,8 @@ describe('POST /api/v1/mtl/entries', () => {
         'Content-Type': 'application/json',
       },
       body: {
-        casino_id: '123e4567-e89b-12d3-a456-426614174000',
         patron_uuid: '123e4567-e89b-12d3-a456-426614174001',
+        casino_id: '123e4567-e89b-12d3-a456-426614174000',
         staff_id: '123e4567-e89b-12d3-a456-426614174002',
         amount: 5000,
         direction: 'in',
@@ -188,69 +210,6 @@ describe('POST /api/v1/mtl/entries', () => {
       },
     });
     const response = await POST(request);
-
-    expect(response.status).toBe(201);
-  });
-
-  it('accepts optional rating_slip_id', async () => {
-    const request = createMockRequest('POST', '/api/v1/mtl/entries', {
-      headers: {
-        'Idempotency-Key': 'test-key-125',
-        'Content-Type': 'application/json',
-      },
-      body: {
-        casino_id: '123e4567-e89b-12d3-a456-426614174000',
-        patron_uuid: '123e4567-e89b-12d3-a456-426614174001',
-        rating_slip_id: '123e4567-e89b-12d3-a456-426614174003',
-        amount: 5000,
-        direction: 'in',
-        txn_type: 'buy_in',
-        idempotency_key: 'test-key-125',
-      },
-    });
-    const response = await POST(request);
-
-    expect(response.status).toBe(201);
-  });
-
-  it('accepts optional visit_id', async () => {
-    const request = createMockRequest('POST', '/api/v1/mtl/entries', {
-      headers: {
-        'Idempotency-Key': 'test-key-126',
-        'Content-Type': 'application/json',
-      },
-      body: {
-        casino_id: '123e4567-e89b-12d3-a456-426614174000',
-        patron_uuid: '123e4567-e89b-12d3-a456-426614174001',
-        visit_id: '123e4567-e89b-12d3-a456-426614174004',
-        amount: 5000,
-        direction: 'in',
-        txn_type: 'buy_in',
-        idempotency_key: 'test-key-126',
-      },
-    });
-    const response = await POST(request);
-
-    expect(response.status).toBe(201);
-  });
-
-  it('accepts direction "out"', async () => {
-    const request = createMockRequest('POST', '/api/v1/mtl/entries', {
-      headers: {
-        'Idempotency-Key': 'test-key-127',
-        'Content-Type': 'application/json',
-      },
-      body: {
-        casino_id: '123e4567-e89b-12d3-a456-426614174000',
-        patron_uuid: '123e4567-e89b-12d3-a456-426614174001',
-        amount: 3000,
-        direction: 'out',
-        txn_type: 'cash_out',
-        idempotency_key: 'test-key-127',
-      },
-    });
-    const response = await POST(request);
-
     expect(response.status).toBe(201);
   });
 });

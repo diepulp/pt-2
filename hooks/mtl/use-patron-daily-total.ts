@@ -107,7 +107,6 @@ export function usePatronDailyTotal(
       }
 
       const result = await getGamingDaySummary({
-        casino_id: casinoId,
         gaming_day: gamingDay,
         patron_uuid: patronUuid,
         limit: 1, // We only need the single patron's summary

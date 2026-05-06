@@ -75,7 +75,12 @@ describe('loyalty crud', () => {
       (mappers.parseAccrueOnCloseResponse as jest.Mock).mockReturnValue({
         ledgerId: 'ledger-uuid-1',
         pointsDelta: 100,
-        theo: 5000,
+        theo: {
+          value: 5000,
+          type: 'estimated',
+          source: 'loyalty.theo',
+          completeness: { status: 'complete' },
+        },
         balanceAfter: 1100,
         isExisting: false,
       });

@@ -1,5 +1,6 @@
 'use client';
 
+import { FinancialValue } from '@/components/financial';
 import {
   MetricGradeBadge,
   MissingDataWarning,
@@ -8,7 +9,6 @@ import {
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getWinLossColor } from '@/lib/colors';
-import { formatCents } from '@/lib/format';
 import type { OpeningSource } from '@/services/table-context/shift-metrics/provenance';
 
 export interface HeroWinLossCompactProps {
@@ -86,14 +86,20 @@ export function HeroWinLossCompact({
           <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
             Win/Loss
           </p>
-          {metricGrade && <MetricGradeBadge grade={metricGrade} size="sm" />}
           {openingSource && <OpeningSourceBadge source={openingSource} />}
         </div>
-        <p
-          className={`mt-2 text-3xl font-semibold font-mono tabular-nums ${colorConfig.text}`}
-        >
-          {formatCents(winLossCents)}
-        </p>
+        <div className={`mt-2 ${colorConfig.text}`}>
+          <FinancialValue
+            variant="compact"
+            label="Win/Loss"
+            value={{
+              value: winLossCents,
+              type: metricGrade === 'ESTIMATE' ? 'estimated' : 'actual',
+              source: 'shift_metrics',
+              completeness: { status: 'complete' },
+            }}
+          />
+        </div>
         {hasMissingTables && (
           <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-400">
             {tablesMissingBaselineCount} of {tablesCount} tables missing

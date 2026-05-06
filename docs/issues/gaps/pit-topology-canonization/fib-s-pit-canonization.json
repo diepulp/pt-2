@@ -1,0 +1,83 @@
+{
+  "feature_id": "FIB-PTC-001",
+  "name": "Pit Topology Canonicalization",
+  "priority": "P0",
+  "domain": "TableContext",
+
+  "what": {
+    "entities": [
+      "floor_layout",
+      "floor_layout_version",
+      "floor_pit",
+      "floor_table_slot"
+    ],
+    "legacy_entity": "gaming_table.pit"
+  },
+
+  "how": {
+    "strategy": "one_time_import_and_canonicalization",
+    "steps": [
+      "detect absence of floor_layout",
+      "extract distinct gaming_table.pit values",
+      "create floor_layout + version",
+      "create floor_pit entries",
+      "create floor_table_slot entries",
+      "activate layout"
+    ],
+    "post_condition": "first_class_layout_is_source_of_truth"
+  },
+
+  "where": {
+    "write_points": ["rpc_complete_casino_setup"],
+    "read_points": [
+      "admin pit configuration panel",
+      "pit terminal",
+      "dashboard queries"
+    ]
+  },
+
+  "who": {
+    "actors": ["casino_admin"],
+    "system_actor": "setup_pipeline"
+  },
+
+  "when": {
+    "trigger": "onboarding_completion",
+    "fallback_trigger": "first_admin_panel_access_if_no_layout_exists"
+  },
+
+  "why": {
+    "problem": "split_brain_between_legacy_and_first_class_pit_models",
+    "goal": "single_canonical_topology_model"
+  },
+
+  "constraints": {
+    "idempotency": "import_runs_only_if_no_layout_exists",
+    "no_reverse_sync": true,
+    "legacy_write_prohibited": true
+  },
+
+  "compatibility": {
+    "temporary_projection": {
+      "allowed": true,
+      "direction": "first_class_to_legacy",
+      "purpose": "backward_compatibility_only"
+    },
+    "deprecation": {
+      "target": "gaming_table.pit",
+      "status": "compatibility_only"
+    }
+  },
+
+  "acceptance_criteria": [
+    "admin_panel_displays_pits_after_onboarding",
+    "pit_terminal_uses_first_class_model",
+    "no_duplicate_or_conflicting_pit_definitions",
+    "no_system_reads_from_legacy_pit_field"
+  ],
+
+  "risks": [
+    "partial_read_migration_leaves_hidden_split_brain",
+    "duplicate_import_if_idempotency_not_enforced"
+  ]
+}

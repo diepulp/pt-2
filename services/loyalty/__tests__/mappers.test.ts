@@ -9,6 +9,8 @@
  * @see EXECUTION-SPEC-PRD-004.md WS7
  */
 
+import { financialValueSchema } from '@/lib/financial/schema';
+
 import {
   toAccrueOnCloseOutput,
   toApplyPromotionOutput,
@@ -32,7 +34,7 @@ import type {
 
 describe('loyalty mappers', () => {
   describe('toAccrueOnCloseOutput', () => {
-    it('maps RPC response to DTO with snake_case to camelCase', () => {
+    it('maps RPC response to DTO with snake_case to camelCase and wraps theo as FinancialValue envelope', () => {
       const response: AccrueOnCloseRpcResponse = {
         ledger_id: 'ledger-uuid-1',
         points_delta: 100,
@@ -46,7 +48,12 @@ describe('loyalty mappers', () => {
       expect(result).toEqual({
         ledgerId: 'ledger-uuid-1',
         pointsDelta: 100,
-        theo: 5000,
+        theo: {
+          value: 5000,
+          type: 'estimated',
+          source: 'loyalty.theo',
+          completeness: { status: 'complete' },
+        },
         balanceAfter: 1100,
         isExisting: false,
       });
@@ -64,6 +71,57 @@ describe('loyalty mappers', () => {
       const result = toAccrueOnCloseOutput(response);
 
       expect(result.isExisting).toBe(true);
+    });
+
+    // PRD-070 WS2 — stable test names cited in WS9 verification matrix.
+    it('toAccrueOnCloseOutput emits theo envelope with type=estimated source=loyalty.theo completeness=complete (PRD-070 §3.6)', () => {
+      const response: AccrueOnCloseRpcResponse = {
+        ledger_id: 'ledger-uuid-2',
+        points_delta: 42,
+        theo: 12345,
+        balance_after: 50000,
+        is_existing: false,
+      };
+
+      const { theo } = toAccrueOnCloseOutput(response);
+
+      expect(theo.type).toBe('estimated');
+      expect(theo.source).toBe('loyalty.theo');
+      expect(theo.completeness.status).toBe('complete');
+      expect(theo.value).toBe(12345);
+      expect(() => financialValueSchema.parse(theo)).not.toThrow();
+    });
+
+    it('toAccrueOnCloseOutput theo envelope preserves zero-value cents contract', () => {
+      const response: AccrueOnCloseRpcResponse = {
+        ledger_id: 'ledger-uuid-3',
+        points_delta: 0,
+        theo: 0,
+        balance_after: 0,
+        is_existing: false,
+      };
+
+      const { theo } = toAccrueOnCloseOutput(response);
+
+      expect(theo.value).toBe(0);
+      expect(theo.completeness.status).toBe('complete');
+    });
+
+    it('toAccrueOnCloseOutput keeps points fields as bare numbers (WAVE-1-CLASSIFICATION-RULES §6.3 carve-out)', () => {
+      const response: AccrueOnCloseRpcResponse = {
+        ledger_id: 'ledger-uuid-4',
+        points_delta: 75,
+        theo: 7500,
+        balance_after: 12345,
+        is_existing: false,
+      };
+
+      const result = toAccrueOnCloseOutput(response);
+
+      expect(typeof result.pointsDelta).toBe('number');
+      expect(typeof result.balanceAfter).toBe('number');
+      expect(result.pointsDelta).toBe(75);
+      expect(result.balanceAfter).toBe(12345);
     });
   });
 

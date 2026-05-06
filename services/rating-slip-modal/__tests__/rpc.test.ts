@@ -89,7 +89,7 @@ const mockValidRpcResponse = {
   },
   financial: {
     totalCashIn: 50000,
-    totalChipsOut: 30000,
+    totalCashOut: 30000,
     netPosition: 20000,
   },
   tables: [
@@ -135,7 +135,7 @@ const mockGhostVisitRpcResponse = {
   loyalty: null, // No loyalty without player
   financial: {
     totalCashIn: 0,
-    totalChipsOut: 0,
+    totalCashOut: 0,
     netPosition: 0,
   },
   tables: [
@@ -182,7 +182,7 @@ const mockClosedSlipRpcResponse = {
   },
   financial: {
     totalCashIn: 50000,
-    totalChipsOut: 30000,
+    totalCashOut: 30000,
     netPosition: 20000,
   },
   tables: [],
@@ -238,7 +238,7 @@ describe('getModalDataViaRPC - Successful Data Mapping', () => {
       },
       financial: {
         totalCashIn: 50000,
-        totalChipsOut: 30000,
+        totalCashOut: 30000,
         netPosition: 20000,
       },
       tables: [
@@ -468,7 +468,7 @@ describe('getModalDataViaRPC - Type Guard Validation', () => {
       // Missing slip section
       player: null,
       loyalty: null,
-      financial: { totalCashIn: 0, totalChipsOut: 0, netPosition: 0 },
+      financial: { totalCashIn: 0, totalCashOut: 0, netPosition: 0 },
       tables: [],
     };
     const supabase = createMockSupabaseWithRpc(invalidResponse);
@@ -491,7 +491,7 @@ describe('getModalDataViaRPC - Type Guard Validation', () => {
       },
       player: null,
       loyalty: null,
-      financial: { totalCashIn: 0, totalChipsOut: 0, netPosition: 0 },
+      financial: { totalCashIn: 0, totalCashOut: 0, netPosition: 0 },
       tables: [],
     };
     const supabase = createMockSupabaseWithRpc(invalidResponse);
@@ -529,7 +529,7 @@ describe('getModalDataViaRPC - Type Guard Validation', () => {
       loyalty: null,
       financial: {
         totalCashIn: 'not-a-number', // Should be number
-        totalChipsOut: 0,
+        totalCashOut: 0,
         netPosition: 0,
       },
       tables: [],
@@ -549,7 +549,7 @@ describe('getModalDataViaRPC - Type Guard Validation', () => {
       slip: mockValidRpcResponse.slip,
       player: null,
       loyalty: null,
-      financial: { totalCashIn: 0, totalChipsOut: 0, netPosition: 0 },
+      financial: { totalCashIn: 0, totalCashOut: 0, netPosition: 0 },
       tables: 'not-an-array', // Should be array
     };
     const supabase = createMockSupabaseWithRpc(invalidResponse);
@@ -567,7 +567,7 @@ describe('getModalDataViaRPC - Type Guard Validation', () => {
       slip: mockValidRpcResponse.slip,
       player: 'invalid-player-type', // Should be object or null
       loyalty: null,
-      financial: { totalCashIn: 0, totalChipsOut: 0, netPosition: 0 },
+      financial: { totalCashIn: 0, totalCashOut: 0, netPosition: 0 },
       tables: [],
     };
     const supabase = createMockSupabaseWithRpc(invalidResponse);
@@ -612,7 +612,7 @@ describe('getModalDataViaRPC - Edge Cases', () => {
       ...mockValidRpcResponse,
       financial: {
         totalCashIn: 0,
-        totalChipsOut: 0,
+        totalCashOut: 0,
         netPosition: 0,
       },
     };
@@ -621,7 +621,7 @@ describe('getModalDataViaRPC - Edge Cases', () => {
     const result = await getModalDataViaRPC(supabase, SLIP_ID, CASINO_ID);
 
     expect(result.financial.totalCashIn).toBe(0);
-    expect(result.financial.totalChipsOut).toBe(0);
+    expect(result.financial.totalCashOut).toBe(0);
     expect(result.financial.netPosition).toBe(0);
   });
 
@@ -630,7 +630,7 @@ describe('getModalDataViaRPC - Edge Cases', () => {
       ...mockValidRpcResponse,
       financial: {
         totalCashIn: 10000,
-        totalChipsOut: 25000,
+        totalCashOut: 25000,
         netPosition: -15000, // Player is up
       },
     };

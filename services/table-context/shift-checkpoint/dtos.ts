@@ -4,7 +4,19 @@
  * Pattern A (Contract-First): Manual interfaces derived from Database types.
  * INSERT-only immutable metric snapshots for mid-shift delta comparisons.
  *
+ * Financial envelope wrapping (PRD-070 WS2 — DEFERRED):
+ * All `_cents` fields here (`win_loss_cents`, `fills_total_cents`,
+ * `credits_total_cents`, `drop_total_cents`, `rated_buyin_cents`,
+ * `grind_buyin_cents`, `cash_out_observed_cents`) cascade into
+ * `components/shift-dashboard-v3/*`. Blanket Phase 1.2 deferral — see
+ * `../dtos.ts` top-of-file block for classification targets
+ * (CLASSIFICATION-RULES §3.5). Checkpoint rows are immutable snapshots, so
+ * `completeness.status` at the time of the snapshot is always `'complete'`
+ * for the captured counts — consumers computing deltas across snapshots
+ * must propagate completeness per Pattern B (worst-of) rules.
+ *
  * @see PRD-038 Mid-Shift Delta Checkpoints
+ * @see PRD-070 Financial Telemetry Wave 1 Phase 1.1
  * @see EXEC-038 WS2 Service Layer
  */
 

@@ -11,13 +11,16 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 327-365
  */
 
+import { dollarsToCents } from '@/lib/financial/rounding';
+import { financialValueSchema } from '@/lib/financial/schema';
 import { narrowRpcJson } from '@/lib/json/narrows';
 import type { VisitLiveViewDTO } from '@/services/visit/dtos';
-import type { Json } from '@/types/database.types';
+import type { Database, Json } from '@/types/database.types';
 
 import type {
   ActivePlayerForDashboardDTO,
   ClosedSlipForGamingDayDTO,
+  PitCashObservationDTO,
   RatingSlipDTO,
   RatingSlipPauseDTO,
   RatingSlipStatus,
@@ -333,11 +336,31 @@ export function toVisitLiveViewDTO(
     current_segment_started_at: data.current_segment_started_at,
     current_segment_average_bet: data.current_segment_average_bet,
     session_total_duration_seconds: data.session_total_duration_seconds,
-    // Convert financial amounts from cents (DB storage) to dollars (UI consumption)
-    // player_financial_transaction.amount is stored in cents (see use-save-with-buyin.ts)
-    session_total_buy_in: data.session_total_buy_in / 100,
-    session_total_cash_out: data.session_total_cash_out / 100,
-    session_net: data.session_net / 100,
+    // Phase 1.2 canonicalization complete: /100 removed, integer cents, financialValueSchema.int() active.
+    session_total_buy_in: financialValueSchema.parse({
+      value: data.session_total_buy_in ?? 0,
+      type: 'actual',
+      source: 'visit_financial_summary.total_in',
+      completeness: {
+        status: data.session_total_buy_in != null ? 'complete' : 'unknown',
+      },
+    }),
+    session_total_cash_out: financialValueSchema.parse({
+      value: data.session_total_cash_out ?? 0,
+      type: 'actual',
+      source: 'visit_financial_summary.total_out',
+      completeness: {
+        status: data.session_total_cash_out != null ? 'complete' : 'unknown',
+      },
+    }),
+    session_net: financialValueSchema.parse({
+      value: data.session_net ?? 0,
+      type: 'actual',
+      source: 'visit_financial_summary.net_amount',
+      completeness: {
+        status: data.session_net != null ? 'complete' : 'unknown',
+      },
+    }),
     session_points_earned: data.session_points_earned,
     session_segment_count: data.session_segment_count,
     segments: data.segments,
@@ -483,4 +506,54 @@ export function toActivePlayerForDashboardDTOList(
   rows: RpcActivePlayerRow[],
 ): ActivePlayerForDashboardDTO[] {
   return rows.map(toActivePlayerForDashboardDTO);
+}
+
+// === Pit Cash Observation Mappers (PRD-OPS-CASH-OBS-001 + PRD-070) ===
+
+/**
+ * Row shape returned by `rpc_create_pit_cash_observation`.
+ * Mirrors the `pit_cash_observation` table row with the fields the RPC emits.
+ */
+type PitCashObservationSelectedRow =
+  Database['public']['Tables']['pit_cash_observation']['Row'];
+
+/**
+ * Maps a pit_cash_observation row to PitCashObservationDTO.
+ *
+ * PRD-070 Phase 1.1: Wraps `amount` in the canonical FinancialValue envelope.
+ * Per WAVE-1-SURFACE-INVENTORY §3.2:
+ *   - authority: `observed`
+ *   - source:    `"pit_cash_observation"`
+ *   - unit at boundary: cents (dollars × 100 via `dollarsToCents`)
+ *   - completeness.status: `complete` (single-row observation; aggregates are
+ *     `partial`/`unknown` and live in other services).
+ *
+ * The underlying database column is still dollars (numeric) — the conversion
+ * happens at this mapper boundary only. Schema unchanged in Wave 1.
+ */
+export function toPitCashObservationDTO(
+  row: PitCashObservationSelectedRow,
+): PitCashObservationDTO {
+  return {
+    id: row.id,
+    casinoId: row.casino_id,
+    gamingDay: row.gaming_day,
+    playerId: row.player_id,
+    visitId: row.visit_id,
+    ratingSlipId: row.rating_slip_id,
+    direction: row.direction,
+    amount: {
+      value: dollarsToCents(row.amount),
+      type: 'observed',
+      source: 'pit_cash_observation',
+      completeness: { status: 'complete' },
+    },
+    amountKind: row.amount_kind,
+    source: row.source,
+    observedAt: row.observed_at,
+    createdByStaffId: row.created_by_staff_id,
+    note: row.note,
+    idempotencyKey: row.idempotency_key,
+    createdAt: row.created_at,
+  };
 }

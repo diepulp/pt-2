@@ -79,7 +79,7 @@ const floorCapabilities = [
       'Win/loss, handle, theo, sessions — aggregated across the entire floor in real time.',
   },
   {
-    title: 'Coverage quality',
+    title: 'Attribution Ratio',
     detail:
       'See which tables are covered, which are idle, and where floor presence has gaps.',
   },

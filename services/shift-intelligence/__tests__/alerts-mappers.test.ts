@@ -1,6 +1,7 @@
 /**
  * PRD-056 Alert Maturity Mapper Tests
- * Tests for mapPersistResult, mapAcknowledgeResult, mapAlertQualityResult.
+ * Tests for mapPersistResult, mapAcknowledgeResult, mapAlertQualityResult,
+ * and getAlerts delegation output preservation.
  *
  * @jest-environment node
  */
@@ -10,6 +11,104 @@ import {
   mapAlertQualityResult,
   mapPersistResult,
 } from '../mappers';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database.types';
+import { getAlerts } from '../alerts';
+
+// ── Minimal row fixture matching the getAlerts Supabase join shape ───────────
+
+const SHIFT_ALERT_BASE = {
+  id: 'alert-001',
+  table_id: 'tbl-001',
+  casino_id: 'casino-abc',
+  metric_type: 'drop_total',
+  gaming_day: '2026-04-24',
+  status: 'open',
+  severity: 'low',
+  observed_value: 15000,
+  baseline_median: 12000,
+  baseline_mad: 1500,
+  deviation_score: 2.0,
+  direction: 'above',
+  message: 'test alert',
+  created_at: '2026-04-24T00:00:00Z',
+  updated_at: '2026-04-24T00:00:00Z',
+};
+
+function makeMockSupabase(rows: unknown[]): SupabaseClient<Database> {
+  const mockOrder = jest.fn().mockResolvedValue({ data: rows, error: null });
+  const mockEq = jest.fn().mockReturnValue({ order: mockOrder });
+  const mockSelect = jest.fn().mockReturnValue({ eq: mockEq });
+  return {
+    from: jest.fn().mockReturnValue({ select: mockSelect }),
+  } as unknown as SupabaseClient<Database>;
+}
+
+describe('getAlerts → mapShiftAlertRow delegation', () => {
+  it('preserves tableLabel from gaming_table.label join result', async () => {
+    const row = {
+      ...SHIFT_ALERT_BASE,
+      gaming_table: { label: 'BJ-01' },
+      alert_acknowledgment: null,
+    };
+
+    const result = await getAlerts(makeMockSupabase([row]), {
+      gaming_day: '2026-04-24',
+    });
+
+    expect(result[0].tableLabel).toBe('BJ-01');
+  });
+
+  it('preserves acknowledgedByName from staff.first_name + staff.last_name join', async () => {
+    const row = {
+      ...SHIFT_ALERT_BASE,
+      gaming_table: { label: 'BJ-02' },
+      alert_acknowledgment: [
+        {
+          id: 'ack-001',
+          alert_id: 'alert-001',
+          casino_id: 'casino-abc',
+          acknowledged_by: 'staff-uuid',
+          notes: null,
+          is_false_positive: false,
+          created_at: '2026-04-24T01:00:00Z',
+          staff: { first_name: 'Jane', last_name: 'Smith' },
+        },
+      ],
+    };
+
+    const result = await getAlerts(makeMockSupabase([row]), {
+      gaming_day: '2026-04-24',
+    });
+
+    expect(result[0].acknowledgment?.acknowledgedByName).toBe('Jane Smith');
+  });
+
+  it('sets acknowledgedByName to null when staff join is absent', async () => {
+    const row = {
+      ...SHIFT_ALERT_BASE,
+      gaming_table: { label: 'BJ-03' },
+      alert_acknowledgment: [
+        {
+          id: 'ack-002',
+          alert_id: 'alert-001',
+          casino_id: 'casino-abc',
+          acknowledged_by: 'staff-uuid',
+          notes: null,
+          is_false_positive: false,
+          created_at: '2026-04-24T01:00:00Z',
+          staff: null,
+        },
+      ],
+    };
+
+    const result = await getAlerts(makeMockSupabase([row]), {
+      gaming_day: '2026-04-24',
+    });
+
+    expect(result[0].acknowledgment?.acknowledgedByName).toBeNull();
+  });
+});
 
 describe('Alert Maturity Mappers', () => {
   describe('mapPersistResult', () => {

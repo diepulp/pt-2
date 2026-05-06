@@ -58,7 +58,7 @@ interface RpcModalDataResponse {
   } | null;
   financial: {
     totalCashIn: number;
-    totalChipsOut: number;
+    totalCashOut: number;
     netPosition: number;
   };
   tables: Array<{
@@ -97,7 +97,7 @@ function isValidRpcModalDataResponse(
   if (!obj.financial || typeof obj.financial !== 'object') return false;
   const financial = obj.financial as Record<string, unknown>;
   if (typeof financial.totalCashIn !== 'number') return false;
-  if (typeof financial.totalChipsOut !== 'number') return false;
+  if (typeof financial.totalCashOut !== 'number') return false;
   if (typeof financial.netPosition !== 'number') return false;
 
   // Validate tables section (required, array)
@@ -254,7 +254,7 @@ export async function getModalDataViaRPC(
       : null,
     financial: {
       totalCashIn: data.financial.totalCashIn,
-      totalChipsOut: data.financial.totalChipsOut,
+      totalCashOut: data.financial.totalCashOut,
       netPosition: data.financial.netPosition,
     },
     tables: data.tables.map((t) => ({

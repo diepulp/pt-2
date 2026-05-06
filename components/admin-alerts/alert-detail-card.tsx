@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useTransition } from 'react';
 
+import { FinancialValue } from '@/components/financial';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCents } from '@/lib/format';
@@ -100,9 +101,16 @@ export function AlertDetailCard({
       <div className="flex items-center gap-6 mt-3 ml-7 text-xs">
         <div>
           <span className="text-muted-foreground">Observed </span>
-          <span className="font-mono tabular-nums font-medium text-foreground">
-            {formatCents(alert.observed_value)}
-          </span>
+          <FinancialValue
+            variant="compact"
+            label="Observed"
+            value={{
+              value: alert.observed_value,
+              type: 'observed',
+              source: 'cash_obs_telemetry',
+              completeness: { status: 'complete' },
+            }}
+          />
         </div>
         <div>
           <span className="text-muted-foreground">Threshold </span>

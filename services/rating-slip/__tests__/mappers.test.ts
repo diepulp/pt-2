@@ -10,8 +10,12 @@
  * @see PRD-002 Rating Slip Service
  */
 
+import { financialValueSchema } from '@/lib/financial/schema';
+import type { FinancialValue } from '@/types/financial';
+
 import type { RatingSlipStatus } from '../dtos';
 import {
+  toPitCashObservationDTO,
   toRatingSlipDTO,
   toRatingSlipDTOList,
   toRatingSlipDTOOrNull,
@@ -23,6 +27,7 @@ import {
   toRatingSlipWithPausesDTOOrNull,
   toRatingSlipWithPlayerDTO,
   toRatingSlipWithPlayerDTOList,
+  toVisitLiveViewDTO,
 } from '../mappers';
 
 // === Test Data ===
@@ -960,6 +965,268 @@ describe('Rating Slip Mappers', () => {
       expect(result[0].player).not.toBeNull();
       expect(result[1].player).toBeNull();
       expect(result[2].player).not.toBeNull();
+    });
+  });
+
+  // ===========================================================================
+  // toVisitLiveViewDTO — BRIDGE-001 retirement (PRD-074 WS1_BRIDGE001)
+  // ===========================================================================
+  // Verify unit semantics: DEC-3 — mapper fixtures with source value 7500 must
+  // return value: 7500 exactly (integer cents pass-through, not /100 dollar float).
+
+  describe('toVisitLiveViewDTO — integer-cents canonicalization', () => {
+    const baseRpcRow = {
+      visit_id: 'visit-001',
+      player_id: 'player-001',
+      player_first_name: 'Jane',
+      player_last_name: 'Smith',
+      visit_status: 'open' as const,
+      started_at: '2026-04-30T10:00:00Z',
+      current_segment_slip_id: 'slip-001',
+      current_segment_table_id: 'table-001',
+      current_segment_table_name: 'BJ-01',
+      current_segment_seat_number: '3',
+      current_segment_status: 'open' as const,
+      current_segment_started_at: '2026-04-30T10:00:00Z',
+      current_segment_average_bet: 50,
+      session_total_duration_seconds: 3600,
+      session_total_buy_in: 7500,
+      session_total_cash_out: 6000,
+      session_net: -1500,
+      session_points_earned: 15,
+      session_segment_count: 1,
+    };
+
+    it('emits integer cents verbatim — 7500 stays 7500, not 75 dollars', () => {
+      const result = toVisitLiveViewDTO(baseRpcRow);
+
+      expect(result.session_total_buy_in.value).toBe(7500);
+      expect(result.session_total_cash_out.value).toBe(6000);
+      expect(result.session_net.value).toBe(-1500);
+    });
+
+    it('financial envelopes pass financialValueSchema.parse() — int() constraint active', () => {
+      const result = toVisitLiveViewDTO(baseRpcRow);
+
+      expect(() =>
+        financialValueSchema.parse(result.session_total_buy_in),
+      ).not.toThrow();
+      expect(() =>
+        financialValueSchema.parse(result.session_total_cash_out),
+      ).not.toThrow();
+      expect(() =>
+        financialValueSchema.parse(result.session_net),
+      ).not.toThrow();
+    });
+
+    it('completeness is complete for non-null DB values', () => {
+      const result = toVisitLiveViewDTO(baseRpcRow);
+
+      expect(result.session_total_buy_in.completeness.status).toBe('complete');
+      expect(result.session_total_cash_out.completeness.status).toBe(
+        'complete',
+      );
+      expect(result.session_net.completeness.status).toBe('complete');
+    });
+
+    it('completeness is unknown for null DB values and value is 0', () => {
+      const result = toVisitLiveViewDTO({
+        ...baseRpcRow,
+        session_total_buy_in: null as unknown as number,
+        session_total_cash_out: null as unknown as number,
+        session_net: null as unknown as number,
+      });
+
+      expect(result.session_total_buy_in.value).toBe(0);
+      expect(result.session_total_buy_in.completeness.status).toBe('unknown');
+    });
+
+    it('source provenance is correctly set', () => {
+      const result = toVisitLiveViewDTO(baseRpcRow);
+
+      expect(result.session_total_buy_in.source).toBe(
+        'visit_financial_summary.total_in',
+      );
+      expect(result.session_total_cash_out.source).toBe(
+        'visit_financial_summary.total_out',
+      );
+      expect(result.session_net.source).toBe(
+        'visit_financial_summary.net_amount',
+      );
+    });
+  });
+
+  // ===========================================================================
+  // toPitCashObservationDTO (PRD-070 Phase 1.1 FinancialValue envelope)
+  // ===========================================================================
+
+  describe('toPitCashObservationDTO', () => {
+    const basePitCashObsRow = {
+      id: 'obs-1',
+      casino_id: 'casino-456',
+      gaming_day: '2026-04-24',
+      player_id: 'player-001',
+      visit_id: 'visit-789',
+      rating_slip_id: 'slip-123',
+      direction: 'out',
+      amount: 500, // dollars
+      amount_kind: 'estimate' as const,
+      source: 'walk_with' as const,
+      observed_at: '2026-04-24T18:00:00Z',
+      created_by_staff_id: 'staff-001',
+      note: null,
+      idempotency_key: null,
+      created_at: '2026-04-24T18:00:00Z',
+    };
+
+    it('toPitCashObservationDTO wraps dollar amount via dollarsToCents helper', () => {
+      const result = toPitCashObservationDTO({ ...basePitCashObsRow });
+
+      // 500 dollars → 50000 cents (integer)
+      expect(result.amount.value).toBe(50000);
+      expect(Number.isInteger(result.amount.value)).toBe(true);
+    });
+
+    it('toPitCashObservationDTO emits envelope with type=observed source=pit_cash_observation completeness=complete for single row', () => {
+      const result = toPitCashObservationDTO({ ...basePitCashObsRow });
+
+      const expected: FinancialValue = {
+        value: 50000,
+        type: 'observed',
+        source: 'pit_cash_observation',
+        completeness: { status: 'complete' },
+      };
+      expect(result.amount).toEqual(expected);
+
+      // Boundary schema validation (financialValueSchema.parse)
+      expect(() => financialValueSchema.parse(result.amount)).not.toThrow();
+    });
+
+    it('preserves non-currency fields verbatim', () => {
+      const result = toPitCashObservationDTO({ ...basePitCashObsRow });
+
+      expect(result.id).toBe('obs-1');
+      expect(result.casinoId).toBe('casino-456');
+      expect(result.gamingDay).toBe('2026-04-24');
+      expect(result.playerId).toBe('player-001');
+      expect(result.visitId).toBe('visit-789');
+      expect(result.ratingSlipId).toBe('slip-123');
+      expect(result.direction).toBe('out');
+      expect(result.amountKind).toBe('estimate');
+      expect(result.source).toBe('walk_with');
+      expect(result.observedAt).toBe('2026-04-24T18:00:00Z');
+      expect(result.createdByStaffId).toBe('staff-001');
+      expect(result.note).toBeNull();
+      expect(result.idempotencyKey).toBeNull();
+      expect(result.createdAt).toBe('2026-04-24T18:00:00Z');
+    });
+
+    it('rounds fractional dollars per dollarsToCents semantics', () => {
+      // dollarsToCents is pinned to Math.round(dollars * 100) — PRD-070 G6
+      const result = toPitCashObservationDTO({
+        ...basePitCashObsRow,
+        amount: 12.34,
+      });
+      expect(result.amount.value).toBe(1234);
+    });
+
+    it('handles zero amount as envelope with value=0 and status=complete', () => {
+      const result = toPitCashObservationDTO({
+        ...basePitCashObsRow,
+        amount: 0,
+      });
+      expect(result.amount.value).toBe(0);
+      expect(result.amount.completeness.status).toBe('complete');
+    });
+  });
+
+  // ===========================================================================
+  // Legacy-theo envelope rule (PRD-070 Phase 1.1 MANDATORY)
+  // ===========================================================================
+  //
+  // CLASSIFICATION-RULES §3.2 + SURFACE-INVENTORY §3.2 require that any DTO
+  // surfacing `rating_slip.legacy_theo_cents` emits an envelope with:
+  //   - type:   `estimated`
+  //   - source: `"rating_slip.theo.legacy"`
+  //   - completeness.status: `'unknown'` (MANDATORY — no other value permitted
+  //     regardless of how "complete" the underlying row looks).
+  //
+  // Rating-slip core DTOs in this workstream (WS3) do NOT currently surface
+  // `legacy_theo_cents` or `computed_theo_cents` — those columns are read by
+  // `services/measurement/` for anomaly math (different bounded context) and
+  // by `services/loyalty/` for accrual. The table below pins the envelope
+  // contract for when / if a rating-slip DTO surfaces them in a later slice.
+  //
+  // Judgement call (flagged for WS9): because no current DTO field is wired
+  // yet, the tests below assert the contract by constructing envelopes in
+  // the exact shape required, validated with `financialValueSchema.parse`.
+  // A fully-wired behavioral test follows the same shape when the DTO exists.
+
+  describe('rating-slip theo envelope contract (WS3 placeholder for WS9)', () => {
+    it('toXxxDTO emits computed_theo envelope with type=estimated source=rating_slip.theo completeness=partial for open slips', () => {
+      // Contract shape for an OPEN slip with a computed_theo_cents column.
+      const envelope: FinancialValue = {
+        value: 12345, // cents pass-through
+        type: 'estimated',
+        source: 'rating_slip.theo',
+        completeness: { status: 'partial' },
+      };
+      expect(() => financialValueSchema.parse(envelope)).not.toThrow();
+      expect(envelope.type).toBe('estimated');
+      expect(envelope.source).toBe('rating_slip.theo');
+      expect(envelope.completeness.status).toBe('partial');
+    });
+
+    it('toXxxDTO emits computed_theo envelope with completeness=complete for closed slips', () => {
+      // Contract shape for a CLOSED slip with a computed_theo_cents column.
+      const envelope: FinancialValue = {
+        value: 67890,
+        type: 'estimated',
+        source: 'rating_slip.theo',
+        completeness: { status: 'complete' },
+      };
+      expect(() => financialValueSchema.parse(envelope)).not.toThrow();
+      expect(envelope.completeness.status).toBe('complete');
+      expect(envelope.source).toBe('rating_slip.theo');
+    });
+
+    it('toXxxDTO emits legacy_theo envelope with source=rating_slip.theo.legacy completeness=unknown (MANDATORY legacy rule)', () => {
+      // MANDATORY per PRD-070 Phase 1.1: legacy_theo_cents surfaces ALWAYS
+      // emit source="rating_slip.theo.legacy" and completeness.status='unknown',
+      // regardless of how "complete" the underlying row appears.
+      const envelope: FinancialValue = {
+        value: 99999,
+        type: 'estimated',
+        source: 'rating_slip.theo.legacy',
+        completeness: { status: 'unknown' },
+      };
+      expect(() => financialValueSchema.parse(envelope)).not.toThrow();
+      expect(envelope.type).toBe('estimated');
+      expect(envelope.source).toBe('rating_slip.theo.legacy');
+      // Legacy rule is absolute — no other completeness value permitted.
+      expect(envelope.completeness.status).toBe('unknown');
+    });
+  });
+
+  // ===========================================================================
+  // Average bet carve-out (PRD-070 Phase 1.1)
+  // ===========================================================================
+
+  describe('average_bet carve-out', () => {
+    it('average_bet remains a bare number (carve-out, not a FinancialValue)', () => {
+      // RatingSlipDTO.average_bet
+      const slip = toRatingSlipDTO(mockRatingSlipRow);
+      expect(typeof slip.average_bet).toBe('number');
+      expect(slip.average_bet).toBe(100);
+
+      // Null passes through for slips with no bet set
+      const slipNullBet = toRatingSlipDTO(mockRatingSlipRowNullOptionals);
+      expect(slipNullBet.average_bet).toBeNull();
+
+      // Closed slip: still bare number
+      const slipClosed = toRatingSlipDTO(mockRatingSlipRowClosed);
+      expect(typeof slipClosed.average_bet).toBe('number');
+      expect(slipClosed.average_bet).toBe(150);
     });
   });
 });

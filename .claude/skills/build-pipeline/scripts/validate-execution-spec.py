@@ -35,14 +35,7 @@ from typing import Any
 # Project root (relative to script location)
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
 
-# Context files for governance validation
-CONTEXT_FILES = {
-    "architecture": PROJECT_ROOT / "context" / "architecture.context.md",
-    "governance": PROJECT_ROOT / "context" / "governance.context.md",
-    "quality": PROJECT_ROOT / "context" / "quality.context.md",
-}
-
-# SRM Ownership Rules (from architecture.context.md)
+# SRM Ownership Rules — canonical source: docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md
 # Tables with exclusive write ownership - other services cannot modify
 SRM_EXCLUSIVE_OWNERSHIP = {
     "casino_settings": "CasinoService",
@@ -58,7 +51,7 @@ SRM_EXCLUSIVE_OWNERSHIP = {
 # Bounded context services that use Pattern A (contract-first DTOs)
 PATTERN_A_SERVICES = {"LoyaltyService", "FinanceService", "MTLService", "TableContextService"}
 
-# Test location standard (from governance.context.md — co-located canonical pattern)
+# Test location standard — co-located canonical pattern
 # Canonical: services/{domain}/__tests__/*.test.ts (co-located with service)
 # Also valid: __tests__/services/{domain}/ (top-level, legacy)
 TEST_LOCATION_PATTERN = r"services/[\w-]+/__tests__/"
@@ -85,6 +78,7 @@ VALID_SKILLS = {
     "qa-specialist",
     "performance-engineer",
     "lead-architect",
+    "devops-pt2",  # Release/infra workstreams (deploy, env config, smoke checks)
 }
 
 VALID_GATES = {
@@ -95,7 +89,14 @@ VALID_GATES = {
     "build",
     "pft-rls-isolation-check",
     "playwright-reconciliation",
-    "e2e-write-path",  # Test-per-PRD mandate gate (workflows-gaps.md §3); prescribed by quality.context.md and build-pipeline/SKILL.md
+    "e2e-write-path",  # Test-per-PRD mandate gate (workflows-gaps.md §3); prescribed by build-pipeline/SKILL.md
+    # Release-validation gate taxonomy (sdlc_category: Release Validation / OPS)
+    "gate-0-preview-surface",
+    "gate-1-preview-auth",
+    "gate-2-validation",
+    "gate-3-operator-signoff",
+    "gate-4-production-smoke",
+    "gate-4-production",
 }
 
 REQUIRED_WORKSTREAM_FIELDS = {"name", "executor", "executor_type", "depends_on", "outputs", "gate"}
@@ -714,9 +715,8 @@ def main() -> int:
         print("Fix these issues before proceeding with pipeline execution.")
         print()
         print("Reference:")
-        print("  - references/architecture.context.md (SRM ownership)")
-        print("  - references/governance.context.md (test locations, migrations)")
-        print("  - references/quality.context.md (coverage, gates)")
+        print("  - docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md (SRM ownership)")
+        print("  - Domain expert skills (test locations, migrations, DTO patterns)")
         return 1
 
     print("=" * 60)

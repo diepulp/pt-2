@@ -73,26 +73,18 @@ External Dependencies:
 
 Estimated Complexity: {low/medium/high}
 
-DA Team Review: [{CONSOLIDATED_VERDICT}]
-  R1 Security & Tenancy:          {verdict} ({p0} P0, {p1} P1)
-  R2 Architecture & Boundaries:   {verdict} ({p0} P0, {p1} P1)
-  R3 Implementation Completeness: {verdict} ({p0} P0, {p1} P1)
-  R4 Test & Quality:              {verdict} ({p0} P0, {p1} P1)
-  R5 Performance & Operability:   {verdict} ({p0} P0, {p1} P1)
-  ─────────────────────────────────────────────────
-  Consolidated: {total_p0} P0, {total_p1} P1 (deduplicated)
-  {If P0 > 0: list P0 findings with source reviewer}
-  {If conflicts > 0: list conflicts}
+Validation: ✅ Structural + Intake-Traceability
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Approve execution plan? [y/n/edit]
+Approve execution plan? [y/n]
+  y — proceed with execution
+  n — save checkpoint; edit EXEC-SPEC manually, then `/build EXEC-### --resume`
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 **User Options**:
-- `y` - Proceed with execution
-- `n` - Abort pipeline
-- `edit` - Modify EXECUTION-SPEC before proceeding
+- `y` — Proceed with execution
+- `n` — Save checkpoint and stop. Human edits the EXEC-SPEC file directly (or re-scopes the PRD) and resumes with `/build EXEC-### --resume`. The pipeline does not re-run scaffold/expert stages on rejection — human owns the edit.
 
 ### Phase Completion Approval
 

@@ -1,0 +1,432 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-H-FIN-SHIFT-001 v1",
+    "status": "draft",
+    "feature_id": "FIB-S-FIN-SHIFT-001",
+    "feature_name": "Shift-Intelligence Internal Authority Routing (WS7B)",
+    "priority": "P1",
+    "decision_horizon": "phase-1-1-close",
+    "owner": "Vladimir Ivanov",
+    "opened_on": "2026-04-24",
+    "parent_prd": "PRD-070",
+    "parent_exec_spec": "EXEC-070",
+    "supersedes_scope_in_parent": ["WS7B"]
+  },
+  "intent": {
+    "operator_problem": "EXEC-070 WS7A froze MetricType-to-authority routing rules and issued a Phase 1.1 waiver deferring public DTO field-shape changes. WS7B was separated into this child spec. Three defects remain in services/shift-intelligence/ that block WS9: (1) no routing helper exists — rules documented in EXEC-070 but not implemented; (2) getAlerts in alerts.ts assembles ShiftAlertDTO inline instead of calling mapShiftAlertRow, creating a divergent code path that Phase 1.2 would have to update in two places; (3) anomaly-alerts-route-boundary.test.ts asserts gamingDay/computedAt keys that do not exist on AnomalyAlertsResponseDTO — the live shape uses baselineGamingDay + baselineCoverage.",
+    "pilot_fit": "Internal correctness gate for services/shift-intelligence/ before WS9 can run items 4 and 12. Coherent single slice: all deliverables are service-layer only (no route, no UI, no SQL). The routing helper is the single shared primitive both mapper paths need before Phase 1.2 wraps public fields. The stale route-boundary test is a correctness defect, not a Phase 1.2 obligation.",
+    "transitional_governance_note": "The bare-number fields on AnomalyAlertDTO and ShiftAlertDTO are NOT bridge DTOs under the TRANSITIONAL-GOVERNANCE-CAVEAT. That caveat covers the visit-surface envelope bridge declared by PRD-072. Shift-intelligence bare fields are pre-migration state; Phase 1.2 wraps them directly without a bridge. This slice introduces no bridge DTO.",
+    "success_outcomes": [
+      "resolveShiftMetricAuthority(metricType) implemented: drop_total → { type: 'estimated', source: 'table_session.drop' }, win_loss_cents → { type: 'estimated', source: 'table_session.inventory_win' }, cash_obs_total → { type: 'estimated', source: 'pit_cash_observation.extrapolated' }, hold_percent → null (bare ratio, never wrapped).",
+      "mapAnomalyAlertRow and mapShiftAlertRow both call resolveShiftMetricAuthority internally.",
+      "getAlerts in alerts.ts calls mapShiftAlertRow — inline DTO assembly block (lines 127–157) deleted.",
+      "anomaly-alerts-route-boundary.test.ts: gamingDay/computedAt keys removed from fixture and assertions; baselineGamingDay/baselineCoverage added matching AnomalyAlertsResponseDTO shape.",
+      "mappers.test.ts has one explicit assertion per MetricType routing rule including hold_percent returns null.",
+      "AnomalyAlertDTO and ShiftAlertDTO public numeric fields remain typed as number | null — no FinancialValue wrapper applied in this slice.",
+      "schemas.ts remains request-only per WS7A waiver — no outbound Zod added.",
+      "npm run test:slice:shift-intelligence --runInBand exits 0.",
+      "npx jest --runInBand --runTestsByPath services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts exits 0.",
+      "npm run type-check exits 0."
+    ],
+    "explicit_exclusions": [
+      "AnomalyAlertDTO.observedValue, baselineMedian, baselineMad, thresholdValue wrapping in FinancialValue — Phase 1.2 per GATE-070.6",
+      "ShiftAlertDTO.observedValue, baselineMedian, baselineMad wrapping — Phase 1.2",
+      "Outbound Zod schemas for AnomalyAlertDTO or ShiftAlertDTO — WS7A waiver; reopen requires lead-architect EXEC-SPEC amendment",
+      "Route handler changes (app/api/v1/shift-intelligence/) — Phase 1.2",
+      "UI component changes (components/shift-intelligence/, components/shift-dashboard/, components/admin-alerts/) — Phase 1.2 + 1.3",
+      "BaselineDTO numeric fields (medianValue, madValue, minValue, maxValue) — not in Phase 1.1 exception set per EXEC-070 Planning Lock Resolution",
+      "SQL migrations — no schema changes required",
+      "New bridge DTO declaration — this slice declares none; shift-intelligence bare fields are pre-migration state",
+      "WS9 verification matrix execution — stays under parent EXEC-070 as closing gate; runs after this slice closes",
+      "baseline.ts and baseline-computation.test.ts — no currency envelope treatment in Phase 1.1",
+      "http.ts ServiceHttpResult wrappers — unchanged"
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Bundle WS7B into FIB-FIN-CENTS-001",
+        "why_considered": "All remaining Phase 1.1 work",
+        "why_rejected_now": "Different bounded context, different pattern (mapper helper vs shape conversion); bundling defeats manageable-slice goal per EXEC-070 Amendment 1"
+      },
+      {
+        "idea": "Wrap observedValue et al. in FinancialValue now",
+        "why_considered": "Phase 1.2 will do it anyway",
+        "why_rejected_now": "GATE-070.6 deferred explicitly; fields cross live HTTP/UI boundaries — doing it now triggers full route+UI+component-test bundle that Phase 1.2 owns"
+      },
+      {
+        "idea": "Add outbound Zod schema for AnomalyAlertDTO",
+        "why_considered": "Consistent with WS1 pattern",
+        "why_rejected_now": "WS7A explicitly waived this; entangles internal routing with deferred public-shape decision — reopen trigger rule applies"
+      },
+      {
+        "idea": "Leave getAlerts inline assembly, fix in Phase 1.2",
+        "why_considered": "Smaller diff",
+        "why_rejected_now": "EXEC-070 explicitly flags as mandatory WS7B remediation; leaving creates two divergent update paths for Phase 1.2"
+      },
+      {
+        "idea": "Declare bridge DTO for bare-number shift-intelligence fields",
+        "why_considered": "Aligns with Transitional Governance Caveat pattern",
+        "why_rejected_now": "Caveat covers intentional dollar-float bridges (PRD-072). Shift-intelligence bare fields are deferred canonical state. Declaring a bridge creates governance debt without correctness benefit."
+      },
+      {
+        "idea": "Fix stale route boundary test in WS9 instead of WS7B",
+        "why_considered": "WS9 is the verification gate",
+        "why_rejected_now": "WS9 item 12 cannot run at all if the fixture is wrong — test correction is a precondition for running WS9, not a phase-close nicety"
+      },
+      {
+        "idea": "Extract resolveShiftMetricAuthority to lib/financial/",
+        "why_considered": "Centralizes authority logic",
+        "why_rejected_now": "Routing rules reference service-private metric identifiers; elevating to lib/ implies broader applicability that does not exist yet — keep service-private"
+      }
+    ]
+  },
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "resolveShiftMetricAuthority",
+          "kind": "helper-function",
+          "description": "Pure function mapping MetricType to { type: FinancialAuthority; source: string } | null. Returns null for hold_percent (bare ratio). Encodes the four WS7A-frozen routing rules.",
+          "stateful": false,
+          "system_of_record": "services/shift-intelligence/mappers.ts (or extracted to services/shift-intelligence/authority-routing.ts if both mappers.ts and alerts.ts need to import it)"
+        },
+        {
+          "name": "mapAnomalyAlertRow",
+          "kind": "mapper-function",
+          "description": "Existing mapper in mappers.ts. WS7B adds internal call to resolveShiftMetricAuthority. Public output shape (AnomalyAlertDTO) unchanged.",
+          "stateful": false,
+          "system_of_record": "services/shift-intelligence/mappers.ts"
+        },
+        {
+          "name": "mapShiftAlertRow",
+          "kind": "mapper-function",
+          "description": "Existing mapper in mappers.ts. WS7B adds internal call to resolveShiftMetricAuthority. Public output shape (ShiftAlertDTO) unchanged.",
+          "stateful": false,
+          "system_of_record": "services/shift-intelligence/mappers.ts"
+        },
+        {
+          "name": "getAlerts",
+          "kind": "service-function",
+          "description": "Existing function in alerts.ts. WS7B refactors inline DTO assembly (lines 127–157) to call mapShiftAlertRow from mappers.ts.",
+          "stateful": false,
+          "system_of_record": "services/shift-intelligence/alerts.ts"
+        },
+        {
+          "name": "AnomalyAlertsResponseDTO",
+          "kind": "dto",
+          "description": "Existing response envelope. Fields: alerts: AnomalyAlertDTO[]; baselineGamingDay: string; baselineCoverage: BaselineCoverageDTO. This is the shape the stale test must assert.",
+          "stateful": false,
+          "system_of_record": "services/shift-intelligence/dtos.ts",
+          "fields_in_scope": ["baselineGamingDay", "baselineCoverage"],
+          "fields_stale_in_test": ["gamingDay", "computedAt"]
+        },
+        {
+          "name": "MetricType",
+          "kind": "union-type",
+          "description": "Existing union: 'drop_total' | 'hold_percent' | 'cash_obs_total' | 'win_loss_cents'. All four values must be explicitly covered by resolveShiftMetricAuthority.",
+          "stateful": false,
+          "system_of_record": "services/shift-intelligence/dtos.ts"
+        }
+      ],
+      "relationships": [
+        "resolveShiftMetricAuthority is called by mapAnomalyAlertRow and mapShiftAlertRow (single implementation path for both alert flows)",
+        "getAlerts calls mapShiftAlertRow — inline assembly deleted",
+        "anomaly-alerts-route-boundary.test.ts fixture must reflect AnomalyAlertsResponseDTO (baselineGamingDay + baselineCoverage), not the legacy shape (gamingDay + computedAt)",
+        "FinancialAuthority type is imported from types/financial.ts — not redefined in this service",
+        "hold_percent return value of null from resolveShiftMetricAuthority is a hard invariant — explicitly asserted in tests"
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "MetricType-to-authority routing helper",
+          "owner": "backend-service-builder",
+          "description": "resolveShiftMetricAuthority(metricType: MetricType): { type: FinancialAuthority; source: string } | null. Four branches: drop_total → { type: 'estimated', source: 'table_session.drop' }; win_loss_cents → { type: 'estimated', source: 'table_session.inventory_win' }; cash_obs_total → { type: 'estimated', source: 'pit_cash_observation.extrapolated' }; hold_percent → null. Exhaustive switch with compile-time exhaustiveness check."
+        },
+        {
+          "id": "CAP-2",
+          "name": "Unified mapper path for both alert flows",
+          "owner": "backend-service-builder",
+          "description": "mapAnomalyAlertRow and mapShiftAlertRow both call resolveShiftMetricAuthority. getAlerts in alerts.ts calls mapShiftAlertRow instead of inline assembly. Public DTO shape unchanged — routing result is used internally, not emitted on the DTO."
+        },
+        {
+          "id": "CAP-3",
+          "name": "Stale boundary test remediation",
+          "owner": "backend-service-builder / qa-specialist",
+          "description": "anomaly-alerts-route-boundary.test.ts: ALERTS_FIXTURE corrected to { alerts, baselineGamingDay, baselineCoverage: { withBaseline, withoutBaseline } }. Route handler assertion updated: body.data.baselineGamingDay (string) + body.data.baselineCoverage (object with withBaseline/withoutBaseline). gamingDay and computedAt keys removed."
+        },
+        {
+          "id": "CAP-4",
+          "name": "Routing rule test coverage",
+          "owner": "backend-service-builder / qa-specialist",
+          "description": "mappers.test.ts extended: one test case per MetricType routing rule, one explicit hold_percent → null assertion, one cash_obs_total static-threshold assertion (shouldEvaluate = false). alerts-mappers.test.ts extended: assertion that getAlerts produces ShiftAlertDTO via mapShiftAlertRow (mapper unification verified)."
+        }
+      ]
+    },
+    "where": {
+      "surfaces": [
+        {
+          "kind": "service",
+          "name": "shift-intelligence mapper",
+          "path": "services/shift-intelligence/mappers.ts",
+          "changes": [
+            "Add resolveShiftMetricAuthority helper",
+            "Add internal routing call in mapAnomalyAlertRow",
+            "Add internal routing call in mapShiftAlertRow"
+          ]
+        },
+        {
+          "kind": "service",
+          "name": "shift-intelligence alerts",
+          "path": "services/shift-intelligence/alerts.ts",
+          "changes": [
+            "Refactor getAlerts to call mapShiftAlertRow; delete inline DTO assembly block (lines 127–157)"
+          ]
+        },
+        {
+          "kind": "test",
+          "name": "mapper unit tests",
+          "path": "services/shift-intelligence/__tests__/mappers.test.ts",
+          "changes": [
+            "Add resolveShiftMetricAuthority test suite: one case per MetricType, hold_percent null assertion, cash_obs_total static invariant"
+          ]
+        },
+        {
+          "kind": "test",
+          "name": "alert mapper tests",
+          "path": "services/shift-intelligence/__tests__/alerts-mappers.test.ts",
+          "changes": [
+            "Add test verifying getAlerts delegates DTO construction to mapShiftAlertRow"
+          ]
+        },
+        {
+          "kind": "test",
+          "name": "route boundary test (remediation)",
+          "path": "services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts",
+          "changes": [
+            "Correct ALERTS_FIXTURE: remove gamingDay/computedAt, add baselineGamingDay/baselineCoverage",
+            "Update assertions: body.data.baselineGamingDay + body.data.baselineCoverage shape"
+          ]
+        }
+      ],
+      "optional_surface": {
+        "path": "services/shift-intelligence/authority-routing.ts",
+        "note": "Extract resolveShiftMetricAuthority to a sibling file if both mappers.ts and alerts.ts need to import it. Decision at EXEC-SPEC time by lead-architect. If mappers.ts handles all routing use, keep it there."
+      },
+      "excluded_surfaces": [
+        {
+          "path": "app/api/v1/shift-intelligence/",
+          "reason": "Route handlers unchanged; public response shape unchanged in this slice"
+        },
+        {
+          "path": "components/shift-intelligence/",
+          "reason": "UI components unchanged — Phase 1.2 + 1.3 scope"
+        },
+        {
+          "path": "components/shift-dashboard/",
+          "reason": "UI unchanged"
+        },
+        {
+          "path": "components/admin-alerts/",
+          "reason": "UI unchanged"
+        },
+        {
+          "path": "services/shift-intelligence/schemas.ts",
+          "reason": "Remains request-only per WS7A waiver; no outbound Zod added in this slice"
+        },
+        {
+          "path": "services/shift-intelligence/dtos.ts",
+          "reason": "Public DTO shapes unchanged; no FinancialValue wrapper on public fields"
+        }
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "severity": "hard",
+          "statement": "resolveShiftMetricAuthority must cover all four MetricType values exhaustively. An unmatched MetricType is a compile-time error, not a runtime unknown."
+        },
+        {
+          "id": "RULE-2",
+          "severity": "hard",
+          "statement": "hold_percent returns null from resolveShiftMetricAuthority. It is a bare ratio and MUST NOT be wrapped in FinancialValue at any layer in Phase 1.1 or Phase 1.2 (per EXEC-070 WS7 routing rules, frozen)."
+        },
+        {
+          "id": "RULE-3",
+          "severity": "hard",
+          "statement": "AnomalyAlertDTO and ShiftAlertDTO public numeric fields (observedValue, baselineMedian, baselineMad, thresholdValue) remain typed as number | null. No FinancialValue wrapper is applied in this slice. Phase 1.2 owns the wrapping under a separate EXEC-SPEC."
+        },
+        {
+          "id": "RULE-4",
+          "severity": "hard",
+          "statement": "getAlerts in alerts.ts must call mapShiftAlertRow. Inline DTO construction is deleted. Both alert code paths (anomaly via mapAnomalyAlertRow, persistent via getAlerts → mapShiftAlertRow) use the same mapper."
+        },
+        {
+          "id": "RULE-5",
+          "severity": "hard",
+          "statement": "anomaly-alerts-route-boundary.test.ts must assert baselineGamingDay (string) and baselineCoverage ({ withBaseline: number; withoutBaseline: number }) per AnomalyAlertsResponseDTO. Zero references to gamingDay (at response envelope level) or computedAt after remediation."
+        },
+        {
+          "id": "RULE-6",
+          "severity": "hard",
+          "statement": "schemas.ts remains request-only. No outbound Zod schemas for AnomalyAlertDTO or ShiftAlertDTO are added. Reopening the WS7A waiver requires a lead-architect EXEC-SPEC amendment before execution."
+        },
+        {
+          "id": "RULE-7",
+          "severity": "hard",
+          "statement": "cash_obs_total maps to { type: 'estimated', source: 'pit_cash_observation.extrapolated' } and the test suite preserves the static-threshold invariant: anomaly evaluation does not run for cash_obs_total."
+        },
+        {
+          "id": "RULE-8",
+          "severity": "soft",
+          "statement": "If resolveShiftMetricAuthority is used by both mappers.ts and alerts.ts, extract it to a sibling file (authority-routing.ts) to avoid a circular import. If used only by mappers.ts, keep it there. Decision at EXEC-SPEC time."
+        }
+      ]
+    },
+    "when": {
+      "triggers": [
+        "RPC row arrives with metric_type string → resolveShiftMetricAuthority returns authority metadata → mapper uses it internally",
+        "Phase 1.2 wraps deferred public fields → calls resolveShiftMetricAuthority at the FinancialValue construction site",
+        "CI test run → mappers.test.ts exercises all four routing rules + hold_percent null invariant",
+        "CI test run → anomaly-alerts-route-boundary.test.ts exercises correct AnomalyAlertsResponseDTO shape",
+        "npm run test:slice:shift-intelligence → WS9 items 4 and 12 unblock"
+      ]
+    }
+  },
+  "containment": {
+    "loop": [
+      {
+        "step": 1,
+        "actor": "RPC row",
+        "action": "rpc_get_anomaly_alerts / shift_alert table returns metric_type as string column"
+      },
+      {
+        "step": 2,
+        "actor": "resolveShiftMetricAuthority",
+        "action": "Maps MetricType to { type: FinancialAuthority; source: string } | null using frozen WS7A routing table. hold_percent → null."
+      },
+      {
+        "step": 3,
+        "actor": "mapAnomalyAlertRow / mapShiftAlertRow",
+        "action": "Calls resolveShiftMetricAuthority internally. Public DTO fields (observedValue, baselineMedian, etc.) remain bare numbers — routing result is an internal invariant, not emitted on the DTO."
+      },
+      {
+        "step": 4,
+        "actor": "getAlerts",
+        "action": "Calls mapShiftAlertRow from mappers.ts instead of inline assembly. ShiftAlertDTO emitted by the unified mapper path."
+      },
+      {
+        "step": 5,
+        "actor": "route handler",
+        "action": "Passes AnomalyAlertsResponseDTO / ShiftAlertDTO[] through unchanged. Response shape is identical to pre-WS7B for consumers."
+      },
+      {
+        "step": 6,
+        "actor": "route boundary test (corrected)",
+        "action": "Asserts baselineGamingDay (string) + baselineCoverage ({ withBaseline, withoutBaseline }) on anomaly-alerts response. Asserts alerts[0].metricType is a valid MetricType value."
+      },
+      {
+        "step": 7,
+        "actor": "mapper unit tests",
+        "action": "Explicitly assert all four MetricType routing rules: drop_total, win_loss_cents, cash_obs_total produce FinancialAuthority metadata; hold_percent returns null."
+      }
+    ]
+  },
+  "governance": {
+    "open_questions_allowed_at_scaffold": [
+      {
+        "id": "Q-1",
+        "question": "Should resolveShiftMetricAuthority live in mappers.ts or in a separate authority-routing.ts?",
+        "owner": "lead-architect",
+        "recommendation": "Keep in mappers.ts if only used there. Extract to authority-routing.ts if alerts.ts needs to import it directly (to avoid circular import). Decision at EXEC-SPEC time."
+      },
+      {
+        "id": "Q-2",
+        "question": "Should resolveShiftMetricAuthority embed the authority result on the DTO in a non-public field for Phase 1.2 readiness, or remain a pure internal call whose result is discarded until Phase 1.2?",
+        "owner": "lead-architect",
+        "recommendation": "Discard in Phase 1.1 — do not smuggle routing metadata into the DTO shape before Phase 1.2 formally wraps the fields. The routing call in Phase 1.1 is for testability and path-unification only. Phase 1.2 will call the same helper at the FinancialValue construction site."
+      },
+      {
+        "id": "Q-3",
+        "question": "Does anomaly-evaluation.test.ts need amendment as part of WS7B?",
+        "owner": "backend-service-builder",
+        "recommendation": "Only if mapper refactoring creates a structural conflict. Current anomaly-evaluation.test.ts tests inline local logic functions, not imported mappers. Leave intact unless WS7B implementation reveals a conflict. If amendment is needed, scope it to the minimum change required."
+      },
+      {
+        "id": "Q-4",
+        "question": "Should the corrected anomaly-alerts-route-boundary.test.ts add a hold_percent metricType fixture to verify routing invariant at the boundary?",
+        "owner": "lead-architect + qa-specialist",
+        "recommendation": "Yes — add a second alert in the fixture with metricType: 'hold_percent' to ensure the route passthrough handles all MetricType values. This also exercises the null-routing branch without asserting FinancialValue (which does not exist on the DTO in Phase 1.1)."
+      }
+    ],
+    "hard_rules_must_appear_in_exec_spec": [
+      "RULE-1",
+      "RULE-2",
+      "RULE-3",
+      "RULE-4",
+      "RULE-5",
+      "RULE-6",
+      "RULE-7"
+    ],
+    "expansion_trigger_rule": "Amend this brief if any downstream artifact proposes: (a) wrapping AnomalyAlertDTO or ShiftAlertDTO public numeric fields in FinancialValue during this slice; (b) adding outbound Zod to schemas.ts without WS7A waiver reopen; (c) route handler changes in app/api/v1/shift-intelligence/; (d) UI changes in components/shift-intelligence/, components/shift-dashboard/, or components/admin-alerts/; (e) declaring a bridge DTO for shift-intelligence numeric fields; (f) parallel execution of mappers.ts and alerts.ts changes without serialization invariant being explicit; (g) widening scope to BaselineDTO numeric fields."
+  },
+  "traceability": {
+    "parent_prd": "docs/10-prd/PRD-070-financial-telemetry-wave1-phase1.1-service-dto-envelope-v0.md",
+    "parent_exec_spec": "docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md",
+    "ws7a_decision_record": "EXEC-070 § Planning Lock Resolution (routing rules frozen 2026-04-24)",
+    "classification_rules": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-CLASSIFICATION-RULES.md",
+    "surface_inventory": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-SURFACE-INVENTORY.md",
+    "phase_1_0_signoff": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-PHASE-1.0-SIGNOFF.md",
+    "transitional_governance_caveat": "docs/issues/gaps/financial-data-distribution-standard/decisions/TRANSITIONAL-GOVERNANCE-CAVEAT.md",
+    "shared_primitives": [
+      "types/financial.ts (FinancialAuthority — used as return type of resolveShiftMetricAuthority)",
+      "lib/financial/schema.ts (financialAuthoritySchema — available if outbound Zod is reopened in Phase 1.2)"
+    ],
+    "stale_test_evidence": {
+      "file": "services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts",
+      "stale_fixture_keys": ["gamingDay", "computedAt"],
+      "correct_keys": ["baselineGamingDay", "baselineCoverage"],
+      "stale_assertion_lines": [124, 125],
+      "dto_source": "services/shift-intelligence/dtos.ts (AnomalyAlertsResponseDTO lines 108-112)"
+    },
+    "frozen_routing_rules": {
+      "source": "EXEC-070 § WS7 — Shift-Intelligence Expert Outcome",
+      "rules": [
+        {
+          "metricType": "drop_total",
+          "type": "estimated",
+          "source": "table_session.drop"
+        },
+        {
+          "metricType": "win_loss_cents",
+          "type": "estimated",
+          "source": "table_session.inventory_win"
+        },
+        {
+          "metricType": "cash_obs_total",
+          "type": "estimated",
+          "source": "pit_cash_observation.extrapolated"
+        },
+        {
+          "metricType": "hold_percent",
+          "type": null,
+          "source": null,
+          "note": "bare ratio, never wrapped"
+        }
+      ]
+    },
+    "ws9_unblock": {
+      "items_blocked_on_this_fib": [4, 12],
+      "item_4_command": "npm run test:slice:shift-intelligence",
+      "item_12_path": "services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts"
+    },
+    "companion_fib_closed": {
+      "fib_id": "FIB-FIN-CENTS-001",
+      "prd": "PRD-072",
+      "status": "Phase 1.1b complete (commit 38d25cc1)"
+    }
+  }
+}

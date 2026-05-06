@@ -9,12 +9,15 @@
  * @see PRD-009 Player Financial Service
  */
 
+import { financialValueSchema } from '@/lib/financial/schema';
+
 import type { FinancialDirection, FinancialSource } from '../dtos';
 import {
   toFinancialTransactionDTO,
   toFinancialTransactionDTOFromRpc,
   toFinancialTransactionDTOList,
   toFinancialTransactionDTOOrNull,
+  toVisitCashInWithAdjustmentsDTO,
   toVisitFinancialSummaryDTO,
   toVisitFinancialSummaryDTOList,
   toVisitFinancialSummaryDTOOrNull,
@@ -465,6 +468,94 @@ describe('Player Financial Mappers', () => {
       expect(result.total_in).toBe(1000.99);
       expect(result.total_out).toBe(250.5);
       expect(result.net_amount).toBe(750.49);
+    });
+  });
+
+  // ===========================================================================
+  // toVisitCashInWithAdjustmentsDTO — PRD-070 WS2 FinancialValue envelope
+  // ===========================================================================
+
+  describe('toVisitCashInWithAdjustmentsDTO', () => {
+    it('toVisitCashInWithAdjustmentsDTO wraps totals as FinancialValue envelopes (PRD-070 §3.1 PFT visit aggregate)', () => {
+      const row = {
+        original_total: 150000,
+        adjustment_total: -5000,
+        net_total: 145000,
+        adjustment_count: 2,
+      };
+
+      const result = toVisitCashInWithAdjustmentsDTO(row);
+
+      expect(result.original_total).toEqual({
+        value: 150000,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      });
+      expect(result.adjustment_total).toEqual({
+        value: -5000,
+        type: 'actual',
+        source: 'PFT.adjustment',
+        completeness: { status: 'unknown' },
+      });
+      expect(result.net_total).toEqual({
+        value: 145000,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      });
+      expect(result.adjustment_count).toBe(2);
+
+      // Envelope shape validates against the canonical schema
+      expect(() =>
+        financialValueSchema.parse(result.original_total),
+      ).not.toThrow();
+      expect(() =>
+        financialValueSchema.parse(result.adjustment_total),
+      ).not.toThrow();
+      expect(() => financialValueSchema.parse(result.net_total)).not.toThrow();
+    });
+
+    it('toVisitCashInWithAdjustmentsDTO coerces string-numeric RPC totals to cents', () => {
+      const row = {
+        original_total: '12345',
+        adjustment_total: '0',
+        net_total: '12345',
+        adjustment_count: '1',
+      };
+
+      const result = toVisitCashInWithAdjustmentsDTO(row);
+
+      expect(result.original_total.value).toBe(12345);
+      expect(result.adjustment_total.value).toBe(0);
+      expect(result.net_total.value).toBe(12345);
+      expect(result.adjustment_count).toBe(1);
+    });
+
+    it('toVisitCashInWithAdjustmentsDTO emits zero envelopes with completeness=unknown for null row', () => {
+      const result = toVisitCashInWithAdjustmentsDTO(null);
+
+      expect(result.original_total.value).toBe(0);
+      expect(result.original_total.completeness.status).toBe('unknown');
+      expect(result.adjustment_total.value).toBe(0);
+      expect(result.adjustment_total.source).toBe('PFT.adjustment');
+      expect(result.net_total.value).toBe(0);
+      expect(result.adjustment_count).toBe(0);
+    });
+
+    it('toVisitCashInWithAdjustmentsDTO adjustment_total envelope uses PFT.adjustment source (PRD-070 §3.1 adjustments are separate rows)', () => {
+      const row = {
+        original_total: 10000,
+        adjustment_total: -2500,
+        net_total: 7500,
+        adjustment_count: 1,
+      };
+
+      const { adjustment_total, original_total } =
+        toVisitCashInWithAdjustmentsDTO(row);
+
+      expect(original_total.source).toBe('PFT');
+      expect(adjustment_total.source).toBe('PFT.adjustment');
     });
   });
 });

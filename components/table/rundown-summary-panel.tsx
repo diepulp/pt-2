@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import * as React from 'react';
 
+import { FinancialValue } from '@/components/financial';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTableRundown } from '@/hooks/table-context/use-table-rundown';
@@ -52,6 +53,7 @@ interface MetricRowProps {
   highlight?: boolean;
   variant?: 'positive' | 'negative' | 'neutral';
   muted?: boolean;
+  valueNode?: React.ReactNode;
 }
 
 // === Helper Functions ===
@@ -66,6 +68,7 @@ function MetricRow({
   highlight = false,
   variant = 'neutral',
   muted = false,
+  valueNode,
 }: MetricRowProps) {
   const Icon =
     variant === 'positive'
@@ -98,6 +101,11 @@ function MetricRow({
       </span>
       {isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      ) : valueNode !== undefined ? (
+        <div className={cn('flex items-center gap-1', highlight && colorClass)}>
+          {highlight && variant !== 'neutral' && <Icon className="h-4 w-4" />}
+          {valueNode}
+        </div>
       ) : value !== null ? (
         <div className={cn('flex items-center gap-1', highlight && colorClass)}>
           {highlight && variant !== 'neutral' && <Icon className="h-4 w-4" />}
@@ -196,22 +204,75 @@ export function RundownSummaryPanel({
       <CardContent>
         <dl className="space-y-0">
           {/* Opening Bankroll */}
-          <MetricRow label="Opening" value={rundown.opening_total_cents} />
+          <MetricRow
+            label="Opening"
+            value={rundown.opening_total_cents}
+            valueNode={
+              <FinancialValue
+                variant="compact"
+                label="Opening"
+                value={{
+                  value: rundown.opening_total_cents ?? 0,
+                  type: 'actual',
+                  source: 'table_rundown',
+                  completeness: {
+                    status:
+                      rundown.opening_total_cents == null
+                        ? 'unknown'
+                        : 'complete',
+                  },
+                }}
+              />
+            }
+          />
 
-          {/* Fills (subtractive - reduces win, shown as negative) */}
+          {/* Fills (subtractive — shown as negative, reduces win) */}
           <MetricRow
             label="Fills"
             value={
               rundown.fills_total_cents > 0 ? -rundown.fills_total_cents : null
             }
-            prefix=""
             muted={rundown.fills_total_cents === 0}
+            valueNode={
+              rundown.fills_total_cents > 0 ? (
+                <FinancialValue
+                  variant="compact"
+                  label="Fills"
+                  value={{
+                    value: -rundown.fills_total_cents,
+                    type: 'actual',
+                    source: 'table_rundown',
+                    completeness: { status: 'complete' },
+                  }}
+                />
+              ) : undefined
+            }
           />
 
           {/* Closing Bankroll */}
-          <MetricRow label="Closing" value={rundown.closing_total_cents} />
+          <MetricRow
+            label="Closing"
+            value={rundown.closing_total_cents}
+            valueNode={
+              <FinancialValue
+                variant="compact"
+                label="Closing"
+                value={{
+                  value: rundown.closing_total_cents ?? 0,
+                  type: 'actual',
+                  source: 'table_rundown',
+                  completeness: {
+                    status:
+                      rundown.closing_total_cents == null
+                        ? 'unknown'
+                        : 'complete',
+                  },
+                }}
+              />
+            }
+          />
 
-          {/* Credits (additive - increases win, shown as positive) */}
+          {/* Credits (additive — increases win) */}
           <MetricRow
             label="Credits"
             value={
@@ -219,8 +280,21 @@ export function RundownSummaryPanel({
                 ? rundown.credits_total_cents
                 : null
             }
-            prefix="+"
             muted={rundown.credits_total_cents === 0}
+            valueNode={
+              rundown.credits_total_cents > 0 ? (
+                <FinancialValue
+                  variant="compact"
+                  label="Credits"
+                  value={{
+                    value: rundown.credits_total_cents,
+                    type: 'actual',
+                    source: 'table_rundown',
+                    completeness: { status: 'complete' },
+                  }}
+                />
+              ) : undefined
+            }
           />
 
           {/* Drop */}
@@ -228,9 +302,24 @@ export function RundownSummaryPanel({
             label="Drop"
             value={rundown.drop_total_cents}
             muted={!isDropPosted}
+            valueNode={
+              <FinancialValue
+                variant="compact"
+                label="Drop"
+                value={{
+                  value: rundown.drop_total_cents ?? 0,
+                  type: 'actual',
+                  source: 'table_rundown',
+                  completeness: {
+                    status:
+                      rundown.drop_total_cents == null ? 'unknown' : 'complete',
+                  },
+                }}
+              />
+            }
           />
 
-          {/* Table Win/Loss - highlighted */}
+          {/* Table Win/Loss - highlighted, Pattern B (derived from formula components) */}
           <MetricRow
             label={
               winLossVariant === 'positive'
@@ -242,6 +331,27 @@ export function RundownSummaryPanel({
             value={rundown.table_win_cents}
             highlight
             variant={winLossVariant}
+            valueNode={
+              <FinancialValue
+                variant="compact"
+                label="Table Win/Loss"
+                derivedFrom={[
+                  'opening_total_cents',
+                  'fills_total_cents',
+                  'credits_total_cents',
+                  'drop_total_cents',
+                ]}
+                value={{
+                  value: rundown.table_win_cents ?? 0,
+                  type: 'actual',
+                  source: 'table_rundown',
+                  completeness: {
+                    status:
+                      rundown.table_win_cents === null ? 'unknown' : 'complete',
+                  },
+                }}
+              />
+            }
           />
 
           {/* Variance from Par (if configured and par is set) */}
@@ -281,7 +391,7 @@ export function RundownSummaryPanel({
 
         {/* Formula reference */}
         <p className="mt-4 text-xs text-muted-foreground text-center">
-          Win = Closing + Credits + Drop − Opening − Fills
+          Inventory Win = Closing + Credits + Drop − Opening − Fills
         </p>
       </CardContent>
     </Card>

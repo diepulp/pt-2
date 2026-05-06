@@ -12,6 +12,7 @@
 
 import { ArrowLeft } from 'lucide-react';
 
+import { FinancialValue } from '@/components/financial';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { RewardCatalogDTO } from '@/services/loyalty/reward/dtos';
@@ -33,10 +34,6 @@ export interface EntitlementConfirmPanelProps {
 }
 
 // === Helpers ===
-
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 function formatInstrumentType(type: string): string {
   return type === 'match_play' ? 'Match Play' : 'Free Play';
@@ -106,7 +103,16 @@ export function EntitlementConfirmPanel({
         {faceValueCents !== null && (
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Configured face value</span>
-            <span className="font-medium">{formatCents(faceValueCents)}</span>
+            <FinancialValue
+              variant="compact"
+              label="Configured face value"
+              value={{
+                value: faceValueCents,
+                type: 'actual',
+                source: 'reward_catalog',
+                completeness: { status: 'complete' },
+              }}
+            />
           </div>
         )}
 
@@ -115,7 +121,16 @@ export function EntitlementConfirmPanel({
             <span className="text-muted-foreground">
               Configured match wager
             </span>
-            <span className="font-medium">{formatCents(matchWagerCents)}</span>
+            <FinancialValue
+              variant="compact"
+              label="Configured match wager"
+              value={{
+                value: matchWagerCents,
+                type: 'actual',
+                source: 'reward_catalog',
+                completeness: { status: 'complete' },
+              }}
+            />
           </div>
         )}
       </div>

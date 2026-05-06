@@ -1,0 +1,30 @@
+{
+  "id": "PRD-073",
+  "spec_path": "docs/21-exec-spec/PRD-073/EXEC-073-financial-telemetry-wave1-phase1.1c-shift-intelligence-authority-routing.md",
+  "prd_path": "docs/10-prd/PRD-073-financial-telemetry-wave1-phase1.1c-shift-intelligence-authority-routing-v0.md",
+  "status": "complete",
+  "complexity_prescreen": "streamlined",
+  "gov010_check": "waived:fib-intake-chain-replaces-scaffold+adr-all-decisions-frozen-in-exec-070-ws7a",
+  "fib_h_ref": "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-FIN-SHIFT-001/FIB-H-FIN-SHIFT-001-shift-intelligence-authority-routing.md",
+  "fib_s_ref": "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-FIN-SHIFT-001/FIB-S-FIN-SHIFT-001-shift-intelligence-authority-routing.json",
+  "fib_s_loaded": true,
+  "write_path_classification": "none",
+  "current_phase": 3,
+  "pending_workstreams": [],
+  "in_progress_workstreams": [],
+  "completed_workstreams": ["WS1", "WS2", "WS3"],
+  "dormant_workstreams": [],
+  "gates_passed": ["WS1:type-check", "WS2:type-check", "WS3:type-check", "WS3:test-pass"],
+  "artifacts": {
+    "exec_spec": "docs/21-exec-spec/PRD-073/EXEC-073-financial-telemetry-wave1-phase1.1c-shift-intelligence-authority-routing.md",
+    "WS1": "services/shift-intelligence/mappers.ts",
+    "WS2": "services/shift-intelligence/alerts.ts",
+    "WS3": [
+      "services/shift-intelligence/__tests__/mappers.test.ts",
+      "services/shift-intelligence/__tests__/alerts-mappers.test.ts",
+      "services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts"
+    ]
+  },
+  "created_at": "2026-04-25T04:36:11Z",
+  "updated_at": "2026-04-25T05:35:00Z"
+}

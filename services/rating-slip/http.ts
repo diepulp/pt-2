@@ -27,6 +27,7 @@ import type {
   RatingSlipWithPausesDTO,
   UpdateAverageBetInput,
 } from './dtos';
+import { toPitCashObservationDTO } from './mappers';
 
 // Re-export types for consumers
 export type {
@@ -308,24 +309,9 @@ export async function createPitCashObservation(
     );
   }
 
-  // Map snake_case response to camelCase DTO
-  return {
-    id: data.id,
-    casinoId: data.casino_id,
-    gamingDay: data.gaming_day,
-    playerId: data.player_id,
-    visitId: data.visit_id,
-    ratingSlipId: data.rating_slip_id,
-    direction: data.direction,
-    amount: data.amount,
-    amountKind: data.amount_kind,
-    source: data.source,
-    observedAt: data.observed_at,
-    createdByStaffId: data.created_by_staff_id,
-    note: data.note,
-    idempotencyKey: data.idempotency_key,
-    createdAt: data.created_at,
-  };
+  // Map snake_case response to camelCase DTO with FinancialValue envelope
+  // on `amount` (PRD-070 Phase 1.1 — delegated to mappers.ts).
+  return toPitCashObservationDTO(data);
 }
 
 // === Closed Sessions (Start From Previous Panel) ===

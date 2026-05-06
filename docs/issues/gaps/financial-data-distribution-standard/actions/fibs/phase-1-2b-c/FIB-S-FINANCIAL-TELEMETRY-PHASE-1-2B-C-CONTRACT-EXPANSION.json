@@ -1,0 +1,526 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-C-CONTRACT-EXPANSION",
+    "status": "draft",
+    "feature_id": "FIB-S-FIN-PHASE-1-2B-C",
+    "feature_name": "Financial Telemetry Phase 1.2B-C — Contract Expansion",
+    "priority": "P2",
+    "decision_horizon": "phase-1-2b-close",
+    "owner": "Financial Telemetry (Cross-context)",
+    "opened_on": "2026-05-03",
+    "parent_prd": "TBD — requires new PRD (own PRD separate from PRD-074)",
+    "predecessor_fib": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2b-b/FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-B-RENDER-MIGRATION.md",
+    "predecessor_phase": "Phase 1.2B-A (Service Canonicalization — EXEC-074, closed 2026-04-30, commit e83a2c12)",
+    "parallel_slice": "Phase 1.2B-B (Render Migration) — no shared files; can execute concurrently",
+    "successor_slice": "Phase 1.3 — UI Layer: Split Display + Labels"
+  },
+
+  "scope_guardrail": {
+    "governance_ref": "docs/70-governance/FIB_GENERATION_SCOPE_GUARDRAIL.md",
+    "primary_change_class": "Enforcement",
+    "coverage_mode": {
+      "mode": "full",
+      "surfaces": [
+        "docs/25-api-data/api-surface.openapi.yaml — all financially-relevant path entries missing FinancialValue $ref + GET /shift-intelligence/alerts path entry birth (DEC-6)",
+        "app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts",
+        "app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts",
+        "app/api/v1/shift-intelligence/alerts/__tests__/route.test.ts",
+        "services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts"
+      ],
+      "surface_granularity": "concrete-instances-only",
+      "full_mode_justification": "Enforcement class and dedicated inventory rollout slice — documenting all financially-relevant routes post-canonicalization (GOV-FIB-001 §6.3)"
+    },
+    "layer_budget": {
+      "primary_layer": "API Contract",
+      "secondary_layers": [],
+      "secondary_layer_constraints": "none — no secondary layer receives logic changes",
+      "dto_classification": "no DTO changes in this slice"
+    },
+    "one_line_boundary": "This FIB documents the Q-5-audited financially-relevant route contract in api-surface.openapi.yaml and expands route-boundary test coverage to route-appropriate matrices; it does not change service output, UI rendering, or wire runtime observability.",
+    "atomicity_test": {
+      "ships_without_deferred_work": true,
+      "deferred_work_can_follow_without_rewrite": true,
+      "ships_as_correct_internal_contract": true
+    },
+    "diff_size_sanity": {
+      "expected_logic_files": 5,
+      "directory_boundaries": [
+        "docs/25-api-data/",
+        "app/api/v1/players/[playerId]/recent-sessions/__tests__/",
+        "app/api/v1/visits/[visitId]/live-view/__tests__/",
+        "app/api/v1/shift-intelligence/alerts/__tests__/",
+        "services/shift-intelligence/__tests__/"
+      ],
+      "bounded_contexts": [
+        "API contract documentation",
+        "player-sessions",
+        "visits",
+        "shift-intelligence"
+      ],
+      "hidden_multi_class_scope_review_required": false,
+      "multi_boundary_justification": "Full/Enforcement classification: a full inventory pass across all financially-relevant routes requires touching test files in each affected route directory. 5 files, 5 directory boundaries, 4 bounded contexts — all within §11 file threshold (5–7). Scale is linear across bounded contexts: each contributes one route test file and zero service changes. No logic change in any file requires knowledge of another file's change."
+    },
+    "adjacent_consequence_ledger": [
+      {
+        "temptation": "Structured log events per deprecated-field usage at route handlers",
+        "why_adjacent": "Route handler directories are adjacent while birthing alerts test; observability is a natural follow-on",
+        "disposition": "Phase 1.4",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "ESLint no-unlabeled-financial-value / no-forbidden-financial-label rules",
+        "why_adjacent": "Enforcement infrastructure that follows stable contract documentation",
+        "disposition": "Phase 1.4",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "CI gate for OpenAPI envelope regression",
+        "why_adjacent": "Natural after contract is fully documented and tested",
+        "disposition": "Phase 1.4",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "components/financial/FinancialValue.tsx component birth",
+        "why_adjacent": "Contract stability enables component design",
+        "disposition": "Phase 1.3",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "Expand all shift-dashboards route test families beyond DEF-005 named routes",
+        "why_adjacent": "Route directories exist and are nearby while touching shift-intelligence tests",
+        "disposition": "Phase 1.4 or separate Enforcement slice",
+        "removed_from_must": true
+      }
+    ],
+    "downstream_expansion_allowed_without_amendment": false
+  },
+
+  "phase_boundary": {
+    "one_line_invariant": "If a change annotates financially-relevant OpenAPI paths with FinancialValue refs, births or expands route-boundary tests to 4-case matrices, or closes DEF-005 / DEC-6 tracker items — and nothing else — it is in scope.",
+    "primary_change_class": "Enforcement",
+    "primary_layer": "API Contract",
+    "coverage_mode": "Full",
+    "secondary_layers_allowed": [],
+    "concrete_in_scope_openapi_targets": [
+      "docs/25-api-data/api-surface.openapi.yaml — all financially-relevant path entries missing FinancialValue $ref (Q-5 audit step confirms complete list)",
+      "docs/25-api-data/api-surface.openapi.yaml — GET /shift-intelligence/alerts path entry birth (DEC-6)"
+    ],
+    "concrete_in_scope_route_test_files": [
+      "app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts — expand to 4-case matrix",
+      "app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts — expand to 4-case matrix",
+      "app/api/v1/shift-intelligence/alerts/__tests__/route.test.ts — birth with 4-case matrix",
+      "services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts — expand to 4-case matrix"
+    ],
+    "stop_conditions": [
+      "service logic changes required",
+      "UI component changes required",
+      "lint rule authoring required",
+      "structured log event wiring required",
+      "hold_percent wrapped as FinancialValue",
+      "FinancialValue component structurally expanded beyond integer-cents documentation/type correction"
+    ],
+    "prohibited": [
+      "Service layer changes (complete — Phase 1.2B-A)",
+      "UI render migration (Phase 1.2B-B — parallel)",
+      "ESLint rule authoring (Phase 1.4)",
+      "CI gate authoring (Phase 1.4)",
+      "Structured log events (Phase 1.4)",
+      "Component test births (Phase 1.3 per DEF-006)",
+      "hold_percent FinancialValue wrapping (DEF-NEVER — all phases)",
+      "Expanding shift-dashboards route test families beyond DEF-005 named routes"
+    ]
+  },
+
+  "intent": {
+    "operator_problem": "After Phase 1.2B-A retired BRIDGE-001 and promoted ShiftAlertDTO to a discriminated union, the API surface contract documentation and test coverage are stale in three ways: (1) most financially-relevant route path entries in api-surface.openapi.yaml describe financial fields as bare number rather than referencing the FinancialValue component; (2) GET /shift-intelligence/alerts has no path entry in the OpenAPI at all (DEC-6) despite the route handler being live and ShiftAlertDTO being promoted; (3) route-boundary tests for recent-sessions and live-view cover only spot-check shape assertions from Phase 1.2A, not 4-case boundary matrices (DEF-005).",
+    "pilot_fit": "Contract documentation and test matrices are Enforcement work that follows a stable service contract. Phase 1.2B-A established stability. The OpenAPI must be accurate before Phase 1.3 UI component design begins — that phase uses the spec as its reference. DEF-005 was deliberately deferred from Phase 1.2A to avoid documenting a changing contract.",
+    "parallel_note": "Phase 1.2B-B (UI render migration) can run concurrently. The render migration touches only start-from-previous.tsx; this FIB touches only api-surface.openapi.yaml and route __tests__ files. Zero shared files."
+  },
+
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "api-surface.openapi.yaml",
+          "description": "OpenAPI specification for all PT-2 API routes — the authoritative contract reference for consumers and Phase 1.3 UI design",
+          "financial_relevance": "Path entries for financially-relevant routes must reference FinancialValue component schema after Phase 1.2B-A canonicalization"
+        },
+        {
+          "name": "FinancialValue component",
+          "description": "Already defined in api-surface.openapi.yaml; integer-cents value with type, source, completeness envelope",
+          "financial_relevance": "All financial field annotations in path entries must $ref this component; stale value semantics may be corrected to integer cents, but no new component fields are introduced"
+        },
+        {
+          "name": "ShiftAlertDTO",
+          "description": "Discriminated union promoted in Phase 1.2B-A; financial metric types carry FinancialValue|null; ratio branch metricType 'hold_percent' keeps metric values bare number|null (DEF-NEVER)",
+          "financial_relevance": "DEC-6 path entry must accurately describe the promoted discriminated-union shape"
+        },
+        {
+          "name": "ROLLOUT-TRACKER.json DEF-005",
+          "description": "Deferred register item for full 4-case route-boundary test matrices on recent-sessions and live-view routes",
+          "financial_relevance": "Closure with commit SHA confirms Enforcement phase complete"
+        }
+      ],
+      "boundaries": [
+        "No service layer changes — Phase 1.2B-A complete",
+        "No UI component changes — Phase 1.3",
+        "No lint rule authoring — Phase 1.4",
+        "No observability wiring — Phase 1.4",
+        "No FinancialValue component structural expansion — only stale integer-cents documentation/type semantics may be corrected"
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "Q-5 OpenAPI audit",
+          "description": "Grep api-surface.openapi.yaml for all financially-relevant field names (buy_in, cash_out, net, observedValue, baselineMedian, baselineMad, thresholdValue, totalCashOut) without adjacent FinancialValue $ref — confirms complete list of unannotated path entries",
+          "traces_to_loop_step": 1,
+          "change_class": "Enforcement",
+          "output": "Complete inventory of unannotated financially-relevant routes"
+        },
+        {
+          "id": "CAP-2",
+          "name": "OpenAPI annotation — existing paths",
+          "description": "Add $ref: '#/components/schemas/FinancialValue' to all financially-relevant fields in unannotated path entries; replace bare number schema entries",
+          "traces_to_loop_step": 2,
+          "change_class": "Enforcement",
+          "output": "All financially-relevant routes reference FinancialValue component"
+        },
+        {
+          "id": "CAP-3",
+          "name": "DEC-6 path entry birth — GET /shift-intelligence/alerts",
+          "description": "Add GET /shift-intelligence/alerts path entry with ShiftAlertDTO schema: metricType discriminant present; explicit oneOf branches (or reusable equivalent component schemas) require metricType, observedValue, baselineMedian, and baselineMad in both branches; financial metric branches expose metric values as FinancialValue|null; ratio branch metricType 'hold_percent' exposes metric values as bare number|null (DEF-NEVER); thresholdValue is absent",
+          "traces_to_loop_step": 3,
+          "change_class": "Enforcement",
+          "output": "DEC-6 gap closed; alerts route documented in OpenAPI"
+        },
+        {
+          "id": "CAP-4",
+          "name": "recent-sessions 4-case test matrix",
+          "description": "Extend existing route.test.ts: 401 unauthorized, invalid params, empty result for missing/cross-tenant/no-session player state, success asserting integer-cents FinancialValue on total_buy_in / total_cash_out / net",
+          "traces_to_loop_step": 4,
+          "change_class": "Enforcement",
+          "output": "recent-sessions route test covers full 4-case boundary"
+        },
+        {
+          "id": "CAP-5",
+          "name": "live-view 4-case test matrix",
+          "description": "Extend existing route.test.ts: 401 unauthorized, 404 visit-not-found, service error, success asserting integer-cents FinancialValue on session_total_buy_in / session_total_cash_out / session_net",
+          "traces_to_loop_step": 5,
+          "change_class": "Enforcement",
+          "output": "live-view route test covers full 4-case boundary"
+        },
+        {
+          "id": "CAP-6",
+          "name": "shift-intelligence/alerts route test birth",
+          "description": "Birth app/api/v1/shift-intelligence/alerts/__tests__/route.test.ts: 401 unauthorized, invalid or missing gaming_day query, empty array result, ratio-branch ShiftAlertDTO with metricType 'hold_percent' asserting bare numeric metric fields, success with financial-branch ShiftAlertDTO asserting FinancialValue|null on observedValue / baselineMedian / baselineMad plus absence of thresholdValue and standalone hold_percent fields",
+          "traces_to_loop_step": 6,
+          "change_class": "Enforcement",
+          "output": "alerts route test born; DEC-6 test obligation satisfied"
+        },
+        {
+          "id": "CAP-7",
+          "name": "anomaly-alerts test expansion",
+          "description": "Extend services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts to 4-case matrix matching discriminated-union shape from Phase 1.2B-A: observedValue / baselineMedian / baselineMad / thresholdValue as FinancialValue|null; hold_percent as bare number|null",
+          "traces_to_loop_step": 7,
+          "change_class": "Enforcement",
+          "output": "anomaly-alerts test aligned to promoted DTO shape"
+        },
+        {
+          "id": "CAP-8",
+          "name": "DEF-005 + DEC-6 tracker closure + quality gates",
+          "description": "Update ROLLOUT-TRACKER.json: close DEF-005 with commit SHA, add DEC-6 to resolved decisions. Run npm run type-check + npm run lint + npm run build.",
+          "traces_to_loop_step": "8, 9",
+          "change_class": "Governance",
+          "output": "Tracker updated; quality gates pass; Phase 1.2B-C exit gate met"
+        }
+      ]
+    },
+    "where": {
+      "surfaces": [
+        {
+          "id": "SURF-1",
+          "name": "OpenAPI specification",
+          "path": "docs/25-api-data/api-surface.openapi.yaml",
+          "bounded_context": "API contract",
+          "change_type": "annotation + path birth"
+        },
+        {
+          "id": "SURF-2",
+          "name": "recent-sessions route test",
+          "path": "app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts",
+          "bounded_context": "player-sessions",
+          "change_type": "expansion"
+        },
+        {
+          "id": "SURF-3",
+          "name": "live-view route test",
+          "path": "app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts",
+          "bounded_context": "visits",
+          "change_type": "expansion"
+        },
+        {
+          "id": "SURF-4",
+          "name": "shift-intelligence/alerts route test",
+          "path": "app/api/v1/shift-intelligence/alerts/__tests__/route.test.ts",
+          "bounded_context": "shift-intelligence",
+          "change_type": "birth"
+        },
+        {
+          "id": "SURF-5",
+          "name": "anomaly-alerts route boundary test",
+          "path": "services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts",
+          "bounded_context": "shift-intelligence",
+          "change_type": "expansion"
+        }
+      ],
+      "bounded_contexts": [
+        "API contract documentation",
+        "player-sessions (route test expansion)",
+        "visits (route test expansion)",
+        "shift-intelligence (route test birth + expansion)"
+      ]
+    },
+    "who": {
+      "actors": [
+        {
+          "id": "ACTOR-1",
+          "name": "API consumer / frontend developer",
+          "role": "Reads api-surface.openapi.yaml to understand wire contract for financially-relevant routes; depends on accurate FinancialValue annotations"
+        },
+        {
+          "id": "ACTOR-2",
+          "name": "Route test suite",
+          "role": "Asserts 4-case boundary matrix at each financially-relevant route; catches regressions against the stable integer-cents contract"
+        }
+      ]
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "id": "TRIG-1",
+          "description": "Phase 1.2B-A exit gate passed (EXEC-074 commit e83a2c12, 2026-04-30): FinancialValue.value is integer cents, ShiftAlertDTO is a discriminated union — service contract is stable and ready to document",
+          "precondition": "Phase 1.2B-A complete"
+        },
+        {
+          "id": "TRIG-2",
+          "description": "DEF-005 is open: full 4-case route-boundary test matrices for recent-sessions and live-view are absent; spot-check BRIDGE-001 assertions from Phase 1.2A are insufficient post-canonicalization",
+          "precondition": "DEF-005 status open in ROLLOUT-TRACKER.json"
+        },
+        {
+          "id": "TRIG-3",
+          "description": "DEC-6 from EXEC-074: GET /shift-intelligence/alerts route handler is live at app/api/v1/shift-intelligence/alerts/route.ts and ShiftAlertDTO was promoted in Phase 1.2B-A, but no OpenAPI path entry exists",
+          "precondition": "/shift-intelligence/alerts path absent from api-surface.openapi.yaml"
+        }
+      ]
+    },
+    "why": {
+      "rules": [
+        {
+          "id": "RULE-1",
+          "description": "FinancialValue fields in OpenAPI path entries must use $ref: '#/components/schemas/FinancialValue' — bare number is incorrect for integer-cents fields after Phase 1.2B-A",
+          "traces_to_loop_step": 2,
+          "traces_to_capability": "CAP-2"
+        },
+        {
+          "id": "RULE-2",
+          "description": "hold_percent must remain a ratio discriminant/semantic branch and must never be wrapped as FinancialValue — DEF-NEVER hard invariant survives all phases",
+          "traces_to_loop_step": 3,
+          "traces_to_capability": "CAP-3"
+        },
+        {
+          "id": "RULE-3",
+          "description": "GET /shift-intelligence/alerts must have a path entry in the OpenAPI — route handler exists, ShiftAlertDTO is promoted, documentation gap is DEC-6 recorded in EXEC-074",
+          "traces_to_loop_step": 3,
+          "traces_to_capability": "CAP-3"
+        },
+        {
+          "id": "RULE-4",
+          "description": "Route-boundary tests must cover route-appropriate 4-case matrices: auth failure, validation or not-found where supported, empty/service-error, success with full financial shape — spot-check only is insufficient post-canonicalization",
+          "traces_to_loop_step": "4, 5, 6, 7",
+          "traces_to_capability": "CAP-4, CAP-5, CAP-6, CAP-7"
+        },
+        {
+          "id": "RULE-5",
+          "description": "Success case must assert integer-cents FinancialValue shape: value is integer (not dollar-float), type/source/completeness.status present — no BRIDGE-001 style assertions",
+          "traces_to_loop_step": "4, 5, 6",
+          "traces_to_capability": "CAP-4, CAP-5, CAP-6"
+        },
+        {
+          "id": "RULE-6",
+          "description": "alerts route test must verify the discriminated union and query validation: missing/invalid gaming_day fails validation; ratio branch metricType 'hold_percent' carries bare numeric metric values; financial branches carry FinancialValue|null; thresholdValue and standalone hold_percent fields are absent",
+          "traces_to_loop_step": 6,
+          "traces_to_capability": "CAP-6"
+        },
+        {
+          "id": "RULE-7",
+          "description": "DEF-005 must be closed in ROLLOUT-TRACKER.json with implementation commit SHA after all route test expansions are verified green",
+          "traces_to_loop_step": 8,
+          "traces_to_capability": "CAP-8"
+        }
+      ],
+      "invariants": [
+        "hold_percent is never FinancialValue in any OpenAPI schema (DEF-NEVER)",
+        "FinancialValue component may only correct stale integer-cents documentation/type semantics; no new component fields",
+        "No service logic changes — this FIB documents the output of Phase 1.2B-A; it does not alter it",
+        "Phase 1.2B-B (render migration) and Phase 1.2B-C (this FIB) share zero files and may execute concurrently"
+      ]
+    }
+  },
+
+  "containment_loop": [
+    {
+      "step": 1,
+      "actor": "Developer",
+      "action": "Run Q-5 audit: grep api-surface.openapi.yaml for financially-relevant field names (buy_in, cash_out, net, observedValue, baselineMedian, baselineMad, thresholdValue, totalCashOut) without adjacent $ref to FinancialValue component",
+      "system_response": "Complete list of unannotated financially-relevant path entries identified",
+      "capability": "CAP-1"
+    },
+    {
+      "step": 2,
+      "actor": "Developer",
+      "action": "Annotate each unannotated financially-relevant path entry with $ref: '#/components/schemas/FinancialValue' for each financial field; replace bare number schema entries",
+      "system_response": "All financially-relevant routes reference FinancialValue component; bare number replaced where FinancialValue is the correct type",
+      "capability": "CAP-2"
+    },
+    {
+      "step": 3,
+      "actor": "Developer",
+      "action": "Add GET /shift-intelligence/alerts path entry to api-surface.openapi.yaml: metricType discriminant present; explicit oneOf branches (or reusable equivalent component schemas) require metricType, observedValue, baselineMedian, and baselineMad in both branches; financial metric branches expose metric values as FinancialValue|null; ratio branch metricType 'hold_percent' exposes metric values as bare number|null (DEF-NEVER); thresholdValue is absent",
+      "system_response": "DEC-6 path gap closed; api-surface.openapi.yaml now documents the alerts route with the correct promoted ShiftAlertDTO shape",
+      "capability": "CAP-3"
+    },
+    {
+      "step": 4,
+      "actor": "Developer",
+      "action": "Extend app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts with 4 cases: 401 unauthorized, invalid params, empty result for missing/cross-tenant/no-session player state, success asserting integer-cents FinancialValue shape on total_buy_in / total_cash_out / net",
+      "system_response": "recent-sessions route test covers full boundary matrix; success case asserts FinancialValue.value is integer",
+      "capability": "CAP-4"
+    },
+    {
+      "step": 5,
+      "actor": "Developer",
+      "action": "Extend app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts with 4 cases: 401 unauthorized, 404 visit-not-found, service error, success asserting integer-cents FinancialValue shape on session_total_buy_in / session_total_cash_out / session_net",
+      "system_response": "live-view route test covers full boundary matrix; success case asserts FinancialValue.value is integer",
+      "capability": "CAP-5"
+    },
+    {
+      "step": 6,
+      "actor": "Developer",
+      "action": "Birth app/api/v1/shift-intelligence/alerts/__tests__/route.test.ts with invalid-query coverage and branch assertions: 401 unauthorized, invalid or missing gaming_day query, empty array result, ratio-branch ShiftAlertDTO with metricType 'hold_percent' asserting bare numeric metric fields, success with financial-branch ShiftAlertDTO asserting FinancialValue|null on observedValue / baselineMedian / baselineMad plus absence of thresholdValue and standalone hold_percent fields",
+      "system_response": "alerts route test born; discriminated-union contract asserted; DEC-6 test obligation satisfied",
+      "capability": "CAP-6"
+    },
+    {
+      "step": 7,
+      "actor": "Developer",
+      "action": "Extend services/shift-intelligence/__tests__/anomaly-alerts-route-boundary.test.ts to 4-case matrix aligned to discriminated-union shape from Phase 1.2B-A: observedValue / baselineMedian / baselineMad / thresholdValue as FinancialValue|null; hold_percent as bare number|null",
+      "system_response": "anomaly-alerts test expanded; FinancialValue|null discriminated-union shape fully asserted",
+      "capability": "CAP-7"
+    },
+    {
+      "step": 8,
+      "actor": "Developer",
+      "action": "Update ROLLOUT-TRACKER.json: set DEF-005 status to closed with implementation commit SHA; add DEC-6 to resolved decisions list",
+      "system_response": "Tracker updated; Phase 1.2B-C deferred items closed",
+      "capability": "CAP-8"
+    },
+    {
+      "step": 9,
+      "actor": "Developer",
+      "action": "Run npm run type-check, npm run lint, npm run build",
+      "system_response": "All quality gates exit 0; Phase 1.2B-C exit gate met",
+      "capability": "CAP-8"
+    }
+  ],
+
+  "success_outcomes": [
+    {
+      "id": "OUT-1",
+      "description": "All financially-relevant path entries in api-surface.openapi.yaml reference FinancialValue component for financial fields",
+      "traces_to_capability": "CAP-2"
+    },
+    {
+      "id": "OUT-2",
+      "description": "GET /shift-intelligence/alerts path entry present in api-surface.openapi.yaml with correct ShiftAlertDTO discriminated-union schema (DEC-6 closed)",
+      "traces_to_capability": "CAP-3"
+    },
+    {
+      "id": "OUT-3",
+      "description": "hold_percent is never wrapped as FinancialValue; ratio-branch metric values remain bare number|null in all OpenAPI schemas — DEF-NEVER enforced in documentation, no exceptions",
+      "traces_to_capability": "CAP-3"
+    },
+    {
+      "id": "OUT-4",
+      "description": "recent-sessions and live-view route tests each have 4-case boundary matrix; success cases assert integer-cents FinancialValue shape",
+      "traces_to_capability": "CAP-4, CAP-5"
+    },
+    {
+      "id": "OUT-5",
+      "description": "shift-intelligence/alerts route test born with invalid-query coverage plus discriminated-union branch assertions; anomaly-alerts test expanded to match promoted DTO",
+      "traces_to_capability": "CAP-6, CAP-7"
+    },
+    {
+      "id": "OUT-6",
+      "description": "DEF-005 closed in ROLLOUT-TRACKER.json with implementation commit SHA",
+      "traces_to_capability": "CAP-8"
+    },
+    {
+      "id": "OUT-7",
+      "description": "npm run type-check, npm run lint, npm run build all exit 0",
+      "traces_to_capability": "CAP-8"
+    }
+  ],
+
+  "traceability_check": {
+    "operator_problem_to_loop_step": [
+      "Stale OpenAPI bare-number annotations on financially-relevant routes → steps 1–2 (Q-5 audit + annotation)",
+      "Missing GET /shift-intelligence/alerts path entry (DEC-6) → step 3",
+      "Missing 4-case route test matrices for recent-sessions and live-view (DEF-005) → steps 4–5",
+      "Missing alerts route test and stale anomaly-alerts test → steps 6–7"
+    ],
+    "loop_step_to_capability": {
+      "1": "CAP-1",
+      "2": "CAP-2",
+      "3": "CAP-3",
+      "4": "CAP-4",
+      "5": "CAP-5",
+      "6": "CAP-6",
+      "7": "CAP-7",
+      "8": "CAP-8",
+      "9": "CAP-8"
+    },
+    "capability_to_outcome": {
+      "CAP-1": "enables CAP-2",
+      "CAP-2": "OUT-1",
+      "CAP-3": "OUT-2, OUT-3",
+      "CAP-4": "OUT-4",
+      "CAP-5": "OUT-4",
+      "CAP-6": "OUT-5",
+      "CAP-7": "OUT-5",
+      "CAP-8": "OUT-6, OUT-7"
+    },
+    "rule_to_loop_step": {
+      "RULE-1": [2],
+      "RULE-2": [3],
+      "RULE-3": [3],
+      "RULE-4": [4, 5, 6, 7],
+      "RULE-5": [4, 5, 6],
+      "RULE-6": [6],
+      "RULE-7": [8]
+    }
+  },
+
+  "governance": {
+    "frozen_adrs": ["ADR-052", "ADR-053", "ADR-054", "ADR-055"],
+    "def_never_items": ["hold_percent FinancialValue wrapping"],
+    "deferred_register_items_closed": ["DEF-005"],
+    "decisions_resolved": ["DEC-6"],
+    "downstream_expansion_allowed_without_amendment": false,
+    "scope_authority": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-C-CONTRACT-EXPANSION",
+    "approval": "Vladimir Ivanov / 2026-05-03"
+  }
+}

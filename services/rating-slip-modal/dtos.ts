@@ -146,9 +146,9 @@ export interface FinancialSectionDTO {
   totalCashIn: number;
 
   /** Total chips-out amount (cents) */
-  totalChipsOut: number;
+  totalCashOut: number;
 
-  /** Net position (totalCashIn - totalChipsOut) */
+  /** Net position (totalCashIn - totalCashOut) */
   netPosition: number;
 }
 

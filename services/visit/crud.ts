@@ -14,7 +14,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
 import { safeErrorDetails } from '@/lib/errors/safe-error-details';
+import { financialValueSchema } from '@/lib/financial/schema';
 import type { Database } from '@/types/database.types';
+import type { FinancialValue } from '@/types/financial';
 
 import type {
   ActiveVisitDTO,
@@ -510,17 +512,38 @@ export async function getPlayerRecentSessions(
     );
   }
 
-  // Convert financial amounts from cents (DB storage) to dollars (UI consumption)
-  // player_financial_transaction.amount is stored in cents (see use-save-with-buyin.ts)
+  // Wrap integer-cent amounts in canonical FinancialValue envelope.
+  // BRIDGE-001 retired (Phase 1.2): /100 removed, financialValueSchema.int() active.
   const centsToDollars = <
     T extends { total_buy_in: number; total_cash_out: number; net: number },
   >(
     s: T,
-  ): T => ({
+  ): Omit<T, 'total_buy_in' | 'total_cash_out' | 'net'> & {
+    total_buy_in: FinancialValue;
+    total_cash_out: FinancialValue;
+    net: FinancialValue;
+  } => ({
     ...s,
-    total_buy_in: s.total_buy_in / 100,
-    total_cash_out: s.total_cash_out / 100,
-    net: s.net / 100,
+    total_buy_in: financialValueSchema.parse({
+      value: s.total_buy_in,
+      type: 'actual',
+      source: 'visit_financial_summary.total_in',
+      completeness: { status: s.total_buy_in != null ? 'complete' : 'unknown' },
+    }),
+    total_cash_out: financialValueSchema.parse({
+      value: s.total_cash_out,
+      type: 'actual',
+      source: 'visit_financial_summary.total_out',
+      completeness: {
+        status: s.total_cash_out != null ? 'complete' : 'unknown',
+      },
+    }),
+    net: financialValueSchema.parse({
+      value: s.net,
+      type: 'actual',
+      source: 'visit_financial_summary.net_amount',
+      completeness: { status: s.net != null ? 'complete' : 'unknown' },
+    }),
   });
 
   return {

@@ -4,13 +4,25 @@
  * Pattern A (Contract-First): Manual DTOs for loyalty ledger and balance operations.
  * All DTOs use camelCase (not snake_case) and explicit interfaces.
  *
+ * Financial envelope wrapping (PRD-070 WS2):
+ *   - `AccrueOnCloseOutput.theo` is wrapped in `FinancialValue` per
+ *     WAVE-1-CLASSIFICATION-RULES §3.6 (authority `estimated`,
+ *     source `"loyalty.theo"`, completeness `complete` on accrual).
+ *   - Points (`pointsDelta`, balances, `bonusPoints`, `points_redeemed`) are a
+ *     carve-out (§6.3) — a separate unit system outside the envelope scope.
+ *   - Comp/entitlement face values and print-payload currency are DEFERRED to
+ *     Phase 1.2 — wrapping cascades into `components/loyalty/*` and the frozen
+ *     PRD-052 §8.1 fulfillment-payload contract. Deferrals are marked inline.
+ *
  * @see PRD-004 Loyalty Service - Ledger-Based Points System
+ * @see PRD-070 Financial Telemetry Wave 1 Phase 1.1
  * @see EXECUTION-SPEC-PRD-004.md WS3
  * @see LEDGER-PAGINATION-CONTRACT.md
  * @see IDEMPOTENCY-DRIFT-CONTRACT.md
  */
 
 import type { Database } from '@/types/database.types';
+import type { FinancialValue } from '@/types/financial';
 
 // === Enum Types ===
 
@@ -131,13 +143,28 @@ export interface AccrueOnCloseOutput {
   /** Created ledger entry ID */
   ledgerId: string;
 
-  /** Points awarded (always positive, 0 if theo <= 0) */
+  /**
+   * Points awarded (always positive, 0 if theo <= 0).
+   * Carve-out (WAVE-1-CLASSIFICATION-RULES §6.3): points unit system — bare number.
+   */
   pointsDelta: number;
 
-  /** Theoretical win amount in cents (from policy snapshot) */
-  theo: number;
+  /**
+   * Theoretical win envelope (cents) from the policy snapshot on accrual.
+   *
+   * Per WAVE-1-CLASSIFICATION-RULES §3.6: authority `estimated`, source
+   * `"loyalty.theo"`, completeness `'complete'` at accrual because closing a
+   * slip implies a pinned policy-snapshot theo. If the close path ever allows
+   * accrual on a gapped slip, this completeness value MUST be revisited
+   * (expected treatment: `'unknown'` per the `unknown for gapped sessions`
+   * clause in §3.6).
+   */
+  theo: FinancialValue;
 
-  /** Player balance after accrual */
+  /**
+   * Player balance after accrual.
+   * Carve-out (WAVE-1-CLASSIFICATION-RULES §6.3): points balance — bare number.
+   */
   balanceAfter: number;
 
   /** True if this was a duplicate request (idempotent response) */
@@ -177,18 +204,20 @@ export interface RedeemInput {
 
 /**
  * Output from redemption operation.
+ *
+ * All numeric fields are points (§6.3 carve-out — separate unit system, not currency).
  */
 export interface RedeemOutput {
   /** Created ledger entry ID */
   ledgerId: string;
 
-  /** Points deducted (NEGATIVE value) */
+  /** Points deducted (NEGATIVE value). Carve-out (§6.3): points unit — bare number. */
   pointsDelta: number;
 
-  /** Player balance before redemption */
+  /** Player balance before redemption. Carve-out (§6.3): points — bare number. */
   balanceBefore: number;
 
-  /** Player balance after redemption */
+  /** Player balance after redemption. Carve-out (§6.3): points — bare number. */
   balanceAfter: number;
 
   /** True if overdraw was applied (balance went negative) */
@@ -222,15 +251,17 @@ export interface ManualCreditInput {
 
 /**
  * Output from manual credit operation.
+ *
+ * All numeric fields are points (§6.3 carve-out — separate unit system, not currency).
  */
 export interface ManualCreditOutput {
   /** Created ledger entry ID */
   ledgerId: string;
 
-  /** Points awarded (positive) */
+  /** Points awarded (positive). Carve-out (§6.3): points unit — bare number. */
   pointsDelta: number;
 
-  /** Player balance after credit */
+  /** Player balance after credit. Carve-out (§6.3): points — bare number. */
   balanceAfter: number;
 
   /** True if this was a duplicate request (idempotent response) */
@@ -269,7 +300,7 @@ export interface ApplyPromotionOutput {
   /** Created ledger entry ID */
   ledgerId: string;
 
-  /** Promotional points awarded (positive) */
+  /** Promotional points awarded (positive). Carve-out (§6.3): points unit — bare number. */
   promoPointsDelta: number;
 
   /** True if this was a duplicate request (idempotent response) */
@@ -323,10 +354,22 @@ export interface MidSessionRewardRpcInput {
  * Used for live preview of potential points during session.
  */
 export interface SessionRewardSuggestionOutput {
-  /** Estimated theoretical win (cents) based on current session data */
+  /**
+   * Estimated theoretical win (cents) based on current session data.
+   *
+   * DEFERRED (PRD-070 WS2 → Phase 1.2): live-preview value cascades through
+   * `app/api/v1/rating-slips/[id]/modal-data/route.ts` into the rating-slip
+   * modal UI. Wrapping is blocked by the WS4 exception slice boundary — this
+   * is not part of WS2 scope.
+   *
+   * Classification target when wrapped (CLASSIFICATION-RULES §3.2 via the
+   * rating-slip-theo row): type `estimated`, source `"rating_slip.theo"`,
+   * completeness `'partial'` for live/open sessions (preview) or `'unknown'`
+   * when session data is insufficient.
+   */
   suggestedTheo: number;
 
-  /** Estimated points based on current policy */
+  /** Estimated points based on current policy. Carve-out (§6.3): points — bare number. */
   suggestedPoints: number;
 
   /** Policy version used for calculation */
@@ -436,7 +479,9 @@ export interface IssueCompParams {
   note?: string;
 
   /**
-   * Dollar amount in cents for variable-amount comps.
+   * Dollar amount in cents for variable-amount comps (operator input).
+   *
+   * Carve-out (WAVE-1-CLASSIFICATION-RULES §6.1): operator input — bare number.
    * When provided, overrides catalog points_cost: pointsCost = ceil(faceValueCents / CENTS_PER_POINT).
    * When omitted, falls back to catalog reward_price_points.points_cost.
    */
@@ -463,13 +508,13 @@ export interface CompIssuanceResult {
   /** Ledger entry ID created by rpc_redeem */
   ledgerId: string;
 
-  /** Points debited (positive, represents cost) */
+  /** Points debited (positive, represents cost). Carve-out (§6.3): points — bare number. */
   pointsDebited: number;
 
-  /** Player balance before debit */
+  /** Player balance before debit. Carve-out (§6.3): points — bare number. */
   balanceBefore: number;
 
-  /** Player balance after debit */
+  /** Player balance after debit. Carve-out (§6.3): points — bare number. */
   balanceAfter: number;
 
   /** Reward catalog item ID */
@@ -481,7 +526,18 @@ export interface CompIssuanceResult {
   /** Reward name from catalog */
   rewardName: string;
 
-  /** Issued face value in cents. Caller-provided value takes precedence over catalog metadata. */
+  /**
+   * Issued face value in cents. Caller-provided value takes precedence over catalog metadata.
+   *
+   * DEFERRED (PRD-070 WS2 → Phase 1.2): wrapping cascades into
+   * `components/loyalty/issuance-result-panel.tsx` which reads `.faceValueCents`
+   * as a bare number. Phase 1.1 G1 deferral — requires paired direct-consumer
+   * workstream to move the UI consumer in the same slice.
+   *
+   * Classification target when wrapped (CLASSIFICATION-RULES §3.6 loyalty comp
+   * face-value row): type `actual`, source `"loyalty.comp_face_value"`,
+   * completeness `'complete'` per issuance.
+   */
   faceValueCents: number;
 
   /** True if this was an idempotent replay (no additional debit) */
@@ -504,8 +560,16 @@ export interface CompFulfillmentPayload {
   reward_id: string;
   reward_code: string;
   reward_name: string;
+  /**
+   * DEFERRED (PRD-070 WS2 → Phase 1.2): frozen PRD-052 §8.1 print-contract
+   * shape consumed by `lib/print/` templates. Wrapping requires coordinated
+   * print-template amendment. Classification target when wrapped: `actual` /
+   * `"loyalty.comp_face_value"` / `'complete'`.
+   */
   face_value_cents: number;
+  /** Carve-out (§6.3): points — bare number. */
   points_redeemed: number;
+  /** Carve-out (§6.3): points balance — bare number. */
   balance_after: number;
   // Context for print template
   player_name: string;
@@ -529,7 +593,17 @@ export interface EntitlementFulfillmentPayload {
   reward_id: string;
   reward_code: string;
   reward_name: string;
+  /**
+   * DEFERRED (PRD-070 WS2 → Phase 1.2): frozen PRD-052 §8.1 print-contract
+   * shape consumed by `lib/print/` templates. Classification target when
+   * wrapped: `actual` / `"loyalty.entitlement_face_value"` / `'complete'`.
+   */
   face_value_cents: number;
+  /**
+   * DEFERRED (PRD-070 WS2 → Phase 1.2): frozen PRD-052 §8.1 print-contract
+   * shape. Classification target when wrapped: `actual` /
+   * `"loyalty.entitlement_match_wager"` / `'complete'` per entitlement.
+   */
   required_match_wager_cents: number | null; // null for free play
   expires_at: string | null; // ISO 8601
   // Context for print template
