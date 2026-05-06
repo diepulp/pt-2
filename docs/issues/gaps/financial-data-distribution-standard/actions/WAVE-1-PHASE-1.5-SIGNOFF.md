@@ -126,7 +126,48 @@ The four I5-2 tests require a player record with `computed_theo_cents = null` in
 
 ## Gate 4: Production Release and Smoke Check
 
-{WS4 fills this section}
+**Merge commit SHA:** 9bdce996be40324df4fe1f018917237d17f59f9d
+**Vercel production URL:** pt-2-weld.vercel.app
+**Vercel deployment UID:** dpl_3nRyc47NRs9UxUj2aHRKDUZvAFJM
+**Vercel deployment URL:** pt-2-ehkvnaa0i-vladimirivanovdev-4624s-projects.vercel.app
+**Vercel deployment SHA:** 9bdce996be40324df4fe1f018917237d17f59f9d
+**Date:** 2026-05-06T07:15:57Z
+
+### Pre-Merge Smoke Path Dry-Run
+
+| Surface | Preview URL | Result | Evidence | Notes |
+|---------|-------------|--------|----------|-------|
+| Gate 4 smoke paths | https://pt-2-jwigzuirz-vladimirivanovdev-4624s-projects.vercel.app | PASS (static+operator) | (1) Gate 2 type-check SHA 90168046 validates all ServiceHttpResult.data path references compile correctly; (2) Gate 3 operator walkthrough confirmed financial routes return data on Preview URL; (3) JSON paths derived from direct source code inspection of route handlers and FinancialValue type | Cookie-based auth (Supabase SSR) prevents programmatic API smoke from CLI — routes are accessible only via browser session. No VERCEL_AUTOMATION_BYPASS_SECRET configured. Static verification and Gate 3 operator evidence used as dry-run basis. |
+
+### Resolved IDs (DEC-1)
+
+| Param | Resolved value | Source |
+|-------|---------------|--------|
+| playerId | a1000000-0000-0000-0000-000000000002 | Query against vaicxfihdldgepzryhpd — active player with open visit in casino ca000000-0000-0000-0000-000000000001 |
+| visitId (live-view) | a8c74bf5-fa4c-42cb-ba6c-4fa68b495c14 | Query against vaicxfihdldgepzryhpd — open visit (ended_at null), gaming_day 2026-05-05, casino 1 |
+| gaming_day | 2026-05-05 | Query against vaicxfihdldgepzryhpd — most recent gaming day; **DATA GAP: shift_alert table has 0 rows** — no financial metric alerts exist in production (drop_total, cash_obs_total, win_loss_cents). Per DEC-1: gap recorded; carve-out route (hold_percent) not substituted. |
+| metricType verified | N/A — DATA GAP | shift_alert table empty; no qualifying financial metric alerts available for assertion |
+| ratingSlipId | 35380354-4545-492e-bb07-9a7f92eb3a97 | Query against vaicxfihdldgepzryhpd — open rating slip linked to visit a8c74bf5, casino 1 |
+| visitId (financial-summary) | a8c74bf5-fa4c-42cb-ba6c-4fa68b495c14 | Query against vaicxfihdldgepzryhpd — visit with financial summary: total_in 50000, total_out 0, net_amount 50000, event_count 1 |
+| Authenticated role | admin (pitboss@dev.local — Marcus Thompson, staff_id 5a000000-0000-0000-0000-000000000001) | Only seeded auth user for casino 1; casino 1 has no pit_boss or floor_supervisor seeded auth user. Admin covers all financial route access. |
+
+### Smoke Matrix Results
+
+**Note on verification method:** The Next.js App Router routes use cookie-based Supabase auth (`@supabase/ssr`). Authenticated API calls cannot be made from CLI (JWT Bearer token is not accepted by the SSR client — cookies are required). Production smoke routes require human browser verification. The executor verified production deployment, recorded resolved IDs, and confirms the data exists in the database. Human approval of Gate 4 certifies the browser-verified route results.
+
+Sign in at https://pt-2-weld.vercel.app as `pitboss@dev.local` / `devpass123` (admin, casino 1) and verify:
+
+| Category | Route | Status | JSON Paths Verified | Notes |
+|---|---|---|---|---|
+| Envelope | GET /api/v1/players/a1000000-0000-0000-0000-000000000002/recent-sessions?limit=1 | PENDING HUMAN VERIFICATION | data.sessions[0].total_buy_in.value/.type/.source/.completeness.status; data.sessions[0].total_cash_out.{...}; data.sessions[0].net.{...} | Navigate to player, check browser network tab; expect FinancialValue shape on financial fields |
+| Envelope | GET /api/v1/visits/a8c74bf5-fa4c-42cb-ba6c-4fa68b495c14/live-view | PENDING HUMAN VERIFICATION | data.session_total_buy_in.value/.type/.source/.completeness.status; data.session_total_cash_out.{...}; data.session_net.{...} | Visit live view; expect FinancialValue shape |
+| Envelope | GET /api/v1/shift-intelligence/alerts?gaming_day=2026-05-05 | DATA GAP — 0 alerts in production | N/A — no qualifying financial metric alerts exist | shift_alert table has 0 rows; cannot assert FinancialValue on empty result set. Per DEC-1: gap recorded, hold_percent carve-out not substituted. |
+| Bare-number sanity | GET /api/v1/rating-slips/35380354-4545-492e-bb07-9a7f92eb3a97/modal-data | PENDING HUMAN VERIFICATION | data.financial.totalCashIn/.totalCashOut/.netPosition present as bare-number cents; no FinancialValue assertion | Check browser network tab; bare numbers only |
+| Bare-number sanity | GET /api/v1/visits/a8c74bf5-fa4c-42cb-ba6c-4fa68b495c14/financial-summary | PENDING HUMAN VERIFICATION | data.total_in/.total_out/.net_amount present as bare-number cents; no FinancialValue assertion | Expect 50000/0/50000 (integer cents) |
+
+**Production availability:** pt-2-weld.vercel.app returns HTTP 200. Deployment SHA 9bdce996be40324df4fe1f018917237d17f59f9d confirmed matches merge commit.
+
+**Gate 4 smoke result:** PENDING HUMAN APPROVAL — executor has verified deployment, resolved IDs, and confirmed data exists. Browser route verification and Gate 4 sign-off required from engineering lead.
 
 ---
 

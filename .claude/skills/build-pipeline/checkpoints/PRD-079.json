@@ -17,12 +17,12 @@
     "granted_at": "2026-05-05T06:42:01Z",
     "note": "EXEC-SPEC patched post-generation (gate-0 checks expanded); final approval granted"
   },
-  "current_phase": 1,
+  "current_phase": 4,
   "created_at": "2026-05-05T06:42:01Z",
-  "updated_at": "2026-05-05T06:45:00Z",
-  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5"],
-  "in_progress_workstreams": [],
-  "completed_workstreams": [],
+  "updated_at": "2026-05-06T07:15:57Z",
+  "pending_workstreams": ["WS5"],
+  "in_progress_workstreams": ["WS4"],
+  "completed_workstreams": ["WS1", "WS2", "WS3"],
   "dormant_workstreams": [],
   "execution_phases": [
     {
@@ -30,28 +30,45 @@
       "label": "Preview Authentication Unblock",
       "workstreams": ["WS1"],
       "gate": "gate-1-preview-auth",
-      "status": "pending"
+      "status": "complete",
+      "gate_approved_by": "Vladimir Ivanov",
+      "gate_approved_at": "2026-05-05T08:40:00Z"
     },
     {
       "phase": 2,
       "label": "Blocking and Advisory Validation",
       "workstreams": ["WS2"],
       "gate": "gate-2-validation",
-      "status": "pending"
+      "status": "complete",
+      "gate_result": "PASS — blocking green at SHA 90168046; E2E I5 advisory failures recorded with disposition"
     },
     {
       "phase": 3,
       "label": "Operator Walkthrough Sign-off",
       "workstreams": ["WS3"],
       "gate": "gate-3-operator-signoff",
-      "status": "pending"
+      "status": "complete",
+      "gate_result": "PASS — Vladimir Ivanov (floor supervisor), all four interpretability checks pass, 2026-05-06T06:58:12Z"
     },
     {
       "phase": 4,
       "label": "Production Release and Smoke Check",
       "workstreams": ["WS4"],
       "gate": "gate-4-production-smoke",
-      "status": "pending"
+      "status": "in_progress",
+      "merge_commit_sha": "9bdce996be40324df4fe1f018917237d17f59f9d",
+      "vercel_deployment_uid": "dpl_3nRyc47NRs9UxUj2aHRKDUZvAFJM",
+      "vercel_deployment_url": "pt-2-ehkvnaa0i-vladimirivanovdev-4624s-projects.vercel.app",
+      "production_url": "pt-2-weld.vercel.app",
+      "production_http_status": 200,
+      "dec1_player_id": "a1000000-0000-0000-0000-000000000002",
+      "dec1_visit_id_live_view": "a8c74bf5-fa4c-42cb-ba6c-4fa68b495c14",
+      "dec1_gaming_day": "2026-05-05",
+      "dec1_alerts_data_gap": "shift_alert table 0 rows — no financial metric alerts in production",
+      "dec1_rating_slip_id": "35380354-4545-492e-bb07-9a7f92eb3a97",
+      "dec1_visit_id_financial_summary": "a8c74bf5-fa4c-42cb-ba6c-4fa68b495c14",
+      "dec1_auth_role": "admin (pitboss@dev.local)",
+      "gate_pending": "Human browser verification of 4 authenticated API routes required at pt-2-weld.vercel.app"
     },
     {
       "phase": 5,
@@ -70,5 +87,22 @@
     "SMOKE_IDS": "at-execution-time — executor queries vaicxfihdldgepzryhpd",
     "BLOCKING_GATE_EVIDENCE": "local-command-with-sha — per PRD §5.1 FR-3"
   },
-  "resume_instructions": "Next: execute Phase 1 by dispatching WS1 via Skill(skill='devops-pt2'). WS1 adds three Supabase env vars to Vercel Preview, verifies Gate 0 (deployment identity + auth viability), and creates WAVE-1-PHASE-1.5-SIGNOFF.md. Gate 1 (human approval) required before Phase 2 begins."
+  "ws1_evidence": {
+    "vercel_preview_url": "https://pt-2-jwigzuirz-vladimirivanovdev-4624s-projects.vercel.app",
+    "vercel_deployment_uid": "dpl_27knVfw9AdUe7mGLWBnwsxN9oaDJ",
+    "vercel_inspector_url": "https://vercel.com/vladimirivanovdev-4624s-projects/pt-2/27knVfw9AdUe7mGLWBnwsxN9oaDJ",
+    "pr_number": 50,
+    "pr_url": "https://github.com/diepulp/pt-2/pull/50",
+    "branch_sha": "90168046",
+    "deployment_substate": "STAGED",
+    "supabase_url_in_preview": true,
+    "supabase_anon_key_in_preview": true,
+    "service_role_key_in_preview": false,
+    "goTrue_health": "v2.189.0",
+    "middleware_500": false,
+    "gate0_automated": "pass",
+    "gate0_pending_human": ["authentication_succeeds", "financial_routes_return_data"],
+    "signoff_artifact_commit": "90168046"
+  },
+  "resume_instructions": "WS4 in-progress. PR #50 merged (9bdce996). Production deployment READY at pt-2-weld.vercel.app (dpl_3nRyc47NRs9UxUj2aHRKDUZvAFJM). Gate 4 section populated in WAVE-1-PHASE-1.5-SIGNOFF.md with DEC-1 IDs resolved. Human must: sign in at pt-2-weld.vercel.app as pitboss@dev.local/devpass123 (admin, casino 1), verify 4 routes via browser network tab (alerts route has data gap — shift_alert table empty), update Gate 4 smoke results in WAVE-1-PHASE-1.5-SIGNOFF.md, then approve Gate 4 to unblock WS5 (lead-architect, Phase 5: Retrospective and Rollout Closure)."
 }
