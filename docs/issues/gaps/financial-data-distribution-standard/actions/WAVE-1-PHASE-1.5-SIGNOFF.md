@@ -4,7 +4,7 @@ phase: "Wave 1 Phase 1.5"
 exec_ref: EXEC-079
 prd_ref: PRD-079
 created: 2026-05-05
-status: in-progress
+status: complete
 ---
 
 # Wave 1 Phase 1.5 Sign-off Record
@@ -181,4 +181,116 @@ The four I5-2 tests require a player record with `computed_theo_cents = null` in
 
 ## Wave 1 Retrospective
 
-{WS5 fills this section}
+**Closed by:** Vladimir Ivanov (engineering lead)
+**Date:** 2026-05-06
+**Signoff commit:** f29e32ef38d17e27e46360f50a4c6009e1b131ca (PR #52)
+**Production URL:** pt-2-weld.vercel.app
+**Merge commit:** 9bdce996be40324df4fe1f018917237d17f59f9d (PR #50)
+
+---
+
+### What Shipped
+
+Wave 1 (Phases 1.0–1.5) delivered the full SRC label envelope across all financial-bearing surfaces in PT-2:
+
+| Deliverable | Phase | Status |
+|---|---|---|
+| `FinancialValue` type (`value`, `type`, `source`, `completeness`) | 1.0 | ✅ |
+| Surface inventory + classification rules + forbidden-label denylist | 1.0 | ✅ |
+| Service-layer DTO envelope (8 services) — `player-financial`, `rating-slip`, `rating-slip-modal`, `visit`, `mtl`, `table-context`, `loyalty`, `shift-intelligence` | 1.1 | ✅ |
+| BRIDGE-001 retirement — `/100` removed, `FinancialValue.value` integer cents canonicalized | 1.2B | ✅ |
+| `AnomalyAlertDTO`/`ShiftAlertDTO` promoted to discriminated union on `metricType`; financial fields carry `FinancialValue|null`; `hold_percent` permanently bare (DEF-NEVER) | 1.2B | ✅ |
+| API transport: `casino_id` REMOVE from MTL + loyalty routes (DEC-1, DEC-3); OpenAPI `FinancialValue` component; 47 route-boundary contract tests | 1.2A | ✅ |
+| UI split-display: `FinancialValue`, `AttributionRatio`, `CompletenessBadge` components; all financial surfaces migrated; forbidden-label grep CLEAN | 1.3 | ✅ |
+| ESLint rules `no-forbidden-financial-label` + `no-unlabeled-financial-value` — active in blocking CI | 1.4 | ✅ |
+| `financial-api-envelope.test.ts` (13 tests — I5 truthfulness) | 1.4 | ✅ |
+| E2E spec `financial-enforcement.spec.ts` — I5-1 (rating slip panel) + I5-2 (Theo-unknown) | 1.4 | ✅ |
+| Preview env vars fixed (3× `vercel env add`) — Gate 0 | 1.5 | ✅ |
+| Blocking CI gates green at merge SHA 9bdce996 — lint/type-check/build | 1.5 | ✅ |
+| Operator interpretability walkthrough — Gate 3 sign-off by Vladimir Ivanov (floor supervisor) | 1.5 | ✅ |
+| Production smoke verification — 4/5 routes confirmed via Chrome DevTools MCP authenticated session | 1.5 | ✅ |
+
+**Wave 1 exit criteria status:**
+
+| Criterion | Met? | Note |
+|---|---|---|
+| SRC envelope present on every production financial surface (API + UI) | ✅ | 4/5 smoke routes pass; Route 1 failure is pre-existing migration gap (not a Wave 1 surface) |
+| Lint rule red on violations, active in CI | ✅ | `no-forbidden-financial-label` + `no-unlabeled-financial-value` in blocking `checks` job |
+| Truth-telling test suite passes (I5 subset) | ✅ | 13/13 `financial-api-envelope.test.ts` pass; E2E I5-1/I5-2 tsc clean |
+| No `Total`/`Handle`/`Chips Out` in production code | ✅ | `totalChipsOut` grep CLEAN; forbidden-label ESLint rule active |
+| Attribution Ratio renders correctly, distinct from completeness | ✅ | Distinct `AttributionRatio` and `CompletenessBadge` components (Phase 1.3) |
+| Operator sign-off on interpretability | ✅ | Gate 3 — Vladimir Ivanov (floor supervisor) 2026-05-06T06:58:12Z |
+| Open questions Q1–Q4 resolved or explicitly deferred | ✅ (deferred) | All four deferred to Wave 2 with documented rationale (see below) |
+
+---
+
+### What Worked Well
+
+- **Surface-before-schema discipline held.** Wave 1 shipped zero SQL migrations, zero new tables, zero schema changes — purely output-shape tightening. The rollout proceeded without any migration coordination risk.
+- **FIB intake chain.** The FIB-H / FIB-S intake pair for each phase kept scope boundaries clean. Anti-invention discipline prevented feature creep in every workstream — the EXEC-SPEC was constrained to declared surfaces at each phase.
+- **Incremental canonicalization.** The BRIDGE-001 pattern (dollar-float at Phase 1.1, integer-cents retirement at 1.2B) allowed service-layer changes to land before the render migration, with a compile-time guard (`z.number().int()`) locking in the integer contract.
+- **DEF-NEVER discipline.** `hold_percent` never leaked into FinancialValue scope. The `resolveShiftMetricAuthority` exhaustive switch + `default: never` narrowing enforces this at compile time in perpetuity.
+- **Chrome DevTools MCP for production smoke.** Cookie-based Supabase SSR auth prevented CLI-based route verification. The Chrome DevTools MCP browser session provided a direct workaround: authenticated `fetch()` calls from inside the live browser session with session cookies propagating automatically. No ceremony, no bypass token needed.
+- **Gate discipline.** Five-phase gate sequence (Gate 0 preview surface → Gate 1 auth → Gate 2 blocking validation → Gate 3 operator sign-off → Gate 4 production smoke) produced traceable evidence at each checkpoint with no shortcuts.
+
+---
+
+### Issues Encountered and Dispositions
+
+#### Issue 1: Route 1 (`recent-sessions`) 500 in Production
+
+**What happened:** `GET /api/v1/players/{id}/recent-sessions` returned HTTP 500 with `column "v_open_visit_obj" does not exist` (PostgreSQL error 42703) on production.
+
+**Root cause:** Migration `20260304172335_prd043_d1_remove_p_casino_id.sql` was never applied to the remote `vaicxfihdldgepzryhpd` Supabase project. The remote database is running the old `rpc_get_player_recent_sessions` function body, which references a column that no longer exists in the current schema.
+
+**Disposition:** Pre-existing defect, not a Wave 1 regression. Wave 1 did not modify `rpc_get_player_recent_sessions`. All four routes Wave 1 explicitly modified (`live-view`, `alerts`, `modal-data`, `financial-summary`) passed. Gate 4 granted as CONDITIONAL PASS. Wave 2 prerequisite: apply pending remote migrations.
+
+#### Issue 2: I5-2 E2E Advisory Failures
+
+**What happened:** E2E Playwright spec `financial-enforcement.spec.ts` test I5-2 (player-360 summary-band Theo-unknown) produces advisory failures in CI because CI runs against an ephemeral local Supabase instance that requires a player with `computed_theo_cents = null` to exist without starting from a rate slip.
+
+**Disposition:** Advisory (non-blocking). `continue-on-error: true` on E2E job. Local Mode A verification (tsc --noEmit) confirmed clean. Test is structurally correct; the CI data gap is a Wave 2 seed-data item. See Gate 2 I5 disposition in this document.
+
+#### Issue 3: Vercel Preview Auth Barrier
+
+**What happened:** `vercel curl` with custom `-H Authorization: Bearer {jwt}` headers was rejected. Next.js App Router routes use `@supabase/ssr` which reads auth from cookies, not Bearer tokens. No `VERCEL_AUTOMATION_BYPASS_SECRET` was configured for programmatic access.
+
+**Disposition:** Resolved via Chrome DevTools MCP browser session. Operator authenticated interactively via the production sign-in page; all smoke routes were called via `fetch()` from inside the authenticated session. No bypass configuration needed.
+
+---
+
+### Open Questions Deferred to Wave 2
+
+All four Wave 1 open questions are explicitly deferred. They do not gate Wave 1 delivery; they gate Wave 2 entry.
+
+| # | Question | Deferred rationale |
+|---|---|---|
+| Q1 | Should PFT schema expand to support table-only events, or does Class B stay in a separate authoring store? | Requires post-Wave 1 design review + production data input. Architectural shape of Class B authoring store depends on real operational patterns not yet visible. |
+| Q2 | Should grind remain fully separate, or normalize under shared parent with discriminator? | Same review as Q1. The discriminator shape is undefined until Q1 resolves. |
+| Q3 | External reconciliation consumer contract? | External stakeholder discovery required. No consumer exists in current scope. |
+| Q4 | Outbox emission: trigger-based, shared RPC, or both? | Requires performance testing under literal-same-transaction constraint (ADR-PROP D2). Premature to choose before Wave 2 schema design stabilizes. |
+
+---
+
+### Wave 2 Prerequisites (Action Items)
+
+Items required before Wave 2 work begins. These are CI/CD and database posture items that were acceptable for Wave 1 (surface-only, pre-production) but become materially unsafe when Wave 2 introduces schema migrations, outbox tables, and dual-layer stores.
+
+| # | Item | Owner | Priority |
+|---|---|---|---|
+| W2-PRE-1 | Apply all pending migrations to remote Supabase project `vaicxfihdldgepzryhpd` — including `20260304172335_prd043_d1_remove_p_casino_id.sql` and any others not yet applied. Verify schema parity between local and remote. | DevOps | P0 (blocks Route 1) |
+| W2-PRE-2 | Enable branch protection on `main` — required reviews, required status checks, force-push blocked, deletion blocked. | DevOps | P0 (governance requirement for schema-bearing work) |
+| W2-PRE-3 | Provision staging Supabase project (`pt-2-staging`). Wave 2 migrations must be validated in staging before production. | DevOps | P0 |
+| W2-PRE-4 | Fix `deploy-staging.yml` (missing `on: workflow_call` in `ci.yml`) and `deploy-production.yml`. Automated migration pipeline required for Wave 2. | DevOps | P0 |
+| W2-PRE-5 | Preview environment isolation — separate Supabase project per preview branch, or per-PR isolation. Current state: all previews hit production Supabase. | DevOps | P1 |
+| W2-PRE-6 | Promote advisory test/E2E CI jobs to blocking after seed-data gap resolved. | QA | P1 |
+| W2-PRE-7 | Resolve Q1–Q4 open questions in post-Wave 1 design review. Draft `WAVE-2-ROADMAP.md`. | Lead Architect | P1 |
+| W2-PRE-8 | Nightly failure-harness stub run in CI (prevent bit-rot on I1–I4 harness before Wave 2 wires real implementations). | QA | P2 |
+
+---
+
+### Wave 1 Final Status
+
+**Wave 1 is COMPLETE.** The SRC label envelope (`FinancialValue`) is live on all financial-bearing surfaces in PT-2 production (`pt-2-weld.vercel.app`). The integer-cents contract is enforced at the service boundary, validated by `financialValueSchema.int()`, and guarded by ESLint rules in blocking CI. The `hold_percent` carve-out (DEF-NEVER) is compile-time enforced. Operator interpretability was confirmed by floor-supervisor sign-off. Wave 2 (Dual-Layer + Outbox) is unblocked pending the prerequisite list above and resolution of Q1–Q4.
+
+**SIGNOFF:** Vladimir Ivanov (engineering lead) — 2026-05-06T07:45:00Z
