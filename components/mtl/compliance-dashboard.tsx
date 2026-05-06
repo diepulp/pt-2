@@ -129,7 +129,7 @@ export function ComplianceDashboard({
       (s) => s.agg_badge_out === 'agg_ctr_met',
     ).length;
     const totalPatrons = items.length;
-    const totalVolume = items.reduce((sum, s) => sum + s.total_volume, 0);
+    const totalVolume = items.reduce((sum, s) => sum + s.total_volume.value, 0);
 
     return {
       mtlThresholdMetCount,
@@ -383,7 +383,7 @@ export function ComplianceDashboard({
           }}
           onSubmit={handleAdjustmentSubmit}
           currentTotal={
-            adjustmentTarget?.amount ? adjustmentTarget.amount / 100 : 0
+            adjustmentTarget?.amount ? adjustmentTarget.amount.value / 100 : 0
           }
           isPending={createAdjustment.isPending}
           error={adjustmentError}

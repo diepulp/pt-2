@@ -40,7 +40,7 @@ export function CompliancePanelWrapper({
   const ctrStatus: CtrStatus | null = React.useMemo(() => {
     if (!complianceData?.items?.[0]) return null;
     const item = complianceData.items[0];
-    const totalCents = (item.total_in ?? 0) + (item.total_out ?? 0);
+    const totalCents = item.total_in.value + item.total_out.value;
     return {
       todayTotal: totalCents / 100,
       threshold: 10000,

@@ -67,6 +67,7 @@ import {
 } from '@/components/ui/table';
 import { useMtlEntries } from '@/hooks/mtl/use-mtl-entries';
 import { useCreateMtlEntry } from '@/hooks/mtl/use-mtl-mutations';
+import { financialValueSchema } from '@/lib/financial/schema';
 import { formatCents } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { MtlDirection, MtlEntryDTO } from '@/services/mtl/dtos';
@@ -457,9 +458,9 @@ function TransactionLogTable({ entries }: { entries: MtlEntryDTO[] }) {
 
   const entriesWithTotals = entries.map((entry) => {
     if (entry.direction === 'in') {
-      runningCashIn += entry.amount;
+      runningCashIn += entry.amount.value;
     } else {
-      runningCashOut += entry.amount;
+      runningCashOut += entry.amount.value;
     }
     return {
       ...entry,
@@ -544,7 +545,7 @@ function TransactionLogTable({ entries }: { entries: MtlEntryDTO[] }) {
                   </span>
                 </TableCell>
                 <TableCell className="text-right font-mono font-medium">
-                  {formatCents(entry.amount)}
+                  {formatCents(entry.amount.value)}
                 </TableCell>
                 <TableCell
                   className={cn(
@@ -676,9 +677,9 @@ export function MtlEntryForm({
     return optimisticEntries.reduce(
       (acc, entry) => {
         if (entry.direction === 'in') {
-          acc.cashIn += entry.amount;
+          acc.cashIn += entry.amount.value;
         } else {
-          acc.cashOut += entry.amount;
+          acc.cashOut += entry.amount.value;
         }
         return acc;
       },
@@ -711,7 +712,12 @@ export function MtlEntryForm({
         staff_id: staffId,
         rating_slip_id: ratingSlipId ?? null,
         visit_id: visitId ?? null,
-        amount: amountCents, // CENTS (ISSUE-FB8EB717)
+        amount: financialValueSchema.parse({
+          value: amountCents,
+          type: 'compliance',
+          source: 'mtl_entry',
+          completeness: { status: 'complete' },
+        }),
         direction: typeConfig.direction,
         txn_type: typeConfig.mtlType,
         source: 'table',

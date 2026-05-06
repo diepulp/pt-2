@@ -160,14 +160,14 @@ export function mapToSessionValue(
     };
   }
 
-  const netWinLoss = financialSummary.net_amount;
+  const netWinLoss = financialSummary.net_amount.value;
 
   // Calculate trend vs previous period
   let trendPercent = 0;
-  if (previousPeriodSummary && previousPeriodSummary.net_amount !== 0) {
+  if (previousPeriodSummary && previousPeriodSummary.net_amount.value !== 0) {
     trendPercent = Math.round(
-      ((netWinLoss - previousPeriodSummary.net_amount) /
-        Math.abs(previousPeriodSummary.net_amount)) *
+      ((netWinLoss - previousPeriodSummary.net_amount.value) /
+        Math.abs(previousPeriodSummary.net_amount.value)) *
         100,
     );
     // Clamp to -100 to +100
@@ -204,7 +204,7 @@ export function mapToCashVelocity(
     };
   }
 
-  const sessionTotal = financialSummary.total_in;
+  const sessionTotal = financialSummary.total_in.value;
 
   // Calculate rate per hour
   let ratePerHour = 0;

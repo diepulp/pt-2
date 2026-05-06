@@ -51,14 +51,14 @@
     "wave": 1,
     "active_phase": null,
     "phase_status": "complete",
-    "phase_label": "Wave 1 COMPLETE. Phase 1.5 (Rollout & Sign-off) closed 2026-05-06. Wave 2 entry blocked on W2-PRE-1–W2-PRE-8 and Q1–Q4 resolution.",
+    "phase_label": "Wave 1 COMPLETE. Pre-Wave-2 surface debt closed (PRD-080, EXEC-080, 2026-05-06). Wave 2 entry blocked on W2-PRE-1–W2-PRE-8 and Q1–Q4 resolution.",
     "blocker": null,
-    "next_action": "Resolve W2-PRE-1–W2-PRE-8 prerequisites + Q1–Q4 open questions → draft WAVE-2-ROADMAP.md → /prd-writer for Wave 2 Phase 2",
+    "next_action": "Pre-Wave-2 surface debt closed (EXEC-080). Check Wave 2 entry criteria: W2-PRE-1–W2-PRE-8 prerequisites + Q1–Q4 open questions → draft WAVE-2-ROADMAP.md → /prd-writer for Wave 2 Phase 2",
     "next_action_prd": null,
-    "last_closed_phase": "1.5",
+    "last_closed_phase": "pre_wave_2",
     "last_closed_date": "2026-05-06",
-    "last_closed_exec": "EXEC-079",
-    "last_closed_commit": "f29e32ef38d17e27e46360f50a4c6009e1b131ca",
+    "last_closed_exec": "EXEC-080",
+    "last_closed_commit": "20df161b6aadc3f236106bdc84dc96b415815d48",
     "wave_1_status": "closed",
     "wave_1_closed_date": "2026-05-06",
     "wave_1_signoff_artifact": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-PHASE-1.5-SIGNOFF.md"
@@ -189,7 +189,7 @@
       "wave": 1,
       "status": "complete",
       "prd": "PRD-074",
-      "prd_status": "active",
+      "prd_status": "complete",
       "prd_path": "docs/10-prd/PRD-074-financial-telemetry-wave1-phase1.2b-canonicalization-v0.md",
       "exec_spec": "EXEC-074",
       "exec_spec_path": "docs/21-exec-spec/PRD-074/EXEC-074-financial-telemetry-wave1-phase1.2b-canonicalization.md",
@@ -373,6 +373,103 @@
       }
     },
     {
+      "id": "pre_wave_2",
+      "label": "Pre-Wave-2 Surface Debt Closure",
+      "wave": "pre_wave_2",
+      "status": "complete",
+      "prd": "PRD-080",
+      "prd_path": "docs/10-prd/PRD-080-financial-telemetry-pre-wave2-surface-debt-closure-v0.md",
+      "exec_spec": "EXEC-080",
+      "exec_spec_path": "docs/21-exec-spec/EXEC-080-financial-telemetry-pre-wave2-surface-debt-closure.md",
+      "exit_date": "2026-05-06",
+      "commit": "20df161b6aadc3f236106bdc84dc96b415815d48",
+      "entry_gate": "Wave 1 sign-off ✅ (EXEC-079, 2026-05-06)",
+      "purpose": "Close 12 bare-number currency fields deferred from Wave 1 across 4 DTOs in 3 bounded contexts. No schema changes — surface-layer wrapping only.",
+      "fields_closed": {
+        "group_a_VisitFinancialSummaryDTO": {
+          "fields": ["total_in", "total_out", "net_amount"],
+          "classification": {
+            "type": "actual",
+            "source": "PFT",
+            "completeness": "unknown"
+          },
+          "workstream": "WS2",
+          "note": "completeness 'unknown': /financial-summary view has no gaming-day lifecycle column (DEC-1). Wave 2 must introduce lifecycle-aware projection to emit 'complete'/'partial'."
+        },
+        "group_b_FinancialSectionDTO": {
+          "fields": ["totalCashIn", "totalCashOut", "netPosition"],
+          "classification": {
+            "type": "actual",
+            "source": "PFT",
+            "completeness": "unknown"
+          },
+          "workstream": "WS3",
+          "note": "BFF RPC path wraps DB bare numbers. completeness 'unknown' same DEC-1 rationale as Group A."
+        },
+        "group_c_MtlEntryDTO": {
+          "fields": ["amount"],
+          "classification": {
+            "type": "compliance",
+            "source": "mtl_entry",
+            "completeness": "complete"
+          },
+          "workstream": "WS4",
+          "note": "Individual committed MTL row is always complete — no partial state. Badge computed on bare row.amount BEFORE financialValueSchema.parse() (badge-order invariant)."
+        },
+        "group_d_MtlGamingDaySummaryDTO": {
+          "fields": [
+            "total_in",
+            "total_out",
+            "total_volume",
+            "max_single_in",
+            "max_single_out"
+          ],
+          "classification": {
+            "type": "compliance",
+            "source": "mtl_entry",
+            "completeness": "unknown"
+          },
+          "workstream": "WS5",
+          "note": "DEC-1: completeness always 'unknown' — mtl_gaming_day_summary view has no gaming-day lifecycle column. DEC-2: max_single_in/out are FinancialValue|null (null = no transactions for direction, per EXEC-SPEC DoD line 682)."
+        }
+      },
+      "wave_2_completeness_refinement_dependency": {
+        "decision_id": "DEC-1",
+        "statement": "Standalone GET /api/v1/visits/{visitId}/financial-summary emits completeness.status: 'unknown' always. The underlying mtl_gaming_day_summary view and player_financial_transaction aggregates have no gaming-day lifecycle column that would signal when a gaming day is closed. Wave 2 must introduce lifecycle-aware projection infrastructure (e.g., a gaming-day-close event or lifecycle column) before 'complete' or 'partial' can be emitted on these fields.",
+        "wave_2_action": "Design lifecycle-aware completeness projection as part of Wave 2 dual-layer + outbox work. Until then, all visit-level financial aggregates emit 'unknown'.",
+        "affects_routes": [
+          "GET /api/v1/visits/{visitId}/financial-summary",
+          "GET /api/v1/rating-slips/{id}/modal-data (financial section)"
+        ]
+      },
+      "workstreams_closed": [
+        "WS1",
+        "WS2",
+        "WS3",
+        "WS3b",
+        "WS4",
+        "WS5",
+        "WS6",
+        "WS7"
+      ],
+      "test_count": 112,
+      "exit_gates_passed": [
+        "WS1: consumer callsite counts verified against PRE-WAVE-2-SURFACE-DEBT-INVENTORY.md; DEC-1/DEC-2 decisions resolved",
+        "WS2: VisitFinancialSummaryDTO.total_in/total_out/net_amount wrapped (actual/PFT/unknown); 6 consumer sites updated",
+        "WS3: FinancialSectionDTO.totalCashIn/totalCashOut/netPosition wrapped (actual/PFT/unknown); RPC mapper wraps DB bare numbers; WS2 bridge removed",
+        "WS3b: rating-slip-modal.tsx consumers updated (.value unwrap at lines 554, 560)",
+        "WS4: MtlEntryDTO.amount wrapped (compliance/mtl_entry/complete); badge-order invariant preserved; 13 callsites updated",
+        "WS5: MtlGamingDaySummaryDTO.total_in/total_out/total_volume wrapped (compliance/mtl_entry/unknown); max_single_in/out: FinancialValue|null (DEC-2); 4 consumer sites updated",
+        "WS6: OpenAPI updated for /visits/{visitId}/financial-summary and /rating-slips/{id}/modal-data; route-boundary tests assert FinancialValue shape; F-11 isolation test passes",
+        "WS7: ROLLOUT-TRACKER.json updated — 12 fields closed; cursor.next_action at Wave 2 entry",
+        "npm run type-check exit 0",
+        "npm run lint exit 0",
+        "npm run build exit 0",
+        "112 tests passing",
+        "F-11 compliance isolation verified: type:'compliance' values never co-aggregated with type:'actual'"
+      ]
+    },
+    {
       "id": "2",
       "label": "Dual-Layer + Outbox",
       "wave": 2,
@@ -506,7 +603,7 @@
   ],
 
   "api_contract_delta": {
-    "description": "Service-layer changes from Phase 1.1 that were or still need to be propagated at the HTTP wire. Phase 1.2A addressed casino_id REMOVE items; Phase 1.2B must canonicalize cents and wrap shift-intelligence fields.",
+    "description": "Service-layer changes from Phase 1.1 propagated at the HTTP wire across Phases 1.2A and 1.2B. All Wave 1 items complete as of 2026-05-06.",
     "items": [
       {
         "service_change": "casino_id REMOVE from MTL routes (gaming-day-summary, entries)",
@@ -516,37 +613,41 @@
           "POST /api/v1/mtl/entries"
         ],
         "phase_1_2a_action": "COMPLETE — DEC-1 applied; client param stripped from schema; handler always uses mwCtx.rlsContext!.casinoId",
-        "phase_1_2b_wire": null
+        "status": "complete"
       },
       {
         "service_change": "casino_id REMOVE from loyalty/balances",
         "route": "GET /api/v1/loyalty/balances",
         "phase_1_2a_action": "COMPLETE — DEC-3 applied; no active consumer found; getBalance receives RLS casinoId",
-        "phase_1_2b_wire": null
+        "status": "complete"
       },
       {
-        "service_change": "RecentSessionDTO.total_buy_in/total_cash_out/net → FinancialValue (dollar-float)",
+        "service_change": "RecentSessionDTO.total_buy_in/total_cash_out/net → FinancialValue integer cents",
         "route": "GET /api/v1/players/[playerId]/recent-sessions",
-        "current_wire": "Serializing FinancialValue dollar-float (Phase 1.1b). Phase 1.2A: OpenAPI documented + BRIDGE-001 spot-check test added.",
-        "phase_1_2b_wire": "Canonicalize to integer cents (BRIDGE-001 retirement)"
+        "phase_1_2a_action": "COMPLETE — FinancialValue dollar-float (BRIDGE-001); OpenAPI documented.",
+        "phase_1_2b_action": "COMPLETE — BRIDGE-001 retired (EXEC-074, commit e83a2c12); /100 removed from services/visit/crud.ts; financialValueSchema.int() enforced. Production route returns 500 due to pre-existing remote migration gap (W2-PRE-1).",
+        "status": "complete"
       },
       {
-        "service_change": "VisitLiveViewDTO.session_total_* → FinancialValue (dollar-float)",
+        "service_change": "VisitLiveViewDTO.session_total_* → FinancialValue integer cents",
         "route": "GET /api/v1/visits/[visitId]/live-view",
-        "current_wire": "Serializing FinancialValue dollar-float (Phase 1.1b). Phase 1.2A: OpenAPI documented + BRIDGE-001 spot-check test added.",
-        "phase_1_2b_wire": "Canonicalize to integer cents (BRIDGE-001 retirement)"
+        "phase_1_2a_action": "COMPLETE — FinancialValue dollar-float (BRIDGE-001); OpenAPI documented.",
+        "phase_1_2b_action": "COMPLETE — BRIDGE-001 retired (EXEC-074, commit e83a2c12); /100 removed from services/rating-slip/mappers.ts; integer cents confirmed in Gate 4 smoke ({value:50000, type:\"actual\"}).",
+        "status": "complete"
       },
       {
-        "service_change": "AnomalyAlertDTO numeric fields — deferred (bare number | null)",
+        "service_change": "AnomalyAlertDTO numeric fields → discriminated union FinancialValue|null",
         "route": "GET /api/v1/shift-intelligence/anomaly-alerts",
-        "current_wire": "Bare number | null. Phase 1.2A: DEC-5 waiver applied; bare-number test added; OpenAPI annotated.",
-        "phase_1_2b_wire": "Wrap in FinancialValue (except hold_percent)"
+        "phase_1_2a_action": "COMPLETE — DEC-5 waiver; bare number|null; OpenAPI annotated.",
+        "phase_1_2b_action": "COMPLETE — AnomalyAlertDTO promoted to discriminated union on metricType (EXEC-074, commit e83a2c12); financial metrics carry FinancialValue|null; hold_percent retains bare number|null (DEF-NEVER).",
+        "status": "complete"
       },
       {
-        "service_change": "ShiftAlertDTO numeric fields — deferred (bare number | null)",
+        "service_change": "ShiftAlertDTO numeric fields → discriminated union FinancialValue|null",
         "route": "GET /api/v1/shift-intelligence/alerts",
-        "current_wire": "Bare number | null. Phase 1.2A: DEF-NEVER (hold_percent) annotated in OpenAPI.",
-        "phase_1_2b_wire": "Wrap in FinancialValue"
+        "phase_1_2a_action": "COMPLETE — DEF-NEVER (hold_percent) annotated in OpenAPI.",
+        "phase_1_2b_action": "COMPLETE — ShiftAlertDTO promoted to discriminated union on metricType (EXEC-074, commit e83a2c12); alerts path entry born (EXEC-076, commit e73879f4). Gate 4 smoke: data gap (shift_alert table empty, 0 rows).",
+        "status": "complete"
       }
     ]
   },

@@ -272,12 +272,7 @@ export function GamingDaySummary({
                         <FinancialValue
                           variant="compact"
                           label="Cash In"
-                          value={{
-                            value: summary.total_in,
-                            type: 'compliance',
-                            source: 'mtl_gaming_day',
-                            completeness: { status: 'complete' },
-                          }}
+                          value={summary.total_in}
                         />
                       </div>
                       <div className="text-xs text-muted-foreground">
@@ -297,12 +292,7 @@ export function GamingDaySummary({
                         <FinancialValue
                           variant="compact"
                           label="Cash Out"
-                          value={{
-                            value: summary.total_out,
-                            type: 'compliance',
-                            source: 'mtl_gaming_day',
-                            completeness: { status: 'complete' },
-                          }}
+                          value={summary.total_out}
                         />
                       </div>
                       <div className="text-xs text-muted-foreground">

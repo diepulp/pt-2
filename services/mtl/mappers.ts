@@ -8,6 +8,7 @@
  * @see DTO_CANONICAL_STANDARD.md Pattern A
  */
 
+import { financialValueSchema } from '@/lib/financial/schema';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -111,6 +112,8 @@ export function mapMtlEntryRow(
   row: MtlEntryRow,
   thresholds: CasinoThresholds,
 ): MtlEntryDTO {
+  // Badge computed on bare amount BEFORE wrapping (PRD-080 WS4 invariant)
+  const entry_badge = deriveEntryBadge(row.amount, thresholds);
   return {
     id: row.id,
     patron_uuid: row.patron_uuid,
@@ -118,7 +121,12 @@ export function mapMtlEntryRow(
     staff_id: row.staff_id,
     rating_slip_id: row.rating_slip_id,
     visit_id: row.visit_id,
-    amount: row.amount,
+    amount: financialValueSchema.parse({
+      value: row.amount,
+      type: 'compliance',
+      source: 'mtl_entry',
+      completeness: { status: 'complete' },
+    }),
     // Direction is constrained to 'in' | 'out' by database CHECK constraint
     // eslint-disable-next-line custom-rules/no-dto-type-assertions -- DB-enforced enum
     direction: row.direction as MtlDirection,
@@ -128,7 +136,7 @@ export function mapMtlEntryRow(
     gaming_day: row.gaming_day,
     occurred_at: row.occurred_at,
     created_at: row.created_at,
-    entry_badge: deriveEntryBadge(row.amount, thresholds),
+    entry_badge,
   };
 }
 
@@ -218,22 +226,54 @@ export function mapGamingDaySummaryRow(
     patron_last_name: row.patron_last_name ?? null,
     patron_date_of_birth: row.patron_date_of_birth ?? null,
     gaming_day: row.gaming_day ?? '',
-    // Cash-in aggregates
-    total_in: totalIn,
+    // Cash-in aggregates. Badge computed on bare number before wrapping (same invariant as WS4).
+    // DEC-1: completeness always 'unknown' — view has no gaming-day lifecycle column.
+    total_in: financialValueSchema.parse({
+      value: totalIn,
+      type: 'compliance',
+      source: 'mtl_entry',
+      completeness: { status: 'unknown' },
+    }),
     count_in: row.count_in ?? 0,
-    max_single_in: row.max_single_in,
+    max_single_in:
+      row.max_single_in === null
+        ? null
+        : financialValueSchema.parse({
+            value: row.max_single_in,
+            type: 'compliance',
+            source: 'mtl_entry',
+            completeness: { status: 'unknown' },
+          }),
     first_in_at: row.first_in_at,
     last_in_at: row.last_in_at,
     agg_badge_in: deriveAggBadge(totalIn, thresholds),
     // Cash-out aggregates
-    total_out: totalOut,
+    total_out: financialValueSchema.parse({
+      value: totalOut,
+      type: 'compliance',
+      source: 'mtl_entry',
+      completeness: { status: 'unknown' },
+    }),
     count_out: row.count_out ?? 0,
-    max_single_out: row.max_single_out,
+    max_single_out:
+      row.max_single_out === null
+        ? null
+        : financialValueSchema.parse({
+            value: row.max_single_out,
+            type: 'compliance',
+            source: 'mtl_entry',
+            completeness: { status: 'unknown' },
+          }),
     first_out_at: row.first_out_at,
     last_out_at: row.last_out_at,
     agg_badge_out: deriveAggBadge(totalOut, thresholds),
     // Overall
-    total_volume: row.total_volume ?? 0,
+    total_volume: financialValueSchema.parse({
+      value: row.total_volume ?? 0,
+      type: 'compliance',
+      source: 'mtl_entry',
+      completeness: { status: 'unknown' },
+    }),
     entry_count: row.entry_count ?? 0,
   };
 }

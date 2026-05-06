@@ -80,3 +80,4 @@ perf-*-trace-*.json.gz
 plan.md
 .playwright-mcp/
 .codex/
+.gitnexus

@@ -121,8 +121,8 @@ export function usePatronDailyTotal(
       }
 
       return {
-        totalIn: summary.total_in,
-        totalOut: summary.total_out,
+        totalIn: summary.total_in.value,
+        totalOut: summary.total_out.value,
         entryCount: summary.entry_count,
       };
     },

@@ -12,6 +12,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { financialValueSchema } from '@/lib/financial/schema';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -253,9 +254,24 @@ export async function getModalDataViaRPC(
         }
       : null,
     financial: {
-      totalCashIn: data.financial.totalCashIn,
-      totalCashOut: data.financial.totalCashOut,
-      netPosition: data.financial.netPosition,
+      totalCashIn: financialValueSchema.parse({
+        value: data.financial.totalCashIn,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      }),
+      totalCashOut: financialValueSchema.parse({
+        value: data.financial.totalCashOut,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      }),
+      netPosition: financialValueSchema.parse({
+        value: data.financial.netPosition,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      }),
     },
     tables: data.tables.map((t) => ({
       id: t.id,

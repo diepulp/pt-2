@@ -24,6 +24,7 @@
  */
 
 import type { Database } from '@/types/database.types';
+import type { FinancialValue } from '@/types/financial';
 
 // ============================================================================
 // Enum Types (derived from database enums for type safety)
@@ -96,21 +97,13 @@ export interface MtlEntryDTO {
   rating_slip_id: string | null;
   visit_id: string | null;
   /**
-   * Amount in CENTS per ISSUE-FB8EB717 standardization (e.g., 300000 = $3,000).
+   * Transaction amount. Envelope: compliance / mtl_entry / complete.
    *
-   * DEFERRED (PRD-070 WS2 → Phase 1.2): wrapping cascades into UI consumers:
-   *   - `components/mtl/entry-list.tsx:229`
-   *   - `components/mtl/entry-detail.tsx:168`
-   *   - `components/mtl/mtl-entry-form.tsx:{460,462,547,679,681}`
-   *   - `components/mtl/mtl-entry-view-modal.tsx:{226,228,306,429,431}`
-   *   - `components/mtl/compliance-dashboard.tsx:386`
-   *   - `app/review/mtl-form/mtl-entry-form.tsx:{515,517,611,756,758}`
-   * Phase 1.1 G1 deferral — requires paired direct-consumer workstream.
-   * Classification target when wrapped (CLASSIFICATION-RULES §3.4):
-   *   type `'compliance'`, source `"mtl_entry"`, completeness `'complete'` per row.
+   * Each committed MTL row is always complete — no partial state for individual entries.
    * Compliance isolation rule: MUST NEVER be aggregated with non-compliance authorities.
+   * Consumers must read `.amount.value` for arithmetic (PRD-080 F-10).
    */
-  amount: number;
+  amount: FinancialValue;
   direction: MtlDirection;
   txn_type: MtlTxnType;
   source: MtlSource;
@@ -164,38 +157,43 @@ export interface MtlGamingDaySummaryDTO {
   /** Patron date of birth for compliance disambiguation */
   patron_date_of_birth: string | null;
   gaming_day: string;
-  // Cash-in aggregates (all amounts in CENTS per ISSUE-FB8EB717).
+  // Cash-in aggregates.
   //
-  // DEFERRED (PRD-070 WS2 → Phase 1.2): aggregate currency fields cascade into
-  // `components/mtl/gaming-day-summary.tsx:{272,288}`,
-  // `components/mtl/compliance-dashboard.tsx:132`,
-  // `hooks/mtl/use-patron-daily-total.ts:{125,126}`, and
-  // `app/(dashboard)/players/[playerId]/timeline/_components/compliance-panel-wrapper.tsx:43`.
-  // Classification target when wrapped (CLASSIFICATION-RULES §3.4):
-  //   type `'compliance'`, source `"mtl_entry"`, completeness = `'partial'`
-  //   until gaming day closes, `'complete'` after close, `'unknown'` at
-  //   ambiguous boundary (gaming-day lifecycle via `rpc_current_gaming_day()`).
-  // Compliance isolation rule applies (NEVER aggregate with non-compliance).
-  total_in: number;
+  // Envelope (PRD-080 WS5): compliance / mtl_entry / unknown.
+  // DEC-1: completeness always 'unknown' — view has no gaming-day close column.
+  // Compliance isolation rule: NEVER aggregate with non-compliance authorities.
+  // Consumers must read `.value` for arithmetic (PRD-080 F-10).
+  /**
+   * Daily cash-in total. Envelope: compliance / mtl_entry / unknown (DEC-1).
+   */
+  total_in: FinancialValue;
   count_in: number;
-  /** DEFERRED — same classification target as `total_in` (per-field max). */
-  max_single_in: number | null;
+  /**
+   * Largest single cash-in. null means no transactions (DEC-2). Envelope: compliance / mtl_entry / unknown.
+   */
+  max_single_in: FinancialValue | null;
   first_in_at: string | null;
   last_in_at: string | null;
   /** Tier 2 aggregate badge for cash-in (COMPLIANCE) */
   agg_badge_in: AggBadge;
-  // Cash-out aggregates (all amounts in CENTS per ISSUE-FB8EB717).
-  // DEFERRED — same classification target as total_in.
-  total_out: number;
+  // Cash-out aggregates. Same envelope as total_in.
+  /**
+   * Daily cash-out total. Envelope: compliance / mtl_entry / unknown (DEC-1).
+   */
+  total_out: FinancialValue;
   count_out: number;
-  /** DEFERRED — same classification target as `total_in`. */
-  max_single_out: number | null;
+  /**
+   * Largest single cash-out. null means no transactions (DEC-2). Envelope: compliance / mtl_entry / unknown.
+   */
+  max_single_out: FinancialValue | null;
   first_out_at: string | null;
   last_out_at: string | null;
   /** Tier 2 aggregate badge for cash-out (COMPLIANCE) */
   agg_badge_out: AggBadge;
-  // Overall. DEFERRED — same classification target as total_in.
-  total_volume: number;
+  /**
+   * Combined cash volume (in + out). Envelope: compliance / mtl_entry / unknown (DEC-1).
+   */
+  total_volume: FinancialValue;
   entry_count: number;
 }
 

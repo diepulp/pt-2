@@ -226,7 +226,7 @@ export function EntryList({
                   )}
                 >
                   {entry.direction === 'in' ? '+' : '-'}
-                  {formatCents(entry.amount)}
+                  {formatCents(entry.amount.value)}
                 </TableCell>
                 <TableCell>
                   <EntryBadge badge={entry.entry_badge} size="sm" />

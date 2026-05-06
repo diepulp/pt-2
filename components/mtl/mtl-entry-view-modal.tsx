@@ -223,9 +223,9 @@ function TransactionLogTable({
 
   const entriesWithTotals = entries.map((entry) => {
     if (entry.direction === 'in') {
-      runningCashIn += entry.amount;
+      runningCashIn += entry.amount.value;
     } else {
-      runningCashOut += entry.amount;
+      runningCashOut += entry.amount.value;
     }
     return {
       ...entry,
@@ -303,7 +303,7 @@ function TransactionLogTable({
                   </span>
                 </TableCell>
                 <TableCell className="text-right font-mono font-medium">
-                  {formatCents(entry.amount)}
+                  {formatCents(entry.amount.value)}
                 </TableCell>
                 <TableCell
                   className={cn(
@@ -426,9 +426,9 @@ export function MtlEntryViewModal({
     return entries.reduce(
       (acc, entry) => {
         if (entry.direction === 'in') {
-          acc.cashIn += entry.amount;
+          acc.cashIn += entry.amount.value;
         } else {
-          acc.cashOut += entry.amount;
+          acc.cashOut += entry.amount.value;
         }
         return acc;
       },
