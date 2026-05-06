@@ -189,7 +189,7 @@
       "wave": 1,
       "status": "complete",
       "prd": "PRD-074",
-      "prd_status": "active",
+      "prd_status": "complete",
       "prd_path": "docs/10-prd/PRD-074-financial-telemetry-wave1-phase1.2b-canonicalization-v0.md",
       "exec_spec": "EXEC-074",
       "exec_spec_path": "docs/21-exec-spec/PRD-074/EXEC-074-financial-telemetry-wave1-phase1.2b-canonicalization.md",
@@ -506,7 +506,7 @@
   ],
 
   "api_contract_delta": {
-    "description": "Service-layer changes from Phase 1.1 that were or still need to be propagated at the HTTP wire. Phase 1.2A addressed casino_id REMOVE items; Phase 1.2B must canonicalize cents and wrap shift-intelligence fields.",
+    "description": "Service-layer changes from Phase 1.1 propagated at the HTTP wire across Phases 1.2A and 1.2B. All Wave 1 items complete as of 2026-05-06.",
     "items": [
       {
         "service_change": "casino_id REMOVE from MTL routes (gaming-day-summary, entries)",
@@ -516,37 +516,41 @@
           "POST /api/v1/mtl/entries"
         ],
         "phase_1_2a_action": "COMPLETE — DEC-1 applied; client param stripped from schema; handler always uses mwCtx.rlsContext!.casinoId",
-        "phase_1_2b_wire": null
+        "status": "complete"
       },
       {
         "service_change": "casino_id REMOVE from loyalty/balances",
         "route": "GET /api/v1/loyalty/balances",
         "phase_1_2a_action": "COMPLETE — DEC-3 applied; no active consumer found; getBalance receives RLS casinoId",
-        "phase_1_2b_wire": null
+        "status": "complete"
       },
       {
-        "service_change": "RecentSessionDTO.total_buy_in/total_cash_out/net → FinancialValue (dollar-float)",
+        "service_change": "RecentSessionDTO.total_buy_in/total_cash_out/net → FinancialValue integer cents",
         "route": "GET /api/v1/players/[playerId]/recent-sessions",
-        "current_wire": "Serializing FinancialValue dollar-float (Phase 1.1b). Phase 1.2A: OpenAPI documented + BRIDGE-001 spot-check test added.",
-        "phase_1_2b_wire": "Canonicalize to integer cents (BRIDGE-001 retirement)"
+        "phase_1_2a_action": "COMPLETE — FinancialValue dollar-float (BRIDGE-001); OpenAPI documented.",
+        "phase_1_2b_action": "COMPLETE — BRIDGE-001 retired (EXEC-074, commit e83a2c12); /100 removed from services/visit/crud.ts; financialValueSchema.int() enforced. Production route returns 500 due to pre-existing remote migration gap (W2-PRE-1).",
+        "status": "complete"
       },
       {
-        "service_change": "VisitLiveViewDTO.session_total_* → FinancialValue (dollar-float)",
+        "service_change": "VisitLiveViewDTO.session_total_* → FinancialValue integer cents",
         "route": "GET /api/v1/visits/[visitId]/live-view",
-        "current_wire": "Serializing FinancialValue dollar-float (Phase 1.1b). Phase 1.2A: OpenAPI documented + BRIDGE-001 spot-check test added.",
-        "phase_1_2b_wire": "Canonicalize to integer cents (BRIDGE-001 retirement)"
+        "phase_1_2a_action": "COMPLETE — FinancialValue dollar-float (BRIDGE-001); OpenAPI documented.",
+        "phase_1_2b_action": "COMPLETE — BRIDGE-001 retired (EXEC-074, commit e83a2c12); /100 removed from services/rating-slip/mappers.ts; integer cents confirmed in Gate 4 smoke ({value:50000, type:\"actual\"}).",
+        "status": "complete"
       },
       {
-        "service_change": "AnomalyAlertDTO numeric fields — deferred (bare number | null)",
+        "service_change": "AnomalyAlertDTO numeric fields → discriminated union FinancialValue|null",
         "route": "GET /api/v1/shift-intelligence/anomaly-alerts",
-        "current_wire": "Bare number | null. Phase 1.2A: DEC-5 waiver applied; bare-number test added; OpenAPI annotated.",
-        "phase_1_2b_wire": "Wrap in FinancialValue (except hold_percent)"
+        "phase_1_2a_action": "COMPLETE — DEC-5 waiver; bare number|null; OpenAPI annotated.",
+        "phase_1_2b_action": "COMPLETE — AnomalyAlertDTO promoted to discriminated union on metricType (EXEC-074, commit e83a2c12); financial metrics carry FinancialValue|null; hold_percent retains bare number|null (DEF-NEVER).",
+        "status": "complete"
       },
       {
-        "service_change": "ShiftAlertDTO numeric fields — deferred (bare number | null)",
+        "service_change": "ShiftAlertDTO numeric fields → discriminated union FinancialValue|null",
         "route": "GET /api/v1/shift-intelligence/alerts",
-        "current_wire": "Bare number | null. Phase 1.2A: DEF-NEVER (hold_percent) annotated in OpenAPI.",
-        "phase_1_2b_wire": "Wrap in FinancialValue"
+        "phase_1_2a_action": "COMPLETE — DEF-NEVER (hold_percent) annotated in OpenAPI.",
+        "phase_1_2b_action": "COMPLETE — ShiftAlertDTO promoted to discriminated union on metricType (EXEC-074, commit e83a2c12); alerts path entry born (EXEC-076, commit e73879f4). Gate 4 smoke: data gap (shift_alert table empty, 0 rows).",
+        "status": "complete"
       }
     ]
   },
