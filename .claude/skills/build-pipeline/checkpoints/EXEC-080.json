@@ -1,0 +1,26 @@
+{
+  "pipeline_id": "EXEC-080",
+  "prd_id": "PRD-080",
+  "prd_path": "docs/10-prd/PRD-080-financial-telemetry-pre-wave2-surface-debt-closure-v0.md",
+  "exec_spec_path": "docs/21-exec-spec/EXEC-080-financial-telemetry-pre-wave2-surface-debt-closure.md",
+  "status": "awaiting_approval",
+  "created_at": "2026-05-06T00:00:00Z",
+  "updated_at": "2026-05-06T00:00:00Z",
+  "complexity_prescreen": "streamlined",
+  "complexity_override": "full",
+  "gov010_check": "waived:bounded-debt-closure-slice-no-new-routes-or-schema",
+  "fib_h_ref": null,
+  "fib_s_ref": null,
+  "fib_s_loaded": false,
+  "write_path_classification": "none",
+  "current_phase": 0,
+  "completed_workstreams": [],
+  "dormant_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS3b", "WS4", "WS5", "WS6", "WS7"],
+  "artifacts": {
+    "exec_spec_written": true,
+    "validation": "passed",
+    "temporal_integrity": "clean",
+    "gate_name_patch": "4 custom gate names replaced with valid registry values"
+  }
+}
