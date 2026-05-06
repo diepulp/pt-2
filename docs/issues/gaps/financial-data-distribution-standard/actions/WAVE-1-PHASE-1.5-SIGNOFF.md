@@ -27,10 +27,10 @@ status: in-progress
 | Financial routes return data | pending-human | Supabase project healthy; env vars present. Actual data visibility on financial routes requires authenticated session — human operator confirms at Gate 1 walkthrough. |
 | Deployment label/metadata recorded as evidence | pass | Full deployment metadata recorded above: `dpl_27knVfw9AdUe7mGLWBnwsxN9oaDJ`, STAGED substate, pr_id 50, Vercel inspector URL. URL shape alone was not relied upon. |
 | Production-tagged URL confirmed not in use | pass | Deployment `readySubstate: STAGED` (not `PROMOTED`). `pt-2-weld.vercel.app` (production) is distinct from Preview URL `pt-2-jwigzuirz-vladimirivanovdev-4624s-projects.vercel.app`. Production-tagged deployment was not used as the validation surface. |
-| Shared-database mutation risk recorded | pass | Preview and production both point to Supabase project `vaicxfihdldgepzryhpd`. See shared-database caveat below. |
-| Preview validation declared read-only against shared DB | pass | No mutation actions performed during Gate 0 verification. All checks were read-only HTTP requests and Vercel API metadata queries. |
+| Shared-database mutation risk recorded | pass — caveat lifted | `vaicxfihdldgepzryhpd` is the remote dev/non-production Supabase project. It is not a live production database — it can be reset. Writes during Preview validation are permitted. The shared-database write-prohibition caveat does not apply. |
+| Preview validation declared read-only against shared DB | n/a — caveat lifted | Remote DB is non-production and resettable. Read-only restriction lifted per engineering-lead statement 2026-05-05. |
 
-**Gate 0 result:** PARTIAL PASS — items 1–3, 6–9 verified automatically. Items 4–5 (authentication succeeds, financial routes return data) require human sign-in on Preview URL; confirmation deferred to Gate 1 human-approval. Gate 1 approval covers and supersedes these items.
+**Gate 0 result:** PARTIAL PASS — items 1–3, 6–9 verified automatically. Items 4–5 (authentication succeeds, financial routes return data) require human sign-in on Preview URL; confirmation deferred to Gate 1 human-approval. Gate 1 approval covers and supersedes these items. Shared-database write-prohibition caveat lifted — remote DB is non-production.
 
 **Preview URL:** https://pt-2-jwigzuirz-vladimirivanovdev-4624s-projects.vercel.app
 
@@ -45,23 +45,14 @@ status: in-progress
 | SUPABASE_SERVICE_ROLE_KEY disposition recorded | not-needed | `SUPABASE_SERVICE_ROLE_KEY` is absent from Preview environment (confirmed via API: Preview env keys are `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `DATABASE_URL`, `DIRECT_URL` only). No server path required service-role access — all financial routes under Gate 4 smoke matrix use anon/authenticated JWT access. Not added to Preview. |
 | SUPABASE_SERVICE_ROLE_KEY confirmed absent from logs/screenshots/PR | n/a | Key was not added to Preview. N/A per WS1 conditional rule. |
 | PR Preview URL loads authenticated Supabase-backed financial surfaces | pending | To be confirmed by operator at Gate 1 approval. Preview URL: https://pt-2-jwigzuirz-vladimirivanovdev-4624s-projects.vercel.app. Sign in with pit_boss or floor_supervisor credentials and navigate to a financial surface to confirm. |
-| Shared-database caveat recorded | pass | vaicxfihdldgepzryhpd shared between Preview and production |
+| Shared-database caveat recorded | n/a — caveat lifted | `vaicxfihdldgepzryhpd` is the remote dev/non-production Supabase project. Not a live production DB; resettable. Write-prohibition caveat lifted per engineering-lead statement 2026-05-05. |
 
-**Shared-database caveat:** Preview and production both point to Supabase project `vaicxfihdldgepzryhpd`.
-No validation writes may be performed during Gate 0 through Gate 3. Any attempted write would affect
-the live remote database and invalidates Phase 1.5 until staging isolation exists or the FIB is amended.
+**Shared-database caveat: LIFTED** — `vaicxfihdldgepzryhpd` is a remote non-production Supabase project.
+It is not a live production database and can be reset. Writes during Preview validation (Gates 0–3) are
+permitted. The write-prohibition caveat originally specified in EXEC-079 does not apply to this environment.
 
-**Read-only validation rule:** Because Preview and production share `vaicxfihdldgepzryhpd`,
-Gate 0 through Gate 3 must not perform production data mutations. If a required validation step
-would mutate data, Phase 1.5 halts until staging isolation exists or the FIB is amended.
-
-**Gate 1 result:** PENDING HUMAN APPROVAL
+**Gate 1 result:** APPROVED (Vladimir Ivanov, 2026-05-05T08:40:00Z)
 **PR Preview URL:** https://pt-2-jwigzuirz-vladimirivanovdev-4624s-projects.vercel.app
-
-**Gate 1 confirmation required:** Sign in on the Preview URL above with a pit_boss or floor_supervisor account and confirm:
-1. Authentication succeeds (completes Gate 0.4)
-2. At least one financial surface loads data (completes Gate 0.5)
-3. Approve Gate 1 to unblock Phase 2 (WS2: Blocking and Advisory Validation)
 
 ---
 
