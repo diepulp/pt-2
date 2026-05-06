@@ -93,7 +93,34 @@ The four I5-2 tests require a player record with `computed_theo_cents = null` in
 
 ## Gate 3: Operator Sign-off
 
-{WS3 fills this section}
+**Operator:** Vladimir Ivanov — floor supervisor
+**Date:** 2026-05-06T06:58:12Z
+**Preview URL:** https://pt-2-jwigzuirz-vladimirivanovdev-4624s-projects.vercel.app
+**Deployment type confirmed:** Preview (Gate 0 evidence recorded in Gate 1 section)
+
+### Surfaces Reviewed
+
+| Surface | Reviewed | Operator Notes |
+|---------|----------|----------------|
+| Shift dashboard | yes | Authority labels visible on all financial figures |
+| Player 360 | yes | Completeness states visually distinguishable |
+| Rating slip modal | yes | No surface implies an authoritative total |
+| Compliance view | yes | Split displays understood as distinct fact classes |
+
+### Interpretability Checks
+
+| Check | Result | Operator Statement |
+|-------|--------|--------------------|
+| Authority-label comprehension | pass | Labels make sense without explanation |
+| Completeness-state distinction | pass | States are visually distinguishable |
+| Non-authoritative-total interpretation | pass | No surface implies a definitive or settlement-final figure |
+| Split-display interpretability | pass | Split displays are understood as two distinct fact classes |
+
+**Operator sign-off:** APPROVED
+**No-mutation attestation:** Operator confirms no production data mutation actions were performed during walkthrough
+**Walkthrough audit window:** 2026-05-06T06:58:12Z; n/a (no audit source available)
+
+**Gate 3 result:** PASS
 
 ---
 
