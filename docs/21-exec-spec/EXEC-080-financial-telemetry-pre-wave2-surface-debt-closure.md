@@ -106,9 +106,9 @@ workstreams:
       - components/mtl/mtl-entry-form.tsx
       - components/mtl/mtl-entry-view-modal.tsx
       - components/mtl/compliance-dashboard.tsx
-      - app/review/mtl-form/mtl-entry-form.tsx
     gate: type-check
     estimated_complexity: medium
+    # WS1 correction: app/review/mtl-form/mtl-entry-form.tsx does not exist — removed from outputs.
 
   WS5:
     name: MtlGamingDaySummaryDTO Aggregate Fields Wrap

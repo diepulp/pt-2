@@ -11,6 +11,7 @@
  * @see EXECUTION-SPEC-PRD-005.md WS6
  */
 
+import { financialValueSchema } from '@/lib/financial/schema';
 import type { Database } from '@/types/database.types';
 
 import type { CasinoThresholds } from '../dtos';
@@ -192,26 +193,31 @@ describe('MTLService Mappers', () => {
   // === Entry Mapper Tests ===
 
   describe('mapMtlEntryRow', () => {
-    it('maps all fields correctly with badge computation', () => {
+    it('maps all fields correctly with FinancialValue envelope (PRD-080 WS4)', () => {
       const result = mapMtlEntryRow(mockEntryRow, thresholds);
 
-      expect(result).toEqual({
-        id: 'entry-uuid-1',
-        patron_uuid: 'patron-uuid-1',
-        casino_id: 'casino-uuid-1',
-        staff_id: 'staff-uuid-1',
-        rating_slip_id: 'slip-uuid-1',
-        visit_id: 'visit-uuid-1',
-        amount: 500000,
-        direction: 'in',
-        txn_type: 'buy_in',
-        source: 'table',
-        area: 'high-limit',
-        gaming_day: '2025-01-15',
-        occurred_at: '2025-01-15T14:30:00Z',
-        created_at: '2025-01-15T14:30:05Z',
-        entry_badge: 'watchlist_near',
-      });
+      expect(result.id).toBe('entry-uuid-1');
+      expect(result.patron_uuid).toBe('patron-uuid-1');
+      expect(result.casino_id).toBe('casino-uuid-1');
+      expect(result.direction).toBe('in');
+      expect(result.txn_type).toBe('buy_in');
+      expect(result.entry_badge).toBe('watchlist_near');
+
+      // FinancialValue envelope — compliance / mtl_entry / complete
+      expect(result.amount.value).toBe(500000);
+      expect(result.amount.type).toBe('compliance');
+      expect(result.amount.source).toBe('mtl_entry');
+      expect(result.amount.completeness.status).toBe('complete');
+
+      // Validates against canonical schema
+      expect(() => financialValueSchema.parse(result.amount)).not.toThrow();
+    });
+
+    it('badge is derived from bare amount before FinancialValue wrapping (PRD-080 WS4 invariant)', () => {
+      // $5,000 = 500000 cents → watchlist_near (>= watchlistFloor, not > 90% of CTR)
+      const result = mapMtlEntryRow(mockEntryRow, thresholds);
+      expect(result.entry_badge).toBe('watchlist_near');
+      expect(result.amount.value).toBe(500000);
     });
 
     it('derives correct badge for amount below watchlist', () => {
@@ -514,28 +520,39 @@ describe('MTLService Mappers', () => {
         thresholds,
       );
 
-      expect(result).toEqual({
-        casino_id: 'casino-uuid-1',
-        patron_uuid: 'patron-uuid-1',
-        patron_first_name: null,
-        patron_last_name: null,
-        patron_date_of_birth: null,
-        gaming_day: '2025-01-15',
-        total_in: 1500000,
-        count_in: 3,
-        max_single_in: 800000,
-        first_in_at: '2025-01-15T10:00:00Z',
-        last_in_at: '2025-01-15T14:30:00Z',
-        agg_badge_in: 'agg_ctr_met',
-        total_out: 700000,
-        count_out: 2,
-        max_single_out: 450000,
-        first_out_at: '2025-01-15T11:00:00Z',
-        last_out_at: '2025-01-15T13:00:00Z',
-        agg_badge_out: 'agg_watchlist',
-        total_volume: 2200000,
-        entry_count: 5,
+      expect(result.casino_id).toBe('casino-uuid-1');
+      expect(result.gaming_day).toBe('2025-01-15');
+      expect(result.agg_badge_in).toBe('agg_ctr_met');
+      expect(result.agg_badge_out).toBe('agg_watchlist');
+      expect(result.count_in).toBe(3);
+      expect(result.count_out).toBe(2);
+      expect(result.entry_count).toBe(5);
+
+      // FinancialValue envelopes — compliance / mtl_entry / unknown (DEC-1: PRD-080 WS5)
+      expect(result.total_in).toEqual({
+        value: 1500000,
+        type: 'compliance',
+        source: 'mtl_entry',
+        completeness: { status: 'unknown' },
       });
+      expect(result.total_out).toEqual({
+        value: 700000,
+        type: 'compliance',
+        source: 'mtl_entry',
+        completeness: { status: 'unknown' },
+      });
+      expect(result.total_volume).toEqual({
+        value: 2200000,
+        type: 'compliance',
+        source: 'mtl_entry',
+        completeness: { status: 'unknown' },
+      });
+
+      expect(() => financialValueSchema.parse(result.total_in)).not.toThrow();
+      expect(() => financialValueSchema.parse(result.total_out)).not.toThrow();
+      expect(() =>
+        financialValueSchema.parse(result.total_volume),
+      ).not.toThrow();
     });
 
     it('derives separate badges for in and out totals', () => {
@@ -604,8 +621,8 @@ describe('MTLService Mappers', () => {
 
       const result = mapGamingDaySummaryRow(row, thresholds);
 
-      expect(result.total_in).toBe(0);
-      expect(result.total_out).toBe(0);
+      expect(result.total_in.value).toBe(0);
+      expect(result.total_out.value).toBe(0);
       expect(result.agg_badge_in).toBe('none');
       expect(result.agg_badge_out).toBe('none');
     });
@@ -776,7 +793,7 @@ describe('MTLService Mappers', () => {
 
       const result = mapGamingDaySummaryRow(row, thresholds);
 
-      expect(result.total_volume).toBe(0);
+      expect(result.total_volume.value).toBe(0);
     });
 
     it('handles empty string area', () => {
@@ -878,8 +895,8 @@ describe('MTLService Mappers', () => {
       expect(result.agg_badge_in).toBe('none');
       expect(result.agg_badge_out).toBe('none');
       // Totals are still correctly mapped (not zeroed)
-      expect(result.total_in).toBe(200000);
-      expect(result.total_out).toBe(100000);
+      expect(result.total_in.value).toBe(200000);
+      expect(result.total_out.value).toBe(100000);
     });
 
     it('CRITICAL: patron above threshold on ONE direction is included', () => {

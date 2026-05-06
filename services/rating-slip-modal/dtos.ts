@@ -17,6 +17,7 @@
 
 import type { RatingSlipStatus } from '@/services/rating-slip/dtos';
 import type { GameType, TableStatus } from '@/services/table-context/dtos';
+import type { FinancialValue } from '@/types/financial';
 
 // === Main BFF Response DTO ===
 
@@ -139,17 +140,21 @@ export interface LoyaltySuggestionDTO {
 
 /**
  * Financial section of modal data.
+ *
+ * Envelope: actual / PFT / unknown (completeness unknown until visit closes).
+ * Consumers must read `.value` for arithmetic (PRD-080 F-10).
+ * Compliance isolation: MUST NOT be aggregated with compliance-class values.
  */
 // eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- BFF section
 export interface FinancialSectionDTO {
-  /** Total cash-in amount (cents) */
-  totalCashIn: number;
+  /** Total cash-in amount. Envelope: actual / PFT / unknown. */
+  totalCashIn: FinancialValue;
 
-  /** Total chips-out amount (cents) */
-  totalCashOut: number;
+  /** Total chips-out amount. Envelope: actual / PFT / unknown. */
+  totalCashOut: FinancialValue;
 
-  /** Net position (totalCashIn - totalCashOut) */
-  netPosition: number;
+  /** Net position (totalCashIn - totalCashOut). Envelope: actual / PFT / unknown. */
+  netPosition: FinancialValue;
 }
 
 /**

@@ -15,6 +15,7 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 327-365
  */
 
+import { financialValueSchema } from '@/lib/financial/schema';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -110,13 +111,31 @@ export function toFinancialTransactionDTOFromRpc(
 export function toVisitFinancialSummaryDTO(
   row: VisitFinancialSummaryRow,
 ): VisitFinancialSummaryDTO {
-  // View columns are nullable due to GROUP BY; provide safe defaults
+  // View columns are nullable due to GROUP BY; provide safe defaults.
+  // completeness.status is always 'unknown' at this layer — visit lifecycle
+  // is not available from the view. BFF routes may override when constructing
+  // surface DTOs (PRD-080 §4B projection constraint).
   return {
     visit_id: row.visit_id ?? '',
     casino_id: row.casino_id ?? '',
-    total_in: row.total_in ?? 0,
-    total_out: row.total_out ?? 0,
-    net_amount: row.net_amount ?? 0,
+    total_in: financialValueSchema.parse({
+      value: row.total_in ?? 0,
+      type: 'actual',
+      source: 'PFT',
+      completeness: { status: 'unknown' },
+    }),
+    total_out: financialValueSchema.parse({
+      value: row.total_out ?? 0,
+      type: 'actual',
+      source: 'PFT',
+      completeness: { status: 'unknown' },
+    }),
+    net_amount: financialValueSchema.parse({
+      value: row.net_amount ?? 0,
+      type: 'actual',
+      source: 'PFT',
+      completeness: { status: 'unknown' },
+    }),
     event_count: row.event_count ?? 0,
     first_transaction_at: row.first_transaction_at,
     last_transaction_at: row.last_transaction_at,

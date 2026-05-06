@@ -131,18 +131,11 @@ export interface FinancialTransactionDTO {
  *
  * Computed view of all transactions for a visit.
  *
- * DEFERRED (PRD-070 WS2 → Phase 1.2): the currency aggregate fields
- * (`total_in`, `total_out`, `net_amount`) cascade into multiple surfaces that
- * would require paired direct-consumer workstreams:
- *   - `app/api/v1/rating-slips/[id]/modal-data/route.ts:303-305` (WS4 slice)
- *   - `hooks/mtl/use-patron-daily-total.ts:125-126`
- *   - `components/mtl/gaming-day-summary.tsx:272,288`
- *   - `app/(dashboard)/players/[playerId]/timeline/_components/compliance-panel-wrapper.tsx:43`
- *   - `services/player360-dashboard/mappers.ts` (arithmetic on `.net_amount` / `.total_in`)
- * Phase 1.1 G1 deferral per PRD-070 §2.3. Classification target when wrapped
+ * Currency fields are wrapped as `FinancialValue` per PRD-080 WS2
  * (CLASSIFICATION-RULES §3.1 PFT visit aggregate):
- *   type `'actual'`, source `"PFT"`, completeness `'partial'` while visit OPEN,
- *   `'complete'` when CLOSED, `'unknown'` if visit lifecycle ambiguous.
+ *   type `'actual'`, source `"PFT"`, completeness `'unknown'` at service layer
+ *   (visit lifecycle not available at mapper level — BFF routes with visit context
+ *   may project completeness contextually per PRD-080 §4B).
  */
 // eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Aggregated response type
 export interface VisitFinancialSummaryDTO {
@@ -150,12 +143,12 @@ export interface VisitFinancialSummaryDTO {
   visit_id: string;
   /** Casino scope */
   casino_id: string;
-  /** Total amount IN in cents (buy-ins, markers issued). DEFERRED — see DTO-level note above. */
-  total_in: number;
-  /** Total amount OUT in cents (cashouts, marker repayments). DEFERRED. */
-  total_out: number;
-  /** Net amount in cents (total_in - total_out). DEFERRED. */
-  net_amount: number;
+  /** Total amount IN. Envelope: actual / PFT / unknown (see type doc). */
+  total_in: FinancialValue;
+  /** Total amount OUT. Envelope: actual / PFT / unknown. */
+  total_out: FinancialValue;
+  /** Net amount (total_in − total_out). Envelope: actual / PFT / unknown. */
+  net_amount: FinancialValue;
   /** Number of transactions */
   event_count: number;
   /** First transaction timestamp */

@@ -17,6 +17,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
 import { safeErrorDetails } from '@/lib/errors/safe-error-details';
+import { financialValueSchema } from '@/lib/financial/schema';
 import { calculateTheoFromDuration } from '@/lib/theo';
 import type { Database, Json } from '@/types/database.types';
 
@@ -195,9 +196,24 @@ export async function getPlayerSummary(
         ? {
             visit_id: activeVisit?.id ?? '',
             casino_id: activeVisit?.casino_id ?? '',
-            total_in: totalIn,
-            total_out: totalOut,
-            net_amount: totalIn - totalOut,
+            total_in: financialValueSchema.parse({
+              value: totalIn,
+              type: 'actual',
+              source: 'PFT',
+              completeness: { status: 'unknown' },
+            }),
+            total_out: financialValueSchema.parse({
+              value: totalOut,
+              type: 'actual',
+              source: 'PFT',
+              completeness: { status: 'unknown' },
+            }),
+            net_amount: financialValueSchema.parse({
+              value: totalIn - totalOut,
+              type: 'actual',
+              source: 'PFT',
+              completeness: { status: 'unknown' },
+            }),
             event_count: transactions.length,
             first_transaction_at:
               transactions[transactions.length - 1]?.created_at ?? null,

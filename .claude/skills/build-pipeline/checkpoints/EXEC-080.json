@@ -3,9 +3,9 @@
   "prd_id": "PRD-080",
   "prd_path": "docs/10-prd/PRD-080-financial-telemetry-pre-wave2-surface-debt-closure-v0.md",
   "exec_spec_path": "docs/21-exec-spec/EXEC-080-financial-telemetry-pre-wave2-surface-debt-closure.md",
-  "status": "awaiting_approval",
+  "status": "complete",
   "created_at": "2026-05-06T00:00:00Z",
-  "updated_at": "2026-05-06T00:00:00Z",
+  "updated_at": "2026-05-06T18:00:00Z",
   "complexity_prescreen": "streamlined",
   "complexity_override": "full",
   "gov010_check": "waived:bounded-debt-closure-slice-no-new-routes-or-schema",
@@ -13,14 +13,93 @@
   "fib_s_ref": null,
   "fib_s_loaded": false,
   "write_path_classification": "none",
-  "current_phase": 0,
-  "completed_workstreams": [],
+  "current_phase": 5,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS3b", "WS4", "WS5", "WS6", "WS7"],
   "dormant_workstreams": [],
-  "pending_workstreams": ["WS1", "WS2", "WS3", "WS3b", "WS4", "WS5", "WS6", "WS7"],
+  "pending_workstreams": [],
   "artifacts": {
     "exec_spec_written": true,
     "validation": "passed",
     "temporal_integrity": "clean",
-    "gate_name_patch": "4 custom gate names replaced with valid registry values"
+    "gate_name_patch": "4 custom gate names replaced with valid registry values",
+    "WS1": {
+      "gate": "gate-2-validation",
+      "result": "PASS",
+      "flags": [
+        "FLAG-1(WS4): app/review/mtl-form/mtl-entry-form.tsx does not exist — removed from WS4 outputs. Scope: 5 files, 13 callsites.",
+        "FLAG-2(WS5): compliance-dashboard.tsx:132 reads total_volume not total_in. Consumer map corrected."
+      ]
+    },
+    "WS2": {
+      "gate": "type-check",
+      "result": "PASS",
+      "notes": [
+        "VisitFinancialSummaryDTO.total_in/total_out/net_amount wrapped as FinancialValue (actual/PFT/unknown)",
+        "6 consumer sites updated; bridge in modal-data/route.ts removed in WS3",
+        "108 tests passing"
+      ]
+    },
+    "WS3": {
+      "gate": "type-check",
+      "result": "PASS",
+      "notes": [
+        "FinancialSectionDTO.totalCashIn/totalCashOut/netPosition wrapped as FinancialValue",
+        "rpc.ts: RPC path wraps DB bare numbers with financialValueSchema.parse (actual/PFT/unknown)",
+        "route.ts: WS2 bridge removed, FinancialValue passed through directly",
+        "rating-slip-modal.tsx: .value unwrap at lines 554/560"
+      ]
+    },
+    "WS3b": {
+      "gate": "type-check",
+      "result": "PASS",
+      "notes": [
+        "rating-slip-modal.tsx consumers updated (.value unwrap at lines 554, 560)",
+        "form-section-cash-in.tsx: component prop is derived number — no change needed"
+      ]
+    },
+    "WS4": {
+      "gate": "type-check",
+      "result": "PASS",
+      "notes": [
+        "MtlEntryDTO.amount wrapped (compliance/mtl_entry/complete)",
+        "Badge order invariant preserved",
+        "13 callsites + optimistic entry construction fixed",
+        "71 MTL mapper tests passing"
+      ]
+    },
+    "WS5": {
+      "gate": "type-check",
+      "result": "PASS",
+      "notes": [
+        "MtlGamingDaySummaryDTO.total_in/total_out/total_volume wrapped (compliance/mtl_entry/unknown — DEC-1)",
+        "max_single_in/out remain number|null (DEC-2)",
+        "4 consumer sites: compliance-dashboard.tsx, use-patron-daily-total.ts, compliance-panel-wrapper.tsx, gaming-day-summary.tsx",
+        "gaming-day-summary.tsx: removed incorrect inline wrapper construction (was source=mtl_gaming_day/completeness=complete)",
+        "71/71 MTL mapper tests passing"
+      ]
+    },
+    "WS6": {
+      "gate": "schema-validation",
+      "result": "PASS",
+      "notes": [
+        "OpenAPI updated: /visits/{visit_id}/financial-summary total_in/total_out/net_amount → $ref FinancialValue",
+        "OpenAPI updated: /rating-slips/{rating_slip_id}/modal-data financial.totalCashIn/totalCashOut/netPosition → $ref FinancialValue",
+        "route.test.ts: FinancialValue shape assertion test added",
+        "route.test.ts: F-11 isolation test added (asserts type:'actual', not 'compliance')",
+        "112 tests passing"
+      ]
+    },
+    "WS7": {
+      "gate": "build",
+      "result": "PASS",
+      "notes": [
+        "ROLLOUT-TRACKER.json: pre_wave_2 phase entry added — 12 fields closed (Groups A–D)",
+        "cursor.next_action updated to Wave 2 entry criteria check",
+        "cursor.last_closed_exec updated to EXEC-080",
+        "DEC-1 Wave 2 completeness-refinement dependency documented in pre_wave_2.wave_2_completeness_refinement_dependency",
+        "npm run lint exit 0 (prettier fixes applied to 8 files)",
+        "npm run build exit 0"
+      ]
+    }
   }
 }

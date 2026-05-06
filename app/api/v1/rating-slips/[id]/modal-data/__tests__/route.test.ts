@@ -59,9 +59,26 @@ jest.mock('@/services/loyalty', () => ({
 
 jest.mock('@/services/player-financial', () => ({
   createPlayerFinancialService: jest.fn(() => ({
-    getVisitSummary: jest
-      .fn()
-      .mockResolvedValue({ total_in: 0, total_out: 0, net_amount: 0 }),
+    getVisitSummary: jest.fn().mockResolvedValue({
+      total_in: {
+        value: 0,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      },
+      total_out: {
+        value: 0,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      },
+      net_amount: {
+        value: 0,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      },
+    }),
   })),
 }));
 
@@ -93,7 +110,26 @@ jest.mock('@/services/rating-slip-modal/rpc', () => ({
     },
     player: null,
     loyalty: null,
-    financial: { totalCashIn: 0, totalCashOut: 0, netPosition: 0 },
+    financial: {
+      totalCashIn: {
+        value: 0,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      },
+      totalCashOut: {
+        value: 0,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      },
+      netPosition: {
+        value: 0,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      },
+    },
     tables: [],
   }),
 }));
@@ -117,5 +153,45 @@ describe('GET /api/v1/rating-slips/[id]/modal-data', () => {
     const body = await response.json();
     expect(body.data).toHaveProperty('slip');
     expect(body.data).toHaveProperty('financial');
+  });
+
+  it('financial section fields are FinancialValue envelopes (PRD-080 WS3)', async () => {
+    const request = createMockRequest(
+      'GET',
+      `/api/v1/rating-slips/${slipId}/modal-data`,
+    );
+    const routeParams = createMockRouteParams({ id: slipId });
+    const response = await GET(request, routeParams);
+    const body = await response.json();
+
+    const { financial } = body.data;
+    for (const field of [
+      'totalCashIn',
+      'totalCashOut',
+      'netPosition',
+    ] as const) {
+      expect(financial[field]).toHaveProperty('value');
+      expect(financial[field]).toHaveProperty('type');
+      expect(financial[field]).toHaveProperty('source');
+      expect(financial[field]).toHaveProperty('completeness');
+      expect(financial[field].completeness).toHaveProperty('status');
+    }
+  });
+
+  it('F-11: financial fields are type actual, NOT compliance (isolation check)', async () => {
+    const request = createMockRequest(
+      'GET',
+      `/api/v1/rating-slips/${slipId}/modal-data`,
+    );
+    const routeParams = createMockRouteParams({ id: slipId });
+    const response = await GET(request, routeParams);
+    const body = await response.json();
+
+    const { financial } = body.data;
+    // FinancialSectionDTO comes from VisitFinancialSummaryDTO (actual authority)
+    // It must never carry type: 'compliance' — that would violate F-11 isolation
+    expect(financial.totalCashIn.type).toBe('actual');
+    expect(financial.totalCashOut.type).toBe('actual');
+    expect(financial.netPosition.type).toBe('actual');
   });
 });

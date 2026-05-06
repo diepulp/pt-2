@@ -279,19 +279,39 @@ describe('Player Financial Mappers', () => {
   // ===========================================================================
 
   describe('toVisitFinancialSummaryDTO', () => {
-    it('should map all summary fields', () => {
+    it('should map all summary fields with FinancialValue envelopes (PRD-080 WS2)', () => {
       const result = toVisitFinancialSummaryDTO(mockVisitSummaryRow);
 
-      expect(result).toEqual({
-        visit_id: 'visit-abc',
-        casino_id: 'casino-456',
-        total_in: 1000,
-        total_out: 250,
-        net_amount: 750,
-        event_count: 5,
-        first_transaction_at: '2025-01-15T10:00:00Z',
-        last_transaction_at: '2025-01-15T14:00:00Z',
+      expect(result.visit_id).toBe('visit-abc');
+      expect(result.casino_id).toBe('casino-456');
+      expect(result.event_count).toBe(5);
+      expect(result.first_transaction_at).toBe('2025-01-15T10:00:00Z');
+      expect(result.last_transaction_at).toBe('2025-01-15T14:00:00Z');
+
+      // FinancialValue envelopes — type: actual, source: PFT, completeness: unknown
+      expect(result.total_in).toEqual({
+        value: 1000,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
       });
+      expect(result.total_out).toEqual({
+        value: 250,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      });
+      expect(result.net_amount).toEqual({
+        value: 750,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      });
+
+      // Validate against canonical schema
+      expect(() => financialValueSchema.parse(result.total_in)).not.toThrow();
+      expect(() => financialValueSchema.parse(result.total_out)).not.toThrow();
+      expect(() => financialValueSchema.parse(result.net_amount)).not.toThrow();
     });
 
     it('should handle null values with defaults', () => {
@@ -299,9 +319,9 @@ describe('Player Financial Mappers', () => {
 
       expect(result.visit_id).toBe('');
       expect(result.casino_id).toBe('');
-      expect(result.total_in).toBe(0);
-      expect(result.total_out).toBe(0);
-      expect(result.net_amount).toBe(0);
+      expect(result.total_in.value).toBe(0);
+      expect(result.total_out.value).toBe(0);
+      expect(result.net_amount.value).toBe(0);
       expect(result.event_count).toBe(0);
       expect(result.first_transaction_at).toBeNull();
       expect(result.last_transaction_at).toBeNull();
@@ -324,9 +344,9 @@ describe('Player Financial Mappers', () => {
 
       const result = toVisitFinancialSummaryDTO(zeroRow);
 
-      expect(result.total_in).toBe(0);
-      expect(result.total_out).toBe(0);
-      expect(result.net_amount).toBe(0);
+      expect(result.total_in.value).toBe(0);
+      expect(result.total_out.value).toBe(0);
+      expect(result.net_amount.value).toBe(0);
       expect(result.event_count).toBe(0);
     });
 
@@ -340,7 +360,7 @@ describe('Player Financial Mappers', () => {
 
       const result = toVisitFinancialSummaryDTO(winningRow);
 
-      expect(result.net_amount).toBe(-500);
+      expect(result.net_amount.value).toBe(-500);
     });
   });
 
@@ -455,19 +475,20 @@ describe('Player Financial Mappers', () => {
       expect(result.event_count).toBe(10000);
     });
 
-    it('should handle high-precision amounts in summary', () => {
-      const precisionSummary = {
+    it('should handle large integer cent amounts in summary', () => {
+      // Financial values are always stored as integer cents (ISSUE-FB8EB717)
+      const largeSummary = {
         ...mockVisitSummaryRow,
-        total_in: 1000.99,
-        total_out: 250.5,
-        net_amount: 750.49,
+        total_in: 100099,
+        total_out: 25050,
+        net_amount: 75049,
       };
 
-      const result = toVisitFinancialSummaryDTO(precisionSummary);
+      const result = toVisitFinancialSummaryDTO(largeSummary);
 
-      expect(result.total_in).toBe(1000.99);
-      expect(result.total_out).toBe(250.5);
-      expect(result.net_amount).toBe(750.49);
+      expect(result.total_in.value).toBe(100099);
+      expect(result.total_out.value).toBe(25050);
+      expect(result.net_amount.value).toBe(75049);
     });
   });
 

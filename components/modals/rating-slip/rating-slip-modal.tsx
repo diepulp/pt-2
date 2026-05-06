@@ -551,13 +551,15 @@ export function RatingSlipModal({
 
   // Get financial data for display (in cents, convert to dollars)
   // Derive computed values from server data + form state (React 19 pattern: no useEffect sync)
-  const totalCashIn = modalData ? modalData.financial.totalCashIn / 100 : 0;
+  const totalCashIn = modalData
+    ? modalData.financial.totalCashIn.value / 100
+    : 0;
 
   // Chips Taken from form is in dollars, server data is in cents
   // computedChipsOut = server chips out + pending chips taken
   const pendingChipsTaken = Number(formState.chipsTaken) || 0;
   const computedChipsOut = modalData
-    ? (modalData.financial.totalCashOut + pendingChipsTaken * 100) / 100
+    ? (modalData.financial.totalCashOut.value + pendingChipsTaken * 100) / 100
     : 0;
 
   // Net Position = Cash In - Chips Out (using computed chips out for reactivity)

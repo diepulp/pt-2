@@ -1031,8 +1031,8 @@ paths:
       summary: Get visit financial summary
       description: >
         Aggregated financial totals for a visit. Currency fields (total_in, total_out, net_amount)
-        are bare number (cents). DEFERRED Phase 1.2 — classification target: actual / PFT /
-        partial (open visit) or complete (closed visit).
+        are FinancialValue envelopes — actual / PFT / unknown (PRD-080 WS2).
+        Completeness is unknown at this boundary; visit lifecycle is not surfaced here.
       tags: [Visits]
       security:
         - bearerAuth: []
@@ -1056,14 +1056,17 @@ paths:
                         properties:
                           visit_id: { $ref: '#/components/schemas/UUID' }
                           total_in:
-                            type: number
-                            description: Total buy-ins in cents. DEFERRED Phase 1.2.
+                            allOf:
+                              - $ref: '#/components/schemas/FinancialValue'
+                            description: Total buy-ins. Envelope: actual / PFT / unknown.
                           total_out:
-                            type: number
-                            description: Total cash-outs in cents. DEFERRED Phase 1.2.
+                            allOf:
+                              - $ref: '#/components/schemas/FinancialValue'
+                            description: Total cash-outs. Envelope: actual / PFT / unknown.
                           net_amount:
-                            type: number
-                            description: Net (total_in − total_out) in cents. DEFERRED Phase 1.2.
+                            allOf:
+                              - $ref: '#/components/schemas/FinancialValue'
+                            description: Net (total_in − total_out). Envelope: actual / PFT / unknown.
                           event_count: { type: integer }
                           first_transaction_at: { type: string, nullable: true }
                           last_transaction_at: { type: string, nullable: true }
@@ -1209,7 +1212,8 @@ paths:
       description: >
         Composite BFF response for rating-slip detail modal.
         averageBet is bare number — operator input (WAVE-1-CLASSIFICATION-RULES §6 carve-out).
-        totalCashOut is FinancialValue where the service emits it.
+        financial.totalCashIn, financial.totalCashOut, financial.netPosition are FinancialValue
+        envelopes — actual / PFT / unknown (PRD-080 WS3).
       tags: [RatingSlips]
       security:
         - bearerAuth: []
@@ -1239,10 +1243,22 @@ paths:
                             description: >
                               Operator input. Not a committed financial fact.
                               Bare number per WAVE-1-CLASSIFICATION-RULES §6 carve-out.
-                          totalCashOut:
-                            allOf:
-                              - $ref: '#/components/schemas/FinancialValue'
-                            description: Total cash-out. FinancialValue envelope from service.
+                          financial:
+                            type: object
+                            description: Visit financial summary for this slip's session.
+                            properties:
+                              totalCashIn:
+                                allOf:
+                                  - $ref: '#/components/schemas/FinancialValue'
+                                description: Total buy-ins. Envelope: actual / PFT / unknown.
+                              totalCashOut:
+                                allOf:
+                                  - $ref: '#/components/schemas/FinancialValue'
+                                description: Total cash-outs. Envelope: actual / PFT / unknown.
+                              netPosition:
+                                allOf:
+                                  - $ref: '#/components/schemas/FinancialValue'
+                                description: Net position. Envelope: actual / PFT / unknown.
                           started_at: { type: string, nullable: true }
                           ended_at: { type: string, nullable: true }
 
