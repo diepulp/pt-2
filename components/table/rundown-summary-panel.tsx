@@ -240,9 +240,11 @@ export function RundownSummaryPanel({
                   label="Fills"
                   value={{
                     value: -rundown.fills_total_cents,
-                    type: 'actual',
+                    type: 'estimated',
                     source: 'table_rundown',
-                    completeness: { status: 'complete' },
+                    completeness: {
+                      status: isDropPosted ? 'complete' : 'partial',
+                    },
                   }}
                 />
               ) : undefined
@@ -288,9 +290,11 @@ export function RundownSummaryPanel({
                   label="Credits"
                   value={{
                     value: rundown.credits_total_cents,
-                    type: 'actual',
+                    type: 'estimated',
                     source: 'table_rundown',
-                    completeness: { status: 'complete' },
+                    completeness: {
+                      status: isDropPosted ? 'complete' : 'partial',
+                    },
                   }}
                 />
               ) : undefined
@@ -343,11 +347,15 @@ export function RundownSummaryPanel({
                 ]}
                 value={{
                   value: rundown.table_win_cents ?? 0,
-                  type: 'actual',
+                  type: 'estimated',
                   source: 'table_rundown',
                   completeness: {
                     status:
-                      rundown.table_win_cents === null ? 'unknown' : 'complete',
+                      rundown.table_win_cents === null
+                        ? 'unknown'
+                        : isDropPosted
+                          ? 'complete'
+                          : 'partial',
                   },
                 }}
               />

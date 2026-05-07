@@ -53,7 +53,7 @@ function CompactKpi({
             label={title}
             value={{
               value: valueCents ?? 0,
-              type: metricGrade === 'ESTIMATE' ? 'estimated' : 'actual',
+              type: metricGrade === 'AUTHORITATIVE' ? 'actual' : 'estimated',
               source: 'shift_metrics',
               completeness: {
                 status: valueCents == null ? 'unknown' : 'complete',
@@ -80,12 +80,14 @@ export function SecondaryKpiStack({ data, isLoading }: SecondaryKpiStackProps) {
         title="Fills"
         valueCents={data?.fills_total_cents}
         accentColor="bg-blue-500"
+        metricGrade="ESTIMATE"
         isLoading={isLoading}
       />
       <CompactKpi
         title="Credits"
         valueCents={data?.credits_total_cents}
         accentColor="bg-violet-500"
+        metricGrade="ESTIMATE"
         isLoading={isLoading}
       />
       <CompactKpi

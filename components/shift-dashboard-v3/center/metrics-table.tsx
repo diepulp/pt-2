@@ -116,7 +116,7 @@ function TableRow({
           label="Fills"
           value={{
             value: table.fills_total_cents ?? 0,
-            type: 'actual',
+            type: 'estimated',
             source: 'shift_metrics',
             completeness: {
               status: table.fills_total_cents == null ? 'unknown' : 'complete',
@@ -130,7 +130,7 @@ function TableRow({
           label="Credits"
           value={{
             value: table.credits_total_cents ?? 0,
-            type: 'actual',
+            type: 'estimated',
             source: 'shift_metrics',
             completeness: {
               status:
