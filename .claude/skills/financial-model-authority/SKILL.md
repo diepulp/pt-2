@@ -75,6 +75,11 @@ Class B is never produced by projecting Class A. Class A is never produced by pr
 ### R3 — Outbox is the only propagation path
 Every authored event (Class A or B) emits to `finance_outbox` **within the same DB transaction** as the authoring write — one `BEGIN…COMMIT`, one `pg_current_xact_id()`. Not eventually. Not via background job. Not via post-commit trigger. Literally the same transaction boundary.
 
+Note: a `BEFORE`/`AFTER INSERT` trigger that writes **only** to `finance_outbox` satisfies this rule. A trigger that writes to any other table (projections, caches, bounded contexts) violates ADR-054 D6 regardless of transaction scope. The distinction is the trigger's *target*, not its *timing*.
+
+For the full outbox implementation contract — trigger classification table, `finance_outbox` DDL, relay worker design, idempotent consumer, projection layer requirements, and GAP-F1 closure checklist — read:
+`docs/issues/gaps/financial-data-distribution-standard/wave-2/outbox-knowledge-base.md`
+
 ### R4 — `origin_label` is immutable in transit
 A value's label travels unchanged through every consumer, projection, API response, and UI render. Consumers may not upgrade `'estimated'` to `'actual'`. Mixed-authority aggregates degrade to the lowest present, by the hierarchy: `Actual > Observed > Estimated`. `Compliance` is parallel — never merged with any other authority in a single aggregate.
 
@@ -163,7 +168,7 @@ Canonical target vs bridge DTO distinction: the catalog describes the destinatio
 
 GAP-F1 is the most structurally significant active gap. Any spec or implementation that assumes outbox producers exist must be flagged: that wire-up is pending.
 
-Read `references/open-issues.md` for full gap detail.
+Read `references/open-issues.md` for full gap detail. For the GAP-F1 closure checklist (6 concrete steps from DDL through consumer wiring), read §12 of the outbox knowledge base.
 
 ---
 
@@ -175,7 +180,7 @@ When reviewing a PRD, EXEC-SPEC, FIB, or code, walk through this sequence:
 
 **2. Check the write boundary.** Class A writes go through `rpc_create_financial_txn` or `rpc_create_financial_adjustment`. Class B writes go through the grind authoring path. Direct inserts into `player_financial_transaction` outside seed/test are non-conformant.
 
-**3. Check outbox coupling.** Does the authoring write emit to `finance_outbox` in the same transaction? (Note GAP-F1: this is not yet implemented. If a spec assumes it is available, flag the dependency.)
+**3. Check outbox coupling.** Does the authoring write emit to `finance_outbox` in the same transaction? (Note GAP-F1: this is not yet implemented. If a spec assumes it is available, flag the dependency.) If the work involves designing or reviewing the outbox itself — DDL shape, trigger vs. RPC form, relay worker, consumer idempotency, or projection surface contract — read the outbox knowledge base: `docs/issues/gaps/financial-data-distribution-standard/wave-2/outbox-knowledge-base.md`.
 
 **4. Check discriminator fields.** Does every row set `fact_class` and `origin_label` explicitly at insert? Are these typed as enums, not free strings?
 
@@ -357,6 +362,7 @@ The human-readable progress companion is `ROLLOUT-PROGRESS.md` in the same direc
 | `docs/70-governance/FIB_GENERATION_SCOPE_GUARDRAIL.md` | GOV-FIB-001 full rule set: change class gate, coverage mode rules, adjacent consequence ledger, red flags, §13 review checklist |
 | `docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md` | High-level execution strategy: rollout principles (§2), execution protocol/PRD-EXEC-SPEC chain (§2.5), non-goals (§8), skill routing (§9), exit criteria (§10) |
 | `docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json` | Machine-readable current state: active phase cursor, per-service status, deferred register, active bridges, API contract delta |
+| `docs/issues/gaps/financial-data-distribution-standard/wave-2/outbox-knowledge-base.md` | Full outbox implementation contract: `finance_outbox` DDL, trigger classification (D2 vs D6), relay worker, idempotent consumer, origin_label immutability, surface rendering contract (§6.2), GAP-F1 closure checklist (§12) |
 
 Source docs (read-only reference, do not patch):
 - `docs/issues/gaps/financial-data-distribution-standard/FACT-AUTHORITY-MATRX-FIN-DOMAIN.md`

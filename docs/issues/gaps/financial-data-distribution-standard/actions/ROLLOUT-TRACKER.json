@@ -82,7 +82,7 @@
           "id": "W2-C3",
           "criterion": "Q1–Q4 open questions resolved",
           "status": "not_met",
-          "detail": "All 4 questions open. Resolution requires post-Wave-1 design review + external stakeholder discovery (Q3)."
+          "detail": "Q1+Q2: design review scheduled 2026-05-06. Q3: resolved_deferred 2026-05-06 — out of pilot scope, no external consumer contract in Wave 2. Q4: awaiting performance testing under literal-same-txn constraint. Q1, Q2, Q4 still open."
         },
         {
           "id": "W2-C4",
@@ -98,9 +98,9 @@
         }
       ],
       "unblocking_sequence": [
-        "1. Schedule post-Wave-1 design review — resolve Q1 (PFT schema vs separate authoring store) and Q2 (grind normalization)",
-        "2. External stakeholder discovery — resolve Q3 (reconciliation consumer contract)",
-        "3. Performance testing under literal-same-txn constraint — resolve Q4 (outbox emission strategy)",
+        "1. [SCHEDULED 2026-05-06] Post-Wave-1 design review scheduled — agenda: Q1 (PFT schema vs separate authoring store) + Q2 (grind normalization). /financial-model-authority deployed for Phase 2 context gathering.",
+        "2. [RESOLVED 2026-05-06] Q3 deferred outside pilot scope. Wave 2 defines internal propagation only. Future externalization requires separate ADR + stakeholder discovery.",
+        "3. [IN PROGRESS 2026-05-06] Q4 surfaced for review. 'Both' option pre-rejected (ADR-055 P3/P4). Review must produce: latency budget + test protocol. Full resolution requires performance test execution.",
         "4. Draft WAVE-2-ROADMAP.md after Q1–Q4 resolved",
         "5. Verify FAILURE-SIMULATION-HARNESS.md against stub implementation",
         "6. Run /prd-writer for Wave 2 Phase 1"
@@ -722,15 +722,17 @@
       "id": "Q1",
       "question": "PFT schema expand for table-only events, or Class B stays in a separate authoring store?",
       "gates": "Wave 2",
-      "status": "open",
+      "status": "review_scheduled",
+      "review_scheduled_date": "2026-05-06",
       "wave_2_blocks": true,
-      "resolution_path": "Post-Wave 1 design review + prod data input"
+      "resolution_path": "Post-Wave-1 design review + prod data input"
     },
     {
       "id": "Q2",
       "question": "Grind normalized under shared parent with discriminator, or fully separate?",
       "gates": "Wave 2",
-      "status": "open",
+      "status": "review_scheduled",
+      "review_scheduled_date": "2026-05-06",
       "wave_2_blocks": true,
       "resolution_path": "Same review as Q1"
     },
@@ -738,17 +740,26 @@
       "id": "Q3",
       "question": "External reconciliation consumer contract?",
       "gates": "Wave 2",
-      "status": "open",
-      "wave_2_blocks": true,
-      "resolution_path": "External stakeholder discovery"
+      "status": "resolved_deferred",
+      "resolved_date": "2026-05-06",
+      "wave_2_blocks": false,
+      "resolution": "Explicitly deferred outside pilot scope. Wave 2 defines internal propagation guarantees only. No external consumer contract, reconciliation interface, or third-party event semantics are frozen in this phase. Outbox remains internal infrastructure. Future externalization requires a separate ADR + stakeholder discovery before any external consumer contract is defined."
     },
     {
       "id": "Q4",
       "question": "Outbox emission: trigger-based, shared RPC, or both?",
       "gates": "Wave 2",
-      "status": "open",
+      "status": "review_in_progress",
+      "surfaced_date": "2026-05-06",
       "wave_2_blocks": true,
-      "resolution_path": "Performance testing under literal-same-txn constraint (ADR-PROP D2)"
+      "resolution_path": "Performance testing under literal-same-txn constraint (ADR-PROP D2)",
+      "pre_rejected": "'both' option — ADR-055 P3 violation (asymmetric validation mechanisms) and P4 violation (asymmetric rollout). Reduces decision space to trigger vs RPC.",
+      "review_deliverables": [
+        "Latency budget agreed (p99 delta budget for outbox insert on PFT write critical path)",
+        "Performance test protocol defined (write volume, concurrency, measurement boundary, failure path)",
+        "Confirmation that chosen form applies to both Class A and Class B in same migration (ADR-055 P4)"
+      ],
+      "full_resolution_requires": "Performance test data against defined protocol — cannot be answered by review alone"
     }
   ],
 
