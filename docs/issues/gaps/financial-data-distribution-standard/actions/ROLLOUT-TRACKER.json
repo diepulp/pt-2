@@ -81,8 +81,9 @@
         {
           "id": "W2-C3",
           "criterion": "Q1–Q4 open questions resolved",
-          "status": "not_met",
-          "detail": "Q1+Q2: design review scheduled 2026-05-06. Q3: resolved_deferred 2026-05-06 — out of pilot scope, no external consumer contract in Wave 2. Q4: awaiting performance testing under literal-same-txn constraint. Q1, Q2, Q4 still open."
+          "status": "met",
+          "resolved_date": "2026-05-06",
+          "detail": "All four resolved 2026-05-06. Q1: two-store model confirmed, PFT expansion rejected. Q2: separate tables confirmed, shared parent not chosen. Q3: deferred outside pilot scope. Q4: shared RPC-coupled insertion adopted, triggers rejected for pilot phase."
         },
         {
           "id": "W2-C4",
@@ -98,9 +99,9 @@
         }
       ],
       "unblocking_sequence": [
-        "1. [SCHEDULED 2026-05-06] Post-Wave-1 design review scheduled — agenda: Q1 (PFT schema vs separate authoring store) + Q2 (grind normalization). /financial-model-authority deployed for Phase 2 context gathering.",
+        "1. [RESOLVED 2026-05-06] Q1: two-store model confirmed. PFT expansion rejected (ADR-052 §4 pattern). Q2: separate tables confirmed. Shared parent not chosen ('I still would not unify now') — conditionally permitted by ADR set but behavioral convergence risk favors structural separation.",
         "2. [RESOLVED 2026-05-06] Q3 deferred outside pilot scope. Wave 2 defines internal propagation only. Future externalization requires separate ADR + stakeholder discovery.",
-        "3. [IN PROGRESS 2026-05-06] Q4 surfaced for review. 'Both' option pre-rejected (ADR-055 P3/P4). Review must produce: latency budget + test protocol. Full resolution requires performance test execution.",
+        "3. [RESOLVED 2026-05-06] Q4: shared RPC-coupled outbox insertion adopted for both Class A and Class B. Trigger-based insertion rejected for pilot. RPC performs deterministic outbox construction only — no projection writes, fan-out, or business logic.",
         "4. Draft WAVE-2-ROADMAP.md after Q1–Q4 resolved",
         "5. Verify FAILURE-SIMULATION-HARNESS.md against stub implementation",
         "6. Run /prd-writer for Wave 2 Phase 1"
@@ -722,19 +723,19 @@
       "id": "Q1",
       "question": "PFT schema expand for table-only events, or Class B stays in a separate authoring store?",
       "gates": "Wave 2",
-      "status": "review_scheduled",
-      "review_scheduled_date": "2026-05-06",
-      "wave_2_blocks": true,
-      "resolution_path": "Post-Wave-1 design review + prod data input"
+      "status": "resolved",
+      "resolved_date": "2026-05-06",
+      "wave_2_blocks": false,
+      "resolution": "Two-store model confirmed for Wave 2. PFT expansion rejected — materially equivalent to ADR-052 §4 explicitly rejected pattern (PFT absorbs grind). Any future reconsideration requires a superseding ADR before any code. Class B remains in a separate authoring store."
     },
     {
       "id": "Q2",
       "question": "Grind normalized under shared parent with discriminator, or fully separate?",
       "gates": "Wave 2",
-      "status": "review_scheduled",
-      "review_scheduled_date": "2026-05-06",
-      "wave_2_blocks": true,
-      "resolution_path": "Same review as Q1"
+      "status": "resolved",
+      "resolved_date": "2026-05-06",
+      "wave_2_blocks": false,
+      "resolution": "Separate tables confirmed for Wave 2. Shared parent not chosen — 'I still would not unify now.' Shared parent is conditionally permitted by the ADR set (five-commitment checklist: physical partitioning + DB-enforced discriminator + service isolation + separate DTOs + projection rebuild isolation) but behavioral convergence risk makes structural separation the safer default. Decision is revisable in a future phase with explicit five-commitment sign-off."
     },
     {
       "id": "Q3",
@@ -749,17 +750,19 @@
       "id": "Q4",
       "question": "Outbox emission: trigger-based, shared RPC, or both?",
       "gates": "Wave 2",
-      "status": "review_in_progress",
-      "surfaced_date": "2026-05-06",
-      "wave_2_blocks": true,
-      "resolution_path": "Performance testing under literal-same-txn constraint (ADR-PROP D2)",
-      "pre_rejected": "'both' option — ADR-055 P3 violation (asymmetric validation mechanisms) and P4 violation (asymmetric rollout). Reduces decision space to trigger vs RPC.",
-      "review_deliverables": [
-        "Latency budget agreed (p99 delta budget for outbox insert on PFT write critical path)",
-        "Performance test protocol defined (write volume, concurrency, measurement boundary, failure path)",
-        "Confirmation that chosen form applies to both Class A and Class B in same migration (ADR-055 P4)"
+      "status": "resolved",
+      "resolved_date": "2026-05-06",
+      "wave_2_blocks": false,
+      "resolution": "Shared RPC-coupled outbox insertion adopted for both Class A (PFT) and Class B (grind) authoring paths. Each authoring RPC inserts the authoring row and the corresponding finance_outbox row within the same literal database transaction (ADR-054 D2). Trigger-based outbox insertion rejected for the pilot phase.",
+      "rationale": [
+        "Preserves explicit transaction ownership",
+        "Avoids hidden propagation behavior",
+        "Improves rollback and debug visibility",
+        "Aligns with existing RPC-centric architecture",
+        "Simplifies parity enforcement under ADR-055",
+        "Reduces future trigger-creep risk"
       ],
-      "full_resolution_requires": "Performance test data against defined protocol — cannot be answered by review alone"
+      "constraint": "The RPC layer performs deterministic outbox construction only. No projection writes, fan-out, notifications, reconciliation, or business-side propagation logic permitted inside the RPC."
     }
   ],
 

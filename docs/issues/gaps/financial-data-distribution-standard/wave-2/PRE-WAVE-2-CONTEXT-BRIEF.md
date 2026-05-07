@@ -45,7 +45,7 @@ Wave 1 delivered the **surface contract only** — the FinancialValue envelope o
 
 4. **Production data signal** — The review needs actual production write patterns: are there real events that are currently falling through the cracks (unattributed observations that should be PFT rows)? Without that data, Q1 is a theoretical architecture debate.
 
-**Pre-wired answer the review cannot override without a new ADR:** If the proposal is "expand PFT with an `is_table_only` flag or nullable `player_id`," that is the rejected pattern from ADR-052 §4. The review must produce a superseding ADR or accept the two-store model.
+**Decision (2026-05-06):** Two-store model confirmed for Wave 2. PFT expansion rejected — the proposal is materially equivalent to the ADR-052 §4 rejected pattern. Any future reconsideration requires a superseding ADR before any code is written.
 
 ### Q2 — Grind normalized under shared parent with discriminator, or fully separate?
 
@@ -93,7 +93,7 @@ Without all five, the shared parent is an invitation to drift.
 4. **Separate DTOs** — `LedgerFactDTO` and `OperationalFactDTO` are not derived from a shared parent DTO. The shared table does not produce a shared DTO.
 5. **Projection rebuild isolation** — a projection rebuildable from `fact_class = 'ledger'` rows alone must never depend on `fact_class = 'operational'` rows, and vice versa.
 
-If the review cannot commit to all five, the recommendation is separate tables. Separate tables make the boundary legible to every engineer who touches the codebase without needing to know the governance rules. The shared parent requires knowing the rules; separate tables enforce them structurally.
+**Decision (2026-05-06):** Separate tables confirmed for Wave 2. The shared parent is conditionally permitted by the ADR set (the five-commitment checklist above is not voided) but behavioral convergence risk favors structural separation as the default. This decision is revisable in a future phase only with explicit five-commitment sign-off documented before any DDL is written.
 
 **Outbox envelope is unaffected by this decision:** ADR-055 P1 envelope parity means the `finance_outbox` column set is identical regardless of where Class B is stored. Q2 affects the authoring RPC, not the event schema. If anyone argues Q2 affects the outbox envelope, that is a misunderstanding to correct in the review.
 
@@ -105,43 +105,28 @@ If the review cannot commit to all five, the recommendation is separate tables. 
 
 **What the ADR set permits:** Both forms satisfy the literal same-transaction rule (ADR-054 D2), but under different conditions. A `BEFORE`/`AFTER INSERT` trigger that writes **only** to `finance_outbox` within the same transaction is permitted. A single RPC that inserts both the authoring row and the outbox row before `COMMIT` is permitted. A post-commit trigger, a background job, or two RPCs described as "atomic" are all forbidden — ADR-054 D2 is literal.
 
-**Why the design review cannot fully answer Q4:** The resolution path requires performance testing under actual write load (ADR-PROP D2 constraint). Under concurrent buy-in recording — multiple tables simultaneously — a synchronous trigger adds latency inside every PFT write on the critical path. A modified RPC moves that cost to the application layer where it is measurable and rollback-safe. The KB correctly defers Q4; the review cannot substitute a preference for data.
+**Decision (2026-05-06): Shared RPC-coupled outbox insertion adopted.**
 
-**What the review can and must do now:**
+Each authoring RPC inserts the authoring row and the corresponding `finance_outbox` row within the same literal database transaction (ADR-054 D2). This applies to both Class A (`rpc_create_financial_txn`, `rpc_create_financial_adjustment`) and Class B (grind authoring RPC) simultaneously — ADR-055 P4, no asymmetric rollout.
 
-**1. Pre-reject the "both" option on parity grounds.**
+Trigger-based outbox insertion is **rejected for the pilot phase**.
 
-"Trigger for Class A, RPC for Class B" (or vice versa) is not a third option — it is an ADR-055 P3 violation. P3 requires ingestion strictness to be symmetric across classes: required-field validation, type constraints, and timestamp discipline must be identical. A trigger validates at DB level; an RPC validates at application level. These are not the same mechanism. If one class enforces outbox field presence via a trigger CHECK and the other enforces it via Zod, the two classes have divergent failure modes, divergent error surfaces, and divergent rollback behaviors. That asymmetry compounds over time.
+**Rationale:**
+- Preserves explicit transaction ownership at the RPC boundary
+- Avoids hidden propagation behavior (ADR-054 D6 risk eliminated by design)
+- Rollback and debug visibility is at the application layer, not buried in DB trigger firing order
+- Aligns with the existing RPC-centric architecture — no new DB-side mechanism class introduced
+- Simplifies parity enforcement under ADR-055: one validation mechanism (application-layer Zod + SQL) for both classes
+- Reduces trigger-creep risk — triggers permitted by ADR-054 D2 are now an explicit non-starter for this system
 
-The "both" option also violates P4 (parity before feature rollout): if trigger-coupling is deployed for Class A while Class B's RPC coupling is still in progress, Class A is live with outbox and Class B is not — exactly the "Class A first, Class B catches up" pattern the ADR forbids.
+**Hard constraint on RPC scope:** The RPC performs deterministic outbox construction only. Permitted: insert authoring row, insert `finance_outbox` row, return authoring row `id`. Forbidden inside the RPC: projection writes, fan-out, notifications, reconciliation steps, or any business-side propagation logic. The RPC boundary is the propagation firewall.
 
-**The review's pre-rejection is a valid deliverable even without test data.** It reduces the decision space from three options to two.
+**Pre-rejected option (recorded for completeness):** "Both" (trigger for one class, RPC for the other) is an ADR-055 P3 violation (asymmetric validation mechanisms) and P4 violation (asymmetric rollout). It was eliminated before the trigger vs. RPC decision was made.
 
-**2. Define the test protocol for trigger vs. RPC.**
-
-The review must specify what "performance testing under literal-same-txn constraint" means before it can be executed. Minimum protocol definition:
-
-| Dimension | What to specify |
-|---|---|
-| Write volume | Sustained concurrent buy-in rate (transactions/sec) representing peak pit activity |
-| Concurrency | Number of simultaneous table sessions; simulates floor-wide simultaneous action |
-| Latency budget | Acceptable p99 PFT write latency with and without outbox insert — the delta is the cost of coupling |
-| Failure path | What happens when the outbox insert fails: does the authoring write roll back? Both forms must roll back identically. |
-| Measurement boundary | Wall-clock time at the RPC call site (application layer), not just DB execution time |
-
-Without this protocol, the performance test produces a number but not a decision. The review must output the protocol even if it cannot run the test.
-
-**3. Confirm the `rpc_create_financial_txn` modification scope.**
-
-Regardless of which form is chosen, the existing RPC (migration `20251109214028`) has no outbox insert. The review must confirm:
-- For the **RPC form**: `rpc_create_financial_txn` is modified to insert into `finance_outbox` in the same `BEGIN…COMMIT`. `event_id` is generated at the RPC boundary using UUID v7 (not `gen_random_uuid()`). Same modification applies to `rpc_create_financial_adjustment` and the Class B grind authoring RPC simultaneously (ADR-055 P4).
-- For the **trigger form**: the trigger fires on `INSERT` into `player_financial_transaction` and writes only to `finance_outbox`. It must be classified as infrastructure-only (no business logic, no cross-domain propagation per ADR-054 D6). A corresponding trigger on the Class B grind authoring table must ship in the same migration (P4).
-
-**4. Establish the latency budget before testing starts.**
-
-A latency budget must be agreed before running the test or neither result is interpretable. If the trigger form adds 2ms p99 to every PFT insert and the latency budget is 5ms, that's acceptable. If the budget is 1ms, it is not. The review must produce the budget number from product/operator requirements, not from the test output.
-
-**What Q4 resolution looks like:** A documented decision — trigger or RPC — supported by test data showing the chosen form stays within the latency budget, with a confirmation that the same form is deployed for both Class A and Class B in the same migration.
+**Implementation scope for Wave 2 Day 1 (alongside DDL migration):**
+- `rpc_create_financial_txn` modified to insert into `finance_outbox` in same `BEGIN…COMMIT`; `event_id` generated at RPC boundary with UUID v7
+- `rpc_create_financial_adjustment` same modification
+- Class B grind authoring RPC same modification — ships in same migration as Class A (P4)
 
 ---
 
@@ -197,19 +182,20 @@ Q4 asks: outbox emission via trigger-based insert, shared RPC, or both? The KB (
 
 ## Summary for the Design Review Agenda
 
-**Sharpened recommendations:**
+**Decisions recorded (2026-05-06):**
 
-| Decision | Recommendation | Rationale |
+| Question | Decision | Status |
 |---|---|---|
-| **Q1** | Reject PFT expansion unless ADR-052 is formally superseded | The proposal is materially equivalent to the §4 rejected pattern; without a superseding ADR the review has no authority to permit it |
-| **Q2** | Permit shared parent **only if** physically partitioned + DB-enforced discriminator + service isolation mandatory | The ADR does not forbid it, but the risk is behavioral convergence, not schema ambiguity — structural separation is safer; shared parent requires five simultaneous enforcement commitments |
+| **Q1** — PFT expansion vs. separate store | Two-store model confirmed. PFT expansion rejected — ADR-052 §4 pattern. Future reconsideration requires superseding ADR. | ✅ Resolved |
+| **Q2** — Shared parent vs. separate tables | Separate tables confirmed. Shared parent conditionally permitted by ADR set but behavioral convergence risk favors structural separation. Revisable with explicit five-commitment sign-off. | ✅ Resolved |
+| **Q3** — External reconciliation consumer contract | Deferred outside pilot scope. Wave 2 = internal propagation only. ADR-053 D4 defines the integration point. Future externalization requires separate ADR + stakeholder discovery. | ✅ Resolved (deferred) |
+| **Q4** — Outbox emission: trigger vs. RPC | Shared RPC-coupled insertion adopted for both classes. Triggers rejected for pilot. RPC performs deterministic outbox construction only — no projection writes, fan-out, or business logic. | ✅ Resolved |
 
-**The underlying principle for the review to hold:** Schema-level correctness is necessary but insufficient. The question is not "can this schema be used correctly?" but "will this schema be used correctly under time pressure, by engineers who haven't read the ADR set, six months from now?" Separate stores answer that question structurally. A shared parent answers it institutionally. The former is cheaper to maintain.
+**All four questions resolved. Wave 2 planning is unblocked.**
 
-**Must resolve (blocks Wave 2 entry):**
-1. **Q1** — Is the PFT expansion proposal materially distinct from the ADR-052 §4 rejected pattern? If yes, produce a superseding ADR before any code. If no, confirm two-store model as final.
-2. **Q2** — If shared parent: confirm all five enforcement commitments can be made and documented. If not, default to separate tables. Update ADR-052 D3 commentary with the decision either way.
-3. **DDL migration plan** for `finance_outbox` — the table must be rebuilt before GAP-F1 work begins. Zero-data migration (table is empty). This is Wave 2 Day 1.
+**Remaining Wave 2 prerequisites before `/prd-writer`:**
+1. **DDL migration** for `finance_outbox` — table must be rebuilt before GAP-F1 work begins (zero-data migration). Wave 2 Day 1.
+2. **Failure harness stub run** — `FAILURE-SIMULATION-HARNESS.md` is EXEC-READY but not yet verified against a stub implementation (I1–I4).
 
 **Resolved by explicit deferral (no longer blocking Wave 2):**
 - Q3 (reconciliation consumer contract) — deferred outside pilot scope 2026-05-06. Wave 2 defines internal propagation guarantees only. No external consumer contract, reconciliation interface, or third-party event semantics are frozen in this phase. Outbox remains internal infrastructure. Future externalization requires a separate ADR + stakeholder discovery. ADR-053 D4 already defines the integration point (consumers read from `finance_outbox` with authority labels intact) — that is sufficient for Wave 2.
