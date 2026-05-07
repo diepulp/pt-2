@@ -6,7 +6,7 @@ status: Wave 1 Complete — Pre-Wave-2 Surface Debt Closed. Wave 2 NOT STARTED.
 date: 2026-05-06
 wave_1_closed: 2026-05-06
 pre_wave_2_closed: 2026-05-06
-wave_2_status: not_started — blocked on Q1–Q4 resolution and WAVE-2-ROADMAP.md
+wave_2_status: pre-planning — Q3 resolved_deferred; Q1+Q2 design review scheduled; Q4 in progress (pre-rejection done, test protocol pending); PRE-WAVE-2-CONTEXT-BRIEF.md is substrate for WAVE-2-ROADMAP.md
 scope: PT-2 pilot, from decision-freeze (2026-04-23) to production-hardened dual-layer outbox
 purpose: Execution plan from the current point through Wave 1 (surface contract) and Wave 2 (dual-layer outbox), with explicit gates and validation tie-ins.
 derived_from:
@@ -57,7 +57,7 @@ derived_from:
 | 1.4 Validation: Lint + Truth-Telling Tests | ✅ Complete | 2026-05-05 |
 | 1.5 Rollout & Sign-Off | ✅ Complete | 2026-05-06 |
 | Pre-Wave-2 Surface Debt Closure (PRD-080) | ✅ Complete | 2026-05-06 |
-| Wave 2 Dual-Layer + Outbox | 🔴 Not Started | Q1–Q4 open; WAVE-2-ROADMAP.md not drafted |
+| Wave 2 Dual-Layer + Outbox | 🟡 Pre-Planning | Q3 resolved_deferred; Q1+Q2 design review scheduled 2026-05-06; Q4 in progress; PRE-WAVE-2-CONTEXT-BRIEF.md produced as WAVE-2-ROADMAP.md substrate |
 
 ---
 
@@ -434,7 +434,13 @@ Detailed plan deferred until Wave 1 exit gate passes. Scope outline below for co
 
 ## Wave 2 will need its own roadmap
 
-Open a `WAVE-2-ROADMAP.md` after Wave 1 sign-off. Do not pre-plan Wave 2 phases now — the open questions in §6 change what Wave 2 looks like.
+`WAVE-2-ROADMAP.md` is the next document to be planned. Its substrate is already produced:
+
+```
+docs/issues/gaps/financial-data-distribution-standard/wave-2/PRE-WAVE-2-CONTEXT-BRIEF.md
+```
+
+The brief contains: Wave 1 conformance posture, Q1–Q4 analysis with pre-rejections and five-commitment checklist (Q2), Q3 deferral rationale, Q4 test protocol requirements, GAP-F1 DDL inventory, and the existing `finance_outbox` field-level gap table. `WAVE-2-ROADMAP.md` should be authored from this substrate once Q1, Q2, and Q4 are resolved. Do not draft Wave 2 phases before Q1/Q2 are settled — the schema decisions change the phase structure.
 
 ---
 
@@ -458,14 +464,14 @@ The harness file is EXEC-READY for Wave 2. Do not let it bit-rot during Wave 1 �
 
 From `ADR-FINANCIAL-FACT-MODEL §5`, these are deferred but must resolve before Wave 2 schema design begins. They do **not** gate Wave 1.
 
-| Question | Resolution path | Blocks |
-|----------|-----------------|--------|
-| Should PFT schema expand to support table-only events, or does Class B stay in a separate authoring store? | Post–Wave 1 design review; input from Wave 1 production data | Wave 2 schema migration |
-| Should grind remain fully separate, or partially normalized under a shared parent with a discriminator column? | Same review | Wave 2 schema migration |
-| What does the external reconciliation consumer contract look like? | External stakeholder discovery | Wave 2 outbox consumer design |
-| Should outbox emission use trigger-based insertion, shared RPC, or both? | Literal-same-transaction rule (ADR-PROP D2) constrains options; performance testing decides | Wave 2 authoring primitive |
+| Question | Status | Resolution path | Blocks |
+|----------|--------|-----------------|--------|
+| Q1 — PFT schema expand for table-only events, or Class B stays in a separate authoring store? | 🟡 Review scheduled 2026-05-06 | Post-Wave-1 design review. Pre-wired: PFT expansion requires superseding ADR-052 §4 (explicitly rejected pattern). See PRE-WAVE-2-CONTEXT-BRIEF.md §Q1. | Wave 2 schema migration |
+| Q2 — Grind normalized under shared parent with discriminator, or fully separate? | 🟡 Review scheduled 2026-05-06 | Same review. Shared parent permitted only with physical partitioning + DB-enforced discriminator + service isolation (five-commitment checklist). Risk is behavioral convergence, not schema ambiguity. See PRE-WAVE-2-CONTEXT-BRIEF.md §Q2. | Wave 2 schema migration |
+| Q3 — External reconciliation consumer contract? | ✅ Resolved — deferred 2026-05-06 | Explicitly out of pilot scope. Wave 2 defines internal propagation only. ADR-053 D4 defines the integration point (outbox read surface, labels intact). Future externalization requires separate ADR + stakeholder discovery. | ~~Wave 2 outbox consumer design~~ — no longer blocking |
+| Q4 — Outbox emission: trigger-based, shared RPC, or both? | 🟡 In progress 2026-05-06 | "Both" option pre-rejected (ADR-055 P3/P4 violation). Trigger vs. RPC requires performance test against agreed latency budget. Review must produce: latency budget + test protocol. Full resolution requires test execution. See PRE-WAVE-2-CONTEXT-BRIEF.md §Q4. | Wave 2 authoring primitive |
 
-Track resolutions in a `WAVE-2-PREP-DECISIONS.md` accumulated during Wave 1.
+Resolutions are tracked in `ROLLOUT-TRACKER.json → open_questions` (machine-readable) and `PRE-WAVE-2-CONTEXT-BRIEF.md` (analysis substrate). `WAVE-2-PREP-DECISIONS.md` is superseded by the brief as the tracking artifact.
 
 ---
 
@@ -532,11 +538,11 @@ Track resolutions in a `WAVE-2-PREP-DECISIONS.md` accumulated during Wave 1.
 |-----------|--------|-------|
 | Wave 1 complete | ✅ Met | Phases 1.0–1.5 closed 2026-04-23 — 2026-05-06. Sign-off: WAVE-1-PHASE-1.5-SIGNOFF.md |
 | Pre-Wave-2 surface debt closed | ✅ Met | PRD-080 / EXEC-080, 2026-05-06. 12 fields wrapped across 4 DTOs in 3 bounded contexts. |
-| §6 open questions (Q1–Q4) resolved | ❌ Open | All 4 unresolved. See §6. No design review scheduled. |
-| `WAVE-2-ROADMAP.md` drafted | ❌ Not created | Blocked on Q1–Q4 resolution. Do not pre-plan Wave 2 phases. |
+| §6 open questions (Q1–Q4) resolved | 🟡 Partial | Q3 resolved_deferred 2026-05-06. Q1+Q2 design review scheduled. Q4 in progress — "both" option pre-rejected; test protocol pending. See `ROLLOUT-TRACKER.json → open_questions`. |
+| `WAVE-2-ROADMAP.md` drafted | 🟡 Substrate ready | `PRE-WAVE-2-CONTEXT-BRIEF.md` produced 2026-05-06 as planning substrate. `WAVE-2-ROADMAP.md` is next to be planned — blocked on Q1/Q2 resolution from design review. |
 | Failure harness verified against stubs | ❌ Not confirmed | FAILURE-SIMULATION-HARNESS.md is EXEC-READY but has not been run against a stub implementation. |
 
-**Wave 2 readiness: NOT READY.** Three of five criteria unmet. Unblocking sequence: (1) schedule post-Wave-1 design review to resolve Q1–Q4, (2) external stakeholder discovery for Q3 (reconciliation consumer contract), (3) draft WAVE-2-ROADMAP.md, (4) verify failure harness against stub.
+**Wave 2 readiness: NOT READY — pre-planning in progress.** Unblocking sequence: (1) design review closes Q1+Q2 → (2) Q4 test protocol executed → (3) draft `WAVE-2-ROADMAP.md` from `PRE-WAVE-2-CONTEXT-BRIEF.md` substrate → (4) verify failure harness against stub → (5) run `/prd-writer` for Wave 2 Phase 1.
 
 ---
 
