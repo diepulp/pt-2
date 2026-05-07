@@ -13,7 +13,6 @@ import { ChevronRightIcon } from 'lucide-react';
 
 import { FinancialValue } from '@/components/financial';
 import { CoverageBar } from '@/components/shift-dashboard-v3/trust';
-import { formatCents } from '@/lib/format';
 import type { ShiftPitMetricsDTO } from '@/services/table-context/shift-metrics/dtos';
 
 export interface PitTableProps {
@@ -48,7 +47,16 @@ function PitRow({
         </button>
       </td>
       <td className="py-3 px-4 text-right font-mono tabular-nums">
-        {formatCents(pit.win_loss_estimated_total_cents)}
+        <FinancialValue
+          variant="compact"
+          label="Win/Loss"
+          value={{
+            value: pit.win_loss_estimated_total_cents ?? 0,
+            type: 'estimated',
+            source: 'shift_metrics',
+            completeness: { status: 'partial' },
+          }}
+        />
       </td>
       <td className="py-3 px-4 text-right font-mono tabular-nums">
         <FinancialValue

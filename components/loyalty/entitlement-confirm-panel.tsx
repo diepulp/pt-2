@@ -108,7 +108,7 @@ export function EntitlementConfirmPanel({
               label="Configured face value"
               value={{
                 value: faceValueCents,
-                type: 'actual',
+                type: 'compliance',
                 source: 'reward_catalog',
                 completeness: { status: 'complete' },
               }}
@@ -126,7 +126,7 @@ export function EntitlementConfirmPanel({
               label="Configured match wager"
               value={{
                 value: matchWagerCents,
-                type: 'actual',
+                type: 'compliance',
                 source: 'reward_catalog',
                 completeness: { status: 'complete' },
               }}

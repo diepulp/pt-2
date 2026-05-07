@@ -1,11 +1,13 @@
 ---
 id: WAVE-2-BLOCKERS
-status: OPEN
+status: RESOLVED
 date: 2026-05-06
+resolved: 2026-05-07
 scope: Wave 2 pre-conditions — must resolve before producer wiring begins
 references:
   - wave-2/WAVE-2-BLOCKER-UL-RECONCILIATION-PATH.md
   - wave-2/PRE-WAVE-2-UBIQUITOUS-LANGUAGE-PROPOSITION.md
+  - wave-2/WAVE-2-UBIQUITOUS-LANGUAGE-CLARIFICATION.md
   - actions/WAVE-1-CLASSIFICATION-RULES.md
 ---
 
@@ -19,7 +21,7 @@ not rollbacks of Wave 1.
 
 ## B-1 — UL Reconciliation (Ontological)
 
-**Status:** OPEN  
+**Status:** RESOLVED  
 **Source:** `wave-2/WAVE-2-BLOCKER-UL-RECONCILIATION-PATH.md`  
 **Nature:** Pre-wire semantic clarity
 
@@ -41,6 +43,11 @@ changing that surface label.
 3. A Wave 2 UL clarification note added to distinguish projection participation
    from authority semantics. This is semantic stabilization guidance — not an
    architectural re-foundation or ADR replacement.
+
+**Resolution note (2026-05-07):** All three criteria met.
+- Criterion 1: Dependency Event terminology present throughout Wave 2 planning docs.
+- Criterion 2: Outbox scope described as Projection Input propagation in `outbox-knowledge-base.md` and `WAVE-2-BLOCKER-UL-RECONCILIATION-PATH.md`.
+- Criterion 3: `WAVE-2-UBIQUITOUS-LANGUAGE-CLARIFICATION.md` produced as the canonical stabilization note.
 
 **Containment note:** This refinement must not expand into reconciliation
 infrastructure, inventory settlement systems, or general casino accounting

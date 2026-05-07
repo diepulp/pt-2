@@ -276,7 +276,7 @@ System does NOT provide:
 ```ts
 Event {
   event_id: string
-  aggregate_id: string   // table_id
+  aggregate_id: string
   type: string
   payload: DomainFact
   metadata: {

@@ -94,7 +94,7 @@ export function HeroWinLossCompact({
             label="Win/Loss"
             value={{
               value: winLossCents,
-              type: metricGrade === 'ESTIMATE' ? 'estimated' : 'actual',
+              type: metricGrade === 'AUTHORITATIVE' ? 'actual' : 'estimated',
               source: 'shift_metrics',
               completeness: { status: 'complete' },
             }}
