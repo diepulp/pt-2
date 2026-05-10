@@ -5,20 +5,29 @@
 commands:
   feature-start:
     description: "Start a new feature development pipeline (FIB context load + Phase 0: SRM)"
-    usage: "/feature-start <feature-name>"
+    usage: "/feature-start <feature-name> [--fib-h <path>] [--fib-s <path>]"
     arguments:
       - name: feature-name
         required: true
         description: "kebab-case feature identifier (e.g., player-identity-enrollment)"
-    example: "/feature-start player-identity-enrollment"
+      - name: --fib-h
+        required: false
+        description: "Explicit path to the FIB-H artifact (e.g., docs/60-release/FIB-H-transactional-outbox.md)"
+      - name: --fib-s
+        required: false
+        description: "Explicit path to the FIB-S artifact (e.g., docs/60-release/FIB-S-transactional-outbox.json)"
+    example: "/feature-start transactional-outbox --fib-h docs/60-release/FIB-H-transactional-outbox.md --fib-s docs/60-release/FIB-S-transactional-outbox.json"
     workflow: |
-      1. Load FIB context (pre-phase — not a gate):
-         - Look for docs/60-release/FIB-H-{feature-name}.md and FIB-S-{feature-name}.json
+      1. Resolve FIB paths:
+         - If --fib-h provided: use that path. Else: derive docs/60-release/FIB-H-{feature-name}.md
+         - If --fib-s provided: use that path. Else: derive docs/60-release/FIB-S-{feature-name}.json
+      2. Load FIB context (pre-phase — not a gate):
+         - Check resolved paths exist on disk.
          - If both present → mode: fib-bound. Snapshot coherence anchors into checkpoint.
          - If either missing → mode: fib-absent. Display warning:
              [FIB CONTEXT] Feature: {feature-name}
              ─────────────────────────────────────────
-             FIB-H: {found | MISSING}   FIB-S: {found | MISSING}
+             FIB-H: {resolved-path | MISSING}   FIB-S: {resolved-path | MISSING}
              Mode: fib-absent
 
              Warning: No FIB pair found. Pipeline will run without scope anchoring.

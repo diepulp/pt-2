@@ -19,10 +19,10 @@ Design doesn't build. **Build-pipeline does.**
 ## Quick Start
 
 ```
-/feature-start player-identity-enrollment
+/feature-start player-identity-enrollment --fib-h docs/60-release/FIB-H-player-identity-enrollment.md --fib-s docs/60-release/FIB-S-player-identity-enrollment.json
 ```
 
-This starts (or resumes) the 6-phase design pipeline with gates at each transition.
+This starts (or resumes) the 6-phase design pipeline with gates at each transition. `--fib-h` and `--fib-s` are optional; when omitted the pipeline derives paths from the feature name by convention.
 
 ---
 
@@ -56,8 +56,8 @@ Terminal phase is 5. On `prd-approved`, the pipeline records handoff and instruc
 Before Phase 0 begins, the pipeline resolves the FIB pair for `{feature-id}`. This is context injection, not a gate — the pipeline can run in either mode.
 
 **Resolution:**
-1. Look for `docs/60-release/FIB-H-{feature-id}.md` and `docs/60-release/FIB-S-{feature-id}.json`
-2. If both present → `mode: fib-bound` (coherence checks active in every subsequent phase)
+1. Resolve paths: use `--fib-h`/`--fib-s` args if supplied; otherwise derive `docs/60-release/FIB-H-{feature-id}.md` and `docs/60-release/FIB-S-{feature-id}.json` by convention.
+2. If both resolved paths exist on disk → `mode: fib-bound` (coherence checks active in every subsequent phase)
 3. If either missing → `mode: fib-absent` (coherence checks skipped, offer to halt)
 
 **Warning display (fib-absent):**
@@ -241,7 +241,7 @@ Set checkpoint `status` to `"design-complete"` and `current_phase` to `5`. Do no
 
 | Command | Purpose |
 |---------|---------|
-| `/feature-start <name>` | Start new pipeline (FIB context load + Phase 0) |
+| `/feature-start <name> [--fib-h <path>] [--fib-s <path>]` | Start new pipeline (FIB context load + Phase 0) |
 | `/feature-resume [name]` | Resume from last checkpoint |
 | `/feature-status [name]` | Show current phase, gates passed/pending |
 | `/feature-gate <gate>` | Run validation for a specific gate |
