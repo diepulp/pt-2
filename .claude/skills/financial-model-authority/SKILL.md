@@ -1,6 +1,6 @@
 ---
 name: financial-model-authority
-description: Root authority on PT-2's global financial model overhaul. This skill is the final arbiter on conformance with ADR-052, ADR-053, ADR-054, and ADR-055. It also governs the transitional bridge DTO contract and knows the open implementation gaps.
+description: Root authority on PT-2's global financial model overhaul. This skill is the final arbiter on conformance with ADR-052, ADR-053, ADR-054, and ADR-055. It governs the Wave 2 ubiquitous language (Authority Fact / Telemetry Fact / Dependency Event / Projection Input / Projection Artifact / Surface Value), the transitional bridge DTO contract, and open implementation gaps.
 ---
 
 # Financial Model Authority — PT-2 Pilot
@@ -61,6 +61,84 @@ Two further classes exist in the taxonomy but are **not authored in pilot scope*
 | `Compliance` | `mtl_entry` | Parallel domain — never merged with the three above |
 
 The discriminators (`fact_class`, `origin_label`) are **immutable**. Set at insert, never changed. Reclassification means a new row in the target class.
+
+---
+
+## Wave 2 Ubiquitous Language
+
+> **Source:** `docs/issues/gaps/financial-data-distribution-standard/wave-2/PRE-WAVE-2-UBIQUITOUS-LANGUAGE-PROPOSITION.md`
+> **Status:** PROPOSED — must be adopted before Wave 2 producer wiring begins.
+> **Core rule:** Do not use **"financial event"** as an umbrella term. It is overloaded and invites scope drift. Use the six categories below.
+
+### Category Definitions
+
+| Term | Role | Authority-bearing? | Propagated? |
+|---|---|---|---|
+| **Authority Fact** | Authored financial claim with direct financial authority. Current examples: PFT buy-ins, cash-outs, adjustments. Maps to ADR-052 Class A (`actual`). | Yes | Yes |
+| **Telemetry Fact** | Non-authoritative operational financial observation or estimate. Current examples: grind, unattributed table buy-in telemetry. Maps to ADR-052 Class B (`estimated`). | Non-authoritative | Yes |
+| **Dependency Event** | Operational state transition affecting projections but not itself an authority or telemetry fact. Examples: fills, credits, opening/closing inventory snapshots, inventory corrections. | Not by default | Maybe — if projections depend on it |
+| **Projection Input** | Umbrella for any event consumed by a projection: Authority Fact + Telemetry Fact + Dependency Event. Not semantically uniform. | Varies | Yes |
+| **Projection Artifact** | Derived read model or cache produced from Projection Inputs (shift telemetry summary, dashboard cache). | Derived only | Rebuildable output |
+| **Surface Value** | User- or API-visible value at a system boundary. Must declare type, source, and completeness. Carries the `FinancialValue` envelope where applicable. | Must declare if applicable | N/A |
+
+### Fills and Credits — Mandatory Classification
+
+Fills and credits are **Dependency Events**, not Authority Facts or Telemetry Facts.
+
+They affect shift financial telemetry and may require propagation / replay / freshness guarantees, but they are not PFT authority facts and must not be flattened into grind telemetry.
+
+> Correct: _"Fills and credits are Dependency Events used by shift telemetry projections."_
+> Incorrect: _"Fills and credits are financial telemetry facts."_
+
+### Surface Label vs Intrinsic Ontology — Critical Distinction
+
+The Wave 1 `'actual'` / `'estimated'` labels are **operational authority semantics**, not epistemic certainty claims.
+
+- `'actual'` = ledger-authoritative (PFT-class / Class A)
+- `'estimated'` = non-ledger operational (Class B — including fills, credits, and grind)
+
+Fills and credits are operationally concrete and auditable to the cent. They carry `'estimated'` at the surface **not** because they are uncertain or approximate, but because they are non-ledger operational inputs under the current surface contract.
+
+The Wave 2 Dependency Event category refines the internal ontological description of these events. It does not change their surface label. Fills and credits continue to surface as `'estimated'` until a future semantic taxonomy expansion is formally adopted.
+
+### Outbox Scope — UL Implication
+
+The outbox propagates **Projection Inputs** — not "all financial events."
+
+> The internal outbox propagates Projection Inputs required to keep PT-2 operational financial surfaces current and semantically honest.
+
+A future outbox row schema may add an explicit `category` discriminator:
+
+```ts
+category: 'authority_fact' | 'telemetry_fact' | 'dependency_event'
+```
+
+This field is separate from `fact_class` and `origin_label`. Do not overload `fact_class` to represent dependency events without formally superseding ADR-052/054.
+
+### TBT / Grind Clarification
+
+Do not use **TBT** and **grind** as synonyms:
+
+- **TBT** — the current operational data source or table-buy-in telemetry surface.
+- **Grind** — the Class B operational telemetry concept.
+- **Telemetry Fact** — the canonized semantic category for both.
+
+### Terms to Avoid
+
+| Avoid | Use instead |
+|---|---|
+| "financial event" (umbrella) | Authority Fact / Telemetry Fact / Dependency Event / Projection Input |
+| "operational" without qualifier | Qualify: operational telemetry, operational dependency, operational inventory movement |
+| "TBT" and "grind" interchangeably | Distinguish: TBT = source/surface; grind = Class B concept; Telemetry Fact = canonical category |
+
+### Wave 2 Review Decisions (Pre-approved)
+
+| ID | Decision |
+|---|---|
+| DEC-UL-1 | Retire "financial event" umbrella — use precise category terms |
+| DEC-UL-2 | Fills and credits classified as Dependency Events |
+| DEC-UL-3 | Outbox defined as internal Projection Input propagation, not external financial event bus |
+| DEC-UL-4 | Shared propagation mechanics do not imply shared authority semantics |
 
 ---
 
@@ -176,7 +254,7 @@ Read `references/open-issues.md` for full gap detail. For the GAP-F1 closure che
 
 When reviewing a PRD, EXEC-SPEC, FIB, or code, walk through this sequence:
 
-**1. Classify the fact.** Is this authoring a Ledger fact (Class A via PFT), an Operational fact (Class B via grind), or a projection? Clarify before any other question.
+**1. Classify using Wave 2 UL first.** Which category applies: Authority Fact (Class A / PFT), Telemetry Fact (Class B / grind), Dependency Event (fill, credit, inventory snapshot), or Projection Input (umbrella)? Do not use "financial event" as an umbrella — it collapses semantically distinct categories. Then establish whether this is authoring a new fact or working in the projection / surface layer. Clarify before any other question.
 
 **2. Check the write boundary.** Class A writes go through `rpc_create_financial_txn` or `rpc_create_financial_adjustment`. Class B writes go through the grind authoring path. Direct inserts into `player_financial_transaction` outside seed/test are non-conformant.
 
@@ -363,6 +441,7 @@ The human-readable progress companion is `ROLLOUT-PROGRESS.md` in the same direc
 | `docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md` | High-level execution strategy: rollout principles (§2), execution protocol/PRD-EXEC-SPEC chain (§2.5), non-goals (§8), skill routing (§9), exit criteria (§10) |
 | `docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json` | Machine-readable current state: active phase cursor, per-service status, deferred register, active bridges, API contract delta |
 | `docs/issues/gaps/financial-data-distribution-standard/wave-2/outbox-knowledge-base.md` | Full outbox implementation contract: `finance_outbox` DDL, trigger classification (D2 vs D6), relay worker, idempotent consumer, origin_label immutability, surface rendering contract (§6.2), GAP-F1 closure checklist (§12) |
+| `docs/issues/gaps/financial-data-distribution-standard/wave-2/PRE-WAVE-2-UBIQUITOUS-LANGUAGE-PROPOSITION.md` | Wave 2 UL proposition: full definitions, non-examples, boundary table, outbox implication, TBT/grind clarification, DEC-UL-1–4. Substrate for WAVE-2-ROADMAP and all Wave 2 implementation work. |
 
 Source docs (read-only reference, do not patch):
 - `docs/issues/gaps/financial-data-distribution-standard/FACT-AUTHORITY-MATRX-FIN-DOMAIN.md`

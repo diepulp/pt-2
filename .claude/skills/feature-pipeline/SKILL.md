@@ -22,7 +22,7 @@ Design doesn't build. **Build-pipeline does.**
 /feature-start player-identity-enrollment
 ```
 
-This starts (or resumes) the 6-phase design pipeline with gates at each transition.
+This starts (or resumes) the 7-phase design pipeline with gates at each transition.
 
 ---
 
@@ -30,27 +30,123 @@ This starts (or resumes) the 6-phase design pipeline with gates at each transiti
 
 ```
 +---------------------------------------------------------------+
-|  Phase 0: SRM Check           -> Ownership sentence            |
+|  Phase 0: FIB Admission       -> Ingest FIB-H, generate FIB-S |
+|     | GATE: fib-approved                                       |
+|  Phase 1: SRM Check           -> Ownership sentence            |
 |     | GATE: srm-ownership                                      |
-|  Phase 1: Feature Scaffold    -> Intent + constraints + options |
+|  Phase 2: Feature Scaffold    -> Intent + constraints + options |
 |     | GATE: scaffold-approved                                   |
-|  Phase 2: Design Brief / RFC  -> Direction + alternatives      |
+|  Phase 3: Design Brief / RFC  -> Direction + alternatives      |
 |     | GATE: design-approved                                     |
-|  Phase 3: SEC Note            -> Assets/threats/controls       |
+|  Phase 4: SEC Note            -> Assets/threats/controls       |
 |     | GATE: sec-approved                                        |
-|  Phase 4: ADR(s)              -> Durable decisions ONLY        |
+|  Phase 5: ADR(s)              -> Durable decisions ONLY        |
 |     | GATE: adr-frozen                                          |
-|  Phase 5: PRD                 -> Requirements + ADR references |
+|  Phase 6: PRD                 -> Requirements + ADR references |
 |     | GATE: prd-approved                                        |
 |  HANDOFF -> /build PRD-###                                     |
 +---------------------------------------------------------------+
 ```
 
-Terminal phase is 5. On `prd-approved`, feature-pipeline records handoff and instructs user to run `/build PRD-###`. No EXEC-SPEC generation, no workstream execution — that's build-pipeline's domain.
+Terminal phase is 6. On `prd-approved`, feature-pipeline records handoff and instructs user to run `/build PRD-###`. No EXEC-SPEC generation, no workstream execution — that's build-pipeline's domain.
 
 ---
 
-## Phase 0: SRM-First Ownership Contract
+## Phase 0: FIB Admission
+
+**Purpose:** Ingest and validate the pre-existing Feature Intake Brief before any design work begins. The FIB-H is a human artifact — it must be authored and filed before this pipeline is invoked. The pipeline does not create it, prompt for it, or fill gaps in it.
+
+### Admission check
+
+Look for `docs/60-release/FIB-H-{feature-id}.md`.
+
+**If missing:**
+
+```
+[HALT] No Feature Intake Brief found for '{feature-id}'.
+
+The FIB must be completed by a human before this pipeline can run.
+
+Template:  docs/60-release/FEATURE_INTAKE_BRIEF_FORM.md  (§11 quick-use blank form)
+Output to: docs/60-release/FIB-H-{feature-id}.md
+
+Complete the brief, then re-invoke:
+  /feature-start {feature-id}
+```
+
+Stop. Do not proceed to Phase 1.
+
+**If present:** validate, then generate FIB-S.
+
+### FIB-H Validation
+
+Check each required section for completeness. Do not fill gaps on the human's behalf — flag each incomplete field as a blocking error and halt until the human corrects the FIB-H.
+
+Required sections:
+- **A. Feature identity** — name, ID, priority, date opened
+- **B. Operator problem statement** — ≤1 paragraph, no architecture language
+- **C. Pilot-fit justification** — tied to a concrete operator journey
+- **D. Primary actor and operator moment** — actor, surface, trigger event
+- **E. Feature Containment Loop** — 5–10 numbered steps (actor + action + system response each)
+- **F. Required outcomes** — 3–7 bullets
+- **G. Explicit exclusions** — ≥3 items
+- **H. Adjacent ideas considered and rejected** — ≥2 table entries
+- **L. Scope authority block** — intake version, frozen, signed
+
+### FIB-S Generation
+
+Parse the validated FIB-H and populate the Zachman-structured schema (`docs/60-release/zachman_interpolated_feature_intake_recommendation.md` §Proposed structured schema):
+
+- `intent` ← §B operator problem, §C pilot fit, §F outcomes, §G exclusions, §H rejected ideas
+- `zachman.what.entities` ← domain objects named in §E containment loop steps
+- `zachman.how.capabilities` ← one capability per loop action verb
+- `zachman.where` ← §D primary surface; any surfaces mentioned in loop steps
+- `zachman.who` ← §D primary actor; permissions inferred from loop actions
+- `zachman.when` ← §D trigger event; lifecycle transitions in loop steps
+- `zachman.why` ← §F outcomes recast as rules; §G exclusions as negative invariants
+- `containment.loop` ← §E steps as `{id, actor, action, system_response}` array
+- `governance` ← §L scope authority block
+
+Then set:
+- `containment.frozen = true`
+- `governance.scope_authority.frozen = true`
+- `governance.downstream_expansion_allowed_without_amendment = false`
+- At least one `traceability.capability_to_outcome` entry
+
+Write to `docs/60-release/FIB-S-{feature-id}.json`.
+
+**Gate: `fib-approved`**
+
+Passes when ALL of the following are true:
+
+**FIB-H validation passed** (all required sections present and non-empty)
+
+**FIB-S completeness:**
+- ≥1 entity under `zachman.what`
+- ≥1 capability under `zachman.how`
+- ≥1 surface or touchpoint under `zachman.where`
+- ≥1 actor under `zachman.who`
+- ≥1 trigger or lifecycle event under `zachman.when`
+- ≥1 rule or invariant under `zachman.why`
+- `containment.loop` has ≥5 steps
+- `containment.frozen = true`
+- `governance.scope_authority.frozen = true`
+- `governance.downstream_expansion_allowed_without_amendment = false`
+- ≥1 `traceability.capability_to_outcome` entry
+
+**Coherence snapshot — on gate pass:**
+- `coherence.non_goals[]` ← `intent.explicit_exclusions` from FIB-S
+- `coherence.feature_loop[]` ← step IDs from `containment.loop`
+- `coherence.feature_loop_frozen = true`
+- `coherence.scope_authority` ← `governance.scope_authority` from FIB-S
+
+These become the binding scope anchors for every subsequent phase. Any downstream artifact that introduces an entity, capability, actor, surface, or outcome absent from FIB-S is scope expansion and requires an Intake Amendment (`docs/60-release/FEATURE_INTAKE_BRIEF_FORM.md` §9).
+
+Phase 0 is intentionally narrow — ingestion and validation only. No design decisions are made here.
+
+---
+
+## Phase 1: SRM-First Ownership Contract
 
 **Input:** Feature name/description
 **Output:** Ownership sentence + bounded context table
@@ -75,11 +171,11 @@ Terminal phase is 5. On `prd-approved`, feature-pipeline records handoff and ins
    ```
    Record validated tables in checkpoint `srm_validation` field.
 
-Phase 0 is intentionally lean — ownership sentence and write/read/contract table only. Narrative fields (goal, actor, scenario, metric, non-goals) belong in Phase 1.
+Phase 1 is intentionally lean — ownership sentence and write/read/contract table only. Narrative fields (goal, actor, scenario, metric, non-goals) belong in Phase 2 (Scaffold).
 
 ---
 
-## Phase 1: Feature Scaffold
+## Phase 2: Feature Scaffold
 
 **Goal:** Pin intent, constraints, and decisions needed before design work begins.
 **Rule:** Disposable, timeboxed (30-60 min). No implementation detail.
@@ -100,13 +196,13 @@ Phase 0 is intentionally lean — ownership sentence and write/read/contract tab
 
 **Gate:** `scaffold-approved` — If you can't list 2+ options with tradeoffs and 5+ non-goals, you haven't thought enough.
 
-**Coherence checkpoint:** On gate pass, extract non-goals as a list and store in checkpoint `coherence.non_goals[]`. These are the scope boundaries that all subsequent phases must respect.
+**Coherence checkpoint:** On gate pass, verify scaffold non-goals are consistent with `coherence.non_goals[]` already captured at the Phase 0 FIB gate. Scaffold non-goals may elaborate or make more specific the FIB exclusions — they may not contradict or silently remove them. Do not overwrite `coherence.non_goals[]`; that field is owned by the FIB gate. If the scaffold surfaces a legitimate new non-goal not present in the FIB, record it as a candidate Intake Amendment rather than silently adding it.
 
 **Delegates to:** Inline (orchestrator can do this — it's a framing doc, not domain-specific)
 
 ---
 
-## Phase 2: Design Brief / RFC
+## Phase 3: Design Brief / RFC
 
 **Goal:** Propose direction with enough detail to identify ADR-worthy decisions.
 **Rule:** Funnel style — context -> scope -> overview -> details -> alternatives.
@@ -131,7 +227,7 @@ Surface Classification is conditional — only required when the feature introdu
 
 **Gate:** `design-approved` — If you can't name the decisions that need ADRs, the design is incomplete.
 
-**Coherence check:** Before passing the gate, verify the RFC scope does not violate any stored `coherence.non_goals[]` from the scaffold. For each non-goal, confirm the RFC does not include it in scope. If a violation is detected, the gate fails with a coherence error — either revise the RFC or amend the scaffold non-goals with justification.
+**Coherence check:** Before passing the gate, verify the RFC scope does not violate any stored `coherence.non_goals[]` from the FIB (Phase 0). For each non-goal, confirm the RFC does not include it in scope. If a violation is detected, the gate fails with a coherence error — either revise the RFC or file an Intake Amendment (`docs/60-release/FEATURE_INTAKE_BRIEF_FORM.md` §9) to formally expand scope.
 
 **Surface classification check:** If the RFC detailed design section mentions "page", "panel", "dashboard", "form", or "component", prompt the user to confirm whether Surface Classification (ADR-041) is required. If yes and not present, gate fails.
 
@@ -139,7 +235,7 @@ Surface Classification is conditional — only required when the feature introdu
 
 ---
 
-## Phase 3: SEC Note (Tiny Threat Model)
+## Phase 4: SEC Note (Tiny Threat Model)
 
 **Goal:** Prevent "security later" from becoming "security never."
 **Rule:** Small and explicit beats broad and vague.
@@ -178,7 +274,7 @@ Skill(skill="rls-expert", args="Generate SEC Note for feature '{feature_name}':
 
 ---
 
-## Phase 4: ADR(s) (Only for Durable Decisions)
+## Phase 5: ADR(s) (Only for Durable Decisions)
 
 **Goal:** Capture decisions that are hard to reverse or reused widely.
 **Rule:** ADR != diary. ADR is for **durable** architecture decisions.
@@ -205,13 +301,13 @@ Skill(skill="rls-expert", args="Generate SEC Note for feature '{feature_name}':
 
 **Gate:** `adr-frozen` — ADR contains only context/decision/consequences, no SQL/code. Implementation detail goes to EXEC-SPEC via build-pipeline.
 
-**Coherence check:** Verify ADR decisions do not require capabilities listed in `coherence.non_goals[]`. If an ADR decision's consequences depend on a scaffolded non-goal, the gate fails — either revise the ADR or formally amend the scaffold non-goals with justification and update `coherence.non_goals[]`.
+**Coherence check:** Verify ADR decisions do not require capabilities listed in `coherence.non_goals[]`. If an ADR decision's consequences depend on an excluded FIB item, the gate fails — either revise the ADR or file an Intake Amendment (`docs/60-release/FEATURE_INTAKE_BRIEF_FORM.md` §9) and update `coherence.non_goals[]`.
 
 ---
 
-## Phase 5: PRD
+## Phase 6: PRD
 
-**Goal:** Define *what must be true* with testable statements. Now has scaffold, RFC, SEC note, and ADR(s) as input context.
+**Goal:** Define *what must be true* with testable statements. Now has FIB-H, FIB-S, scaffold, RFC, SEC note, and ADR(s) as input context.
 **Rule:** PRD references ADR IDs for mechanism decisions. If changing a library requires rewriting the PRD, reject it.
 
 **Delegation:** Invoke `prd-writer` skill
@@ -231,12 +327,12 @@ deploy a **DA review team** to attack the PRD against all preceding artifacts.
 
 **Temporal Integrity Check (pre-DA gate):**
 
-Before deploying the DA team, compare the modified timestamps of all Phase 0-4
+Before deploying the DA team, compare the modified timestamps of all Phase 0-5
 artifacts against the PRD's created timestamp. If any upstream artifact was modified
 after the PRD was written, the PRD may not reflect the current state of its inputs:
 
 ```
-For each artifact in [feature_boundary, scaffold, rfc, sec_note, adr]:
+For each artifact in [fib_h, fib_s, feature_boundary, scaffold, rfc, sec_note, adr]:
   If artifact.modified > prd.created:
     Flag: "[TEMPORAL WARNING] {artifact} modified after {PRD-ID} was written.
            PRD may not reflect current {artifact_type} state.
@@ -301,8 +397,8 @@ Override: reply "tier 0", "tier 1", or "tier 2" to change.
 **Tier-specific behavior:**
 
 **Tier 0 (Self-Certified):** Record `da_review.magnitude_tier = "self_certified"` in
-checkpoint. Display: "Phase gates (SRM, scaffold, SEC, ADR) provide sufficient coverage.
-Skipping DA team review." Proceed directly to `prd-approved` gate. The 5 preceding phase
+checkpoint. Display: "Phase gates (FIB, SRM, scaffold, SEC, ADR) provide sufficient coverage.
+Skipping DA team review." Proceed directly to `prd-approved` gate. The 6 preceding phase
 gates already validated each artifact independently — the cross-artifact contradiction
 surface is too small to justify a team.
 
@@ -417,9 +513,9 @@ a human decision: override-with-reason or abort. No further automatic revision l
 
 ---
 
-## Handoff (TERMINAL — Phase 5 is the last phase)
+## Handoff (TERMINAL — Phase 6 is the last phase)
 
-On `prd-approved`, the feature-pipeline is **DONE**. There is no Phase 6.
+On `prd-approved`, the feature-pipeline is **DONE**. There is no Phase 7.
 
 **STOP HERE.** Do not generate EXEC-SPECs, DOD gates, workstream definitions, execution phases,
 or any implementation artifact. These belong exclusively to build-pipeline, which the user
@@ -437,6 +533,8 @@ Feature Design Complete: {feature-name}
 ---------------------------------------------
 
 Artifacts:
+  [PASS] FIB-H:     docs/60-release/FIB-H-{feature-id}.md
+  [PASS] FIB-S:     docs/60-release/FIB-S-{feature-id}.json
   [PASS] Boundary:  docs/20-architecture/specs/{feature}/FEATURE_BOUNDARY.md
   [PASS] Scaffold:  docs/01-scaffolds/SCAFFOLD-###-{slug}.md
   [PASS] RFC:       docs/02-design/RFC-###-{slug}.md
@@ -449,8 +547,8 @@ Next: /build PRD-###
 ---------------------------------------------
 ```
 
-Set checkpoint `status` to `"design-complete"` and `current_phase` to `5`. Do not increment
-the phase beyond 5. Do not add `exec_spec`, `dod_gates`, `exec_spec_workstreams`, or
+Set checkpoint `status` to `"design-complete"` and `current_phase` to `6`. Do not increment
+the phase beyond 6. Do not add `exec_spec`, `dod_gates`, `exec_spec_workstreams`, or
 `execution_phases` fields to the checkpoint — those are build-pipeline state.
 
 **Handoff boundary enforcement:** After setting status to `"design-complete"`, verify the
@@ -497,16 +595,17 @@ If no checkpoint exists:
 
 ## State Management
 
-### Checkpoint Structure (v2)
+### Checkpoint Structure (v3)
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "feature_id": "csv-player-import",
-  "current_phase": 3,
+  "current_phase": 4,
   "status": "in_progress",
   "gates": {
-    "srm-ownership":    { "passed": true,  "timestamp": "2026-02-22T10:00:00Z" },
+    "fib-approved":      { "passed": true,  "timestamp": "2026-02-22T09:30:00Z" },
+    "srm-ownership":     { "passed": true,  "timestamp": "2026-02-22T10:00:00Z" },
     "scaffold-approved": { "passed": true,  "timestamp": "2026-02-22T11:00:00Z" },
     "design-approved":   { "passed": true,  "timestamp": "2026-02-22T14:00:00Z" },
     "sec-approved":      { "passed": false, "timestamp": null },
@@ -514,6 +613,8 @@ If no checkpoint exists:
     "prd-approved":      { "passed": false, "timestamp": null }
   },
   "artifacts": {
+    "fib_h": "docs/60-release/FIB-H-csv-player-import.md",
+    "fib_s": "docs/60-release/FIB-S-csv-player-import.json",
     "feature_boundary": "docs/20-architecture/specs/csv-player-import/FEATURE_BOUNDARY.md",
     "scaffold": "docs/01-scaffolds/SCAFFOLD-001-csv-player-import.md",
     "rfc": "docs/02-design/RFC-001-csv-player-import.md",
@@ -541,6 +642,14 @@ If no checkpoint exists:
   },
   "coherence": {
     "non_goals": [],
+    "feature_loop": [],
+    "feature_loop_frozen": false,
+    "deferred_items": [],
+    "scope_authority": {
+      "artifact": "FEATURE_INTAKE_BRIEF",
+      "version": "v0",
+      "frozen": false
+    },
     "violations": []
   },
   "srm_validation": {
@@ -559,10 +668,11 @@ If no checkpoint exists:
 
 These rules are non-negotiable. Violating them means the pipeline has crossed into build-pipeline territory.
 
-- **`current_phase`** must be 0-5. There is no Phase 6.
+- **`current_phase`** must be 0-6. There is no Phase 7.
 - **`status`** must be one of: `"initialized"`, `"in_progress"`, `"design-complete"`, `"failed"`.
-- **`gates`** keys must be from this set only: `srm-ownership`, `scaffold-approved`, `design-approved`, `sec-approved`, `adr-frozen`, `prd-approved`.
-- **`artifacts`** keys must be from this set only: `feature_boundary`, `scaffold`, `rfc`, `sec_note`, `adr`, `prd`.
+- **`gates`** keys must be from this set only: `fib-approved`, `srm-ownership`, `scaffold-approved`, `design-approved`, `sec-approved`, `adr-frozen`, `prd-approved`.
+- **`artifacts`** keys must be from this set only: `fib_h`, `fib_s`, `feature_boundary`, `scaffold`, `rfc`, `sec_note`, `adr`, `prd`.
+- **Gate order is strict:** `fib-approved` must pass before any other gate. A scaffold, RFC, SEC note, or ADR may not be written while `fib-approved` is false.
 - **Forbidden fields**: `exec_spec`, `dod_gates`, `exec_spec_workstreams`, `execution_phases`. These are build-pipeline state. If you are about to write one of these fields, you have overrun the boundary — stop and display the handoff instead.
 ```
 
@@ -583,17 +693,41 @@ These rules are non-negotiable. Violating them means the pipeline has crossed in
 4. Remove old fields: `gates_passed`, `gates_pending`
 5. Save migrated checkpoint back to disk
 
+**Migration (v2 → v3):** When loading a checkpoint with `schema_version: 2`:
+
+1. Set `schema_version: 3`
+2. Add `fib-approved` gate at the front of `gates` (before `srm-ownership`):
+   ```json
+   "fib-approved": { "passed": false, "timestamp": null }
+   ```
+   Do not auto-pass this gate — if the feature already has downstream artifacts, prompt the human to backfill FIB-H and FIB-S before continuing.
+3. Add `fib_h` and `fib_s` to `artifacts` (before `feature_boundary`):
+   ```json
+   "fib_h": null,
+   "fib_s": null
+   ```
+4. Expand `coherence` block with new fields (preserve existing `non_goals` and `violations`):
+   ```json
+   "feature_loop": [],
+   "feature_loop_frozen": false,
+   "deferred_items": [],
+   "scope_authority": { "artifact": "FEATURE_INTAKE_BRIEF", "version": "v0", "frozen": false }
+   ```
+5. Shift `current_phase`: if the stored value is N, set it to N+1 (SRM was 0, now 1; Scaffold was 1, now 2; etc.)
+6. Save migrated checkpoint back to disk
+
 ---
 
 ## Integration with Existing Skills
 
 | Phase | Delegates To | How |
 |-------|--------------|-----|
-| Phase 2 (RFC) | `lead-architect` | Skill invocation with Feature Scaffold context |
-| Phase 3 (SEC Note) | `rls-expert` | Skill invocation with security context (boundary + tables + ADRs) |
-| Phase 4 (ADR) | `lead-architect` | Skill invocation, then freeze operation |
-| Phase 5 (PRD) | `prd-writer` | Skill invocation with Scaffold + RFC + SEC + ADR context |
-| Phase 5 (DA Review) | `devils-advocate` | 4-agent team (3 reviewers + synthesis-lead) via Agent + TeamCreate |
+| Phase 0 (FIB Admission) | Human + pipeline | Human supplies FIB-H; pipeline validates + generates FIB-S |
+| Phase 3 (RFC) | `lead-architect` | Skill invocation with FIB-H, FIB-S, and Feature Scaffold context |
+| Phase 4 (SEC Note) | `rls-expert` | Skill invocation with security context (boundary + tables + ADRs) |
+| Phase 5 (ADR) | `lead-architect` | Skill invocation, then freeze operation |
+| Phase 6 (PRD) | `prd-writer` | Skill invocation with FIB-H, FIB-S, Scaffold + RFC + SEC + ADR context |
+| Phase 6 (DA Review) | `devils-advocate` | 4-agent team (3 reviewers + synthesis-lead) via Agent + TeamCreate |
 
 ---
 
@@ -601,11 +735,14 @@ These rules are non-negotiable. Violating them means the pipeline has crossed in
 
 | Concern | Owner | Artifacts |
 |---------|-------|-----------|
-| What problem, what options | feature-pipeline | Scaffold (`docs/01-scaffolds/`) |
-| What approach + alternatives | feature-pipeline | RFC (`docs/02-design/`) |
-| What security risks | feature-pipeline | SEC Note |
-| What decisions are locked | feature-pipeline | ADR(s) (`docs/80-adrs/`) |
-| What must be true | feature-pipeline | PRD (`docs/10-prd/`) |
+| Human intent, scope authority | **Human** (pre-pipeline) | FIB-H (`docs/60-release/`) |
+| Structured machine-readable scope | feature-pipeline (Phase 0) | FIB-S (`docs/60-release/`) |
+| Bounded context ownership | feature-pipeline (Phase 1) | Feature Boundary (`docs/20-architecture/specs/`) |
+| What problem, what options | feature-pipeline (Phase 2) | Scaffold (`docs/01-scaffolds/`) |
+| What approach + alternatives | feature-pipeline (Phase 3) | RFC (`docs/02-design/`) |
+| What security risks | feature-pipeline (Phase 4) | SEC Note |
+| What decisions are locked | feature-pipeline (Phase 5) | ADR(s) (`docs/80-adrs/`) |
+| What must be true | feature-pipeline (Phase 6) | PRD (`docs/10-prd/`) |
 | How to build it | build-pipeline | EXEC-SPEC (`docs/21-exec-spec/`) |
 | How to prove it's done | build-pipeline | DoD gates |
 | Building it | build-pipeline | Code, migrations, tests |
@@ -630,11 +767,13 @@ Edge cases don't stop existing. You stop letting them expand the scope.
 
 | File | Purpose |
 |------|---------|
-| `references/feature-boundary-template.md` | Phase 0 template (ownership + contracts) |
-| `references/sec-note-template.md` | Phase 3 template |
-| `references/da-team-protocol.md` | **Phase 5 DA team: reviewer roles, prompt templates, two-phase protocol** |
-| `docs/01-scaffolds/TEMPLATE.md` | Phase 1 template |
-| `docs/02-design/TEMPLATE.md` | Phase 2 template |
+| `docs/60-release/FEATURE_INTAKE_BRIEF_FORM.md` | **Phase 0 FIB-H**: form template, completion rules, amendment protocol (§11 quick-use blank) |
+| `docs/60-release/zachman_interpolated_feature_intake_recommendation.md` | **Phase 0 FIB-S**: Zachman schema, field mapping, admission gate rules |
+| `references/feature-boundary-template.md` | Phase 1 template (ownership + contracts) |
+| `references/sec-note-template.md` | Phase 4 template |
+| `references/da-team-protocol.md` | **Phase 6 DA team: reviewer roles, prompt templates, two-phase protocol** |
+| `docs/01-scaffolds/TEMPLATE.md` | Phase 2 template |
+| `docs/02-design/TEMPLATE.md` | Phase 3 template |
 
 ---
 
@@ -642,13 +781,15 @@ Edge cases don't stop existing. You stop letting them expand the scope.
 
 A feature design is "Done" when all gates are green and handoff is ready:
 
+- [ ] **FIB-H** present at `docs/60-release/FIB-H-{feature-id}.md` — human-authored, all required sections complete, scope authority signed
+- [ ] **FIB-S** generated and valid — all Zachman dimensions populated, containment frozen, ≥1 traceability entry
 - [ ] SRM ownership sentence written and boundary declared
-- [ ] Scaffold pins intent, constraints, 5+ non-goals, 2+ options with tradeoffs
-- [ ] RFC proposes direction, identifies ADR-worthy decisions
+- [ ] Scaffold pins intent, constraints, 5+ non-goals, 2+ options with tradeoffs; cites FIB scope authority
+- [ ] RFC proposes direction, identifies ADR-worthy decisions; scope validated against FIB non-goals
 - [ ] If new UI surface: Surface Classification declared (rendering delivery + data aggregation)
 - [ ] If new UI surface: Truth-bearing metrics identified with preliminary MEAS-IDs
 - [ ] SEC Note covers assets, threats, controls, deferred risks
-- [ ] ADR(s) contain only durable decisions (no implementation SQL/code)
-- [ ] PRD references ADR IDs, defines testable acceptance criteria
+- [ ] ADR(s) contain only durable decisions (no implementation SQL/code); scope validated against FIB exclusions
+- [ ] PRD references ADR IDs and FIB-H containment loop, defines testable acceptance criteria
 - [ ] Adversarial review passed (no P0 findings, or override-with-reason recorded)
-- [ ] Handoff instruction displayed with all artifact paths
+- [ ] Handoff instruction displayed with all artifact paths (FIB-H and FIB-S included)

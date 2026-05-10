@@ -117,4 +117,3 @@ Project skills (`.claude/skills/`) provide specialized agent workflows:
 
 See `.claude/skills/README.md` for full skill catalog.
 
-
