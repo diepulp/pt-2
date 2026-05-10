@@ -4,7 +4,7 @@
 
 commands:
   feature-start:
-    description: "Start a new feature development pipeline at Phase 0 (SRM-First Ownership)"
+    description: "Start a new feature development pipeline at Phase 0 (FIB Admission)"
     usage: "/feature-start <feature-name>"
     arguments:
       - name: feature-name
@@ -12,12 +12,23 @@ commands:
         description: "kebab-case feature identifier (e.g., player-identity-enrollment)"
     example: "/feature-start player-identity-enrollment"
     workflow: |
-      1. Create feature directory: docs/20-architecture/specs/{feature-name}/
-      2. Initialize checkpoint file with schema_version=2, status="initialized"
-      3. Load SRM for ownership analysis
-      4. Guide user through Phase 0: SRM-First Ownership
-      5. Generate Feature Boundary Statement draft
-      6. Wait for gate approval: srm-ownership
+      1. Check for docs/60-release/FIB-H-{feature-name}.md
+         - If MISSING: HALT. Display:
+             [HALT] No Feature Intake Brief found for '{feature-name}'.
+             Template:  docs/60-release/FEATURE_INTAKE_BRIEF_FORM.md  (§11 quick-use blank form)
+             Output to: docs/60-release/FIB-H-{feature-name}.md
+             Complete the brief, then re-invoke: /feature-start {feature-name}
+         - If PRESENT: proceed to step 2.
+      2. Validate FIB-H completeness (all required sections A/B/C/D/E/F/G/H/L present and non-empty).
+         Flag any incomplete section as a blocking error — do not fill gaps.
+      3. Generate FIB-S at docs/60-release/FIB-S-{feature-name}.json from validated FIB-H.
+      4. Snapshot coherence anchors into checkpoint (non_goals, feature_loop, scope_authority).
+      5. Pass fib-approved gate. Create checkpoint file with schema_version=3, status="in_progress".
+      6. Create feature directory: docs/20-architecture/specs/{feature-name}/
+      7. Load SRM for ownership analysis.
+      8. Guide user through Phase 1: SRM-First Ownership.
+      9. Generate Feature Boundary Statement draft.
+      10. Wait for gate approval: srm-ownership.
 
   feature-status:
     description: "Show current feature pipeline status"
@@ -36,6 +47,7 @@ commands:
       Status: {in_progress | blocked | complete}
 
       Gates:
+        ✅ fib-approved
         ✅ srm-ownership
         ✅ scaffold-approved
         ⏳ design-approved (current)
@@ -46,12 +58,14 @@ commands:
       DA Review: {not-run | passed | failed (attempt N/2)}
 
       Artifacts:
-        Boundary:  docs/20-architecture/specs/{feature}/FEATURE_BOUNDARY.md
-        Scaffold:  docs/01-scaffolds/SCAFFOLD-###-{slug}.md
-        RFC:       (pending)
-        SEC Note:  (pending)
-        ADR:       (pending)
-        PRD:       (pending)
+        FIB-H:    docs/60-release/FIB-H-{feature-id}.md
+        FIB-S:    docs/60-release/FIB-S-{feature-id}.json
+        Boundary: docs/20-architecture/specs/{feature}/FEATURE_BOUNDARY.md
+        Scaffold: docs/01-scaffolds/SCAFFOLD-###-{slug}.md
+        RFC:      (pending)
+        SEC Note: (pending)
+        ADR:      (pending)
+        PRD:      (pending)
 
       Next Action: Complete Design Brief / RFC for design review
 
@@ -65,10 +79,14 @@ commands:
     example: "/feature-resume player-identity-enrollment"
     workflow: |
       1. Load checkpoint from .claude/skills/feature-pipeline/checkpoints/{feature}.json
-      2. If schema_version < 2, migrate v1 checkpoint (map gates_passed/gates_pending to gates object)
-      3. Display current phase and pending gates
-      4. Show next action required
-      5. Continue from current phase
+      2. Migrate if needed:
+         - schema_version missing (v1): migrate to v2 (map gates_passed/gates_pending arrays)
+         - schema_version=2: migrate to v3 (inject fib-approved gate, fib_h/fib_s artifacts,
+           expand coherence block, shift current_phase +1). Prompt human to backfill FIB-H/FIB-S
+           if fib-approved is not already passed.
+      3. Display current phase and pending gates.
+      4. Show next action required.
+      5. Continue from current phase.
 
   feature-gate:
     description: "Run validation for a specific gate"
@@ -76,26 +94,29 @@ commands:
     arguments:
       - name: gate-name
         required: true
-        description: "Gate to validate (srm-ownership, scaffold-approved, design-approved, sec-approved, adr-frozen, prd-approved)"
-    example: "/feature-gate scaffold-approved"
+        description: "Gate to validate (fib-approved, srm-ownership, scaffold-approved, design-approved, sec-approved, adr-frozen, prd-approved)"
+    example: "/feature-gate fib-approved"
     gates:
+      fib-approved:
+        validation: "FIB-H present and all required sections complete; FIB-S generated with all Zachman dimensions populated and containment frozen"
+        artifact: "FIB-H-{feature-id}.md + FIB-S-{feature-id}.json"
       srm-ownership:
         validation: "Ownership sentence exists and bounded context table is complete"
         artifact: "FEATURE_BOUNDARY.md"
       scaffold-approved:
-        validation: "Scaffold has intent, 5+ non-goals, 2+ options with tradeoffs"
+        validation: "Scaffold has intent, 5+ non-goals consistent with FIB exclusions, 2+ options with tradeoffs, cites FIB scope authority"
         artifact: "SCAFFOLD-###-{slug}.md"
       design-approved:
-        validation: "RFC names decisions that need ADRs"
+        validation: "RFC names decisions that need ADRs; scope does not violate FIB non-goals"
         artifact: "RFC-###-{slug}.md"
       sec-approved:
         validation: "SEC note covers assets/threats/controls, sensitive fields justified"
         artifact: "SEC-NOTE-{slug}.md"
       adr-frozen:
-        validation: "ADR contains only context/decision/consequences, no SQL/code"
+        validation: "ADR contains only context/decision/consequences, no SQL/code; decisions do not depend on excluded FIB items"
         artifact: "ADR-###-{slug}.md"
       prd-approved:
-        validation: "PRD has testable acceptance criteria, DA review passed (no P0)"
+        validation: "PRD has testable acceptance criteria, references FIB containment loop, DA review passed (no P0)"
         artifact: "PRD-###-{slug}.md"
 
 # Gate Protocol
@@ -114,44 +135,53 @@ gate_protocol:
 # Phase Definitions — mirrors SKILL.md exactly
 phases:
   0:
+    name: "FIB Admission"
+    gate: "fib-approved"
+    artifacts:
+      - "FIB-H-{feature-id}.md"
+      - "FIB-S-{feature-id}.json"
+    next: 1
+    note: "Ingestion only. Pipeline checks FIB-H exists, validates it, generates FIB-S. HALT if FIB-H missing."
+
+  1:
     name: "SRM-First Ownership"
     gate: "srm-ownership"
     artifact: "FEATURE_BOUNDARY.md"
-    next: 1
-
-  1:
-    name: "Feature Scaffold"
-    gate: "scaffold-approved"
-    artifact: "SCAFFOLD-###-{slug}.md"
     next: 2
 
   2:
+    name: "Feature Scaffold"
+    gate: "scaffold-approved"
+    artifact: "SCAFFOLD-###-{slug}.md"
+    next: 3
+
+  3:
     name: "Design Brief / RFC"
     gate: "design-approved"
     artifact: "RFC-###-{slug}.md"
     delegate_to: "lead-architect"
-    next: 3
-
-  3:
-    name: "SEC Note"
-    gate: "sec-approved"
-    artifact: "SEC-NOTE-{slug}.md"
     next: 4
 
   4:
+    name: "SEC Note"
+    gate: "sec-approved"
+    artifact: "SEC-NOTE-{slug}.md"
+    next: 5
+
+  5:
     name: "ADR(s)"
     gate: "adr-frozen"
     artifact: "ADR-###-{slug}.md"
     delegate_to: "lead-architect"
     optional: true
-    next: 5
+    next: 6
 
-  5:
+  6:
     name: "PRD"
     gate: "prd-approved"
     artifact: "PRD-###-{slug}.md"
     delegate_to: "prd-writer"
     terminal: true
-    # HARD STOP: Phase 5 is the last phase. There is no Phase 6.
+    # HARD STOP: Phase 6 is the last phase. There is no Phase 7.
     # On prd-approved, set status to "design-complete" and display handoff.
     # Do NOT generate EXEC-SPECs, DOD gates, workstreams, or any build artifact.
