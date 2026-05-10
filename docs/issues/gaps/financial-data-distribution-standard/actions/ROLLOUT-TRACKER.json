@@ -51,9 +51,9 @@
     "wave": 1,
     "active_phase": null,
     "phase_status": "complete",
-    "phase_label": "Wave 1 COMPLETE. Pre-Wave-2 surface debt closed (PRD-080, EXEC-080, 2026-05-06). Wave 2 entry blocked on W2-PRE-1–W2-PRE-8 and Q1–Q4 resolution.",
+    "phase_label": "Wave 1 COMPLETE. Q1–Q4 resolved 2026-05-06. Feature pipeline initiated 2026-05-10 (FIB-H-W2-OUTBOX-001; scaffold-approved gate pending). /feature-pipeline replaces standalone WAVE-2-ROADMAP.md.",
     "blocker": null,
-    "next_action": "Pre-Wave-2 surface debt closed (EXEC-080). Check Wave 2 entry criteria: W2-PRE-1–W2-PRE-8 prerequisites + Q1–Q4 open questions → draft WAVE-2-ROADMAP.md → /prd-writer for Wave 2 Phase 2",
+    "next_action": "Advance /feature-pipeline: scaffold-approved gate → Phase 2 RFC (lead-architect) → Phase 3 SEC Note (rls-expert) → Phase 4 ADR (freeze I1–I4 invariants as ADR consequences) → Phase 5 PRD → /build PRD-###.",
     "next_action_prd": null,
     "last_closed_phase": "pre_wave_2",
     "last_closed_date": "2026-05-06",
@@ -64,7 +64,7 @@
     "wave_1_signoff_artifact": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-PHASE-1.5-SIGNOFF.md",
     "wave_2_readiness": {
       "assessed_date": "2026-05-06",
-      "overall": "NOT_READY",
+      "overall": "ACTIVE",
       "criteria": [
         {
           "id": "W2-C1",
@@ -87,24 +87,24 @@
         },
         {
           "id": "W2-C4",
-          "criterion": "WAVE-2-ROADMAP.md drafted",
-          "status": "not_met",
-          "detail": "Not created. Blocked on Q1–Q4 resolution. Do not pre-plan Wave 2 phases before open questions resolve."
+          "criterion": "Feature pipeline initiated (replaces standalone WAVE-2-ROADMAP.md)",
+          "status": "met",
+          "detail": "FIB-H-W2-OUTBOX-001 authored 2026-05-10. Scaffold (SCAFFOLD-TRANSACTIONAL-OUTBOX.md) in place. /feature-pipeline orchestrates Wave 2 design through Phases 1–5. WAVE-2-ROADMAP.md as a standalone planning document is superseded; the feature-pipeline checkpoint (transactional-outbox.json) is the machine-readable state."
         },
         {
           "id": "W2-C5",
-          "criterion": "Failure harness verified against stubs",
+          "criterion": "Failure harness I1–I4 invariants frozen in Phase 4 ADR; execution verified in EXEC-SPEC DoD",
           "status": "not_met",
-          "detail": "FAILURE-SIMULATION-HARNESS.md is EXEC-READY but has not been run against a stub implementation. I1–I4 are Wave 2 invariants; I5 is complete."
+          "detail": "FAILURE-SIMULATION-HARNESS.md is EXEC-READY. Design-time scope (feature-pipeline): Phase 4 ADR must enumerate I1–I4 atomicity, durability, idempotency, and replayability as durable ADR consequences. Build-pipeline scope (EXEC-SPEC DoD): all four harness scenarios must pass against real implementation. The prior criterion 'run against stubs before feature-pipeline entry' was mis-scoped — stub execution is EXEC-SPEC DoD, not a design-pipeline entry gate."
         }
       ],
       "unblocking_sequence": [
         "1. [RESOLVED 2026-05-06] Q1: two-store model confirmed. PFT expansion rejected (ADR-052 §4 pattern). Q2: separate tables confirmed. Shared parent not chosen ('I still would not unify now') — conditionally permitted by ADR set but behavioral convergence risk favors structural separation.",
         "2. [RESOLVED 2026-05-06] Q3 deferred outside pilot scope. Wave 2 defines internal propagation only. Future externalization requires separate ADR + stakeholder discovery.",
         "3. [RESOLVED 2026-05-06] Q4: shared RPC-coupled outbox insertion adopted for both Class A and Class B. Trigger-based insertion rejected for pilot. RPC performs deterministic outbox construction only — no projection writes, fan-out, or business logic.",
-        "4. Draft WAVE-2-ROADMAP.md after Q1–Q4 resolved",
-        "5. Verify FAILURE-SIMULATION-HARNESS.md against stub implementation",
-        "6. Run /prd-writer for Wave 2 Phase 1"
+        "4. [IN PROGRESS 2026-05-10] Feature pipeline initiated: FIB-H-W2-OUTBOX-001 authored; scaffold-approved gate pending. /feature-pipeline replaces standalone WAVE-2-ROADMAP.md.",
+        "5. Advance /feature-pipeline through Phase 2 RFC → Phase 3 SEC Note → Phase 4 ADR (I1–I4 invariants frozen as ADR consequences) → Phase 5 PRD → handoff to /build PRD-###.",
+        "6. EXEC-SPEC DoD must require I1–I4 harness scenarios to pass against real implementation (build-pipeline scope, not feature-pipeline entry gate)."
       ]
     }
   },

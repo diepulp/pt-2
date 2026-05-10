@@ -1,0 +1,118 @@
+{
+  "schema_version": 2,
+  "feature_id": "transactional-outbox",
+  "current_phase": 1,
+  "status": "in_progress",
+  "gates": {
+    "srm-ownership":     { "passed": true,  "timestamp": "2026-05-09T00:00:00Z" },
+    "scaffold-approved": { "passed": false, "timestamp": null },
+    "design-approved":   { "passed": false, "timestamp": null },
+    "sec-approved":      { "passed": false, "timestamp": null },
+    "adr-frozen":        { "passed": false, "timestamp": null },
+    "prd-approved":      { "passed": false, "timestamp": null }
+  },
+  "artifacts": {
+    "feature_boundary": "docs/20-architecture/specs/transactional-outbox/FEATURE_BOUNDARY.md",
+    "scaffold": "docs/01-scaffolds/SCAFFOLD-TRANSACTIONAL-OUTBOX.md",
+    "rfc": null,
+    "sec_note": null,
+    "adr": null,
+    "prd": null
+  },
+  "critical_references": {
+    "ul_clarification": {
+      "path": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-UBIQUITOUS-LANGUAGE-CLARIFICATION.md",
+      "status": "CANONICAL",
+      "date": "2026-05-07",
+      "mandate": "All Phase 2–5 artifacts that reference fills, credits, Dependency Events, or authority classification must be consistent with this document. Required reading before Phase 2 (RFC) authoring begins.",
+      "key_rules": [
+        "Dependency Event = domain event consumed as Projection Input with no ledger authority of its own (fills, credits, inventory snapshots)",
+        "'estimated' is a provenance label, not an accuracy qualifier — operationally-exact values still carry 'estimated' if non-ledger",
+        "Projection Input = Authority Fact | Telemetry Fact | Dependency Event",
+        "Conservative authority default: absence of provenance signal must never default to authority — fallback stays 'estimated'",
+        "Relay worker must not treat all propagated events as authority-bearing"
+      ]
+    },
+    "outbox_knowledge_base": {
+      "path": "docs/issues/gaps/financial-data-distribution-standard/wave-2/outbox-knowledge-base.md",
+      "status": "KNOWLEDGE-BASE",
+      "mandate": "Primary implementation authority for finance_outbox DDL, trigger classification (D2 vs D6), relay worker design, idempotent consumer, origin_label immutability, and GAP-F1 closure checklist (§12). All Phase 2–5 artifacts must be consistent with it."
+    },
+    "failure_harness": {
+      "path": "docs/issues/gaps/financial-data-distribution-standard/actions/FAILURE-SIMULATION-HARNESS.md",
+      "status": "EXEC-READY",
+      "pipeline_split": {
+        "feature_pipeline_scope": "Phase 4 ADR freezes I1–I4 invariant definitions as consequences; Phase 5 PRD includes 'I1–I4 pass against real implementation' as testable acceptance criterion",
+        "build_pipeline_scope": "Harness execution — Jest test files, injection hooks (tests/failure/), npm run test:failure CI step — all EXEC-SPEC scope"
+      },
+      "invariants": {
+        "I1_atomicity": "PFT/grind INSERT and finance_outbox INSERT are in one pg_current_xact_id(); neither persists without the other",
+        "I2_durability": "Committed outbox row survives process crash; relay worker delivers on next poll",
+        "I3_idempotency": "Consumer deduplicates via processed_messages; runConsumer() twice produces no duplicate side effects",
+        "I4_replayability": "Projections rebuild deterministically from finance_outbox history; truncate + replay = same state"
+      }
+    }
+  },
+  "da_review": {
+    "magnitude_score": 0,
+    "magnitude_tier": null,
+    "magnitude_signals": [],
+    "tier_override": null,
+    "tier_override_reason": null,
+    "ran": false,
+    "verdict": null,
+    "p0_count": 0,
+    "p1_count": 0,
+    "attempt": 0,
+    "override_reason": null,
+    "team_name": null,
+    "team_results": null,
+    "cross_artifact_findings": 0,
+    "resolved_conflicts": [],
+    "unresolved_conflicts": []
+  },
+  "coherence": {
+    "non_goals": [
+      "No external consumer contract — finance_outbox is internal infrastructure only",
+      "No event sourcing — outbox is propagation, not a ledger",
+      "No authoritative totals or settlement surfaces",
+      "No CDC / WAL replication (Debezium, pg_logical) in Wave 2",
+      "No schema changes to player_financial_transaction",
+      "No UI changes — backend/infrastructure only",
+      "No compliance domain scope — mtl_entry / MTLService remains parallel and isolated",
+      "No reconciliation triggers on fills/credits",
+      "No player_id population on Class B rows",
+      "No shared-parent table unification of Class A and Class B"
+    ],
+    "violations": []
+  },
+  "srm_validation": {
+    "ran": true,
+    "owner_service": "PlayerFinancialService (primary) + TableContextService (Class B)",
+    "write_tables": [
+      "finance_outbox",
+      "table_buyin_telemetry",
+      "processed_messages",
+      "player_financial_transaction",
+      "table_fill",
+      "table_credit"
+    ],
+    "cross_context_contracts": [
+      "FinancialOutboxEventDTO",
+      "OutboxRelayWorker"
+    ],
+    "stale_flags": [
+      "SRM footnote ¹ references ADR-016 (payment gateway) for finance_outbox — superseded by ADR-054. SRM update required in Phase 4/5."
+    ]
+  },
+  "frozen_adrs": ["ADR-052", "ADR-053", "ADR-054", "ADR-055"],
+  "resolved_decisions": {
+    "Q1": "Two-store model confirmed. PFT expansion rejected. Class B in separate authoring store (table_buyin_telemetry).",
+    "Q2": "Separate tables confirmed. Shared parent not chosen.",
+    "Q3": "External reconciliation deferred outside pilot scope.",
+    "Q4": "Shared RPC-coupled outbox insertion adopted for both Class A and Class B. Trigger-based insertion rejected."
+  },
+  "branch": "feat/transactional-outbox",
+  "working_directory": "/home/diepulp/projects/pt-2/trees/feat/transactional-outbox",
+  "timestamp": "2026-05-09T00:00:00Z"
+}
