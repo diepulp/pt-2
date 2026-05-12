@@ -4,7 +4,7 @@ description: Live status board for Wave 1 (Surface Contract) and Wave 2 (Dual-La
 type: progress-tracker
 status: Active
 started: 2026-04-23
-last_updated: 2026-05-06 (Wave 1 COMPLETE — Phase 1.5 closed; EXEC-079 all gates passed; Wave 2 prerequisites documented)
+last_updated: 2026-05-11 (Wave 2 Phase 2.0 COMPLETE — PRD-081 / EXEC-081; GAP-F1 closed; I1–I4 proven 19/19; WAVE-2-ROLLOUT-MAP.md authored)
 tracks:
 - ROLLOUT-ROADMAP.md
 - ../decisions/ADR-FINANCIAL-FACT-MODEL.md
@@ -50,7 +50,12 @@ Each Phase ≥ 1.1 has three gates, in order: **PRD drafted & approved → EXEC-
 | 1     | 1.3 UI Split Display          | ✅ PRD-077 | ✅ EXEC-077 | ✅ All WS closed | ✅ PASSED 2026-05-04 |
 | 1     | 1.4 Validation + Lint + I5    | ✅ PRD-078 | ✅ EXEC-078 | ✅ WS1–WS5 closed | ✅ PASSED 2026-05-05 |
 | 1     | 1.5 Rollout & Sign-off        | ✅ PRD-079 | ✅ EXEC-079 | ✅ WS1–WS5 closed | ✅ PASSED 2026-05-06 (SIGNOFF doc, Gate 4 CONDITIONAL PASS) |
-| 2     | Schema + Outbox + Consumer    | ⬜        | ⬜        | ⬜                  | —         |
+| 2     | 2.0 Transactional Outbox Exemplar | ✅ PRD-081 | ✅ EXEC-081 | ✅ All WS closed | ✅ PASSED 2026-05-11 (I1–I4 19/19; commit 8a1b8741) |
+| 2     | 2.1 Producer Expansion A      | ⬜        | ⬜        | ⬜                  | —         |
+| 2     | 2.2 Dependency Events (Fills + Credits) | ⬜ | ⬜   | ⬜                  | —         |
+| 2     | 2.3 First Consumer Slice      | ⬜        | ⬜        | ⬜                  | —         |
+| 2     | 2.4 Operational Telemetry Projection | ⬜  | ⬜        | ⬜                  | —         |
+| 2     | 2.5 Observability + Sign-off  | ⬜        | ⬜        | ⬜                  | —         |
 
 **Skill routing per phase:** see `ROLLOUT-ROADMAP.md §9`. Skills are dispatched by `/build-pipeline`, not invoked directly.
 
@@ -288,13 +293,13 @@ Blocked on: Phase 1.3 exit gate + **Phase 1.4 PRD** + **Phase 1.4 EXEC-SPEC**.
 
 | Invariant     | Wave  | Phase gate      | Status |
 | ------------- | ----- | --------------- | ------ |
-| I1 Atomicity  | 2     | Harness TEST 1  | ➖ Wave 1 |
-| I2 Durability | 2     | Harness TEST 2  | ➖ Wave 1 |
-| I3 Idempotency| 2     | Harness TEST 3  | ➖ Wave 1 |
-| I4 Replayability | 2  | Harness TEST 5  | ➖ Wave 1 |
+| I1 Atomicity  | 2     | Phase 2.0 (tests/failure/i1-atomicity.test.ts) | ✅ Complete (EXEC-081, 5/5 PASS, 2026-05-11) |
+| I2 Durability | 2     | Phase 2.0 (tests/failure/i2-durability.test.ts) | ✅ Complete (EXEC-081, 4/4 PASS, 2026-05-11) |
+| I3 Idempotency| 2     | Phase 2.0 (tests/failure/i3-idempotency.test.ts) | ✅ Complete (EXEC-081, 5/5 PASS, 2026-05-11) |
+| I4 Replayability | 2  | Phase 2.0 (tests/failure/i4-replayability.test.ts) | ✅ Complete (EXEC-081, 5/5 PASS, 2026-05-11) |
 | **I5 Truthfulness** | **1** | **Phase 1.4 truth-telling tests** | ✅ Complete (EXEC-078) |
 
-Harness smoke check (Wave 2 prep): run against stubs in CI nightly to prevent bit-rot — not yet scheduled.
+All five invariants now proven. I1–I4 coverage extends to new producers as they are wired (Phases 2.1/2.2 each require atomicity re-verification for the new path).
 
 ---
 
@@ -302,29 +307,35 @@ Harness smoke check (Wave 2 prep): run against stubs in CI nightly to prevent bi
 
 Accumulated during Wave 1. Do **not** gate Wave 1 deliverables.
 
-| # | Question | Resolution path | Status |
-|---|----------|-----------------|--------|
-| Q1 | Should PFT schema expand to support table-only events, or does Class B stay in a separate authoring store? | Post–Wave 1 design review + prod data input | ⬜ Open |
-| Q2 | Should grind remain fully separate, or normalize under shared parent with discriminator? | Same review | ⬜ Open |
-| Q3 | External reconciliation consumer contract? | External stakeholder discovery | ⬜ Open |
-| Q4 | Outbox emission: trigger-based, shared RPC, or both? | Performance testing under literal-same-txn constraint (ADR-PROP D2) | ⬜ Open |
+| # | Question | Resolution | Status |
+|---|----------|------------|--------|
+| Q1 | Should PFT schema expand to support table-only events, or does Class B stay in a separate authoring store? | Two-store model confirmed. PFT expansion rejected (ADR-052 §4 pattern). | ✅ Resolved 2026-05-06 |
+| Q2 | Should grind remain fully separate, or normalize under shared parent with discriminator? | Separate tables confirmed. Shared parent not chosen — conditional five-commitment checklist documented but behavioral risk favors structural separation. | ✅ Resolved 2026-05-06 |
+| Q3 | External reconciliation consumer contract? | Explicitly deferred outside pilot scope. Internal propagation only. Future externalization requires separate ADR + stakeholder discovery. | ✅ Resolved/Deferred 2026-05-06 |
+| Q4 | Outbox emission: trigger-based, shared RPC, or both? | Shared RPC-coupled insertion adopted for both Class A and Class B. Trigger-based rejected for pilot. | ✅ Resolved 2026-05-06 |
 
-Track resolutions in `WAVE-2-PREP-DECISIONS.md` as they accumulate.
+All Q1–Q4 resolved. No remaining open questions gate Wave 2. Phase plan is in `WAVE-2-ROLLOUT-MAP.md`.
 
 ---
 
-## 5. Wave 2 — Dual-Layer + Outbox (Preview)
+## 5. Wave 2 — Dual-Layer + Outbox (ACTIVE)
 
-Not opened. Detailed plan → `WAVE-2-ROADMAP.md` post Wave 1 sign-off.
+**Phase 2.0 COMPLETE.** PRD-081 / EXEC-081 closed 2026-05-11. GAP-F1 closed. I1–I4 proven (19/19 harness tests). Commit `8a1b8741`.
 
-Scope outline (for awareness only):
-- [ ] Schema migration (Class B authoring store — shape gated by Q1/Q2)
-- [ ] `finance_outbox` DDL
-- [ ] Shared write-path RPC `rpc_emit_financial_event(fact_class, ...)` with literal-same-transaction guarantee
-- [ ] Outbox consumer worker
-- [ ] Projection refactor — Rated ← Class A, Grind ← Class B
-- [ ] Deprecate legacy trigger-based cross-domain propagation
-- [ ] Full failure harness (I1–I5) as exit gate
+**Authoritative Wave 2 phase plan:** `docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md`
+
+Phase summary from the map:
+
+| Phase | Label | Status |
+|-------|-------|--------|
+| 2.0 | Transactional Outbox Exemplar (PRD-081) | ✅ Complete 2026-05-11 |
+| 2.1 | Producer Expansion A: rpc_create_financial_adjustment → `adjustment.recorded` | ⬜ Entry gate met |
+| 2.2 | Dependency Events: rpc_request_table_fill + rpc_request_table_credit (simultaneous) | ⬜ Awaits 2.1 |
+| 2.3 | First Consumer Slice: Lifecycle-Aware Completeness Projection (resolves DEC-1) | ⬜ Awaits 2.1 |
+| 2.4 | Operational Telemetry Projection (shift dashboard event-driven) | ⬜ Awaits 2.2 + 2.3 |
+| 2.5 | Observability + Sign-off | ⬜ Awaits 2.4 |
+
+Phase 2.0 delivered: `finance_outbox` DDL, `processed_messages` DDL, `rpc_claim_outbox_batch`, `rpc_commit_consumer_receipt`, Class A + Class B exemplar producers wired, relay route (`POST /api/internal/outbox-relay`), `runConsumer`, `FinancialOutboxEventDTO`, I1–I4 harness.
 
 ---
 

@@ -1,0 +1,434 @@
+# WAVE-2 ROLLOUT MAP — Transactional Outbox (PT-2 Pilot)
+
+---
+
+status: Active — Phase 2.0 Complete (PRD-081, 2026-05-11). Phase 2.1 ready to initiate.
+date: 2026-05-11
+phase_2_0_closed: 2026-05-11
+phase_2_0_prd: PRD-081
+phase_2_0_exec: EXEC-081
+phase_2_0_commit: 8a1b8741
+scope: PT-2 pilot — producer expansion (adjustment, fills, credits) through first projection consumer slices.
+authority: ADR-052, ADR-053, ADR-054, ADR-055 (frozen 2026-04-23)
+derived_from:
+  - wave-2/outbox-knowledge-base.md
+  - wave-2/PRD-081_VERTICAL_COLLAPSE_EXEMPLAR_DIRECTIVE.md
+  - actions/fibs/wave-2/FIB-H-TRANSACTIONAL-OUTBOX.md
+  - actions/fibs/wave-2/FIB-S-TRANSACTIONAL-OUTBOX.json
+  - actions/ROLLOUT-ROADMAP.md §4
+  - .claude/skills/build-pipeline/checkpoints/PRD-081.json
+
+---
+
+## 1. Status Snapshot (as of 2026-05-11)
+
+### Delivered — Phase 2.0 (PRD-081)
+
+| Artifact | Status |
+|----------|--------|
+| `finance_outbox` Wave 2 DDL + indexes | ✅ |
+| `table_buyin_telemetry` schema | ✅ |
+| `processed_messages` table | ✅ |
+| `generate_uuid_v7()` extension | ✅ |
+| `rpc_claim_outbox_batch` | ✅ |
+| `rpc_commit_consumer_receipt` | ✅ |
+| `rpc_create_financial_txn` outbox extension (Class A exemplar) | ✅ |
+| `rpc_record_grind_observation` (Class B exemplar) | ✅ |
+| `FinancialOutboxEventDTO` | ✅ |
+| Relay worker (`/api/internal/outbox-relay`) + Vercel cron | ✅ |
+| Idempotent consumer (`runConsumer`) | ✅ |
+| RLS hardening — `finance_outbox` + `processed_messages` | ✅ |
+| I1–I4 invariant harness (19 tests PASS) | ✅ |
+| Integration + unit tests (98 tests PASS) | ✅ |
+| Event catalog (Wave 2 entries for exemplar pair) | ✅ |
+| SRM footnote updated (ADR-054 + ADR-056 cited) | ✅ |
+
+### GAP-F1 — Closed
+
+GAP-F1 (`finance_outbox` has zero producers) is fully closed by Phase 2.0. The four transport invariants are proven under real code:
+
+| Invariant | Status | Proof |
+|-----------|--------|-------|
+| I1 — Atomicity | ✅ Proven — exemplar pair only | tests/failure/i1-atomicity.test.ts; no TS outbox fallback path; **must be re-proven per producer in Phase 2.1 and 2.2** |
+| I2 — Durability | ✅ Proven — baseline (inherited) | tests/failure/i2-durability.test.ts; committed row re-delivered on next cycle; inherited by later phases unless relay architecture changes |
+| I3 — Idempotency | ✅ Proven — baseline (inherited) | tests/failure/i3-idempotency.test.ts; duplicate → safe prior commit; inherited by later phases unless consumer architecture changes |
+| I4 — Replayability | ✅ Proven — baseline (inherited) | tests/failure/i4-replayability.test.ts; ORDER BY (table_id, event_id) deterministic; inherited by later phases unless ordering architecture changes |
+
+### Dormant Workstreams (activate via Phase 2.1 / 2.2)
+
+| Workstream | Producer | Category |
+|------------|----------|----------|
+| WS_PRODUCER_ADJUSTMENT | `rpc_create_financial_adjustment` | Class A (Authority Fact) |
+| WS_PRODUCER_FILL | `rpc_request_table_fill` | Dependency Event |
+| WS_PRODUCER_CREDIT | `rpc_request_table_credit` | Dependency Event |
+
+### Wave 2 Entry Criteria — All Met
+
+| Criterion | Status | Evidence |
+|-----------|--------|----------|
+| Wave 1 complete | ✅ | WAVE-1-PHASE-1.5-SIGNOFF.md, 2026-05-06 |
+| Pre-Wave-2 surface debt closed | ✅ | PRD-080 / EXEC-080, commit 20df161b |
+| Q1–Q4 resolved | ✅ | All four resolved 2026-05-06 |
+| Feature pipeline initiated | ✅ | FIB-H-W2-OUTBOX-001, SCAFFOLD, PRD-081 |
+| I1–I4 harness proven against real implementation | ✅ | PRD-081 EXEC-081, test:failure 19/19 PASS |
+
+---
+
+## 2. Rollout Principles
+
+These principles govern every Phase 2.x slice. They are inherited from the frozen ADR set and the Vertical Collapse Directive.
+
+1. **Transport before consumers.** No projection consumer PRD may be initiated until its required producer path exists and I1-I4 are verified. Phase 2.3 does not start before Phase 2.1 gates.
+
+2. **Producers expand one category at a time.** Class A adjustment ships separately from Dependency Events. Within a category, parity rules apply: fills and credits ship as a pair (they are symmetric Dependency Events per RULE-6 / FIB-H §G).
+
+3. **ADR-055 parity is not relaxed.** The exemplar proved Class A and Class B simultaneously. Subsequent expansion slices must still satisfy parity within each slice boundary: no asymmetric rollout where one category of the same semantic class lands far ahead of another.
+
+4. **Consumers are projection-only.** No consumer slice may write to PFT, the grind authoring store, or any other authoring table. Consumers write only to projection stores and `processed_messages`. `origin_label` travels from authoring boundary to consumer unchanged.
+
+5. **Gates are pass/fail.** Each phase has a hard exit condition. No partial advancement. Phase N+1's PRD must land before Phase N+1 code begins.
+
+6. **No scope expansion without FIB amendment.** The FIB-S `downstream_expansion_allowed_without_amendment: false` rule applies to every phase in this map. Any new operator-visible outcome, external consumer contract, or new surface not in the containment loop requires a FIB amendment before it can appear in a PRD.
+
+7. **Freeze discipline holds.** ADR-052–055 are frozen. If a phase surfaces a real conflict, write a superseding ADR. Do not patch frozen docs silently.
+
+---
+
+## 3. Execution Protocol
+
+> This roadmap is a PLANNING document, not an EXEC-SPEC.
+
+The phase tables below describe *what must be built* and *what the exit gate looks like*. They do not replace PT-2's implementation pipeline.
+
+### Per-phase execution chain (fixed for every Phase ≥ 2.1)
+
+```
+┌──────────────┐   ┌──────────────────────┐   ┌──────────────────┐
+│ /prd-writer  │ → │  /lead-architect     │ → │  /build PRD-###  │
+│ (PRD for     │   │  (EXEC-SPEC scaffold  │   │  (workstream     │
+│  the phase)  │   │   + workstream IDs)   │   │   execution)     │
+└──────────────┘   └──────────────────────┘   └──────────────────┘
+```
+
+Every phase requires:
+1. PRD drafted, reviewed, and approved — citing ADR-052–055, this roadmap, and FIB-H-W2-OUTBOX-001 as parent authority
+2. EXEC-SPEC scaffolded by `/lead-architect`
+3. `/build PRD-###` executed to exit criteria
+
+No code is written for Phase N+1 before its PRD lands. No skill is invoked directly outside the build-pipeline chain.
+
+### Phase transitions
+
+Exiting Phase N → Opening Phase N+1 requires two documents:
+1. Phase N exit gate met (this roadmap's §4 criteria)
+2. Phase N+1 PRD drafted and approved
+
+---
+
+## 4. Phase Table
+
+---
+
+### Phase 2.0 — Exemplar Proof Slice ✅ COMPLETE 2026-05-11
+
+**PRD:** PRD-081 | **EXEC:** EXEC-081 | **Commit:** 8a1b8741
+
+**Scope:** Prove the full transport chain against the smallest symmetric pair (one Class A, one Class B). Establish finance_outbox, relay, idempotent consumer backbone, and I1–I4 harness. No producer expansion before this gates.
+
+**Exemplar pair:**
+- Class A: `rpc_create_financial_txn` → `buyin.recorded` / `cashout.recorded`
+- Class B: `rpc_record_grind_observation` → `grind.observed`
+
+**Exit gate (all passed 2026-05-11):**
+- [x] `finance_outbox` Wave 2 DDL live
+- [x] Both exemplar producers emit atomically (I1 proven)
+- [x] Committed row survives relay failure (I2 proven)
+- [x] Duplicate delivery produces one consumer side effect (I3 proven)
+- [x] Replay from ordered history produces equivalent state (I4 proven)
+- [x] test:failure 19/19 PASS; test:slice:player-financial 98/101 PASS (3 integration skipped)
+- [x] type-check exit 0; lint exit 0; build exit 0
+
+---
+
+### Phase 2.1 — Producer Expansion A: Financial Adjustment
+
+**Entry gate:** Phase 2.0 exit ✅
+
+**Scope:** Wire `rpc_create_financial_adjustment` to emit a `finance_outbox` row atomically within its existing transaction boundary. This is the only remaining Class A (Authority Fact) producer. No relay, consumer, or DDL schema changes — the transport infrastructure is already in place.
+
+**Semantic contract:**
+- `event_type`: `'adjustment.recorded'`
+- `fact_class`: `'ledger'`
+- `origin_label`: `'actual'`
+- `player_id`: mandatory (NOT NULL — full attribution required for Class A)
+- `table_id`: mandatory (table-first anchoring)
+- `aggregate_id`: the PFT row id for the adjustment
+
+**Skill to invoke:** `backend-service-builder` (RPC extension migration); `qa-specialist` (atomicity proof test for adjustment path)
+
+### Deliverables
+
+- [ ] Migration extending `rpc_create_financial_adjustment` with outbox emission inside same `BEGIN…COMMIT`
+- [ ] Event catalog entry for `adjustment.recorded` (registered before producer ships)
+- [ ] `FinancialOutboxEventDTO` remains unchanged — no shape changes needed
+- [ ] Unit test proving adjustment path calls single RPC (no TS-level outbox fallback)
+- [ ] `npm run db:types-local` exits 0 after migration
+- [ ] type-check, lint exit 0
+
+### Exit gate
+
+- `rpc_create_financial_adjustment` atomically emits `finance_outbox` row (I1 for adjustment path)
+- `adjustment.recorded` registered in Wave 2 event catalog
+- No second adjustment-to-outbox path exists in TypeScript
+- All gates pass
+
+---
+
+### Phase 2.2 — Producer Expansion B: Dependency Events (Fills + Credits)
+
+**Entry gate:** Phase 2.1 exit
+
+**Scope:** Wire `rpc_request_table_fill` and `rpc_request_table_credit` to emit `finance_outbox` rows atomically. Both must ship simultaneously — they are symmetric Dependency Events and asymmetric rollout is not permitted (ADR-055 parity within the Dependency Event category). No relay, consumer, or DDL schema changes.
+
+**Semantic contract (both producers):**
+
+| Field | Value | Note |
+|-------|-------|------|
+| `fact_class` | `'operational'` | Dependency Events are not Authority Facts |
+| `origin_label` | `'estimated'` | Provenance label per WAVE-2-UBIQUITOUS-LANGUAGE-CLARIFICATION.md — not an accuracy qualifier |
+| `player_id` | `NULL` | Dependency Events have no player attribution |
+| `table_id` | mandatory | Table-first anchoring |
+| `event_type` (fill) | `'fill.recorded'` | |
+| `event_type` (credit) | `'credit.recorded'` | |
+
+**Critical classification note:** Fills and credits carry `'estimated'` as provenance, not because they are uncertain — they are operationally auditable to the cent. The `'estimated'` label means non-ledger operational input under the surface contract (ADR-054 D5). Authority conflation into `'actual'` is a violation.
+
+**Skill to invoke:** `backend-service-builder` (2 RPC extension migrations); `qa-specialist` (atomicity proof + classification guard tests)
+
+### Deliverables
+
+- [ ] Migration extending `rpc_request_table_fill` with outbox emission
+- [ ] Migration extending `rpc_request_table_credit` with outbox emission
+- [ ] Both migrations in same PR / deployment (ADR-055 simultaneous landing)
+- [ ] Event catalog entries for `fill.recorded` and `credit.recorded`
+- [ ] `fact_class = 'operational'` and `origin_label = 'estimated'` hardcoded in both RPCs (not derived from caller input)
+- [ ] `player_id = NULL` enforced unconditionally in both RPCs
+- [ ] Tests proving: (a) atomicity for each path, (b) `origin_label` cannot be upgraded by consumer
+- [ ] type-check, lint exit 0
+
+### Exit gate
+
+- Both `rpc_request_table_fill` and `rpc_request_table_credit` atomically emit `finance_outbox` rows
+- `fill.recorded` and `credit.recorded` registered in Wave 2 event catalog
+- `fact_class = 'operational'` and `origin_label = 'estimated'` verified in migration text
+- No authority conflation — consumer tests assert `origin_label` stays `'estimated'`
+- All gates pass
+
+---
+
+### Phase 2.3 — First Consumer Slice: Lifecycle-Aware Completeness Projection
+
+**Entry gate:** Phase 2.1 exit (Class A adjustment producer wired)
+
+**Scope:** First projection consumer that reads from `finance_outbox` and produces a meaningful projection. Resolves DEC-1: all visit-level financial aggregates currently emit `completeness.status: 'unknown'` because the system has no lifecycle-aware projection mechanism. This slice builds the consumer infrastructure that makes `'complete'` and `'partial'` completeness signals possible.
+
+**What DEC-1 means:** The `mtl_gaming_day_summary` view and `player_financial_transaction` aggregates have no gaming-day lifecycle column signaling when a gaming day is closed. As a result, `VisitFinancialSummaryDTO`, `FinancialSectionDTO`, and `MtlGamingDaySummaryDTO` cannot determine completeness and emit `'unknown'` always (EXEC-080 DEC-1).
+
+**What this slice builds:**
+- A projection store for visit-level Class A financial state (committed buy-ins, cashouts, adjustments per gaming-day window)
+- A consumer that reads `buyin.recorded`, `cashout.recorded`, `adjustment.recorded` events from `finance_outbox` and updates the projection store
+- A lifecycle signal mechanism that marks a gaming-day window as closed (enabling `'complete'`)
+- Updated completeness logic in `VisitFinancialSummaryDTO` and `FinancialSectionDTO` to emit `'complete'` / `'partial'` based on the projection store
+
+**Consumer constraints (non-negotiable):**
+- Must use `processed_messages` idempotency before applying any side effect
+- Must pass `origin_label` through unchanged — no upgrade from `'estimated'` to `'actual'`
+- Must not write to `player_financial_transaction` or any authoring store
+- Must not perform reconciliation
+- Reads `fact_class` and `origin_label` directly — never infers from payload content
+
+**Surface impact:** `VisitFinancialSummaryDTO.total_in/total_out/net_amount` completeness status becomes meaningful. `FinancialSectionDTO` (RatingSlipModal) likewise. Surface rendering contract (Wave 1) is unchanged — labels are already in place.
+
+**Skill to invoke:** `backend-service-builder` (projection store + consumer service); `qa-specialist` (consumer idempotency tests; completeness signal tests); `api-builder` (if projection store surface is exposed via existing routes)
+
+### Deliverables
+
+- [ ] Projection store migration (gaming-day-scoped Class A financial state)
+- [ ] Consumer service reading `finance_outbox` for Class A event types
+- [ ] `processed_messages` idempotency wired within same transaction as projection update
+- [ ] Gaming-day lifecycle signal mechanism (close event or lifecycle column)
+- [ ] `VisitFinancialSummaryDTO` completeness updated: `'complete'` when gaming-day closed, `'partial'` when open, `'unknown'` only when no projection data
+- [ ] `FinancialSectionDTO` completeness updated equivalently
+- [ ] Replay test: truncate projection store, replay Class A events from `finance_outbox`, verify equivalent completeness state
+- [ ] type-check, lint, build exit 0
+
+### Exit gate
+
+- DEC-1 resolved — visit-level financial aggregates emit `'complete'` / `'partial'` when events are flowing
+- Consumer idempotency test passes: duplicate delivery of same `event_id` produces one projection update
+- Replay produces identical completeness state as live processing
+- Surface rendering contract (Wave 1) not broken — labels still visible
+- All gates pass
+
+---
+
+### Phase 2.4 — Consumer Expansion: Operational Telemetry Projection
+
+**Entry gate:** Phase 2.2 exit (all producers wired) + Phase 2.3 exit (consumer infrastructure established)
+
+**Scope:** Projection consumer for Class B (grind) and Dependency Event (fills, credits) streams. Produces shift-level operational telemetry with correct authority labels. This is the consumer that makes shift dashboard financial data event-driven rather than direct-polling from authoring stores.
+
+**Events consumed:**
+- `grind.observed` (Class B — `fact_class: 'operational'`, `origin_label: 'estimated'`)
+- `fill.recorded` (Dependency Event — same labels)
+- `credit.recorded` (Dependency Event — same labels)
+
+**Authority rule:** All three event types carry `origin_label: 'estimated'`. Any mixed-class surface that aggregates these alongside Class A events must degrade to `'estimated'` authority per the hierarchy (Actual > Observed > Estimated). No surface may show a combined operational + ledger total without degradation labeling.
+
+**Surface impact:** Shift telemetry operational estimates (Estimated Drop, Grind Buyin volume) become event-driven. Surfaces gain meaningful `'partial'` completeness during a shift and `'complete'` upon gaming-day close.
+
+**Skill to invoke:** `backend-service-builder` (operational projection store + consumer); `qa-specialist` (authority degradation tests; mixed-class aggregate tests); `frontend-design-pt-2` (if shift dashboard surface changes are required)
+
+### Deliverables
+
+- [ ] Operational projection store migration (shift-level Class B + Dependency Event state)
+- [ ] Consumer reading `grind.observed`, `fill.recorded`, `credit.recorded` from `finance_outbox`
+- [ ] `processed_messages` idempotency wired for operational consumer
+- [ ] Authority degradation enforced: mixed-class aggregates degrade to `'estimated'`
+- [ ] Completeness: `'partial'` during open shift, `'complete'` on gaming-day close
+- [ ] Replay test for operational projection
+- [ ] Shift telemetry surfaces updated to consume projection (not poll authoring store)
+- [ ] type-check, lint, build exit 0
+
+### Exit gate
+
+- Shift telemetry surfaces receive fresh Class B + Dependency Event data via outbox
+- Authority labels correct: `type: 'estimated'` on all operationally-derived values
+- Mixed-class surface shows degraded authority, not spurious `'actual'`
+- Completeness signals meaningful during shift lifecycle
+- All gates pass
+
+---
+
+### Phase 2.5 — Observability + Sign-Off
+
+**Entry gate:** Phase 2.4 exit
+
+**Scope:** Minimal relay health observability, outbox retention policy, and Wave 2 sign-off artifact. This is not a full observability dashboard — that is deferred per FIB-H §G.
+
+### Deliverables
+
+- [ ] `outbox_backlog_size` log line added to relay worker (count of `processed_at IS NULL` rows logged per cycle)
+- [ ] `processing_lag_ms` log line: elapsed time from `finance_outbox.created_at` to `processed_at`
+- [ ] Finance outbox retention: cleanup policy for processed rows older than 7 days (separate job or migration)
+- [ ] Wave 2 sign-off artifact: `docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-2-SIGN-OFF.md`
+  - Summary of all phases completed
+  - I1–I4 proof record
+  - DEC-1 resolution record
+  - Known residual gaps (multi-consumer fan-out, CDC relay, external consumer contract)
+
+### Exit gate
+
+- Backlog and lag metrics appear in relay logs
+- Retention policy active (no indefinite accumulation)
+- Sign-off document authored and approved
+- All gates pass
+
+---
+
+## 5. Failure-Simulation Alignment
+
+| Invariant | Scope | Wave 2 Status | Proof Artifact |
+|-----------|-------|--------------|----------------|
+| I1 — Atomicity | **Producer-specific — must re-prove per producer** | ✅ Proven in 2.0 (exemplar pair); re-proven in 2.1 (adjustment) and 2.2 (fill, credit) | tests/failure/i1-atomicity.test.ts + per-producer atomicity tests in 2.1 and 2.2 |
+| I2 — Durability | Transport substrate — baseline inherited | ✅ Proven in 2.0; inherited by 2.1–2.5 unless relay architecture changes | tests/failure/i2-durability.test.ts |
+| I3 — Idempotency | Transport substrate — baseline inherited; consumer-level re-verified | ✅ Proven in 2.0; consumer idempotency re-verified in 2.3 and 2.4 | tests/failure/i3-idempotency.test.ts + consumer idempotency tests |
+| I4 — Replayability | Transport substrate — baseline inherited; projection-level re-verified | ✅ Proven in 2.0; replay test for each consumer projection in 2.3 and 2.4 | tests/failure/i4-replayability.test.ts + consumer replay tests |
+| I5 — Truthfulness | Surface enforcement — Wave 1 baseline | ✅ Proven in Wave 1 Phase 1.4 | e2e/financial-enforcement.spec.ts (Wave 1) |
+
+**I1 is producer-scoped.** Each newly wired producer path (`rpc_create_financial_adjustment`, `rpc_request_table_fill`, `rpc_request_table_credit`) must ship with an explicit atomicity proof test demonstrating that the authoring row and `finance_outbox` row commit inside the same real transaction boundary. The exemplar proof does not certify future producers.
+
+**I2–I4 are transport-substrate invariants.** They are proven once at the relay/consumer architecture level and inherited by later producer phases. Re-verification is required only if the relay worker, ordering guarantee, or idempotent-consumer implementation changes materially. Consumer projection tests in Phase 2.3 and 2.4 extend I3 and I4 at the consumer layer without replacing the baseline harness.
+
+---
+
+## 6. Non-Goals (explicit)
+
+These are excluded from all Wave 2 phases and require a new FIB or superseding ADR before they can enter scope.
+
+- **No CDC / WAL relay** — Debezium, `pg_logical`, WAL streaming. Post-pilot scale upgrade.
+- **No external consumer contract** — No public event bus, no third-party event semantics, no reconciliation interface. Q3 deferred outside pilot scope; requires separate ADR + stakeholder discovery.
+- **No event sourcing** — The outbox does not reconstruct authoritative state. Not a general ledger.
+- **No authoritative totals** — No `Total Drop`, shift-end settlement, or final money position.
+- **No multi-consumer fan-out registry** — Wave 2 assumes a single internal consumer path. Fan-out requires schema evolution and a new FIB.
+- **No UI-driven reconciliation** — Render completeness labels; never recompute financial state against authoring stores.
+- **No compliance domain scope** — `mtl_entry` / MTLService remains parallel and isolated. `finance_outbox` does not propagate compliance events.
+- **No new PFT columns** — `player_financial_transaction` is append-only; no schema changes.
+
+---
+
+## 7. Skill Routing (invoked through `/build-pipeline`)
+
+Do not invoke these skills directly for any Phase ≥ 2.1. Each phase runs `/prd-writer` → `/lead-architect` (EXEC-SPEC scaffold) → `/build PRD-###`. `/build-pipeline` dispatches domain-expert skills per workstream.
+
+| Phase | Primary skill(s) | Supporting |
+|-------|-----------------|-----------|
+| 2.0 Exemplar | ✅ Complete (PRD-081) | — |
+| 2.1 Class A Adjustment | `backend-service-builder` (RPC migration) | `qa-specialist` (atomicity test) |
+| 2.2 Dependency Events | `backend-service-builder` (2 RPC migrations, simultaneous) | `qa-specialist` (atomicity + classification tests) |
+| 2.3 First Consumer | `backend-service-builder` (projection store + consumer) | `qa-specialist` (idempotency + replay tests); `api-builder` (if route updates needed) |
+| 2.4 Op. Telemetry | `backend-service-builder` (operational projection) | `qa-specialist`; `frontend-design-pt-2` (shift dashboard if surface changes) |
+| 2.5 Sign-off | `/lead-architect` (sign-off artifact) | `qa-specialist` (final gate) |
+
+---
+
+## 8. Exit Criteria
+
+### Wave 2 complete when
+
+1. All five producer paths emit to `finance_outbox` atomically:
+   - `rpc_create_financial_txn` ✅
+   - `rpc_record_grind_observation` ✅
+   - `rpc_create_financial_adjustment`
+   - `rpc_request_table_fill`
+   - `rpc_request_table_credit`
+2. I1–I4 invariants proven for all producer paths (I1 re-verified per new producer; I2–I4 baseline established in Phase 2.0)
+3. DEC-1 resolved — visit-level financial aggregates emit `'complete'` / `'partial'` when events are flowing
+4. Shift telemetry surfaces event-driven (not polling authoring stores)
+5. Authority labels correct on all new projection surfaces
+6. Relay health observable (backlog size + processing lag logged)
+7. Sign-off artifact authored and approved
+
+### Ready to start post-Wave-2 work when
+
+| Criterion | Notes |
+|-----------|-------|
+| Wave 2 sign-off complete | WAVE-2-SIGN-OFF.md authored |
+| All five producers wired and gated | Phase 2.2 exit passed |
+| First consumer slice live | Phase 2.3 exit passed |
+| External consumer contract if needed | Requires separate ADR + stakeholder discovery (Q3) |
+| Multi-consumer fan-out if needed | Requires FIB amendment + schema evolution |
+
+---
+
+## 9. Relationship to ROLLOUT-ROADMAP.md
+
+This document is the detailed execution plan for Wave 2 described in outline at `ROLLOUT-ROADMAP.md §4`. The parent roadmap's §4 note ("Wave 2 will need its own roadmap") is fulfilled by this document.
+
+ROLLOUT-ROADMAP.md remains the authoritative record for:
+- Wave 1 phases (1.0–1.5) — all complete
+- Pre-Wave-2 surface debt closure (PRD-080) — complete
+- Cross-wave principles (§2) and rollout governance (§2.5)
+- Q1–Q4 open question resolutions (§6)
+
+This document supersedes any standalone `WAVE-2-ROADMAP.md` draft. The build-pipeline checkpoint at `.claude/skills/build-pipeline/checkpoints/PRD-081.json` is the machine-readable state for Phase 2.0.
+
+---
+
+```
+Wave 2 changes what the system is.
+
+The transport is proven.
+The producers expand next.
+The consumers follow the producers.
+```

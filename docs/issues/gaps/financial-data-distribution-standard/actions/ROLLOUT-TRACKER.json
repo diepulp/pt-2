@@ -4,7 +4,7 @@
     "version": "1.2.0",
     "source_of_truth": "ROLLOUT-PROGRESS.md",
     "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md",
-    "last_updated": "2026-05-06",
+    "last_updated": "2026-05-11",
     "exec_074_closed": "2026-04-30",
     "update_rule": "Update both this file and ROLLOUT-PROGRESS.md together when phase state changes. This file is the machine-readable projection of the .md; it does not own truth.",
     "reading_order": "cursor → direction (principles + non_goals) → phases → deferred_register → active_bridges. Read roadmap_ref for full narrative, §2.5 for execution protocol, §9 for skill routing."
@@ -48,17 +48,17 @@
   },
 
   "cursor": {
-    "wave": 1,
-    "active_phase": null,
-    "phase_status": "complete",
-    "phase_label": "Wave 1 COMPLETE. Q1–Q4 resolved 2026-05-06. Feature pipeline initiated 2026-05-10 (FIB-H-W2-OUTBOX-001; scaffold-approved gate pending). /feature-pipeline replaces standalone WAVE-2-ROADMAP.md.",
+    "wave": 2,
+    "active_phase": "2.1",
+    "phase_status": "active",
+    "phase_label": "Wave 2 ACTIVE. Phase 2.0 (PRD-081 exemplar — GAP-F1 closed) complete 2026-05-11. I1–I4 invariants proven (19/19 harness tests pass). WAVE-2-ROLLOUT-MAP.md is the authoritative Wave 2 phase plan. Phase 2.1 (Producer Expansion A: rpc_create_financial_adjustment → 'adjustment.recorded') is next.",
     "blocker": null,
-    "next_action": "Advance /feature-pipeline: scaffold-approved gate → Phase 2 RFC (lead-architect) → Phase 3 SEC Note (rls-expert) → Phase 4 ADR (freeze I1–I4 invariants as ADR consequences) → Phase 5 PRD → /build PRD-###.",
+    "next_action": "Author PRD for Phase 2.1: rpc_create_financial_adjustment outbox emission. Entry gate met (Phase 2.0 exit ✅). Run /prd-writer → /lead-architect EXEC-SPEC → /build PRD-###. See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.1 for deliverables and exit gate.",
     "next_action_prd": null,
-    "last_closed_phase": "pre_wave_2",
-    "last_closed_date": "2026-05-06",
-    "last_closed_exec": "EXEC-080",
-    "last_closed_commit": "20df161b6aadc3f236106bdc84dc96b415815d48",
+    "last_closed_phase": "2.0",
+    "last_closed_date": "2026-05-11",
+    "last_closed_exec": "EXEC-081",
+    "last_closed_commit": "8a1b8741",
     "wave_1_status": "closed",
     "wave_1_closed_date": "2026-05-06",
     "wave_1_signoff_artifact": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-PHASE-1.5-SIGNOFF.md",
@@ -94,17 +94,18 @@
         {
           "id": "W2-C5",
           "criterion": "Failure harness I1–I4 invariants frozen in Phase 4 ADR; execution verified in EXEC-SPEC DoD",
-          "status": "not_met",
-          "detail": "FAILURE-SIMULATION-HARNESS.md is EXEC-READY. Design-time scope (feature-pipeline): Phase 4 ADR must enumerate I1–I4 atomicity, durability, idempotency, and replayability as durable ADR consequences. Build-pipeline scope (EXEC-SPEC DoD): all four harness scenarios must pass against real implementation. The prior criterion 'run against stubs before feature-pipeline entry' was mis-scoped — stub execution is EXEC-SPEC DoD, not a design-pipeline entry gate."
+          "status": "met",
+          "met_date": "2026-05-11",
+          "detail": "PRD-081 / EXEC-081 Phase 4 gate passed. tests/failure/ harness: I1-atomicity (5/5), I2-durability (4/4), I3-idempotency (5/5), I4-replayability (5/5) — 19/19 tests PASS against real implementation. ADR-054 + ADR-055 enumerate I1–I4 as durable ADR consequences. Commit 8a1b8741."
         }
       ],
       "unblocking_sequence": [
         "1. [RESOLVED 2026-05-06] Q1: two-store model confirmed. PFT expansion rejected (ADR-052 §4 pattern). Q2: separate tables confirmed. Shared parent not chosen ('I still would not unify now') — conditionally permitted by ADR set but behavioral convergence risk favors structural separation.",
         "2. [RESOLVED 2026-05-06] Q3 deferred outside pilot scope. Wave 2 defines internal propagation only. Future externalization requires separate ADR + stakeholder discovery.",
         "3. [RESOLVED 2026-05-06] Q4: shared RPC-coupled outbox insertion adopted for both Class A and Class B. Trigger-based insertion rejected for pilot. RPC performs deterministic outbox construction only — no projection writes, fan-out, or business logic.",
-        "4. [IN PROGRESS 2026-05-10] Feature pipeline initiated: FIB-H-W2-OUTBOX-001 authored; scaffold-approved gate pending. /feature-pipeline replaces standalone WAVE-2-ROADMAP.md.",
-        "5. Advance /feature-pipeline through Phase 2 RFC → Phase 3 SEC Note → Phase 4 ADR (I1–I4 invariants frozen as ADR consequences) → Phase 5 PRD → handoff to /build PRD-###.",
-        "6. EXEC-SPEC DoD must require I1–I4 harness scenarios to pass against real implementation (build-pipeline scope, not feature-pipeline entry gate)."
+        "4. [COMPLETE 2026-05-11] Feature pipeline delivered PRD-081 / EXEC-081. GAP-F1 closed. Exemplar pair proven. /feature-pipeline arc complete. WAVE-2-ROLLOUT-MAP.md is now the Wave 2 phase authority.",
+        "5. [COMPLETE 2026-05-11] I1–I4 harness proven against real implementation (19/19 tests pass). ADR-054 + ADR-055 enumerate invariants as durable consequences. Commit 8a1b8741.",
+        "6. [NEXT] Phase 2.1: PRD for rpc_create_financial_adjustment outbox emission. See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.1."
       ]
     }
   },
@@ -515,19 +516,42 @@
       ]
     },
     {
-      "id": "2",
-      "label": "Dual-Layer + Outbox",
+      "id": "2.0",
+      "label": "Transactional Outbox Exemplar — GAP-F1 Closure",
       "wave": 2,
-      "status": "not_started",
-      "entry_gate": "Wave 1 sign-off + Q1–Q4 resolved",
-      "readiness_assessed": "2026-05-06",
-      "readiness_overall": "NOT_READY",
-      "readiness_blockers": [
-        "Q1–Q4 open questions unresolved (all 4) — no design review scheduled",
-        "WAVE-2-ROADMAP.md not drafted — blocked on Q1–Q4",
-        "Failure harness not verified against stubs — I1–I4 untested"
+      "status": "complete",
+      "prd": "PRD-081",
+      "prd_path": "docs/10-prd/PRD-081-transactional-outbox-gap-f1-closure-v0.md",
+      "exec_spec": "EXEC-081",
+      "exec_spec_path": "docs/21-exec-spec/EXEC-081-transactional-outbox-gap-f1-exemplar.md",
+      "exit_date": "2026-05-11",
+      "commit": "8a1b8741",
+      "entry_gate": "Wave 1 sign-off ✅ + Q1–Q4 resolved ✅ + W2-C5 (I1–I4 harness) ✅",
+      "scope_amendment": "Vertical collapse to exemplar pair only: rpc_create_financial_txn (Class A) + rpc_record_grind_observation (Class B). rpc_create_financial_adjustment, rpc_request_table_fill, rpc_request_table_credit deferred to Phases 2.1/2.2.",
+      "deliverables": [
+        "finance_outbox DDL (uuid_v7 primary key, all discriminator fields)",
+        "processed_messages DDL (idempotent consumer receipts)",
+        "rpc_claim_outbox_batch (FOR UPDATE SKIP LOCKED, service_role)",
+        "rpc_commit_consumer_receipt (returns 'processed'|'duplicate', service_role)",
+        "rpc_create_financial_txn amended — outbox emit in same transaction (Class A, ADR-054 D2)",
+        "rpc_record_grind_observation amended — outbox emit in same transaction (Class B, ADR-054 D2)",
+        "FinancialOutboxEventDTO (services/player-financial/dtos.ts)",
+        "runConsumer (services/player-financial/outbox-consumer.ts)",
+        "POST /api/internal/outbox-relay (Vercel cron, CRON_SECRET bearer auth)",
+        "tests/failure/ harness: I1–I4 (19/19 tests PASS)"
       ],
-      "roadmap_note": "WAVE-2-ROADMAP.md not yet created. Scope outline in ROLLOUT-PROGRESS.md §5.",
+      "invariants_proven": {
+        "I1_atomicity": "5/5 PASS",
+        "I2_durability": "4/4 PASS",
+        "I3_idempotency": "5/5 PASS",
+        "I4_replayability": "5/5 PASS"
+      },
+      "dormant_workstreams": [
+        "WS_PRODUCER_ADJUSTMENT (rpc_create_financial_adjustment → Phase 2.1)",
+        "WS_PRODUCER_FILL (rpc_request_table_fill → Phase 2.2)",
+        "WS_PRODUCER_CREDIT (rpc_request_table_credit → Phase 2.2)"
+      ],
+      "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md",
       "wave_2_cicd_prerequisites": [
         "Staging Supabase project provisioned (schema migrations cannot go unverified when outbox and dual-layer stores are involved)",
         "Branch protection on main enabled",
@@ -705,10 +729,38 @@
   },
 
   "validation_matrix": {
-    "I1_atomicity": { "wave": 2, "status": "not_wave_1" },
-    "I2_durability": { "wave": 2, "status": "not_wave_1" },
-    "I3_idempotency": { "wave": 2, "status": "not_wave_1" },
-    "I4_replayability": { "wave": 2, "status": "not_wave_1" },
+    "I1_atomicity": {
+      "wave": 2,
+      "phase": "2.0",
+      "status": "complete",
+      "closed_date": "2026-05-11",
+      "closed_in": "EXEC-081",
+      "result": "5/5 PASS"
+    },
+    "I2_durability": {
+      "wave": 2,
+      "phase": "2.0",
+      "status": "complete",
+      "closed_date": "2026-05-11",
+      "closed_in": "EXEC-081",
+      "result": "4/4 PASS"
+    },
+    "I3_idempotency": {
+      "wave": 2,
+      "phase": "2.0",
+      "status": "complete",
+      "closed_date": "2026-05-11",
+      "closed_in": "EXEC-081",
+      "result": "5/5 PASS"
+    },
+    "I4_replayability": {
+      "wave": 2,
+      "phase": "2.0",
+      "status": "complete",
+      "closed_date": "2026-05-11",
+      "closed_in": "EXEC-081",
+      "result": "5/5 PASS"
+    },
     "I5_truthfulness": {
       "wave": 1,
       "phase": "1.4",

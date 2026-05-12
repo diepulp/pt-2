@@ -1,0 +1,95 @@
+{
+  "id": "PRD-082",
+  "exec_spec": "docs/21-exec-spec/EXEC-082-wave2-integration-proof.md",
+  "status": "complete",
+  "created_at": "2026-05-12T00:07:44Z",
+  "updated_at": "2026-05-12T00:35:00Z",
+  "gov010_check": "waived: validation-PRD, Accepted status, FIB chain present, ADRs in affects",
+  "complexity_prescreen": "full",
+  "complexity_override": null,
+  "fib_h_ref": "docs/issues/gaps/financial-data-distribution-standard/wave-2/w-2-integration-proof/FIB-W2-INTEGRATION-PROOF.md",
+  "fib_s_ref": "docs/issues/gaps/financial-data-distribution-standard/wave-2/w-2-integration-proof/fib-s-integration-proof.json",
+  "fib_s_loaded": true,
+  "write_path_classification": "none",
+  "e2e_mandate_waiver": null,
+  "current_phase": 3,
+  "pending_workstreams": [],
+  "completed_workstreams": ["WS1_HARNESS_DDL", "WS2_SEED", "WS3_PROOF_SCRIPTS", "WS4_PROOF_EXECUTE"],
+  "dormant_workstreams": [],
+  "updated_at": "2026-05-12T02:30:00Z",
+  "artifacts": {
+    "exec_spec_generated": "docs/21-exec-spec/EXEC-082-wave2-integration-proof.md",
+    "validation_result": "PASSED (1 advisory warning: schema-verification gate — covered by db:types-local)",
+    "temporal_integrity": "stale: false",
+    "intake_traceability": "PASS — 7/7 outcomes, 10/10 loop steps, 0 anti-invention violations, 2/2 decisions resolved",
+    "claim_reclaim_finding": "reclaimability inherent — no unclaim helper needed; I2 pre-check PASSES",
+    "WS1_HARNESS_DDL": {
+      "status": "completed",
+      "gate": "schema-validation",
+      "gate_result": "PASS",
+      "outputs": [
+        "supabase/migrations/20260512000744_add_outbox_integration_proof_state.sql"
+      ],
+      "notes": "TEARDOWN-ARTIFACT already existed. Migration applied via docker exec psql (migration up blocked by stale history entry 20260512002136 which was cleaned). db:types-local exits 0. outbox_integration_proof_state at types/database.types.ts:1569."
+    },
+    "WS2_SEED": {
+      "status": "completed",
+      "gate": "seed-execute",
+      "gate_result": "PASS",
+      "outputs": [
+        "scripts/outbox-proof/seed.ts"
+      ],
+      "notes": "Fixed accrual_kind to 'compliance_only' (only valid values: 'loyalty'|'compliance_only'; 'loyalty' requires policy_snapshot). Auth user id=19ce5a9b-6a2f-48cf-8619-89196a8d683f. Sign-in OK.",
+      "fixed_uuids": {
+        "COMPANY_ID":     "00000000-0000-0000-0000-000000000009",
+        "CASINO_1_ID":    "00000000-0000-0000-0000-000000000001",
+        "CASINO_2_ID":    "00000000-0000-0000-0000-000000000002",
+        "TABLE_1_ID":     "00000000-0000-0000-0000-000000000003",
+        "TABLE_2_ID":     "00000000-0000-0000-0000-000000000004",
+        "PLAYER_ID":      "00000000-0000-0000-0000-000000000005",
+        "VISIT_ID":       "00000000-0000-0000-0000-000000000006",
+        "SLIP_ID":        "00000000-0000-0000-0000-000000000007",
+        "STAFF_ID":       "00000000-0000-0000-0000-000000000008",
+        "VISIT_GROUP_ID": "00000000-0000-0000-0000-000000000010"
+      }
+    },
+    "WS3_PROOF_SCRIPTS": {
+      "status": "completed",
+      "gate": "test-pass",
+      "gate_result": "scripts written + type-clean",
+      "outputs": [
+        "scripts/outbox-proof/helpers.ts",
+        "scripts/outbox-proof/run-all.ts",
+        "scripts/outbox-proof/i1-atomicity.ts",
+        "scripts/outbox-proof/i2-durability.ts",
+        "scripts/outbox-proof/i3-idempotency.ts",
+        "scripts/outbox-proof/i4-replayability.ts",
+        "scripts/outbox-proof/i5-cashout-non-emission.ts",
+        "scripts/outbox-proof/drift-check.ts"
+      ],
+      "notes": "rpc_record_grind_observation was missing from local DB; applied migration 20260511134700 via docker exec psql; registered all Wave 2 migration versions in schema_migrations; db:types-local regenerated; npx tsc --project tsconfig.json --noEmit: 0 errors in proof scripts."
+    },
+    "WS4_PROOF_EXECUTE": {
+      "status": "completed",
+      "gate": "signoff-validation",
+      "gate_result": "PASS",
+      "outputs": [
+        "docs/issues/gaps/financial-data-distribution-standard/wave-2/w-2-integration-proof/WAVE-2-INTEGRATION-PROOF-SIGNOFF.md",
+        "supabase/migrations/20260512021632_fix_wave2_transport_path_bugs.sql"
+      ],
+      "notes": "Three transport-path bugs fixed before suite could pass: (1) rpc_create_financial_txn ON CONFLICT DO UPDATE → DO NOTHING; (2) bridge_rated_buyin_to_telemetry trigger missing event_type column; (3) finance_outbox missing INSERT policy for authenticated role. Seed bug fixed: missing player_casino record for proof player. Suite result: I1 PASS, I2 PASS, I3 PASS, I4 PASS, I5 PASS, Drift ALL_NON_BLOCKING. OVERALL: PASS. Signoff decision: Phase 2.1 authorized."
+    },
+    "decisions": [
+      {
+        "id": "DEC-001",
+        "statement": "rpc_claim_outbox_batch reclaimability is inherent via processed_at IS NULL filter",
+        "verification": "cited"
+      },
+      {
+        "id": "DEC-002",
+        "statement": "outbox_integration_proof_state is harness-only; not a projection store",
+        "verification": "cited"
+      }
+    ]
+  }
+}

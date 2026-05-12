@@ -1,0 +1,226 @@
+{
+  "id": "FIB-S-W2-INTEGRATION-PROOF-001",
+  "title": "Wave 2 Integration Proof — Exemplar Runtime Validation",
+  "status": "PROPOSED",
+  "date": "2026-05-11",
+  "parent_authority": [
+    "ADR-052",
+    "ADR-053",
+    "ADR-054",
+    "ADR-055",
+    "PRD-081",
+    "EXEC-081",
+    "WAVE-2-ROLLOUT-MAP"
+  ],
+  "scope": {
+    "kind": "integration_proof",
+    "phase": "post_2_0_pre_2_1",
+    "system": "PT-2 pilot",
+    "allowed_change_type": "validation_and_test_harness_only",
+    "business_behavior_change_allowed": false,
+    "producer_expansion_allowed": false,
+    "projection_implementation_allowed": false,
+    "operator_visible_surface_change_allowed": false
+  },
+  "zachman_coverage": {
+    "what": {
+      "thing_under_test": "PRD-081 transactional outbox exemplar transport chain",
+      "entities": [
+        "finance_outbox",
+        "processed_messages",
+        "player_financial_transaction",
+        "table_buyin_telemetry",
+        "relay route",
+        "claim RPC",
+        "consumer receipt RPC",
+        "proof state"
+      ],
+      "event_types": ["buyin.recorded", "cashout.recorded", "grind.observed"]
+    },
+    "how": {
+      "method": "real RPC and relay integration proof",
+      "required_invariants": [
+        "I1_atomicity",
+        "I2_durability",
+        "I3_idempotency",
+        "I4_replayability"
+      ],
+      "proof_mechanisms": [
+        "real database seeding",
+        "real RPC invocation",
+        "relay interruption simulation",
+        "duplicate delivery simulation",
+        "proof-state replay comparison",
+        "runtime drift check"
+      ]
+    },
+    "where": {
+      "execution_contexts": [
+        "local real Supabase/Postgres integration environment",
+        "preview or deployed runtime if available"
+      ],
+      "excluded_contexts": [
+        "production data",
+        "external event broker",
+        "external reconciliation system"
+      ]
+    },
+    "who": {
+      "primary_actor": "developer/operator",
+      "secondary_actor": "Phase 2.1 implementer",
+      "forbidden_actors": [
+        "external consumer",
+        "casino operator UI user",
+        "reconciliation owner"
+      ]
+    },
+    "when": {
+      "entry_point": "after PRD-081 Phase 2.0 implementation",
+      "exit_point": "before Phase 2.1 producer expansion",
+      "blocking_relationship": "Phase 2.1 must not begin until this FIB exits successfully"
+    },
+    "why": {
+      "reason": "Prevent Wave 2 producer expansion from building on an unproven transport substrate.",
+      "risk_addressed": [
+        "runtime drift",
+        "false confidence from structural tests only",
+        "orphaned authoring rows",
+        "phantom outbox rows",
+        "duplicate consumer side effects",
+        "non-deterministic replay"
+      ]
+    }
+  },
+  "containment_loop": [
+    "seed_real_integration_data",
+    "invoke_rpc_create_financial_txn",
+    "invoke_rpc_record_grind_observation",
+    "drive_relay_path",
+    "verify_processed_messages_idempotency",
+    "capture_live_proof_state",
+    "truncate_proof_state",
+    "replay_from_finance_outbox",
+    "compare_replay_to_live_state",
+    "record_signoff"
+  ],
+  "required_outcomes": {
+    "O1_real_rpc_execution": {
+      "required": true,
+      "mock_substitute_allowed": false,
+      "producers": ["rpc_create_financial_txn", "rpc_record_grind_observation"]
+    },
+    "O2_atomicity": {
+      "required": true,
+      "assertions": [
+        "authoring_row_and_outbox_row_commit_together",
+        "failure_injection_rolls_back_both",
+        "no_orphan_authoring_row",
+        "no_phantom_outbox_row",
+        "row_count_only_proof_rejected"
+      ]
+    },
+    "O3_durability": {
+      "required": true,
+      "assertions": [
+        "committed_outbox_row_survives_relay_failure",
+        "row_remains_claimable_or_reclaimable",
+        "later_processing_succeeds"
+      ]
+    },
+    "O4_idempotency": {
+      "required": true,
+      "assertions": [
+        "duplicate_event_id_yields_one_logical_side_effect",
+        "processed_messages_receipt_commits_with_side_effect",
+        "repeat_delivery_safe"
+      ]
+    },
+    "O5_replayability": {
+      "required": true,
+      "assertions": [
+        "live_processing_generates_deterministic_proof_state",
+        "proof_state_can_be_truncated",
+        "ordered_replay_rebuilds_equivalent_state",
+        "live_and_replay_hashes_match"
+      ]
+    },
+    "O6_runtime_drift_check": {
+      "required": true,
+      "areas": [
+        "Supabase RPC execution",
+        "service_role_relay_access",
+        "cron_secret_validation",
+        "RLS behavior",
+        "environment_variables"
+      ]
+    },
+    "O7_evidence_artifact": {
+      "required": true,
+      "artifact_name": "WAVE-2-INTEGRATION-PROOF-SIGNOFF.md",
+      "minimum_fields": [
+        "environment_tested",
+        "commands_or_scripts_run",
+        "I1_result",
+        "I2_result",
+        "I3_result",
+        "I4_result",
+        "runtime_drift_findings",
+        "decision"
+      ]
+    }
+  },
+  "explicit_exclusions": [
+    "rpc_create_financial_adjustment producer wiring",
+    "rpc_request_table_fill producer wiring",
+    "rpc_request_table_credit producer wiring",
+    "new projection stores (exception: outbox_integration_proof_state is authorized as a test harness artifact for I4 replay hashing; not a projection store, not a product read model, must not be consumed by application code outside PRD-082 validation)",
+    "lifecycle-aware completeness projection",
+    "shift telemetry projection",
+    "dashboard freshness behavior",
+    "operator-visible UI changes",
+    "replay UI",
+    "observability dashboard",
+    "generic event platform",
+    "multi-consumer fan-out",
+    "external event contract",
+    "reconciliation behavior",
+    "new financial totals",
+    "ADR-052 through ADR-055 amendments",
+    "broad schema redesign"
+  ],
+  "entry_criteria": [
+    "PRD-081 implementation available",
+    "finance_outbox exists",
+    "processed_messages exists",
+    "rpc_claim_outbox_batch exists",
+    "rpc_commit_consumer_receipt exists",
+    "rpc_create_financial_txn emits outbox rows",
+    "rpc_record_grind_observation emits outbox rows",
+    "relay route exists",
+    "test database can be reset safely"
+  ],
+  "exit_criteria": [
+    "I1_atomicity_passes_for_both_exemplar_producers",
+    "I2_durability_passes_under_relay_interruption",
+    "I3_idempotency_passes_under_duplicate_delivery",
+    "I4_replayability_passes_with_deterministic_state_comparison",
+    "runtime_drift_findings_recorded",
+    "WAVE-2-INTEGRATION-PROOF-SIGNOFF.md authored",
+    "decision_is_either_phase_2_1_authorized_or_blocked"
+  ],
+  "governance": {
+    "downstream_expansion_allowed_without_amendment": false,
+    "phase_2_1_blocked_until_exit": true,
+    "frozen_adr_patch_allowed": false,
+    "producer_expansion_requires_successful_exit": true
+  },
+  "next_if_pass": [
+    "freeze PRD-081 exemplar benchmark",
+    "initiate Phase 2.1 producer expansion for rpc_create_financial_adjustment"
+  ],
+  "next_if_fail": [
+    "patch exemplar transport path only",
+    "rerun integration proof",
+    "do not initiate Phase 2.1"
+  ]
+}

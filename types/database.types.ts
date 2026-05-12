@@ -1566,6 +1566,48 @@ export type Database = {
           },
         ]
       }
+      outbox_integration_proof_state: {
+        Row: {
+          aggregate_id: string
+          casino_id: string
+          consumed_at: string
+          event_id: string
+          event_type: string
+          fact_class: string
+          origin_label: string
+          payload: Json
+          player_id: string | null
+          seq: number
+          table_id: string
+        }
+        Insert: {
+          aggregate_id: string
+          casino_id: string
+          consumed_at?: string
+          event_id: string
+          event_type: string
+          fact_class: string
+          origin_label: string
+          payload: Json
+          player_id?: string | null
+          seq?: number
+          table_id: string
+        }
+        Update: {
+          aggregate_id?: string
+          casino_id?: string
+          consumed_at?: string
+          event_id?: string
+          event_type?: string
+          fact_class?: string
+          origin_label?: string
+          payload?: Json
+          player_id?: string | null
+          seq?: number
+          table_id?: string
+        }
+        Relationships: []
+      }
       pilot_access_requests: {
         Row: {
           casino_name: string
@@ -5908,6 +5950,10 @@ export type Database = {
           new_balance: number
           old_balance: number
         }[]
+      }
+      rpc_record_grind_observation: {
+        Args: { p_amount_cents: number; p_table_id: string }
+        Returns: string
       }
       rpc_redeem: {
         Args: {

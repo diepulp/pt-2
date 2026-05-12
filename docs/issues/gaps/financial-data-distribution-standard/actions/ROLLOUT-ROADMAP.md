@@ -432,15 +432,15 @@ Detailed plan deferred until Wave 1 exit gate passes. Scope outline below for co
 - Classification logic already proven in production → Wave 2 just changes *where* the classification is authored, not *what* it looks like
 - Lint rules catch any regression in envelope discipline while Wave 2 code lands
 
-## Wave 2 will need its own roadmap
+## Wave 2 roadmap — COMPLETE (2026-05-11)
 
-`WAVE-2-ROADMAP.md` is the next document to be planned. Its substrate is already produced:
+**`WAVE-2-ROLLOUT-MAP.md` is the authoritative Wave 2 phase plan.**
 
 ```
-docs/issues/gaps/financial-data-distribution-standard/wave-2/PRE-WAVE-2-CONTEXT-BRIEF.md
+docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md
 ```
 
-The brief contains: Wave 1 conformance posture, Q1–Q4 analysis with pre-rejections and five-commitment checklist (Q2), Q3 deferral rationale, Q4 test protocol requirements, GAP-F1 DDL inventory, and the existing `finance_outbox` field-level gap table. `WAVE-2-ROADMAP.md` should be authored from this substrate once Q1, Q2, and Q4 are resolved. Do not draft Wave 2 phases before Q1/Q2 are settled — the schema decisions change the phase structure.
+Phase 2.0 (PRD-081 / EXEC-081) is complete. Q1–Q4 all resolved 2026-05-06. GAP-F1 closed. I1–I4 proven (19/19 harness tests). Transport infrastructure is in place. Phases 2.1–2.5 cover producer expansion, consumer slices, and observability. See the map for entry gates, deliverables, and exit criteria per phase.
 
 ---
 
