@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { BootstrapForm } from '@/components/onboarding/bootstrap-form';
 import { isDevAuthBypassEnabled } from '@/lib/supabase/dev-context';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
+import { canonicalizeEmail, checkAllowlistGate } from '@/services/pilot/crud';
 
 export default async function BootstrapPage() {
   const supabase = await createClient();
@@ -16,8 +18,18 @@ export default async function BootstrapPage() {
     redirect('/signin?redirect=/bootstrap');
   }
 
-  // Skip redirect checks in dev bypass (no real user/claims to evaluate)
+  // Skip allowlist + redirect checks in dev bypass (no real user/claims to evaluate)
   if (!devBypass) {
+    // Pilot allowlist gate (DEC-6)
+    const serviceClient = createServiceClient();
+    const allowlistResult = await checkAllowlistGate(
+      serviceClient,
+      canonicalizeEmail(user!.email!),
+    );
+    if (allowlistResult !== 'approved') {
+      redirect('/request-access');
+    }
+
     // If user already has a staff binding (casino_id in claims), send to gateway
     const casinoId = user!.app_metadata?.casino_id;
     if (casinoId) {

@@ -1,6 +1,14 @@
-import { MagicLinkForm } from '@/components/magic-link-form';
+/**
+ * Surface Classification (ADR-041 §5.2):
+ *   Rendering Delivery: Client Shell — pure form page; no server read at load time.
+ *   Data Aggregation:   None — submit-only; no data consumed on render.
+ *   Rejected: RSC Prefetch — nothing to prefetch for a public request form.
+ *   Metric Provenance:  None — no truth-bearing metrics rendered.
+ */
 
-export default function SignInPage() {
+import { RequestAccessForm } from '@/components/request-access-form';
+
+export default function RequestAccessPage() {
   return (
     <div className="relative min-h-[70vh] overflow-hidden bg-[#000212]">
       {/* Dot grid texture */}
@@ -26,8 +34,8 @@ export default function SignInPage() {
       />
 
       <div className="relative flex min-h-[70vh] items-center justify-center px-5 py-16 sm:px-6">
-        <div className="w-full max-w-[420px]">
-          <MagicLinkForm />
+        <div className="w-full max-w-[520px]">
+          <RequestAccessForm />
         </div>
       </div>
     </div>

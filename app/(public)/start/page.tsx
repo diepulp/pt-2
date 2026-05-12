@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
+import { canonicalizeEmail, checkAllowlistGate } from '@/services/pilot/crud';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +16,16 @@ export default async function StartGatewayPage() {
 
   if (!user) {
     redirect('/signin');
+  }
+
+  // 1b. Pilot allowlist gate (DEC-6): must be approved before staff-binding check
+  const serviceClient = createServiceClient();
+  const allowlistResult = await checkAllowlistGate(
+    serviceClient,
+    canonicalizeEmail(user.email!),
+  );
+  if (allowlistResult !== 'approved') {
+    redirect('/request-access');
   }
 
   // 2. Check staff binding

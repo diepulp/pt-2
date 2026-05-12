@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { RegisterForm } from '@/components/onboarding/register-form';
 import { isDevAuthBypassEnabled } from '@/lib/supabase/dev-context';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
+import { canonicalizeEmail, checkAllowlistGate } from '@/services/pilot/crud';
 
 export default async function RegisterPage() {
   const supabase = await createClient();
@@ -16,8 +18,18 @@ export default async function RegisterPage() {
     redirect('/signin?redirect=/register');
   }
 
-  // Skip registration check in dev bypass (no real user to query against)
+  // Skip allowlist + registration checks in dev bypass (no real user to query against)
   if (!devBypass) {
+    // Pilot allowlist gate (DEC-6)
+    const serviceClient = createServiceClient();
+    const allowlistResult = await checkAllowlistGate(
+      serviceClient,
+      canonicalizeEmail(user!.email!),
+    );
+    if (allowlistResult !== 'approved') {
+      redirect('/request-access');
+    }
+
     // If user already has a pending registration, skip to bootstrap
     const { data: registration } = await supabase
       .from('onboarding_registration')

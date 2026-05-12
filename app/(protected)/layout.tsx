@@ -10,6 +10,8 @@ import { redirect } from 'next/navigation';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { Header } from '@/components/layout/header';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
+import { canonicalizeEmail, checkAllowlistGate } from '@/services/pilot/crud';
 
 export default async function ProtectedLayout({
   children,
@@ -23,6 +25,16 @@ export default async function ProtectedLayout({
 
   if (!user) {
     redirect('/signin');
+  }
+
+  // Pilot allowlist gate (DEC-6): fail-closed; unapproved users go to request-access
+  const serviceClient = createServiceClient();
+  const allowlistResult = await checkAllowlistGate(
+    serviceClient,
+    canonicalizeEmail(user.email!),
+  );
+  if (allowlistResult !== 'approved') {
+    redirect('/request-access');
   }
 
   // Main sidebar collapsed width: 56px (3.5rem / w-14)
