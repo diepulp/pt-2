@@ -1,0 +1,210 @@
+{
+  "schema_version": 2,
+  "prd": "PRD-081",
+  "exec_spec": "docs/21-exec-spec/EXEC-081-transactional-outbox-gap-f1-exemplar.md",
+  "status": "complete",
+  "created_at": "2026-05-11T13:40:15Z",
+  "updated_at": "2026-05-11T18:30:00Z",
+  "gov010_check": "passed",
+  "complexity_prescreen": "full",
+  "complexity_override": null,
+  "fib_h_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-H-TRANSACTIONAL-OUTBOX.md",
+  "fib_s_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-S-TRANSACTIONAL-OUTBOX.json",
+  "fib_s_loaded": true,
+  "write_path_classification": "detected",
+  "e2e_mandate_waiver": "Internal infrastructure cron endpoint only. POST /api/internal/outbox-relay is protected by CRON_SECRET bearer auth; no operator browser flow. I1-I4 harness + integration tests provide equivalent verification. PRD-081 is backend/infrastructure-only with no operator-facing surface.",
+  "scope_amendment": {
+    "type": "vertical-collapse",
+    "date": "2026-05-11",
+    "exemplar_pair": ["rpc_create_financial_txn", "rpc_record_grind_observation"],
+    "deferred": ["rpc_create_financial_adjustment", "rpc_request_table_fill", "rpc_request_table_credit"]
+  },
+  "spec_patch": {
+    "date": "2026-05-11",
+    "defects_closed": [
+      "Blocker-1: runConsumer atomicity — replaced TypeScript sideEffect with rpc_commit_consumer_receipt SECURITY DEFINER RPC",
+      "Blocker-2: duplicate semantics — defined as safe durable prior commit, not partial prior attempt",
+      "Correction-3: Class B event type — hardcoded to grind.observed, p_event_type parameter removed",
+      "Correction-4: UUIDv7 assertion — monotonic counter explicitly required, pure random rejected",
+      "Correction-5: DROP TABLE CASCADE — replaced with zero-row assertion + explicit policy drops + no CASCADE"
+    ]
+  },
+  "current_phase": 5,
+  "gates": {
+    "approval": { "passed": true, "timestamp": "2026-05-11T14:15:00Z" },
+    "phase_1": {
+      "passed": true,
+      "timestamp": "2026-05-11T14:45:00Z",
+      "gate": "schema-validation",
+      "notes": "All 6 migrations applied. db:types-local exit 0. Wave 2 shape verified in generated types. One fix during execution: gen_random_bytes → extensions.gen_random_bytes (pgcrypto in extensions schema, empty search_path requires full qualification)."
+    },
+    "phase_2": {
+      "passed": true,
+      "timestamp": "2026-05-11T17:20:00Z",
+      "gates": ["type-check", "lint"],
+      "notes": "type-check exit 0. lint exit 0 (0 errors). FinancialOutboxEventDTO converted to intersection type (Pick + narrowed fields) to satisfy custom-rules/no-manual-dto-interfaces ESLint rule."
+    },
+    "phase_3": {
+      "passed": true,
+      "timestamp": "2026-05-11T17:35:00Z",
+      "gates": ["type-check", "lint"],
+      "notes": "type-check exit 0. lint exit 0 on app/api/internal/ + services/player-financial/outbox-consumer.ts."
+    },
+    "phase_4": {
+      "passed": true,
+      "timestamp": "2026-05-11T18:30:00Z",
+      "gates": ["type-check", "lint", "test-pass"],
+      "notes": "type-check exit 0. lint exit 0 (--no-cache). test:failure 4 suites 19 tests PASS. test:slice:player-financial 8 suites 101 tests (3 skipped integration) PASS."
+    }
+  },
+  "pending_workstreams": [],
+  "completed_workstreams": [
+    {
+      "id": "WS8_HARNESS",
+      "completed_at": "2026-05-11T18:00:00Z",
+      "outputs": [
+        "tests/failure/i1-atomicity.test.ts",
+        "tests/failure/i2-durability.test.ts",
+        "tests/failure/i3-idempotency.test.ts",
+        "tests/failure/i4-replayability.test.ts",
+        "package.json",
+        "jest.node.config.js"
+      ],
+      "notes": "4 failure harness tests: I1 atomicity (rollback injection — no TS outbox fallback), I2 durability (committed row re-delivered), I3 idempotency (duplicate→duplicate, 2-param arity), I4 replayability (UUIDv7 deterministic ORDER BY table_id,event_id). jest.node.config.js: added tests/**/*.test.ts to testMatch. package.json test:failure: updated to --testPathPatterns='tests/failure' --runInBand --forceExit (Jest v30 flag). 19 tests PASS."
+    },
+    {
+      "id": "WS9_INTEGRATION",
+      "completed_at": "2026-05-11T18:10:00Z",
+      "outputs": [
+        "services/player-financial/__tests__/outbox-producers.test.ts",
+        "services/player-financial/__tests__/outbox-relay.test.ts",
+        "services/player-financial/__tests__/outbox-consumer.test.ts"
+      ],
+      "notes": "outbox-consumer.test.ts: 6 unit tests (processed/duplicate/Error/casino-mismatch/rpc-args/arity). Fix: mock error must be Error instance (PostgrestError extends Error). outbox-relay.test.ts: 8 tests (401 paths, 200 empty/processed/duplicate, last_error truncated, concurrent SKIP LOCKED). outbox-producers.test.ts: unit section always runs (8 tests), integration section gated on RUN_INTEGRATION_TESTS=true (3 skipped). 8 suites, 101 total (3 skipped), PASS."
+    },
+    {
+      "id": "WS10_DOCS",
+      "completed_at": "2026-05-11T18:15:00Z",
+      "outputs": [
+        "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      ],
+      "notes": "SRM footnote ¹ updated: ADR-016 post-MVP placeholder replaced with ADR-054 + ADR-056 citation. ADR-056 status confirmed Accepted. No other SRM content altered."
+    },
+    {
+      "id": "WS5_RELAY",
+      "completed_at": "2026-05-11T17:30:00Z",
+      "outputs": [
+        "app/api/internal/outbox-relay/route.ts",
+        "vercel.json"
+      ],
+      "notes": "POST /api/internal/outbox-relay. CRON_SECRET validated before DB client construction — missing secret returns 401, Bearer undefined blocked. rpc_claim_outbox_batch via .rpc() (not query-builder). Delivery loop marks processed_at for both 'processed'/'duplicate'; records last_error (bounded 2000 chars) on failure. Stop-before-deadline guard at 30s-5s. vercel.json cron entry added to existing file. .env.example already had CRON_SECRET. type-check + lint: EXIT 0."
+    },
+    {
+      "id": "WS6_CONSUMER",
+      "completed_at": "2026-05-11T17:30:00Z",
+      "outputs": [
+        "services/player-financial/outbox-consumer.ts"
+      ],
+      "notes": "runConsumer() delegates to rpc_commit_consumer_receipt SECURITY DEFINER RPC. ConsumerResult = 'processed' | 'duplicate' | Error. No sideEffect parameter. 'duplicate' = safe durable prior commit invariant documented in source. SupabaseClient<Database> typed. type-check + lint: EXIT 0."
+    },
+    {
+      "id": "WS7_SECURITY",
+      "completed_at": "2026-05-11T17:15:00Z",
+      "outputs": [
+        "supabase/migrations/20260511134500_wave2_finance_outbox_rls_hardening.sql",
+        "supabase/tests/security/outbox_transport_access.test.sql",
+        "supabase/tests/migrations/outbox_legacy_shape.test.sql"
+      ],
+      "notes": "Post-recreate assertion verifies zero authenticated policies on finance_outbox. processed_messages RLS enabled (deny-by-default). 10 pgTAP tests in outbox_transport_access covering SELECT/INSERT/UPDATE/DELETE denial for authenticated + RLS structural checks. 10 pgTAP tests in outbox_legacy_shape covering Wave 2 columns present, legacy columns absent, table_buyin_telemetry preserved. supabase/tests/migrations/ directory created."
+    },
+    {
+      "id": "WS4_DTO",
+      "completed_at": "2026-05-11T17:00:00Z",
+      "outputs": [
+        "services/player-financial/dtos.ts",
+        "types/database.types.ts"
+      ],
+      "notes": "FinancialOutboxEventDTO exported from services/player-financial/dtos.ts. Derived via Pick<FinancialOutboxRow, ...> extending string-compatible DB columns; payload narrowed to Record<string, unknown>, fact_class/origin_label narrowed to union types. db:types-local exits 0. type-check exits 0. Existing DTOs preserved."
+    },
+    {
+      "id": "WS1_DDL",
+      "completed_at": "2026-05-11T14:45:00Z",
+      "outputs": [
+        "supabase/migrations/20260511134015_add_generate_uuid_v7.sql",
+        "supabase/migrations/20260511134100_wave2_finance_outbox_transform.sql",
+        "supabase/migrations/20260511134200_wave2_table_buyin_telemetry_reconcile.sql",
+        "supabase/migrations/20260511134300_wave2_processed_messages.sql",
+        "supabase/migrations/20260511134400_wave2_rpc_claim_outbox_batch.sql",
+        "supabase/migrations/20260511134450_wave2_rpc_commit_consumer_receipt.sql",
+        "types/database.types.ts"
+      ]
+    },
+    {
+      "id": "WS2_PRODUCER_A",
+      "completed_at": "2026-05-11T16:00:00Z",
+      "outputs": [
+        "supabase/migrations/20260511134600_wave2_rpc_create_financial_txn_ext.sql"
+      ],
+      "notes": "Extends rpc_create_financial_txn with F13/F14/F15 outbox emission logic. ADR-040 11-param SECURITY INVOKER shape preserved. Uses public.generate_uuid_v7(). Dispatched in same Skill message as WS3 per ADR-055 P4."
+    },
+    {
+      "id": "WS3_PRODUCER_B",
+      "completed_at": "2026-05-11T16:00:00Z",
+      "outputs": [
+        "supabase/migrations/20260511134700_wave2_rpc_record_grind_observation.sql"
+      ],
+      "notes": "New rpc_record_grind_observation SECURITY DEFINER SET search_path=''. Atomic table_buyin_telemetry + finance_outbox INSERT in one transaction. event_type hardcoded grind.observed, player_id unconditionally NULL. Compat wrapper rpc_log_table_buyin_telemetry updated: GRIND_BUYIN routes to new RPC, RATED_BUYIN/RATED_ADJUSTMENT adds event_type='buyin.observed' for Wave 2 NOT NULL constraint. No second GRIND_BUYIN write path remains."
+    }
+  ],
+  "in_progress_workstreams": [],
+  "dormant_workstreams": [
+    {
+      "id": "WS_PRODUCER_ADJUSTMENT",
+      "name": "rpc_create_financial_adjustment outbox extension",
+      "reason": "Exemplar-slice containment. Activates after I1-I4 pass."
+    },
+    {
+      "id": "WS_PRODUCER_FILL",
+      "name": "rpc_request_table_fill Dependency Event wiring",
+      "reason": "Exemplar-slice containment. Activates after I1-I4 pass."
+    },
+    {
+      "id": "WS_PRODUCER_CREDIT",
+      "name": "rpc_request_table_credit Dependency Event wiring",
+      "reason": "Exemplar-slice containment. Activates after I1-I4 pass."
+    }
+  ],
+  "artifacts": {
+    "exec_spec": "docs/21-exec-spec/EXEC-081-transactional-outbox-gap-f1-exemplar.md",
+    "checkpoint": ".claude/skills/build-pipeline/checkpoints/PRD-081.json"
+  },
+  "validation": {
+    "structural": "passed",
+    "governance": "passed_with_warnings",
+    "warnings": ["SCHEMA GATE: schema-validation gate in Phase 1 covers schema verification"],
+    "intake_traceability": "passed",
+    "temporal_integrity": "passed",
+    "write_path_classification": "detected_waiver_applied"
+  },
+  "phase_3_brief": {
+    "name": "Phase 3 — Relay + Consumer (parallel)",
+    "workstreams": ["WS5_RELAY", "WS6_CONSUMER"],
+    "gates": ["type-check", "lint"],
+    "dependencies_met": ["WS2_PRODUCER_A", "WS3_PRODUCER_B", "WS4_DTO"],
+    "note": "WS5_RELAY depends on WS4_DTO (FinancialOutboxEventDTO). WS6_CONSUMER depends on WS1_DDL + WS4_DTO. Complete WS4_DTO before dispatching Phase 3.",
+    "context_for_executors": {
+      "db_types_path": "types/database.types.ts",
+      "rpc_claim_outbox_batch": "SECURITY DEFINER service_role — returns SETOF finance_outbox rows with FOR UPDATE SKIP LOCKED + claimed_until lease",
+      "rpc_commit_consumer_receipt": "SECURITY DEFINER service_role — (p_message_id UUID, p_casino_id UUID) RETURNS TEXT ('processed'|'duplicate')",
+      "service_client_import": "createServiceClient from '@/lib/supabase/service'",
+      "cron_secret_auth": "Bearer token from CRON_SECRET env var — must be validated BEFORE any DB access; missing CRON_SECRET → 401 for all requests",
+      "relay_route": "app/api/internal/outbox-relay/route.ts",
+      "consumer_file": "services/player-financial/outbox-consumer.ts",
+      "finance_outbox_pk": "event_id (UUID, UUIDv7 via generate_uuid_v7(), NOT via DEFAULT)",
+      "vercel_cron_schedule": "* * * * *",
+      "deadline_guard_ms": 30000,
+      "batch_size": 50
+    }
+  },
+  "next_step": "COMPLETE. All workstreams delivered. DoD: type-check ✅ lint ✅ test:failure ✅ (19/19) test:slice:player-financial ✅ (98/101 run, 3 skipped integration). Dormant workstreams (WS_PRODUCER_ADJUSTMENT, WS_PRODUCER_FILL, WS_PRODUCER_CREDIT) activate after I1-I4 pass in integration environment."
+}

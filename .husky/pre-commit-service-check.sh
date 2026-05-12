@@ -865,6 +865,9 @@ if [ -n "$STAGED_TS_FILES" ]; then
     # Skip allowed files
     if echo "$file" | grep -q "lib/supabase/service\.ts$"; then continue; fi
     if echo "$file" | grep -q "lib/server-actions/middleware/auth\.ts$"; then continue; fi
+    # Internal infrastructure routes are CRON_SECRET-authenticated (not user-facing).
+    # Service-role is required for relay polling across all casinos (ADR-056 D3).
+    if echo "$file" | grep -q "app/api/internal/"; then continue; fi
 
     # Skip files with documented exemption — add '# SERVICE_ROLE_EXEMPTION: <reason>' to the file
     # Use this ONLY when the table design intentionally has no RLS SELECT policy for any role

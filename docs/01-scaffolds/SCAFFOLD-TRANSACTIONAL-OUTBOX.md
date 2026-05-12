@@ -2,8 +2,8 @@
 id: SCAFFOLD-TRANSACTIONAL-OUTBOX
 title: "Feature Scaffold: Transactional Outbox"
 owner: Vladimir Ivanov
-status: Draft
-date: 2026-05-09
+status: Approved
+date: 2026-05-10
 ---
 
 # Feature Scaffold: Transactional Outbox
@@ -13,8 +13,8 @@ date: 2026-05-09
 **Feature name:** Transactional Outbox (GAP-F1 Closure)
 **Owner / driver:** Vladimir Ivanov
 **Stakeholders (reviewers):** Lead Architect
-**Status:** Draft
-**Last updated:** 2026-05-09
+**Status:** Approved
+**Last updated:** 2026-05-10
 
 ## 1) Intent (what outcome changes?)
 
@@ -39,8 +39,8 @@ date: 2026-05-09
 
 ## 3) Non-goals (what we refuse to do in this iteration)
 
-1. **No external consumer contract** — `finance_outbox` is internal infrastructure. No external reconciliation interface, no third-party event semantics, no public event bus. (Q3 deferred outside pilot scope.)
-2. **No event sourcing** — The system does not reconstruct state from outbox history. Outbox is propagation infrastructure, not a ledger.
+1. **No external consumer contract** — `finance_outbox` is internal infrastructure. No external reconciliation interface, no third-party event semantics, no public event bus. Consumers may emit freshness state, cache updates, and projection-local derived values that preserve authority semantics. Consumers MUST NOT derive settlement authority, derive custody truth, perform reconciliation, or synthesize authoritative financial totals. (Q3 deferred outside pilot scope.)
+2. **No event sourcing** — The system does not reconstruct state from outbox history. Replay rebuilds projections only. Replay MUST NOT mutate authoring stores, establish financial authority, reconstruct settlement truth, or replace source authoring tables. Outbox is propagation infrastructure, not a ledger.
 3. **No authoritative totals or settlement** — Projection consumers produce telemetry surfaces with completeness labels. No "Total Drop", shift-end settlement, or final money position.
 4. **No CDC / WAL replication** — Debezium, pg_logical, and WAL streaming are post-pilot infrastructure. Polling relay is the Wave 2 mechanism.
 5. **No schema changes to `player_financial_transaction`** — Existing Class A authoring store is append-only; Wave 2 adds outbox INSERT within existing RPCs, not schema columns on PFT.
@@ -55,20 +55,30 @@ date: 2026-05-09
 - **Inputs:**
   - Class A authoring: RPC call to `rpc_create_financial_txn` or `rpc_create_financial_adjustment` (existing RPCs, extended)
   - Class B authoring: RPC call to new grind authoring RPC (new, inserts into `table_buyin_telemetry`)
-  - Dependency Events: fills and credits from `rpc_request_table_fill` / `rpc_request_table_credit` (optional — if routed through outbox for projection freshness)
+  - Dependency Events: fills and credits from `rpc_request_table_fill` / `rpc_request_table_credit` — **mandatory**. Frozen in FIB §G/§D: `event_type = 'fill.recorded'`/`'credit.recorded'`, `fact_class = 'operational'`, `origin_label = 'estimated'` (provenance, not accuracy qualifier), `player_id = NULL`. Must not be re-routed or reclassified in Phase 2 RFC.
 - **Outputs:**
   - `finance_outbox` row per authoring write (same transaction)
   - Relay worker marks `processed_at` on confirmed delivery
   - Consumer projection updated idempotently
 - **Canonical contract:**
-  - `finance_outbox` schema: `{event_id UUID v7, event_type TEXT, fact_class enum, origin_label enum, table_id UUID NOT NULL, player_id UUID NULL, aggregate_id UUID NOT NULL, payload JSONB, created_at TIMESTAMPTZ, processed_at TIMESTAMPTZ NULL}`
+  - `finance_outbox` schema: `{event_id UUID v7, event_type TEXT, fact_class enum, origin_label enum, table_id UUID NOT NULL, player_id UUID NULL, aggregate_id UUID NOT NULL, payload JSONB, created_at TIMESTAMPTZ, processed_at TIMESTAMPTZ NULL, delivery_attempts INTEGER NOT NULL DEFAULT 0, last_attempted_at TIMESTAMPTZ NULL, last_error TEXT NULL}`
   - `FinancialOutboxEventDTO`: TypeScript projection of the above for relay worker and consumer consumption
+- **Relay lifecycle metadata:**
+  - `finance_outbox` relay lifecycle metadata is intentionally minimal but not binary-only.
+  - `delivery_attempts INTEGER NOT NULL DEFAULT 0`, `last_attempted_at TIMESTAMPTZ NULL`, and `last_error TEXT NULL` exist for poison-event visibility, retry diagnostics, and relay crash introspection.
+  - These fields are explicitly not a DLQ system, observability platform, or alerting framework.
+- **Relay lifecycle vs consumer idempotency:**
+  - `processed_at` = relay delivery lifecycle state.
+  - `processed_messages` = consumer idempotency receipt ledger.
+  - `processed_at` tracks relay dispatch completion. `processed_messages` prevents duplicate consumer side effects during replay or redelivery. The two mechanisms serve different invariants and must not be collapsed.
 
 ## 5) Options
 
 ### Option A: Relay worker as Next.js API route + Vercel cron
 
-The relay worker is implemented as a protected Next.js API route (`/api/internal/outbox-relay`). Vercel's built-in cron jobs trigger it on a schedule (e.g., every 30 seconds). The route polls `finance_outbox WHERE processed_at IS NULL ORDER BY created_at LIMIT batch_size`, delivers to consumers, and sets `processed_at`.
+The relay worker is implemented as a protected Next.js API route (`/api/internal/outbox-relay`). Vercel's built-in cron jobs trigger it on a schedule (e.g., every 30 seconds). The route polls `finance_outbox WHERE processed_at IS NULL ORDER BY event_id LIMIT batch_size` when UUID v7 monotonic ordering is the selected insertion-order source, delivers to consumers, and sets `processed_at`.
+
+Relay ordering guarantee is scoped to `aggregate_id` only (ADR-055 P2). Relay processing order MUST derive from a deterministic insertion-order source: UUID v7 monotonic ordering, or a surrogate insertion sequence. `created_at` alone is insufficient as replay ordering authority.
 
 - **Pros:** No new infrastructure dependency. Fits existing Next.js App Router pattern. Vercel cron is declarative in `vercel.json`. Easy to observe via existing route logging.
 - **Cons / risks:** Polling interval limited by Vercel cron minimum (1 minute on free tier; 1 second on Pro). Stateless — no backpressure or in-flight tracking. Route must be protected from public access (requires internal secret header).
@@ -123,10 +133,11 @@ Authoring RPCs call `pg_notify('finance_outbox_channel', event_id)` after the ou
 
 | Risk / Question | Impact | Mitigation / Learning Plan |
 |---|---|---|
-| `table_buyin_telemetry` schema shape not yet defined | High — blocks Class B producer wiring and DDL | Phase 2 (RFC) must define minimal viable schema: `id`, `casino_id`, `table_id`, `event_type`, `amount_cents`, `created_at`; grind data model confirmed in RFC |
-| Fills/credits as Dependency Events — should they emit to outbox? | Medium — affects projection freshness | Phase 2 decision: include as Dependency Event category in `event_type` enum, with `fact_class = 'operational'` and `origin_label = 'estimated'` per ADR-054 |
+| `table_buyin_telemetry` schema (RESOLVED) | Closed | Frozen in FIB §I: `id UUID PK DEFAULT gen_random_uuid()`, `casino_id UUID NOT NULL`, `table_id UUID NOT NULL`, `event_type TEXT CHECK ('buyin.observed', 'grind.observed')`, `amount_cents BIGINT CHECK >= 0`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`. No `player_id` column by construction (ADR-052 R5). Phase 2 RFC may not shrink or drop any column without a FIB amendment. |
+| Fills/credits routing (RESOLVED) | Closed | Frozen in FIB §G and §D: fills and credits are **mandatory** Dependency Events. `event_type = 'fill.recorded'` / `'credit.recorded'`, `fact_class = 'operational'`, `origin_label = 'estimated'` (provenance label, not accuracy qualifier), `player_id = NULL`. Must not be re-opened in Phase 2 RFC. Authority conflation to `'actual'` is prohibited (WAVE-2-UBIQUITOUS-LANGUAGE-CLARIFICATION.md). |
 | Vercel cron minimum interval (1 min on free tier) | Low-Medium — tolerable for pilot; not real-time | Acceptable for Wave 2 pilot. Document as known latency bound. |
-| `processed_messages` table scope — one per consumer or global | Medium | Phase 2 decision: single table scoped by `consumer_id` column; or per-consumer table. Phase 2 RFC resolves. |
+| `processed_messages` table scope (RESOLVED) | Closed | Frozen in FIB §I: single table, no `consumer_id` column in Wave 2 pilot. Single-consumer assumption is a named constraint. Multi-consumer fan-out is explicitly out of scope and may require future schema evolution. |
+| Poison event handling | Medium — a malformed or repeatedly failing event can consume relay attempts | A failed event does not block replay semantics globally. Relay worker may skip-and-log after bounded retry attempts. Skip behavior MUST preserve replay visibility and operator traceability. Full DLQ infrastructure remains out of scope for pilot. |
 | SRM v4.23.0 stale footnote (ADR-016 → ADR-054 replacement) | Low — doc debt | Phase 4/5 SRM update required; flagged in FEATURE_BOUNDARY.md |
 | Remote database migration gap (W2-PRE-1) | Medium — `finance_outbox` DDL cannot land cleanly if remote DB has pending unapplied migrations | Parallel DevOps action; outbox DDL design proceeds independently |
 
@@ -145,6 +156,9 @@ Authoring RPCs call `pg_notify('finance_outbox_channel', event_id)` after the ou
 
 - Feature Boundary: `docs/20-architecture/specs/transactional-outbox/FEATURE_BOUNDARY.md`
 - **Outbox Knowledge Base (primary implementation authority):** `docs/issues/gaps/financial-data-distribution-standard/wave-2/outbox-knowledge-base.md`
+- **FIB-H (human scope brief, APPROVED 2026-05-10):** `docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-H-TRANSACTIONAL-OUTBOX.md`
+- **FIB-S (machine-legible structured companion):** `docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-S-TRANSACTIONAL-OUTBOX.json`
+- **Wave 2 Overengineering Guardrail (ACTIVE):** `docs/issues/gaps/financial-data-distribution-standard/OVERENGINEERING_GUARDRAIL_OUTBOX_WAVE2.md`
 - Design Brief/RFC: (Phase 2)
 - ADR(s): (Phase 4)
 - PRD: (Phase 5)

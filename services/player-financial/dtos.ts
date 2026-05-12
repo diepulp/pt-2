@@ -24,6 +24,7 @@
  * @see EXECUTION-SPEC-PRD-009.md
  */
 
+import type { Database } from '@/types/database.types';
 import type { FinancialValue } from '@/types/financial';
 
 // === Enum Types ===
@@ -322,4 +323,26 @@ export type VisitCashInWithAdjustmentsDTO = {
   net_total: FinancialValue;
   /** Number of adjustment transactions */
   adjustment_count: number;
+};
+
+// === Transactional Outbox DTOs (Wave 2 — PRD-081) ===
+
+// Derived from Wave 2 finance_outbox Row (WS1_DDL). Picks string-compatible fields
+// directly; payload narrowed from Json → Record<string, unknown>; union types narrowed.
+type FinancialOutboxRow = Database['public']['Tables']['finance_outbox']['Row'];
+
+export type FinancialOutboxEventDTO = Pick<
+  FinancialOutboxRow,
+  | 'event_id'
+  | 'event_type'
+  | 'casino_id'
+  | 'table_id'
+  | 'player_id'
+  | 'aggregate_id'
+  | 'created_at'
+  | 'processed_at'
+> & {
+  fact_class: 'ledger' | 'operational';
+  origin_label: 'actual' | 'estimated' | 'observed' | 'compliance';
+  payload: Record<string, unknown>;
 };

@@ -1,23 +1,34 @@
 {
   "schema_version": 2,
   "feature_id": "transactional-outbox",
-  "current_phase": 1,
-  "status": "in_progress",
+  "current_phase": 6,
+  "status": "ready",
+  "amendment": {
+    "type": "vertical-collapse",
+    "date": "2026-05-11",
+    "description": "PRD-081 pivoted to exemplar-first transport proof slice. Scope narrowed to rpc_create_financial_txn (Class A) + rpc_record_grind_observation (Class B) exemplar pair. Deferred to producer expansion slice: rpc_create_financial_adjustment, rpc_request_table_fill, rpc_request_table_credit.",
+    "directive": "docs/issues/gaps/financial-data-distribution-standard/wave-2/PRD-081_VERTICAL_COLLAPSE_EXEMPLAR_DIRECTIVE.md",
+    "pipeline_note": "No gate reset required. Architecture unchanged (ADR-052–057 frozen). Amendment narrows first implementation slice before EXEC-SPEC generation."
+  },
+  "pause_reason": null,
+  "paused_at": null,
   "gates": {
     "srm-ownership":     { "passed": true,  "timestamp": "2026-05-09T00:00:00Z" },
-    "scaffold-approved": { "passed": false, "timestamp": null },
-    "design-approved":   { "passed": false, "timestamp": null },
-    "sec-approved":      { "passed": false, "timestamp": null },
-    "adr-frozen":        { "passed": false, "timestamp": null },
-    "prd-approved":      { "passed": false, "timestamp": null }
+    "scaffold-approved": { "passed": true,  "timestamp": "2026-05-10T00:00:00Z" },
+    "design-approved":   { "passed": true,  "timestamp": "2026-05-10T00:00:00Z" },
+    "sec-approved":      { "passed": true,  "timestamp": "2026-05-10T00:00:00Z" },
+    "adr-frozen":        { "passed": true,  "timestamp": "2026-05-10T00:00:00Z" },
+    "prd-approved":      { "passed": true,  "timestamp": "2026-05-11T00:00:00Z" }
   },
   "artifacts": {
     "feature_boundary": "docs/20-architecture/specs/transactional-outbox/FEATURE_BOUNDARY.md",
     "scaffold": "docs/01-scaffolds/SCAFFOLD-TRANSACTIONAL-OUTBOX.md",
-    "rfc": null,
-    "sec_note": null,
-    "adr": null,
-    "prd": null
+    "fib_h": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-H-TRANSACTIONAL-OUTBOX.md",
+    "fib_s": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-S-TRANSACTIONAL-OUTBOX.json",
+    "rfc": "docs/02-design/RFC-006-transactional-outbox.md",
+    "sec_note": "docs/30-security/SEC-NOTE-TRANSACTIONAL-OUTBOX.md",
+    "adr": "docs/80-adrs/ADR-056-relay-worker-execution-environment.md",
+    "prd": "docs/10-prd/PRD-081-transactional-outbox-gap-f1-closure-v0.md"
   },
   "critical_references": {
     "ul_clarification": {
@@ -37,6 +48,20 @@
       "path": "docs/issues/gaps/financial-data-distribution-standard/wave-2/outbox-knowledge-base.md",
       "status": "KNOWLEDGE-BASE",
       "mandate": "Primary implementation authority for finance_outbox DDL, trigger classification (D2 vs D6), relay worker design, idempotent consumer, origin_label immutability, and GAP-F1 closure checklist (§12). All Phase 2–5 artifacts must be consistent with it."
+    },
+    "overengineering_guardrail": {
+      "path": "docs/issues/gaps/financial-data-distribution-standard/OVERENGINEERING_GUARDRAIL_OUTBOX_WAVE2.md",
+      "status": "ACTIVE — PILOT PROTECTION (Wave 2)",
+      "supersedes": "docs/issues/gaps/financial-data-distribution-standard/OVERENGINEERING_GUARDRAIL_FIN_TELEMETRY.md (frozen historical — Wave 1 era)",
+      "mandate": "Active Wave 2 transport-era guardrail. Wave 2 sequencing rule: transport before projection before observability. Core principles: propagate, don't platformize; one internal relay path; replay is not event sourcing; no projection leakage into this slice; event types are cataloged not invented inline; RPC-coupled insertion is frozen for pilot (trigger/CDC/pg_notify must not be reopened). Phase 2–5 work that generalizes the transport layer, bundles projection consumers, adds multi-consumer fan-out, upgrades estimated to actual, or adds UI/dashboard behavior is out of scope. One-line invariant: if this work makes the transport layer responsible for presentation behavior, it is wrong."
+    },
+    "fib_pair": {
+      "fib_h": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-H-TRANSACTIONAL-OUTBOX.md",
+      "fib_s": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-S-TRANSACTIONAL-OUTBOX.json",
+      "status": "APPROVED — signed off by Vladimir Ivanov 2026-05-10",
+      "fib_h_id": "FIB-H-W2-OUTBOX-001",
+      "fib_s_id": "FIB-S-W2-OUTBOX-001",
+      "mandate": "Primary scope authority for this feature. FIB-H is the human scope brief and canonical reference; FIB-S is the machine-legible Zachman-structured companion. All Phase 2–5 artifacts must conform to the FIB containment loop (§E), explicit exclusions (§G), frozen decisions (§I), and scope guardrail blocks (§M / governance section). No downstream artifact may introduce new entities, capabilities, actors, operator-visible outcomes, external contracts, or projection surfaces absent from the FIB without a FIB amendment. Fills/credits routing as Dependency Events is frozen in this FIB and must not be re-opened in Phase 2 RFC."
     },
     "failure_harness": {
       "path": "docs/issues/gaps/financial-data-distribution-standard/actions/FAILURE-SIMULATION-HARNESS.md",
@@ -105,7 +130,7 @@
       "SRM footnote ¹ references ADR-016 (payment gateway) for finance_outbox — superseded by ADR-054. SRM update required in Phase 4/5."
     ]
   },
-  "frozen_adrs": ["ADR-052", "ADR-053", "ADR-054", "ADR-055"],
+  "frozen_adrs": ["ADR-052", "ADR-053", "ADR-054", "ADR-055", "ADR-056", "ADR-057"],
   "resolved_decisions": {
     "Q1": "Two-store model confirmed. PFT expansion rejected. Class B in separate authoring store (table_buyin_telemetry).",
     "Q2": "Separate tables confirmed. Shared parent not chosen.",
@@ -114,5 +139,5 @@
   },
   "branch": "feat/transactional-outbox",
   "working_directory": "/home/diepulp/projects/pt-2/trees/feat/transactional-outbox",
-  "timestamp": "2026-05-09T00:00:00Z"
+  "timestamp": "2026-05-10T00:00:00Z"
 }

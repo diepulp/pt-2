@@ -134,7 +134,7 @@ Approved JSON blobs (all others require first-class columns):
 | **Operational**  | EmailService ⁸          | email_send_attempt                                                                                                         | Pilot email delivery & send attempt logging                 |
 | **Access Governance** | PilotContainmentService ⁹ | pilot_access_requests, approved_email_allowlist                                                                       | Pilot access governance — allowlist-gated magic-link auth   |
 
-> ¹ `finance_outbox` is **post-MVP** (ADR-016 planned for payment gateway integration). MVP uses synchronous processing only.
+> ¹ `finance_outbox` is Wave 2 transport infrastructure governed by ADR-054 (propagation surface contract) and ADR-056 (relay worker execution environment — Option A: Next.js API route + Vercel cron). The prior ADR-016 post-MVP placeholder is superseded. See PRD-081 for implementation status.
 > ² `player_identity` is **planned (MVP)** per ADR-022 v7.1. `player_tax_identity` and scanner integration (`player_identity_scan`) are **deferred post-MVP**.
 > ³ `player_note`, `player_tag`, and `PlayerTimelineService` are **planned (MVP)** per ADR-029. These enable the Player 360° Dashboard CRM timeline.
 > ⁴ `staff_pin_attempts` is **planned (MVP)** per GAP-SIGN-OUT. Operational rate-limit state for staff PIN verification. Follows `audit_log` precedent: cross-cutting operational data owned by foundational context. Both FKs reference CasinoService tables (`staff`, `casino`).

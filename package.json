@@ -29,6 +29,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --maxWorkers=2 --testPathIgnorePatterns='integration\\.test' --testPathIgnorePatterns='\\.int\\.test' --testPathIgnorePatterns='e2e/'",
+    "test:failure": "jest --config jest.node.config.js --testPathPatterns='tests/failure' --runInBand --forceExit",
     "test:unit:node": "jest --config jest.node.config.js",
     "test:integration:canary": "RUN_INTEGRATION_TESTS=true jest --config jest.integration.config.js",
     "test:slice:casino": "jest --config jest.node.config.js --testPathPatterns='services/casino/__tests__/.*\\.test\\.ts$'",

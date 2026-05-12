@@ -687,27 +687,32 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 
 #### `finance.outbox_processed`
 
-**Producer**: PlayerFinancialService background worker (post-MVP)
-**Trigger**: Finance outbox event processed (webhook/email sent)
-**Channel**: Internal (worker monitoring)
-**Reference**: [SRM §PlayerFinancialService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#playerfinancialservice-finance-context--implemented) (outbox is post-MVP per ADR-016)
+**Producer**: PlayerFinancialService relay worker (`/api/internal/outbox-relay`)
+**Trigger**: `finance_outbox` row delivered to internal projection consumer and marked `processed_at`
+**Channel**: Internal (relay worker monitoring/diagnostics)
+**Reference**: ADR-054, ADR-056, PRD-081 (Wave 2 transport — not post-MVP; ADR-016 reference superseded)
 
-**Payload Schema**:
+**Payload Schema** (Wave 2 envelope):
 ```typescript
 {
   event: "finance.outbox_processed",
-  outbox_id: string,         // uuid
-  ledger_id: string,         // transaction uuid
-  event_type: string,
-  attempt_count: number,
+  event_id: string,          // UUIDv7 — relay/replay ordering key
+  event_type: string,        // one of the 7 registered Wave 2 event_type values
+  fact_class: "ledger" | "operational",
+  origin_label: "actual" | "estimated",
+  casino_id: string,         // uuid
+  table_id: string,          // uuid NOT NULL — Wave 2 invariant
+  player_id: string | null,  // null for Class B and Dependency Events
+  aggregate_id: string,      // authoring row uuid (PFT id, TBT id, etc.)
+  delivery_attempts: number,
   processed_at: string,
   at: string
 }
 ```
 
 **Consumers**:
-- Observability (worker health monitoring)
-- Admin UI (outbox status)
+- Observability (relay worker health monitoring)
+- Admin UI (outbox delivery status)
 
 ---
 
@@ -770,7 +775,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 
 **Services with Outbox Tables**:
 - **Loyalty** (`loyalty_outbox`) - [SRM §LoyaltyService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#loyaltyservice-reward-context)
-- **Finance** (`finance_outbox`) - post-MVP per ADR-016 ([SRM §PlayerFinancialService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#playerfinancialservice-finance-context--implemented))
+- **Finance** (`finance_outbox`) - Wave 2 transport infrastructure per ADR-054, ADR-056, PRD-081. Replaces the ADR-016 post-MVP placeholder. [SRM §PlayerFinancialService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#playerfinancialservice-finance-context--implemented)
 
 **Purpose**: Reliable side effect execution (emails, webhooks, external integrations)
 
@@ -780,6 +785,26 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 - Workers set `processed_at` and increment `attempt_count` on failures
 - Dead-letter alerting after threshold attempts (N)
 - Exponential backoff with jitter for retries
+
+---
+
+## Wave 2 Finance Outbox `event_type` Registry
+
+**Authority**: RFC-006 §4.1, ADR-054, ADR-057. Produced before EXEC-SPEC execution per PRD-081 F10.
+
+**Governance**: All `event_type` values are governed centrally. Ad-hoc event strings, payload-inferred semantics, and route-local event naming are prohibited (RFC-006 §4.1 guardrail §5.8). No producer or consumer may use an unregistered `event_type`.
+
+| `event_type` | Class | `fact_class` | `origin_label` | Producer RPC | Emission rule (ADR-057 D2) |
+|---|---|---|---|---|---|
+| `buyin.recorded` | A | `ledger` | `actual` | `rpc_create_financial_txn` | Emits when `rating_slip_id` resolves to same-casino `rating_slip.table_id`. Pit cash and chips buy-ins. |
+| `cashout.recorded` | A | `ledger` | `actual` | `rpc_create_financial_txn` | **Reserved — no current eligible producer.** All `direction='out'` Class A paths are cage-scoped; cage cashouts lack a deterministic `rating_slip.table_id` per ADR-057 D2. Reserved for a future rated pit cashout path. Must not emit for cage cashouts. |
+| `adjustment.recorded` | A | `ledger` | `actual` | `rpc_create_financial_adjustment` | Emits only when inherited/current `rating_slip_id` resolves to same-casino `rating_slip.table_id`. Linked adjustments to eligible originals only. |
+| `buyin.observed` | B | `operational` | `estimated` | `rpc_record_grind_observation` | Emits unconditionally for all Class B grind buy-in observations. |
+| `grind.observed` | B | `operational` | `estimated` | `rpc_record_grind_observation` | Emits unconditionally for all Class B grind observations. |
+| `fill.recorded` | Dep | `operational` | `estimated` | `rpc_request_table_fill` | Dependency Event. Emits unconditionally for table fill requests. |
+| `credit.recorded` | Dep | `operational` | `estimated` | `rpc_request_table_credit` | Dependency Event. Emits unconditionally for table credit requests. |
+
+**Note on `cashout.recorded`**: Defined and reserved per RFC-006 §4.1, but the `rpc_create_financial_txn` producer MUST NOT emit this event type in Wave 2 because no `direction='out'` Class A path has a deterministic table anchor. The EXEC-SPEC must include an explicit test that cage cashout writes produce no `finance_outbox` row (PRD-081 F13, ADR-057 §4 impact inventory).
 
 **Reference**: [SRM §LoyaltyService.Contracts](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#loyaltyservice-reward-context), [OBSERVABILITY_SPEC.md](../50-ops/OBSERVABILITY_SPEC.md)
 
@@ -868,7 +893,7 @@ Full mapping details live in:
 | `table.deactivated` | TableContext | UI | casino_id, table_id, at | `{casino_id}` |
 | `floor_layout.activated` | FloorLayout | **TableContext**, Performance, UI | casino_id, layout_id, layout_version_id, activated_by, pits, table_slots, at | `{casino_id}` |
 | `finance.transaction_created` | PlayerFinancial | UI, MTL, Reports | transaction_id, player_id, casino_id, amount, gaming_day, at | `{casino_id}`, `{casino_id}:{player_id}` |
-| `finance.outbox_processed` | PlayerFinancial (worker, post-MVP) | Observability, Admin UI | outbox_id, ledger_id, event_type, attempt_count, at | Internal |
+| `finance.outbox_processed` | PlayerFinancial relay worker (Wave 2, PRD-081) | Observability, Admin UI | event_id, event_type, fact_class, origin_label, casino_id, table_id, player_id, aggregate_id, delivery_attempts, processed_at | Internal |
 | `visit.checked_in` | Visit | UI, Loyalty | visit_id, player_id, casino_id, started_at, at | `{casino_id}` |
 | `visit.checked_out` | Visit | UI, Loyalty, Reports | visit_id, player_id, casino_id, ended_at, duration_minutes, at | `{casino_id}`, `{casino_id}:{visit_id}` |
 
