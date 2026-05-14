@@ -19,34 +19,28 @@ import { Reveal } from './_components/reveal';
  * Data
  * ────────────────────────────────────────────────────────── */
 
-/** Operational Domains — one consequence per card, no feature enumerations */
+/** Operational Domains — 4 executive domains per FDCM consolidation */
 const operationalDomains = [
   {
-    domain: 'Floor Oversight',
+    domain: 'Run the Floor',
     claim:
-      'Monitor active tables and operational exceptions across all pits during the shift.',
+      'Monitor active tables, open sessions, and operational exceptions across all pits — visible as the floor operates.',
     href: '/floor-oversight',
   },
   {
-    domain: 'Session Tracking',
+    domain: 'Understand the Player',
     claim:
-      'Preserve player-session across table moves, breaks, and multi-day visits.',
-    href: '/session-tracking',
-  },
-  {
-    domain: 'Loyalty & Rewards',
-    claim:
-      'Points accrual, comp issuance, and tier entitlements — configured to your property’s economics, not a vendor default program.',
+      'Player profiles, visit continuity, session value, and loyalty position — tied to every visit from check-in through closeout.',
     href: null,
   },
   {
-    domain: 'Cash Accountability',
+    domain: 'Track the Money',
     claim:
-      'Record operational cash movement with attribution at every step — entries, voids, fills, and credits.',
+      'Record operational cash movement with attribution at every step — buy-ins, voids, fills, and credits.',
     href: '/cash-accountability',
   },
   {
-    domain: 'Audit Compliance',
+    domain: 'Defend the Operation',
     claim:
       'Surface regulatory thresholds and operational exceptions during the shift — not after it.',
     href: '/audit-compliance',
@@ -287,8 +281,8 @@ export default function LandingPage() {
                 Operations
               </p>
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-gradient-heading">
-                Tables, sessions, cash, compliance, and loyalty — managed during
-                the shift.
+                Run the floor. Understand the player. Track the money. Defend
+                the operation.
               </h2>
             </div>
           </Reveal>
@@ -359,11 +353,7 @@ export default function LandingPage() {
               );
 
               return (
-                <Reveal
-                  key={domain.domain}
-                  delay={i * 80}
-                  className={isInformational ? 'sm:col-span-2' : ''}
-                >
+                <Reveal key={domain.domain} delay={i * 80} className="">
                   {domain.href ? (
                     <a
                       href={domain.href}

@@ -155,12 +155,14 @@ main_page:
 
     prose_scaffold:
       eyebrow: "Operations"
-      heading: "Tables, sessions, cash, compliance, and loyalty — managed during the shift."
+      heading: "Run the floor. Understand the player. Track the money. Defend the operation."
       heading_note: >
-        Consequence-first per CONTAINMENT_DIRECTIVE §11.1. Names the operational
-        concerns concretely without taxonomy labels. Loyalty added per OQ-1
-        resolution: property-configurable loyalty program is a primary CRM
-        differentiator and belongs in the operational domain spine.
+        FDCM consolidation per FUNCTIONAL-DOMAINS-CONS-MAP.md: 5 domain cards
+        collapsed to 4 executive-operational domains. Verb-first pillar labels
+        are consequence-first per CONTAINMENT_DIRECTIVE §11.1 — each states an
+        operational action, not a taxonomy category. Loyalty & Rewards removed
+        as a standalone card; absorbed into "Understand the Player" (Player
+        Intelligence domain). Grid becomes a clean 2×2 — no col-span-2 card.
 
       card_copy_constraint: >
         HARD FORMAT: one sentence per card. No sub-bullets. No feature enumerations.
@@ -189,45 +191,54 @@ main_page:
         drifted. Move the second sentence to the derived surface.
 
       domains:
-        - title:  "Floor Oversight"
+        # FDCM consolidation: 5 cards → 4 executive-operational domains.
+        # Floor Oversight + Session Tracking → "Run the Floor"
+        # (new) Player Intelligence → "Understand the Player"
+        # Cash Accountability → "Track the Money"
+        # Audit Compliance → "Defend the Operation"
+
+        - title:  "Run the Floor"
           claim: >
-            Monitor active tables and operational exceptions across
-            all pits during the shift.
+            Monitor active tables, open sessions, and operational exceptions
+            across all pits — visible as the floor operates.
           claim_note: >
-            Tightened from four-item enumeration (active tables, shift activity,
-            exceptions, supervisor workflows) to one consequence + one scope.
-            "supervisor workflows" dropped — mechanism, not consequence.
-            Enumeration creep is the earliest form of module-catalog drift.
+            Consolidates Floor Oversight + Session Tracking into one executive
+            domain. Consequence: floor visibility + session continuity in one
+            claim. The depth (seat map, shift dashboard, session lifecycle,
+            table moves) lives in DS1 /floor-operations.
           wave_1_href: "/floor-oversight"
+          wave_1_href_note: >
+            Primary Wave 1 interim link. /session-tracking is a secondary
+            content source for DS1 — both transitional sub-pages are replaced
+            by /floor-operations in Wave 2.
+          wave_2_href: "/floor-operations"
 
-        - title:  "Session Tracking"
+        - title:  "Understand the Player"
           claim: >
-            Preserve player-session continuity from buy-in through closeout —
-            across table moves, breaks, and multi-day visits.
-          wave_1_href: "/session-tracking"
+            Player profiles, visit continuity, session value, and loyalty
+            position — tied to every visit from check-in through closeout.
+          claim_note: >
+            New executive domain per FDCM. Absorbs the former "Loyalty &
+            Rewards" standalone card and adds Player Intelligence scope
+            (Player 360, visit history, game preferences, recognition). No
+            Wave 1 route — informational card only. Wave 2 creates
+            /player-intelligence as DS5.
+          wave_1_href: null
+          wave_2_href: "/player-intelligence"
 
-        - title:  "Cash Accountability"
+        - title:  "Track the Money"
           claim: >
             Record operational cash movement with attribution at every step —
-            entries, voids, fills, and credits.
+            buy-ins, voids, fills, and credits.
           wave_1_href: "/cash-accountability"
+          wave_2_href: "/financial-accountability"
 
-        - title:  "Audit Compliance"
+        - title:  "Defend the Operation"
           claim: >
             Surface regulatory thresholds and operational exceptions
             during the shift — not after it.
           wave_1_href: "/audit-compliance"
-
-        - title:  "Loyalty & Rewards"
-          claim: >
-            Points accrual, comp issuance, and tier entitlements — configured
-            to your property's economics, not a vendor default program.
-          wave_1_href: null
-          wave_1_href_note: >
-            No current sub-page exists for loyalty on the marketing site.
-            Wave 1 card links to nothing (or is rendered without a route).
-            Wave 2 creates /loyalty-rewards as DS5. See ZACHMAN-DERIVED-SURFACES-WAVE2.yaml.
-          wave_2_href: "/loyalty-rewards"
+          wave_2_href: "/compliance-audit"
 
     transition:
       copy_intent: >
@@ -238,11 +249,12 @@ main_page:
 
     notes:
       - "wave_1_href fields point to current transitional sub-pages. See transitional_routing below."
-      - "Five domain cards risk reading as a module catalog more than four (CONTAINMENT_DIRECTIVE §3, §6). The heading does the framing work; cards provide the operational routing. Card copy enforcement is in card_copy_constraint above — that field is the standing constraint, not this note."
+      - "Four domain cards (consolidated from five) materially reduce module-catalog risk (CONTAINMENT_DIRECTIVE §3, §6). The heading does the framing work; cards provide the operational routing. Card copy enforcement is in card_copy_constraint above — that field is the standing constraint, not this note."
       - "MODULE CATALOG FAILURE MODE: The cards are currently compliant. The risk is future edit. Each card that gains a second sentence, a sub-bullet, or a feature enumeration pushes S2 from operational chain into module catalog. The constraint is per card_copy_constraint: one sentence, one consequence, one optional scope qualifier."
-      - "Loyalty card has no Wave 1 route — it is informational only during Wave 1. It anchors the narrative claim and resolves OQ-1."
-      - "OQ-1 RESOLVED: Loyalty positioned as 5th operational domain in S2. Derives DS5 /loyalty-rewards in Wave 2. See ZACHMAN-DERIVED-SURFACES-WAVE2.yaml."
-      - "In Wave 2, wave_1_href fields are replaced with Wave 2 paths (/floor-operations, /financial-accountability, /compliance-audit, /loyalty-rewards). See ZACHMAN-DERIVED-SURFACES-WAVE2.yaml."
+      - "'Understand the Player' card has no Wave 1 route — informational card only. Wave 2 creates /player-intelligence as DS5. See ZACHMAN-DERIVED-SURFACES-WAVE2.yaml."
+      - "OQ-1 AMENDED (2026-05-14): Original resolution (Loyalty as standalone 5th card + DS5 /loyalty-rewards) superseded by FDCM consolidation per FUNCTIONAL-DOMAINS-CONS-MAP.md. Loyalty & Rewards absorbed into 'Understand the Player' (Player Intelligence). DS5 is now /player-intelligence with broader scope. See ZACHMAN-DERIVED-SURFACES-WAVE2.yaml OQ-1 amendment."
+      - "In Wave 2, wave_1_href fields are replaced with Wave 2 paths (/floor-operations, /player-intelligence, /financial-accountability, /compliance-audit). See ZACHMAN-DERIVED-SURFACES-WAVE2.yaml."
+      - "GRID LAYOUT: With 4 cards on a 2-col grid, layout becomes a clean 2×2. 'Understand the Player' is informational but no longer needs col-span-2 — all 4 cards are equal peers. Remove col-span-2 conditional from the informational card render path."
 
   # ─────────────────────────────────────────────────────────────────
   - id: S3
@@ -556,16 +568,23 @@ transitional_routing:
     sub-pages is acceptable during the transition window.
 
   s2_domain_card_links:
-    - domain:       "Floor Oversight"
+    - domain:       "Run the Floor"
       wave_1_href:  "/floor-oversight"
       wave_2_href:  "/floor-operations"
-    - domain:       "Session Tracking"
-      wave_1_href:  "/session-tracking"
-      wave_2_href:  "/floor-operations"
-    - domain:       "Cash Accountability"
+      wave_1_note: >
+        Primary interim link. /session-tracking is a secondary content source
+        for DS1 — both transitional sub-pages are replaced by /floor-operations
+        in Wave 2.
+    - domain:       "Understand the Player"
+      wave_1_href:  null
+      wave_2_href:  "/player-intelligence"
+      wave_1_note: >
+        No Wave 1 route — informational card only.
+        Wave 2 creates /player-intelligence as DS5.
+    - domain:       "Track the Money"
       wave_1_href:  "/cash-accountability"
       wave_2_href:  "/financial-accountability"
-    - domain:       "Audit Compliance"
+    - domain:       "Defend the Operation"
       wave_1_href:  "/audit-compliance"
       wave_2_href:  "/compliance-audit"
 
@@ -611,7 +630,7 @@ exemplar_contract:
   heading_style:
     rule: "Consequence-first. 3–8 words. No taxonomy labels as buyer-facing headings."
     examples_from_wave_1:
-      - "Tables, sessions, cash, and compliance — managed during the shift."
+      - "Run the floor. Understand the player. Track the money. Defend the operation."
       - "What operational leadership sees during a shift."
       - "Activity tied to people, tables, and the gaming day."
       - "See what changed across the shift."

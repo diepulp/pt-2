@@ -138,6 +138,7 @@ They continue from the section that routed to them.
 |---|---|---|---|---|
 | Landing page | Establish one operational system | “Is this coherent and relevant to my floor?” | Compressed | Explain full architecture |
 | `/floor-operations` | Expand live floor workflow | “How does this manage floor activity?” | Workflow depth | Become a general dashboard page |
+| `/player-intelligence` | Expand player profile and loyalty depth | “Who is this player and what is their operational value?” | Player profile + loyalty depth | Become a CDP or analytics platform. Restart the product pitch from the hero. |
 | `/compliance-audit` | Expand review and regulatory visibility | “Can this record hold up during review?” | Compliance depth | Claim legal or regulatory completion beyond scope |
 | `/financial-accountability` | Expand operational cash accountability | “Can I see cash movement with attribution?” | Cash-event depth | Claim accounting, settlement, or reconciliation authority |
 | `/operational-intelligence` | Expand managerial insight from floor activity | “What can leadership see once activity is captured?” | Analysis depth | Become a generic BI or analytics pitch |
@@ -254,9 +255,12 @@ Directional navigation makes the system feel like one operational chain.
 
 ### Current routing interpretation
 
-- `S2 / Floor Oversight` and `S2 / Session Tracking` route to `/floor-operations`.
-- `S2 / Cash Accountability` routes to `/financial-accountability`.
-- `S2 / Audit Compliance` routes to `/compliance-audit`.
+Post-FDCM consolidation (4 executive domain cards):
+
+- `S2 / Run the Floor` routes to `/floor-operations` (Wave 1 interim: `/floor-oversight`).
+- `S2 / Understand the Player` has no Wave 1 route — routes to `/player-intelligence` in Wave 2.
+- `S2 / Track the Money` routes to `/financial-accountability` (Wave 1 interim: `/cash-accountability`).
+- `S2 / Defend the Operation` routes to `/compliance-audit` (Wave 1 interim: `/audit-compliance`).
 - `S4 / Operational Accountability` routes to `/compliance-audit` and `/financial-accountability`.
 - `S5 / Operational Intelligence` routes to `/operational-intelligence`.
 
@@ -448,7 +452,31 @@ It should not claim:
 
 Use operational cash language, not accounting authority language.
 
-### 13.5 Operational Intelligence
+### 13.5 Player Intelligence
+
+`/player-intelligence` should expand:
+
+- player identity, enrollment, notes, and operational flags,
+- visit history and session continuity across the gaming record,
+- game preference patterns derived from session activity,
+- loyalty position: tier, points balance, and redemption history,
+- loyalty accrual mechanics and operator-configurable economics,
+- reward catalog (points_comp and entitlement families),
+- promo programs with lifecycle and exposure tracking,
+- frequency rules that govern issuance limits.
+
+It should not claim:
+
+- predictive analytics or AI-driven player recommendations,
+- marketing automation or engagement campaign management,
+- accounting authority for comp valuations,
+- full CDP or loyalty platform feature parity.
+
+Player value must remain visibly grounded in actual floor activity — session data, not external modeling.
+
+---
+
+### 13.6 Operational Intelligence
 
 `/operational-intelligence` should expand:
 

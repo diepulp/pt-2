@@ -30,15 +30,16 @@
 #
 #   Floor Operations  (/floor-operations)
 #        ↓                            ↓
-#   Operational Accountability    Loyalty & Rewards  (/loyalty-rewards)
-#     → Compliance & Audit  (/compliance-audit)
-#     → Financial Accountability  (/financial-accountability)
+#   Operational Accountability    Player Intelligence  (/player-intelligence)
+#     → Compliance & Audit  (/compliance-audit)         (player profiles, visit history,
+#     → Financial Accountability  (/financial-accountability)   loyalty & value)
 #        ↓
 #   Operational Intelligence  (/operational-intelligence)
 #
-#   Session activity generates the telemetry that drives loyalty accrual.
-#   The loyalty program determines what that telemetry is worth to the player.
-#   DS5 is parallel to the accountability chain — same session origin, different output.
+#   Session activity is the causal input for two parallel downstream domains:
+#   the accountability chain (compliance + financial records) and the player
+#   intelligence domain (visit continuity, player value, loyalty accrual).
+#   DS5 /player-intelligence is a leaf node — points one step back to DS1.
 #
 # Audience (FIB §D):
 #   Primary:   Director of Operations / General Manager / Shift Manager
@@ -418,121 +419,129 @@ surfaces:
 
   # ─────────────────────────────────────────────────────────────────
   - id: DS5
-    label: Loyalty & Rewards
-    proposed_path: "/loyalty-rewards"
-    inherits_from: "Wave 1 S2 — Loyalty & Rewards domain (5th operational domain)"
+    label: Player Intelligence
+    proposed_path: "/player-intelligence"
+    inherits_from: "Wave 1 S2 — 'Understand the Player' domain (2nd executive domain, FDCM consolidation)"
     status: "PROPOSED"
     priority: 5
 
-    buyer_question: "What does the loyalty program actually look like, and can my property configure it?"
-    depth_allowed:  "Loyalty program depth — configurable economics, reward families, tier entitlements, promo programs, coupon lifecycle"
+    # FDCM amendment (2026-05-14): DS5 rescoped from /loyalty-rewards (loyalty
+    # depth only) to /player-intelligence (player profile depth + loyalty depth).
+    # The "Understand the Player" domain absorbs: Player 360, visit history,
+    # session continuity, game preferences, recognition intelligence, loyalty
+    # accrual, comp issuance, and tier progression.
+
+    buyer_question: "Who is this player, what is their operational value, and what loyalty position have they earned?"
+    depth_allowed: >
+      Player profile depth + loyalty depth — visit history, session continuity,
+      game preferences, player notes, identity management, theo tracking, loyalty
+      accrual and redemption, reward issuance, tier progression, recognition
+      intelligence, configurable loyalty economics.
     must_not_do: >
-      Claim vendor-default pricing.
+      Become a CRM or marketing automation page.
+      Position the player intelligence layer as a CDP or engagement platform.
+      Claim predictive analytics or AI-driven player insights.
       Claim accounting authority for comp valuations.
-      Imply a one-size-fits-all program.
-      Position as a CDP or marketing automation platform.
-      Promise features deferred to future releases (earn config UI, eligibility admin UI).
+      Promise features deferred to future releases (earn rate config UI,
+      eligibility criteria admin UI).
+      Restart the product pitch — inherit context from the landing page,
+      do not reintroduce the platform from scratch.
 
     content_scope:
       note: >
-        No current marketing sub-page exists. app/(dashboard)/loyalty/page.tsx is a
-        stub ("Implementation pending — Phase 3"). Content is scaffolded from the
-        fully operational service layer and admin UI surfaces:
-          - services/loyalty/                     (bounded context: earn, redeem, promo)
-          - services/loyalty/reward/              (reward catalog: families, tiers, limits)
-          - services/loyalty/promo/               (promo programs: lifecycle, inventory)
-          - app/(dashboard)/admin/loyalty/        (admin config surfaces: working)
-          - components/admin/loyalty/rewards/     (reward catalog admin: working)
-          - components/admin/loyalty/promo-programs/ (promo program admin: working)
-        Feature inventory: 19 floor-facing features (working), 10 admin-config features
-        (10 working, 2 UI-deferred). See SYSTEM-REALITY-MAP.md §3 Loyalty claim.
+        No current marketing sub-page exists for player intelligence or loyalty.
+        Content is scaffolded from two sources:
+          Player profile source:
+            - app/(dashboard)/players/[id]/page.tsx      (Player 360 surface)
+            - services/player/                            (player bounded context)
+            - services/visit/                             (visit history, continuity)
+          Loyalty source:
+            - services/loyalty/                           (earn, redeem, promo)
+            - services/loyalty/reward/                    (reward catalog: families, tiers, limits)
+            - services/loyalty/promo/                     (promo programs: lifecycle, inventory)
+            - app/(dashboard)/admin/loyalty/              (admin config surfaces: working)
+        Feature inventory: Player 360 + visit continuity (fully operational),
+        19 loyalty floor-facing features (working), 10 admin-config features
+        (10 working, 2 UI-deferred). See SYSTEM-REALITY-MAP.md §2 Player claim
+        and §3 Loyalty claim.
 
     surface_sections:
-      - heading: "A loyalty program your property configures — not a vendor default"
+      - heading: "One player record from every visit"
         content: >
-          The system ships with the mechanism, not the policy. Operators define
-          their own point-to-dollar exchange rate, versioned with an effective date,
-          so the economics can change without losing historical accuracy. Reward
-          catalogs, tier benefits, and promo programs are all operator-defined.
-          Nothing is a factory default left in production.
+          Every check-in, table move, rating slip, buy-in, and loyalty
+          transaction ties back to the same player record. Operators see
+          a complete picture of who the player is, how they play, and
+          what they have earned — without reconstructing it from separate systems.
+
+      - heading: "Player profile — what operational leadership sees"
+        content_blocks:
+          - "Full identity record: enrollment date, contact details, player notes, identity flags."
+          - "Visit history with session continuity — every visit, table assignment, and rating slip in one timeline."
+          - "Session financial activity: buy-ins, cash-outs, voids tied to each visit."
+          - "Game preference patterns visible from the session record — game types, stakes, average bet."
+          - "Loyalty position: current tier, points balance, redemption history."
+          - "Filterable interaction timeline: all floor events, financial events, and loyalty events per player."
+
+      - heading: "Recognition intelligence"
+        content_blocks:
+          - "Player search by name, player ID, or card number — accessible from the pit floor without leaving the shift surface."
+          - "High-value player visibility at check-in: tier, recent activity, open sessions across the floor."
+          - "Visit continuation from a prior session — preserves the play record across breaks and multi-day visits."
+          - "Exclusion awareness at check-in — system flags excluded players before a session opens."
+
+      - heading: "Loyalty and value — configured to your property"
+        content: >
+          The system ships with the mechanism, not the policy. Operators
+          define their own point-to-dollar exchange rate, versioned with an
+          effective date, so the economics can change without losing historical
+          accuracy. Reward catalogs, tier benefits, and promo programs are
+          all operator-defined — nothing is a vendor default left in production.
 
       - heading: "Two reward families, each with its own delivery model"
         content_blocks:
           - "**points_comp** — Redeemable comps: players exchange earned points for face-value credits. Each reward carries its own points cost and overdraw rule."
           - "**entitlement** — Tier-gated benefits: match play and free play instruments with per-tier face values. Bronze earns a different amount than platinum."
-          - "Fulfillment type per reward: comp slip, coupon, or no-fulfillment (inline benefit)."
+          - "Fulfillment type per reward: comp slip, coupon, or inline benefit — no single delivery model forced across all rewards."
           - "Every reward in the catalog is independently configurable — no shared global defaults."
 
       - heading: "Promo programs with full lifecycle management"
         content_blocks:
           - "Match play and free play programs defined per property: face value, required match wager, and date window."
-          - "Programs can be always-valid (no start date) or time-bounded with an expiration."
-          - "Lifecycle management: draft → active → inactive → archived. Each transition is auditable."
+          - "Programs can be always-valid or time-bounded. Lifecycle: draft → active → inactive → archived."
           - "Per-coupon inventory tracking: issued, outstanding, voided, replaced, expiring-soon counts."
-          - "Exposure reporting: total issued face value, patron risk exposure, cleared vs outstanding."
           - "Anonymous coupon issuance supported — coupon can exist before a player is linked."
 
-      - heading: "Frequency rules that prevent over-issuance"
-        content_blocks:
-          - "Per-visit, per-gaming-day, per-week, and per-month scopes — independently configurable per reward."
-          - "Cooldown minutes between issuances of the same reward to the same player."
-          - "Note-required flag: certain limit rules can mandate a supervisor note at issuance."
-          - "One rule per scope per reward — no overlapping rules that create ambiguous ceilings."
-
-      - heading: "Tier entitlements that scale with player value"
-        content_blocks:
-          - "Each tier (bronze → silver → gold → platinum → diamond) can have its own benefit face value."
-          - "Match play and free play instruments are assigned per tier — not a flat rate across all tiers."
-          - "Tier entitlement config is managed per reward in the reward catalog — changes take effect on next eligibility check."
-          - "Tier assignment is driven by play activity, not manual override."
-
-      - heading: "Every loyalty transaction is permanent"
+      - heading: "Every player transaction is permanent"
         content_blocks:
           - "The loyalty ledger is append-only — points accruals, redemptions, manual awards, and adjustments all remain in the record."
           - "Corrections create reversal entries alongside the original — nothing is overwritten."
           - "Promo coupon lifecycle is fully tracked: issued → cleared / voided / replaced / expired."
-          - "Idempotent issuance: the system rejects double-credits on retry without losing the original transaction."
-
-      - heading: "What operators configure today"
-        content_blocks:
-          - "Point redemption rate (cents per point) — versioned with effective date"
-          - "Reward catalog: name, kind, fulfillment type, active/inactive toggle"
-          - "Points cost per reward (points_comp family)"
-          - "Per-reward overdraw permission"
-          - "Tier entitlement benefit amounts per tier per reward (entitlement family)"
-          - "Frequency limits: per-visit / per-gaming-day / per-week / per-month per reward"
-          - "Cooldown minutes per limit rule"
-          - "Note-required flag per limit rule"
-          - "Promo program face value, required match wager, date windows"
-          - "Promo program lifecycle transitions"
-        deferred_note: >
-          Point earn rate (pointsPerTheo, multiplier, rounding) and reward eligibility
-          criteria (minTier, maxTier, visitKinds) are implemented in the service layer
-          but the admin UI is deferred to a future release. These are noted as
-          implementation-pending in the admin surface and are not claimed as available.
 
     causal_back_link:
-      text: "See how session activity generates loyalty telemetry"
+      text: "See how session activity drives player value and loyalty telemetry"
       href: "/floor-operations"
       rationale: >
-        Loyalty accrual is triggered by session close — the session record
-        is the causal input. DS5 points one step back to DS1, not to all surfaces.
-        No forward link from DS5 — it is a leaf in the causal chain.
+        Player intelligence and loyalty accrual are both triggered by session
+        activity — check-in creates the visit record, session close triggers
+        loyalty accrual. DS5 points one step back to DS1. No forward causal
+        link from DS5 — it is a leaf in the causal chain.
 
     positioning_constraint: >
       This surface must not position the system as a CRM or marketing platform.
-      It is an operator-configurable loyalty mechanism built into shift operations —
-      configured by property management, executed during table sessions, settled at
-      session close. The differentiation claim is configurability and operational
-      integration, not points program breadth or player engagement analytics.
+      Player intelligence is the operational picture of who is playing, what
+      they are worth, and what they have earned — derived from actual floor
+      activity, not modeled from external data. Loyalty economics are
+      operator-configurable and operationally integrated, not a vendor program.
+      Aligned with ADR-052 / ADR-053 / ADR-054 / ADR-055 financial authority
+      constraints — player value is observational, not authoritative.
 
     zachman:
-      what:   "Loyalty ledger, reward catalog (points_comp + entitlement), promo programs, coupon inventory, valuation policy, tier entitlements, frequency limits"
-      how:    "Points accrue at session close; operators configure rewards via catalog admin; promo programs created per property; coupons issued with lifecycle tracking; limits enforced per scope per reward"
-      where:  "Admin: /admin/loyalty/economics (valuation), /admin/loyalty/rewards (catalog), /admin/loyalty/promo-programs (promos). Floor: reward issuance from shift dashboard / rating slip flow."
-      who:    "Pit boss (reward issuance during shift), shift manager, property administrator (catalog and economics config)"
-      when:   "Accrual at session close; issuance eligibility checked per visit/day/week/month; promo programs within their configured date window; policy versioned by effective date"
-      why:    "Player loyalty economics must reflect each property's operational reality — configurable programs that run on the property's terms, with permanent audit records, prevent both under-reward and over-exposure"
+      what:   "Player 360, visit history, session continuity, game preferences, player notes, identity management, loyalty ledger, reward catalog (points_comp + entitlement), promo programs, coupon inventory, tier entitlements, valuation policy"
+      how:    "Check-in links session to player record; rating slip captures play; session close triggers loyalty accrual; reward issuance from pit floor; operators configure catalog and economics via admin surfaces"
+      where:  "Player 360 (/players/[id]); Pit Terminal (player check-in, reward issuance); Admin: /admin/loyalty/economics, /admin/loyalty/rewards, /admin/loyalty/promo-programs"
+      who:    "Pit boss (check-in, reward issuance during shift), shift manager (player review), host / property administrator (catalog and economics config)"
+      when:   "Check-in at session start; accrual at session close; issuance eligibility checked per visit/day/week/month; policy versioned by effective date"
+      why:    "Operational player value must be grounded in actual floor activity — who the player is, what they played, and what they earned — not reconstructed from external data or vendor defaults"
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -563,10 +572,10 @@ routing_architecture:
     - from:    "Wave 1 S5 (Operational Intelligence)"
       to:      "/operational-intelligence"
       wave_1_interim: null
-    - from:    "Wave 1 S2 / Loyalty & Rewards domain"
-      to:      "/loyalty-rewards"
+    - from:    "Wave 1 S2 / 'Understand the Player' domain"
+      to:      "/player-intelligence"
       wave_1_interim: null
-      wave_1_note: "Wave 1 card is informational only — no route exists until Wave 2 ships DS5"
+      wave_1_note: "Wave 1 card is informational only — no route exists until Wave 2 ships DS5 /player-intelligence"
 
   derived_cross_links:
     - from:    "/floor-operations"
@@ -581,9 +590,9 @@ routing_architecture:
     - from:    "/operational-intelligence"
       to:      "/floor-operations"
       label:   "See how floor operations generate the floor activity record"
-    - from:    "/loyalty-rewards"
+    - from:    "/player-intelligence"
       to:      "/floor-operations"
-      label:   "See how session activity generates loyalty telemetry"
+      label:   "See how session activity drives player value and loyalty telemetry"
 
   navigation_pattern:
     current: mesh_all_to_all
@@ -606,27 +615,39 @@ open_questions:
 
   - id: OQ-1
     topic: "Loyalty & Rewards positioning"
-    status: RESOLVED
+    status: AMENDED
     resolved_date: "2026-05-14"
+    amended_date:  "2026-05-14"
     blocks: [DS1, DS4]
     question: >
       Loyalty & Rewards is the largest operational domain (19 floor-facing + 10
       admin-config working features) and the system's primary CRM differentiator.
       Where does it fit in the causal chain?
-    decision: >
+    original_decision: >
       Option A + C combined:
-        A. Fifth operational domain added to Wave 1 S2 (ZACHMAN-LANDING-WIREFRAME-v3.yaml
-           updated — informational card, no Wave 1 route, anchors narrative claim).
+        A. Fifth operational domain added to Wave 1 S2 (informational card, no Wave 1
+           route, anchors narrative claim).
         C. DS5 /loyalty-rewards added as a standalone derived surface in Wave 2.
-      Decision rationale: Loyalty is a marketable differentiator at the property
-      level (configurable economics, not vendor defaults) — it earns its own S2 domain
-      card and a full derived surface. It is not a subsection of intelligence (DS4)
-      because its primary claim is operator configurability, not analytics output.
+    amendment: >
+      FDCM consolidation (FUNCTIONAL-DOMAINS-CONS-MAP.md, 2026-05-14) supersedes the
+      original resolution. Loyalty & Rewards is absorbed into the "Understand the Player"
+      executive domain (Player Intelligence). The standalone 5th S2 card is replaced by
+      a 2nd domain card: "Understand the Player." DS5 is rescoped from /loyalty-rewards
+      to /player-intelligence with broader scope (Player 360 + visit history + loyalty
+      & value). The loyalty configurable-economics claim is preserved inside DS5 — it
+      is not demoted.
+    rationale: >
+      The FDCM finding: player profiles, visit continuity, and loyalty are naturally
+      perceived by operators as parts of the same operational loop (player identity →
+      play record → earned value). Separating loyalty from the player record creates
+      artificial fragmentation. "Understand the Player" is a stronger executive claim
+      because it encompasses the full player value picture, not just loyalty mechanics.
     unblocks: [DS1, DS4]
     wave1_change: >
-      ZACHMAN-LANDING-WIREFRAME-v3.yaml S2 now has five domains.
-      Loyalty card wave_1_href is null — informational only, no route in Wave 1.
-    wave2_surface: DS5
+      ZACHMAN-LANDING-WIREFRAME-v3.yaml S2 changed from 5 cards to 4 executive
+      domain cards. "Understand the Player" replaces the former "Loyalty & Rewards"
+      card. wave_1_href is still null — informational card only in Wave 1.
+    wave2_surface: DS5  # now /player-intelligence, not /loyalty-rewards
 
   - id: OQ-2
     topic: "Gaming-day temporal model"
