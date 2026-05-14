@@ -2,6 +2,7 @@
 
 // Re-export UI hooks (PRD-013: Zustand state management)
 export { useModal } from './ui/use-modal';
+export { useOpenSlip } from './ui/use-open-slip';
 export { usePitDashboardUI } from './ui/use-pit-dashboard-ui';
 export { usePlayerDashboard } from './ui/use-player-dashboard';
 export {
