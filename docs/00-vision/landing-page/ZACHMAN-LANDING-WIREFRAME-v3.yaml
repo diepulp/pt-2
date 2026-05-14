@@ -1,0 +1,740 @@
+# ZACHMAN-LANDING-WIREFRAME-v3.yaml
+#
+# Wave:    1 — Landing Page Exemplar
+# Status:  SCAFFOLD
+# Version: 3.1
+# Date:    2026-05-13
+#
+# Scope:
+#   Wave 1 only. This file covers the main landing page (/) exclusively.
+#   Derived surfaces are Wave 2 scope — frozen in:
+#   ZACHMAN-DERIVED-SURFACES-WAVE2.yaml
+#
+# Purpose:
+#   Scaffold the main landing page spine. The landing page is the narrative
+#   exemplar — its headings, block patterns, transitions, and vocabulary
+#   become the style contract Wave 2 derived surfaces must follow.
+#   Do not implement derived surfaces until this exemplar ships and the
+#   exemplar_contract below is confirmed.
+#
+# Inputs:
+#   - ZACHMAN-LANDING-WIREFRAME.yaml              (v1 — current state audit)
+#   - ZACHMAN-LANDING-WIREFRAME-v2.yaml           (v2 — proposed direction)
+#   - FIB-H-LANDING-PAGE-REFRACTOR.md            (scope authority — FIB-H-LP-001 v1)
+#   - LANDING_PAGE_SCAFFOLD_PATCH_DELTA.md
+#   - LANDING_PAGE_NARRATIVE_CONTAINMENT_DIRECTIVE.md
+#   - LANDING_PAGE_VS_DERIVED_SURFACE_NARRATIVE_BOUNDARY.md
+#   - app/(landing)/page.tsx
+#   - app/(landing)/floor-oversight/page.tsx
+#   - app/(landing)/session-tracking/page.tsx
+#   - app/(landing)/cash-accountability/page.tsx
+#   - app/(landing)/audit-compliance/page.tsx
+#
+# Canonical principle (FIB §L):
+#   The landing page explains how casino floor activity becomes
+#   operational oversight, compliance visibility, operational financial
+#   visibility, and operational intelligence.
+#
+# Main-page spine:
+#
+#   NAV
+#        ↓
+#   HERO
+#        ↓
+#   S2 — Floor Operations (Operational Domains)
+#        ↓
+#   S3 — Product Surfaces
+#        ↓
+#   S4 — Operational Accountability
+#        ↓
+#   S5 — Operational Intelligence
+#        ↓
+#   S6 — CTA
+#        ↓
+#   FOOTER
+#
+# Audience (FIB §D):
+#   Primary:   Director of Operations / General Manager / Shift Manager
+#   Secondary: Pit leadership
+#
+# Conversion posture (unified, FIB §F):
+#   One CTA throughout: "Request an operational walkthrough" → /contact
+#
+# Scope authority: FIB-H-LP-001 v1
+
+
+# ═══════════════════════════════════════════════════════════════════
+# MAIN PAGE SCAFFOLD
+# ═══════════════════════════════════════════════════════════════════
+
+main_page:
+
+  # ─────────────────────────────────────────────────────────────────
+  - id: NAV
+    label: Navigation
+
+    zachman:
+      what:   "Brand, causal-chain anchor links, pricing path, single CTA"
+      who:    "Operational leadership buyer at any scroll depth"
+      when:   "Always present"
+      why:    "Wayfinding mirrors the causal chain; single conversion entry point"
+
+    prose_scaffold:
+      brand: "Player Tracker"
+      nav_links:
+        - label: "Operations"
+          href:  "#operations"
+          chain_layer: "Floor Operations"
+        - label: "Accountability"
+          href:  "#accountability"
+          chain_layer: "Operational Accountability"
+        - label: "Intelligence"
+          href:  "#intelligence"
+          chain_layer: "Operational Intelligence"
+        - label: "Pricing"
+          href:  "/pricing"
+      primary_cta:
+        label: "Request an operational walkthrough"
+        href:  "/contact"
+
+    notes:
+      - "Cash accountability remains inside the accountability destination — it is an operational trust concern, not a separate nav layer."
+      - "Intelligence is a nav destination because buyers evaluate it as a distinct capability; this is acceptable if the section copy makes its downstream origin explicit."
+
+  # ─────────────────────────────────────────────────────────────────
+  - id: S1
+    label: Hero
+
+    zachman:
+      what:   "Platform category; causal chain stated at headline level"
+      who:    "Director of Operations / GM on first landing"
+      when:   "First impression; sets the interpretive frame for all sections below"
+      why:    "Buyer must understand operational origin before evaluating downstream claims"
+
+    prose_scaffold:
+      eyebrow: "Casino Operational Intelligence"
+
+      headline:
+        structure:  "Outputs named first; operational source named second"
+        intent: >
+          State the four downstream outcomes (oversight, compliance visibility,
+          cash accountability, intelligence), then attribute them to the single
+          operational source (floor activity). Do not lead with the mechanism.
+        draft: >
+          Operational oversight. Compliance visibility.
+          Cash accountability. Operational intelligence.
+          All from activity already happening on your floor.
+
+      subtitle:
+        intent: "Name the audience and the operational scope"
+        draft: >
+          Built for casino operational leadership —
+          from live floor supervision to audit-ready operational history.
+
+      primary_cta:
+        label: "Request an operational walkthrough"
+        href:  "/contact"
+      secondary_cta:
+        label: "Explore operational domains"
+        href:  "#operations"
+
+    notes:
+      - "No capability strip. No hero proof strip. Causal chain carries the full argument at this level."
+      - "Eyebrow and headline operate in different registers: eyebrow = category claim; headline = causal proof."
+
+  # ─────────────────────────────────────────────────────────────────
+  - id: S2
+    label: Operational Domains
+    anchor: "#operations"
+
+    zachman:
+      what:   "Five operational responsibilities the platform unifies"
+      who:    "Evaluating operator mapping known floor pain to system capability"
+      when:   "Immediately post-hero; transitions from 'what is it' to 'what it controls'"
+      why:    "Establishes operational scope before any accountability or intelligence claim is made"
+
+    prose_scaffold:
+      eyebrow: "Operations"
+      heading: "Tables, sessions, cash, compliance, and loyalty — managed during the shift."
+      heading_note: >
+        Consequence-first per CONTAINMENT_DIRECTIVE §11.1. Names the operational
+        concerns concretely without taxonomy labels. Loyalty added per OQ-1
+        resolution: property-configurable loyalty program is a primary CRM
+        differentiator and belongs in the operational domain spine.
+
+      card_copy_constraint: >
+        HARD FORMAT: one sentence per card. No sub-bullets. No feature enumerations.
+        Pattern: [operational verb] + [one consequence] + [optional: one scope qualifier].
+
+        Acceptable model:
+          "Surface regulatory thresholds and operational exceptions
+          during the shift — not after it."
+          One verb. One consequence. One temporal contrast. Done.
+
+        Borderline (tolerated only when the enumeration clarifies scope):
+          "Record operational cash movement with attribution at every step —
+          entries, voids, fills, and credits."
+          The list names scope, not additional claims. Acceptable under strict reading.
+
+        REJECT — this is the drift pattern:
+          "Track floor activity with real-time dashboards, exception alerts,
+          supervisor workflows, checkpoint analysis, and shift-level analytics."
+          Five claims. No single consequence. Module catalog in one sentence.
+
+        COPY TEST: reduce the card to one operational consequence.
+        If the buyer must parse a list to understand what the card is for,
+        it has drifted from operational routing to feature inventory.
+
+        If the card needs a second sentence to justify itself: the card has
+        drifted. Move the second sentence to the derived surface.
+
+      domains:
+        - title:  "Floor Oversight"
+          claim: >
+            Monitor active tables and operational exceptions across
+            all pits during the shift.
+          claim_note: >
+            Tightened from four-item enumeration (active tables, shift activity,
+            exceptions, supervisor workflows) to one consequence + one scope.
+            "supervisor workflows" dropped — mechanism, not consequence.
+            Enumeration creep is the earliest form of module-catalog drift.
+          wave_1_href: "/floor-oversight"
+
+        - title:  "Session Tracking"
+          claim: >
+            Preserve player-session continuity from buy-in through closeout —
+            across table moves, breaks, and multi-day visits.
+          wave_1_href: "/session-tracking"
+
+        - title:  "Cash Accountability"
+          claim: >
+            Record operational cash movement with attribution at every step —
+            entries, voids, fills, and credits.
+          wave_1_href: "/cash-accountability"
+
+        - title:  "Audit Compliance"
+          claim: >
+            Surface regulatory thresholds and operational exceptions
+            during the shift — not after it.
+          wave_1_href: "/audit-compliance"
+
+        - title:  "Loyalty & Rewards"
+          claim: >
+            Points accrual, comp issuance, and tier entitlements — configured
+            to your property's economics, not a vendor default program.
+          wave_1_href: null
+          wave_1_href_note: >
+            No current sub-page exists for loyalty on the marketing site.
+            Wave 1 card links to nothing (or is rendered without a route).
+            Wave 2 creates /loyalty-rewards as DS5. See ZACHMAN-DERIVED-SURFACES-WAVE2.yaml.
+          wave_2_href: "/loyalty-rewards"
+
+    transition:
+      copy_intent: >
+        Operations naturally lead to product proof — the buyer has seen
+        what the floor is; now they need to see how the system makes it visible.
+        Move the camera closer without reintroducing the platform premise.
+      direction: "→ S3 Product Surfaces"
+
+    notes:
+      - "wave_1_href fields point to current transitional sub-pages. See transitional_routing below."
+      - "Five domain cards risk reading as a module catalog more than four (CONTAINMENT_DIRECTIVE §3, §6). The heading does the framing work; cards provide the operational routing. Card copy enforcement is in card_copy_constraint above — that field is the standing constraint, not this note."
+      - "MODULE CATALOG FAILURE MODE: The cards are currently compliant. The risk is future edit. Each card that gains a second sentence, a sub-bullet, or a feature enumeration pushes S2 from operational chain into module catalog. The constraint is per card_copy_constraint: one sentence, one consequence, one optional scope qualifier."
+      - "Loyalty card has no Wave 1 route — it is informational only during Wave 1. It anchors the narrative claim and resolves OQ-1."
+      - "OQ-1 RESOLVED: Loyalty positioned as 5th operational domain in S2. Derives DS5 /loyalty-rewards in Wave 2. See ZACHMAN-DERIVED-SURFACES-WAVE2.yaml."
+      - "In Wave 2, wave_1_href fields are replaced with Wave 2 paths (/floor-operations, /financial-accountability, /compliance-audit, /loyalty-rewards). See ZACHMAN-DERIVED-SURFACES-WAVE2.yaml."
+
+  # ─────────────────────────────────────────────────────────────────
+  - id: S3
+    label: Product Surfaces
+
+    zachman:
+      what:   "Four operational surfaces with workflow-contextual framing"
+      who:    "Product evaluator wanting visual confirmation that operational claims are real"
+      when:   "Immediately after operational domains; proof stage before accountability claims"
+      why:    "Screenshots ground the operational narrative early and reduce abstraction fatigue"
+
+    prose_scaffold:
+      eyebrow: "Product"
+      heading: "What operational leadership sees during a shift."
+      heading_note: >
+        Consequence-first per CONTAINMENT_DIRECTIVE §11.1. Answers the buyer's
+        'what does it look like?' with an operational frame, not a positioning claim.
+      subheading: >
+        From the shift dashboard to the buy-in panel — surfaces that reflect
+        the floor as it operates.
+
+      surfaces:
+        - label:               "Shift Dashboard"
+          operational_context: "Floor Operations → Operational Intelligence"
+          framing: >
+            Live floor picture: active tables, open sessions, cash activity,
+            shift KPIs — with checkpoint delta tracking that shows how
+            performance changes, not just where it stands.
+
+        - label:               "Player 360"
+          operational_context: "Session Tracking → Operational Accountability"
+          framing: >
+            Complete player operational record: identity, visit continuity,
+            rating slips, financial activity, loyalty position, and a
+            filterable interaction timeline.
+
+        - label:               "Cash Threshold Monitor"
+          operational_context: "Cash Accountability → Compliance"
+          framing: >
+            Buy-in entry with live threshold proximity — MTL at $3K,
+            CTR visibility at $10K. Compliance feedback at point of entry,
+            not after end-of-day reconciliation.
+
+        - label:               "Pit Terminal"
+          operational_context: "Floor Operations → Session Tracking → Cash Accountability"
+          framing: >
+            One surface for active tables, player sessions, and floor activity
+            during the shift. The seat map shows live occupancy across all pits.
+          s3_note: >
+            Framing contains one operational claim only — screenshot carries the
+            depth (seat map, session status, multi-pit navigation, inventory panel,
+            exceptions sidebar, analytics). Remaining surface detail lives in DS1
+            /floor-operations (Wave 2). Per CONTAINMENT_DIRECTIVE §6 and §12:
+            one cognitive frame per block; 1–2 sentences; screenshot absorbs the rest.
+            Swap rationale: Setup & Configuration removed from S3 — onboarding
+            surface does not fit S3 heading "What operational leadership sees
+            during a shift."
+
+    screenshot_requirement: >
+      Each surface tab must show an actual screenshot or the subheading
+      cannot claim 'what operational leadership sees'. A text-only display
+      panel must not claim to be anything other than a description.
+      Screenshots absorb explanation burden per CONTAINMENT_DIRECTIVE §8:
+      short operational claim → screenshot → one-line operational interpretation.
+      Resolves XS-F1 / S3-F1 from v1 audit.
+      Priority screenshot for Wave 1: Pit Terminal seat map panel — shows
+      real occupancy, named players, session status, and the industrial-grade
+      UI treatment that signals "serious operational software". This is the
+      strongest single screenshot for establishing product credibility with
+      floor supervisors evaluating the system.
+
+    transition:
+      copy_intent: >
+        Product proof naturally leads to accountability because visible
+        operational workflows create reviewable records. The camera has
+        shown the product; now it shows that those records hold up.
+      direction: "→ S4 Operational Accountability"
+
+    connective_treatment: >
+      Do not render a standalone system-flow/topology block on the main page.
+      Use section order, screenshot sequencing, directional copy transitions,
+      and subtle visual progression cues to imply how floor activity moves
+      into accountability and intelligence.
+
+  # ─────────────────────────────────────────────────────────────────
+  - id: S4
+    label: Operational Accountability
+    anchor: "#accountability"
+
+    zachman:
+      what:   "Integrated operational trust record: attribution, cash accountability, regulatory visibility, continuity, audit trail"
+      who:    "Compliance-aware GM or operations director validating whether the operational record can be trusted"
+      when:   "After product surfaces establish visual proof; before intelligence claims"
+      why:    "Accountability and financial traceability answer one buyer question: can I trust the operational record?"
+
+    prose_scaffold:
+      eyebrow: "Accountability"
+      heading: "Activity tied to people, tables, and the gaming day."
+      heading_note: >
+        Consequence-first per CONTAINMENT_DIRECTIVE §11.1 and §16.3.
+        Preferred example from directive. Concrete operational consequence —
+        not a taxonomy label or abstract trust claim.
+      subheading: >
+        Floor activity, cash movement, corrections, and compliance thresholds
+        stay connected to staff identity, table context, and gaming-day scope.
+
+      content_blocks:
+        # 4 blocks max per CONTAINMENT_DIRECTIVE §13.
+        # Cash Accountability detail (buy-ins, voids, fills) belongs at
+        # /financial-accountability — compressed claim is carried in the subheading.
+        - title: "Attributed Activity"
+          copy: >
+            Every supervisor action, void, adjustment, and operational change
+            carries staff identity and timestamp. No shared logins.
+            No unattributed changes.
+          copy_note: "'No unattributed changes' per CONTAINMENT_DIRECTIVE §16.1. Replaces 'No anonymous mutations' (engineering-native vocabulary)."
+
+        - title: "Regulatory Visibility"
+          copy: >
+            Progressive MTL and CTR thresholds integrated into operational
+            workflows — visible during the shift, not discovered afterward.
+
+        - title: "Shift Continuity"
+          copy: >
+            Operational context preserved across the gaming day.
+            Sessions, checkpoints, and table events remain coherent
+            across shift boundaries without manual reconciliation.
+
+        - title: "Operational Audit Trail"
+          copy: >
+            Corrections create new records with full lineage.
+            Voids carry the original entry, the correcting entry, and the reason.
+            Nothing is overwritten.
+
+      detail_routes:
+        wave_1_note: >
+          These route to current transitional sub-pages during Wave 1.
+          Wave 2 replaces them with /compliance-audit and /financial-accountability.
+        - label: "Compliance & Audit detail"
+          wave_1_href: "/audit-compliance"
+          wave_2_href: "/compliance-audit"
+        - label: "Financial Accountability detail"
+          wave_1_href: "/cash-accountability"
+          wave_2_href: "/financial-accountability"
+
+      positioning_constraint: >
+        This section must not position the system as financial settlement
+        or accounting software. Operational financial visibility only.
+        Aligned with ADR-052 / ADR-053 / ADR-054 / ADR-055.
+
+    transition:
+      copy_intent: >
+        Accountability naturally leads to intelligence because trusted records
+        make shift insight credible. The floor record is continuous — now show
+        what becomes visible because of it. Do not restart the product explanation.
+      direction: "→ S5 Operational Intelligence"
+
+    notes:
+      - "This section absorbs what v1 called the Trust section. The four properties are identical but embedded in operational framing rather than isolated as marketing trust signals."
+      - "This section also absorbs the former standalone Financial Provenance layer using operator-facing cash accountability language."
+      - "Cash Accountability detail block removed per CONTAINMENT_DIRECTIVE §13 (3–4 blocks max) and BOUNDARY §9.2 (move to derived surface when content needs workflow detail). The subheading carries the compressed cash accountability claim; /financial-accountability carries the depth."
+
+  # ─────────────────────────────────────────────────────────────────
+  - id: S5
+    label: Operational Intelligence
+    anchor: "#intelligence"
+
+    zachman:
+      what:   "Four intelligence outputs: shift performance, checkpoint analysis, anomaly detection, trend visibility"
+      who:    "GM or Director of Operations evaluating managerial insight capability"
+      when:   "After operational accountability; final substantive section — closes the causal chain"
+      why:    "Intelligence is credible because floor activity is continuously captured across tables, sessions, and cash movement"
+
+    prose_scaffold:
+      eyebrow: "Intelligence"
+      heading: "See what changed across the shift."
+      heading_note: >
+        Consequence-first per CONTAINMENT_DIRECTIVE §11.1 preferred example.
+        Concrete operational consequence — not a mechanism claim
+        ('derived from') or taxonomy label ('Operational Intelligence').
+      subheading: >
+        Because floor activity is captured continuously across tables,
+        sessions, and cash movement, shift visibility reflects what is
+        happening on the floor as it happens.
+      subheading_note: >
+        'Not estimated' removed per CONTAINMENT_DIRECTIVE §16.2 —
+        'estimated' carries canonical meaning in the financial authority model
+        and must not be reused casually as marketing contrast.
+
+      content_blocks:
+        - title: "Shift Performance"
+          copy: >
+            Active table performance, session value, cash velocity,
+            and coverage quality visible at the shift level.
+
+        - title: "Checkpoint Analysis"
+          copy: >
+            Mid-shift snapshots show how performance changes, not just
+            where it stands. Delta tracking from any prior checkpoint.
+
+        - title: "Anomaly Detection"
+          copy: >
+            Operational exceptions surface during the shift: coverage gaps,
+            threshold proximity, unrated sessions, table activity patterns.
+
+        - title: "Trend Visibility"
+          copy: >
+            Shift patterns visible because floor activity has been
+            captured continuously — not compiled after the fact.
+
+      screenshot_constraint: >
+        Screenshots for this section must be workflow-origin visuals.
+        The section's credibility depends on showing intelligence that
+        is legibly derived from floor activity — not intelligence that
+        looks like it could come from a standalone BI product.
+
+        ACCEPTABLE screenshot posture (floor-origin anchored):
+          - Checkpoint comparison view showing session deltas since a named snapshot
+          - Coverage quality indicator tied to specific tables or pits
+          - Exceptions panel with flagged gaps attributed to sessions / players
+          - Shift-level session list with per-player coverage status visible
+          - Anomaly surfaced in the context of the table or session that generated it
+
+        REJECT screenshots that show (BI drift indicators):
+          - Standalone bar, line, or pie charts without floor-activity context
+          - KPI tile dashboards with no operational frame
+          - Generic "analytics" UI that could belong to any SaaS product category
+          - Visuals where no table, session, player, or floor event is visible in frame
+
+        TEST: A screenshot passes if it still shows a table, session, player,
+        or floor event somewhere in the frame. It fails if the same image
+        could plausibly illustrate a hotel, restaurant, or HR analytics product.
+
+        Per CONTAINMENT_DIRECTIVE §8: every screenshot must be followed by
+        one-line operational interpretation that references the floor activity
+        origin, not just the metric or chart visible in the visual.
+
+        Per DS4 must_not_do in ZACHMAN-DERIVED-SURFACES-WAVE2.yaml:
+        "Become generic analytics or BI positioning. Disconnect intelligence
+        from floor activity origin." The same constraint governs S5 on the
+        main page at higher compression.
+
+      wave_2_route:
+        href: "/operational-intelligence"
+        note: "Wave 1 has no outbound link from this section. Wave 2 adds the detail route."
+
+    transition:
+      copy_intent: >
+        The causal chain is complete. Intelligence closes the argument.
+        The CTA follows naturally — one line inviting the buyer to evaluate
+        the system against their own operation. No new concepts introduced.
+      direction: "→ S6 CTA"
+
+    notes:
+      - "This section closes the causal chain. The page argument is complete here."
+      - "The heading 'See what changed across the shift' references the checkpoint delta concept — one of the system's genuine differentiators. Specific enough to be credible, concrete enough to be scannable."
+      - "This is a nav destination (#intelligence) — acceptable because buyers evaluate it as a distinct capability, but the subheading must anchor it to operational origin, not to analytics or BI positioning."
+      - "Do not promote this section into generic analytics positioning per BOUNDARY §13.5."
+      - "BI DRIFT FAILURE MODE: The section's framing is correct. The section's credibility will be destroyed if screenshots are chosen for visual impact rather than floor-origin legibility. Chart-heavy screenshots collapse the causal chain into generic BI posture. See screenshot_constraint above — it is not optional guidance, it is the primary implementation risk for this section."
+      - "ORIGIN ANCHOR RULE: Every copy block and screenshot in this section must allow the buyer to trace the intelligence back to a floor event — a session, a table, a checkpoint, a player. Intelligence that cannot be traced back to a floor event does not belong in this section."
+
+  # ─────────────────────────────────────────────────────────────────
+  - id: S6
+    label: CTA (Conversion Close)
+
+    zachman:
+      what:   "Single conversion action"
+      who:    "Bottom-funnel buyer — has scrolled the full causal chain"
+      when:   "After Operational Intelligence closes the argument"
+      why:    "One posture, one destination"
+
+    prose_scaffold:
+      heading: "Evaluate the platform through your operational reality."
+      copy: >
+        Walk through live operational workflows, accountability surfaces,
+        and floor-control scenarios with your team.
+      primary_cta:
+        label: "Request an operational walkthrough"
+        href:  "/contact"
+      secondary_cta: null
+
+    notes:
+      - "No secondary CTA. A bottom-of-funnel buyer does not need a backward-navigation escape."
+
+  # ─────────────────────────────────────────────────────────────────
+  - id: FOOTER
+    label: Footer
+
+    prose_scaffold:
+      brand: "Player Tracker"
+      legal_links:
+        - label: "Privacy Policy"
+          href:  "/privacy"
+        - label: "Terms of Service"
+          href:  "/terms"
+      copyright: "© {year} Player Tracker. All rights reserved."
+
+    notes:
+      - "Legal links required for compliance-positioned B2B product."
+
+
+# ═══════════════════════════════════════════════════════════════════
+# TRANSITIONAL ROUTING
+# How Wave 1 handles outbound links while Wave 2 surfaces don't exist.
+# ═══════════════════════════════════════════════════════════════════
+
+transitional_routing:
+
+  decision: retain_current_subpage_links
+  rationale: >
+    Removing outbound links from S2 domain cards is a user-facing navigation
+    regression — the current sub-pages exist, have content, and are reachable.
+    Linking to them during Wave 1 maintains navigation continuity.
+    Framing inconsistency between the new landing page narrative and the old
+    sub-pages is acceptable during the transition window.
+
+  s2_domain_card_links:
+    - domain:       "Floor Oversight"
+      wave_1_href:  "/floor-oversight"
+      wave_2_href:  "/floor-operations"
+    - domain:       "Session Tracking"
+      wave_1_href:  "/session-tracking"
+      wave_2_href:  "/floor-operations"
+    - domain:       "Cash Accountability"
+      wave_1_href:  "/cash-accountability"
+      wave_2_href:  "/financial-accountability"
+    - domain:       "Audit Compliance"
+      wave_1_href:  "/audit-compliance"
+      wave_2_href:  "/compliance-audit"
+
+  s4_detail_route_links:
+    - label:        "Compliance & Audit detail"
+      wave_1_href:  "/audit-compliance"
+      wave_2_href:  "/compliance-audit"
+    - label:        "Financial Accountability detail"
+      wave_1_href:  "/cash-accountability"
+      wave_2_href:  "/financial-accountability"
+
+  s5_intelligence_route:
+    wave_1: no_outbound_link
+    wave_2_href: "/operational-intelligence"
+    note: >
+      No outbound link from S5 in Wave 1 — no equivalent sub-page exists.
+      The section is self-contained. Wave 2 adds the route when
+      /operational-intelligence is built.
+
+  current_subpages_posture:
+    note: >
+      Do not modify the current sub-pages during Wave 1.
+      They remain as-is. Wave 2 replaces them — see
+      ZACHMAN-DERIVED-SURFACES-WAVE2.yaml for the transition plan.
+    pages:
+      - "/floor-oversight"
+      - "/session-tracking"
+      - "/cash-accountability"
+      - "/audit-compliance"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# EXEMPLAR CONTRACT
+# Patterns established by Wave 1 that Wave 2 derived surfaces must follow.
+# Confirmed after Wave 1 ships. Do not build Wave 2 surfaces before confirming.
+# ═══════════════════════════════════════════════════════════════════
+
+exemplar_contract:
+
+  status: PENDING_CONFIRMATION
+  confirmed_by: "Human approval after Wave 1 ships"
+
+  heading_style:
+    rule: "Consequence-first. 3–8 words. No taxonomy labels as buyer-facing headings."
+    examples_from_wave_1:
+      - "Tables, sessions, cash, and compliance — managed during the shift."
+      - "What operational leadership sees during a shift."
+      - "Activity tied to people, tables, and the gaming day."
+      - "See what changed across the shift."
+    anti_patterns:
+      - "Operational Intelligence"
+      - "Financial Accountability"
+      - "Compliance & Audit"
+      - "Floor Operations"
+    note: >
+      Scaffold labels (section IDs, YAML keys) may use taxonomy names.
+      Buyer-facing rendered headings must use consequence phrasing.
+
+  content_block_pattern:
+    rule: "3–4 blocks per section. Each block: 2–6 word title + 1–2 sentence copy."
+    max_blocks: 4
+    copy_per_block: "1 compact sentence or 2 short sentences"
+    anti_pattern: "Mini-essays. Chained semicolons. Stacked abstractions."
+
+  transition_pattern:
+    rule: >
+      Each substantive section implies one forward movement.
+      The transition should feel like the camera moving closer —
+      not cutting to a different product pitch.
+    structure: "one line or implied by section sequence + screenshot"
+    anti_pattern: "Hard cuts. Section restarts the platform premise."
+
+  screenshot_pattern:
+    rule: "short operational claim → screenshot → one-line interpretation"
+    anti_pattern: "long explanation → generic screenshot → more explanation"
+    requirement: >
+      Screenshots must exist before shipping S3.
+      Text-only panels cannot carry the 'what operational leadership sees' claim.
+
+  vocabulary:
+    preferred_floor_language:
+      - "floor activity"
+      - "table activity"
+      - "shift visibility"
+      - "session continuity"
+      - "cash accountability"
+      - "operational audit trail"
+      - "staff attribution"
+      - "gaming day"
+      - "supervisor review"
+      - "threshold visibility"
+      - "operational history"
+      - "floor-control workflow"
+    banned_buyer_facing:
+      - "provenance"
+      - "telemetry"
+      - "ontology"
+      - "mutation"
+      - "derived state"
+      - "event propagation"
+      - "canonical layer"
+      - "estimated"
+
+  cta_posture:
+    rule: "One label. One destination. All instances."
+    label: "Request an operational walkthrough"
+    href:  "/contact"
+
+  wave_2_activation:
+    trigger: "Wave 1 ships and exemplar_contract.status = CONFIRMED"
+    process: >
+      1. Human confirms exemplar contract against shipped Wave 1 page.
+      2. Amend ZACHMAN-DERIVED-SURFACES-WAVE2.yaml wave_2_activation.status to ACTIVE.
+      3. Open Wave 2 FIB or amend FIB-H-LP-001 §J as the intake for derived surface builds.
+      4. Build derived surfaces in priority order (DS1 → DS2 → DS3 → DS4).
+    prerequisite_doc: "ZACHMAN-DERIVED-SURFACES-WAVE2.yaml"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# DIRECTIVE ALIGNMENT LOG
+# Records which CONTAINMENT_DIRECTIVE and BOUNDARY corrections were applied.
+# ═══════════════════════════════════════════════════════════════════
+
+directive_alignment:
+
+  containment_directive_applied:
+    - rule: "§11.1 Consequence-First Heading Rule"
+      changes:
+        - "S2 heading: 'Operational control...' → 'Tables, sessions, cash, and compliance — managed during the shift.'"
+        - "S3 heading: 'Operational surfaces built around...' → 'What operational leadership sees during a shift.'"
+        - "S4 heading: 'Operational history you can trust under review.' → 'Activity tied to people, tables, and the gaming day.' (also per §16.3)"
+        - "S5 heading: 'Operational insight derived from floor activity.' → 'See what changed across the shift.'"
+
+    - rule: "§16.1 Replace engineering-native vocabulary"
+      changes:
+        - "S4 block 'Attributed Activity': 'No anonymous mutations.' → 'No unattributed changes.'"
+
+    - rule: "§16.2 Avoid 'estimated' as casual marketing contrast"
+      changes:
+        - "S5 subheading: 'shift intelligence is grounded — not estimated.' → 'shift visibility reflects what is happening on the floor as it happens.'"
+
+    - rule: "§13 Section-Level Pattern (3–4 content blocks max)"
+      changes:
+        - "S4: removed standalone 'Cash Accountability' block (5 blocks → 4). Compressed claim in subheading; depth routed to /financial-accountability."
+
+    - rule: "§5.7 Section transition requirement"
+      changes:
+        - "Added transition field to S2, S3, S4, S5 with copy_intent and direction."
+
+    - rule: "§9.1 Do not explain architecture (buyer-facing vocabulary)"
+      changes:
+        - "S3 subheading updated to floor-language framing."
+
+  boundary_doc_applied:
+    - rule: "§9.2 Move to derived surfaces when content needs workflow detail"
+      changes:
+        - "S4 Cash Accountability block removed — detail belongs at /financial-accountability."
+
+    - rule: "§10 Compression Standard"
+      changes:
+        - "S4 block count reduction enforces landing page compression vs. derived surface depth."
+
+  corrections_preserved_from_patch_delta:
+    - "Product surfaces moved before accountability (S3 before S4)"
+    - "Standalone system-flow/topology section removed (connective_treatment note retained in S3)"
+    - "Accountability and financial visibility merged into S4"
+    - "Financial Provenance removed as visible main-page section"
+    - "Single CTA posture retained throughout"

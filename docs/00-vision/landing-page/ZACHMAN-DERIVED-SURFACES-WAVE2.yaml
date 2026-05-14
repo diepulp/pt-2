@@ -1,0 +1,654 @@
+# ZACHMAN-DERIVED-SURFACES-WAVE2.yaml
+#
+# Wave:   2 — Derived Surfaces
+# Status: FROZEN — activate only after Wave 1 exemplar ships
+# Date:   2026-05-13
+#
+# Scope:
+#   Five derived operational surfaces that extend the Wave 1 landing page spine.
+#   Each surface inherits from one causal chain layer and expands it with
+#   workflow depth, operational screenshots, and compliance context.
+#
+# Prerequisite:
+#   Wave 1 (ZACHMAN-LANDING-WIREFRAME-v3.yaml) must ship and the
+#   exemplar_contract must be confirmed before any derived surface is built.
+#   The landing page is the narrative exemplar — derived surfaces follow its
+#   heading style, block patterns, transition patterns, and vocabulary.
+#
+# Inputs:
+#   - ZACHMAN-LANDING-WIREFRAME-v3.yaml           (Wave 1 — landing page exemplar)
+#   - FIB-H-LANDING-PAGE-REFRACTOR.md            (scope authority — FIB-H-LP-001 v1)
+#   - LANDING_PAGE_NARRATIVE_CONTAINMENT_DIRECTIVE.md
+#   - LANDING_PAGE_VS_DERIVED_SURFACE_NARRATIVE_BOUNDARY.md
+#   - app/(landing)/floor-oversight/page.tsx      (transitional — content inventory)
+#   - app/(landing)/session-tracking/page.tsx     (transitional — content inventory)
+#   - app/(landing)/cash-accountability/page.tsx  (transitional — content inventory)
+#   - app/(landing)/audit-compliance/page.tsx     (transitional — content inventory)
+#   - docs/00-vision/landing-page/SYSTEM-REALITY-MAP.md
+#
+# Causal chain (from Wave 1):
+#
+#   Floor Operations  (/floor-operations)
+#        ↓                            ↓
+#   Operational Accountability    Loyalty & Rewards  (/loyalty-rewards)
+#     → Compliance & Audit  (/compliance-audit)
+#     → Financial Accountability  (/financial-accountability)
+#        ↓
+#   Operational Intelligence  (/operational-intelligence)
+#
+#   Session activity generates the telemetry that drives loyalty accrual.
+#   The loyalty program determines what that telemetry is worth to the player.
+#   DS5 is parallel to the accountability chain — same session origin, different output.
+#
+# Audience (FIB §D):
+#   Primary:   Director of Operations / General Manager / Shift Manager
+#   Secondary: Pit leadership / Compliance officer / Cashier (role-specific depth)
+#
+# Scope authority: FIB-H-LP-001 v1 §J (out-of-scope but likely next)
+# Wave 2 requires its own FIB or FIB-H-LP-001 amendment before build starts.
+
+
+# ═══════════════════════════════════════════════════════════════════
+# WAVE 2 ACTIVATION
+# ═══════════════════════════════════════════════════════════════════
+
+wave_2_activation:
+  status: FROZEN
+  trigger: "Wave 1 ships + exemplar_contract confirmed by human approval"
+  activation_steps:
+    1: "Human confirms exemplar contract against shipped Wave 1 page"
+    2: "Change status above from FROZEN to ACTIVE"
+    3: "Open Wave 2 FIB or amend FIB-H-LP-001 §J as intake"
+    4: "Build derived surfaces in priority order (DS1 → DS2 → DS3 → DS4 → DS5)"
+  exemplar_contract_source: "ZACHMAN-LANDING-WIREFRAME-v3.yaml#exemplar_contract"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# ROUTING PRINCIPLE
+# ═══════════════════════════════════════════════════════════════════
+
+routing_principle: >
+  Derived surfaces do not restate the landing page.
+  They continue one causal chain layer one level deeper —
+  using the content the current transitional sub-pages already carry
+  as the content inventory.
+
+  The landing page answers: "Why is this one coherent operational system?"
+  Derived surfaces answer: "How does one part of that system work in practice?"
+
+  Per BOUNDARY §8: routes move forward or one step back along the causal chain.
+  Mesh navigation (every surface → every other surface) is rejected.
+
+
+# ═══════════════════════════════════════════════════════════════════
+# TRANSITIONAL SUB-PAGES
+# Current pages that remain live during Wave 1 and are replaced by
+# derived surfaces in Wave 2.
+# ═══════════════════════════════════════════════════════════════════
+
+transitional_sub_pages:
+  - path:         "/floor-oversight"
+    status:       TRANSITIONAL
+    replaces_with: "/floor-operations"
+    content_role: "primary content source for DS1"
+  - path:         "/session-tracking"
+    status:       TRANSITIONAL
+    replaces_with: "/floor-operations"
+    content_role: "secondary content source for DS1"
+  - path:         "/cash-accountability"
+    status:       TRANSITIONAL
+    replaces_with: "/financial-accountability"
+    content_role: "primary content source for DS3"
+  - path:         "/audit-compliance"
+    status:       TRANSITIONAL
+    replaces_with: "/compliance-audit"
+    content_role: "primary content source for DS2"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# DERIVED SURFACES
+# ═══════════════════════════════════════════════════════════════════
+
+surfaces:
+
+  # ─────────────────────────────────────────────────────────────────
+  - id: DS1
+    label: Floor Operations
+    proposed_path: "/floor-operations"
+    inherits_from: "Wave 1 S2 — Floor Oversight + Session Tracking domains"
+    status: "PROPOSED"
+    priority: 1
+
+    buyer_question: "How does this manage floor activity during a live shift?"
+    depth_allowed:  "Workflow depth — shift rhythm, session lifecycle, continuity mechanisms"
+    must_not_do:    "Become a general dashboard page. Expand into compliance review or cash event detail."
+
+    consolidates:
+      - current: "/floor-oversight"
+        content_from_current:
+          - "Casino-wide KPIs (shift dashboard capabilities)"
+          - "Attribution ratio"
+          - "Cash observation alerts"
+          - "Win/loss trend by pit"
+          - "Floor activity radar (rated vs. unrated)"
+          - "Active players list"
+          - "Checkpoint creation and delta steps"
+          - "Pit capabilities: table-level view, seat map, player presence, inventory context, table analytics"
+          - "Operational rhythm steps (the shift-start workflow)"
+      - current: "/session-tracking"
+        content_from_current:
+          - "Player start capabilities: instant search, recent players, visit check-in, table assignment"
+          - "Rating slip steps (the rating workflow)"
+          - "Continuity mechanisms: table moves, pause/resume, start from previous, visit continuation"
+          - "Context surfaces: session history, financial activity, interaction timeline, summary metrics"
+          - "Floor realities: unidentified players, messy starts, exclusion awareness"
+
+    primary_surfaces_shown:
+      - surface: "Pit Terminal (/pit)"
+        role: >
+          The primary operational interface for pit supervisors. This is
+          where operators spend most of their shift. The seat map, active
+          sessions panel, inventory panel, and buy-in entry all live here.
+          This is the cash-event ingress point and the session-lifecycle
+          control surface. Screenshot priority for DS1.
+      - surface: "Shift Dashboard (/shift-dashboard)"
+        role: >
+          The casino-wide shift overview surface: active tables, coverage
+          quality, shift KPIs, checkpoint delta tracking, alerts.
+
+    surface_sections:
+      - heading: "Floor operations as a live operational loop"
+        content: >
+          The shift is a continuous loop: tables open, players arrive,
+          sessions run, events are captured. This surface shows how the
+          system manages that loop without gaps — centered on the Pit
+          Terminal where operators work.
+
+      - heading: "The Pit Terminal — what the floor supervisor sees"
+        content_blocks:
+          - "Seat map with named occupants in real time — who is at which seat"
+          - "Multi-pit navigation — jump between pits and tables without leaving the surface"
+          - "Table session status: OPEN, ACTIVE, RUNDOWN, CLOSED visible per table"
+          - "Casino-wide active player list: all 200+ active sessions across all pits, searchable"
+          - "Exceptions & Approvals sidebar: cash alerts, pending fill/credit confirmations, unrated-table flags"
+          - "Inventory panel: chip counts by denomination, drop events, rundown reports"
+          - "Per-table analytics: attribution ratio, win/loss, estimated drop, hourly activity"
+          - "Closed sessions panel: gaming-day history with start-from-previous workflow"
+
+      - heading: "Table session lifecycle from the pit floor"
+        content_blocks:
+          - "Table must confirm opening inventory before going ACTIVE (custody gate)"
+          - "New session created from any vacant seat via seat-click"
+          - "Buy-in entry shows live threshold proximity at point of entry"
+          - "Table moves preserve session continuity without a gap in the record"
+          - "Pause and resume with automatic play-duration exclusion"
+          - "Visit continuation from a previous session (same gaming day)"
+          - "Session close generates the final slip and financial record in one step"
+
+      - heading: "How session continuity is preserved"
+        content_blocks:
+          - "Check-in, table assignment, and rating slip creation"
+          - "Unidentified player handling — session continues even without a linked player"
+          - "Exclusion awareness — system flags excluded players at check-in"
+
+      - heading: "The floor activity record this creates"
+        content: >
+          Every floor action — check-in, table move, rating, buy-in,
+          checkpoint — becomes part of the floor activity record. That
+          record is the input to the accountability and intelligence
+          surfaces downstream.
+
+    causal_forward_link:
+      text: "See how floor records become compliance visibility"
+      href: "/compliance-audit"
+
+    zachman:
+      what:   "Table sessions, player visits, rating slips, shift checkpoints, floor state, chip inventory"
+      how:    "Seat-map interaction → new session → rate → buy-in → pause/move → close; checkpoint delta tracking; casino-wide monitoring"
+      where:  "Pit Terminal (primary), Shift Dashboard (macro overview)"
+      who:    "Pit boss, shift manager — primary daily operators"
+      when:   "Gaming-day scope; shift window; session lifecycle (open → rate → close)"
+      why:    "Floor activity is the single operational source for all downstream accountability and intelligence"
+
+  # ─────────────────────────────────────────────────────────────────
+  - id: DS2
+    label: Compliance & Audit
+    proposed_path: "/compliance-audit"
+    inherits_from: "Wave 1 S4 — Operational Accountability"
+    status: "PROPOSED"
+    priority: 2
+
+    buyer_question: "Can this record hold up during regulatory review?"
+    depth_allowed:  "Compliance depth — threshold management, gaming-day accumulation, per-patron review, printable records"
+    must_not_do:    "Claim legal sufficiency. Claim regulatory filing automation. Claim accounting truth."
+
+    consolidates:
+      - current: "/audit-compliance"
+        content_from_current:
+          - "Threshold capabilities: MTL tracking, CTR alerts at $10K, gaming-day accumulation"
+          - "History properties: permanent financial records, corrections create new entries, permanent loyalty ledger, reversals stay in record"
+          - "Attribution steps (the compliance attribution workflow)"
+          - "Review surfaces: compliance dashboard, per-patron aggregates, gaming-day navigation, printable records"
+          - "Context items: linked activity across the day, player timeline context, related financial and compliance events"
+
+    surface_sections:
+      - heading: "Compliance built into operational workflows"
+        content: >
+          Regulatory visibility is not a separate module. It is integrated
+          into the workflows where compliance events actually occur.
+
+      - heading: "Threshold management during the shift"
+        content_blocks:
+          - "Progressive MTL alert at $3,000 during cash entry"
+          - "CTR visibility at $10,000 with regulatory reference"
+          - "Gaming-day accumulation per patron, reset at the gaming-day boundary"
+
+      - heading: "The record that survives review"
+        content_blocks:
+          - "Financial records are permanent — no deletions"
+          - "Corrections create new entries with full lineage"
+          - "Loyalty ledger is permanent — redemptions and credits both preserved"
+          - "Reversals remain in the record alongside the original entry"
+
+      - heading: "What the compliance review surface shows"
+        content_blocks:
+          - "Per-patron daily cash aggregates"
+          - "Gaming-day navigation across the history"
+          - "Linked activity: financial and session events for each patron"
+          - "Player interaction timeline as audit context"
+          - "Printable compliance records"
+
+    causal_adjacent_link:
+      text: "See how cash events generate compliance records"
+      href: "/financial-accountability"
+      routing_note: >
+        Bidirectional with DS3 (/financial-accountability → /compliance-audit).
+        Acceptable — each points to ONE adjacent causal peer, not to all surfaces.
+        Do not add /floor-operations or /operational-intelligence as additional
+        cross-links from this surface.
+
+    zachman:
+      what:   "MTL entries, CTR thresholds, compliance records, per-patron aggregates, exclusions"
+      how:    "Threshold alerts during cash entry; per-patron daily aggregation; audit note capture; gaming-day navigation"
+      where:  "Compliance dashboard, MTL entry panel, patron aggregate view, printable records"
+      who:    "Pit boss (during shift), compliance officer (review), shift manager"
+      when:   "Gaming-day boundaries; $3K MTL / $10K CTR thresholds; post-shift compliance review"
+      why:    "Regulatory obligations require defensible records with attribution — generated at the operational source, not reconciled later"
+
+  # ─────────────────────────────────────────────────────────────────
+  - id: DS3
+    label: Financial Accountability
+    proposed_path: "/financial-accountability"
+    inherits_from: "Wave 1 S4 — Operational Accountability (cash accountability detail route)"
+    status: "PROPOSED"
+    priority: 3
+
+    buyer_question: "Can I see cash movement with full attribution?"
+    depth_allowed:  "Cash-event depth — buy-ins, voids, fills, credits, table financial context"
+    must_not_do:    "Claim settlement authority. Claim accounting totals. Claim reconciliation finality."
+
+    consolidates:
+      - current: "/cash-accountability"
+        content_from_current:
+          - "Entry capabilities: buy-in recording, cash-out recording, live threshold feedback, staff attribution"
+          - "Exception steps (void workflow with reason and audit note)"
+          - "Confirmation types: fill confirmations, credit confirmations, drop acknowledgements"
+          - "Table context: chip inventory, drop and fill tracking, bank summary, rundown report"
+          - "Attribution qualities: who entered, who confirmed, what changed, what was noted"
+
+    surface_sections:
+      - heading: "Cash accountability at the point of activity"
+        content: >
+          Every cash event is recorded where it happens, with the context
+          it happened in: table, staff, gaming day, threshold proximity.
+
+      - heading: "Cash entry and live compliance feedback"
+        content_blocks:
+          - "Buy-in recording with live MTL threshold proximity indicator"
+          - "Cash-out recording with large-amount confirmation gate"
+          - "Staff attribution on every entry"
+
+      - heading: "The exception record"
+        content_blocks:
+          - "Void workflow: reason required, audit note captured, original entry preserved"
+          - "Fill confirmation with discrepancy note"
+          - "Credit confirmation with discrepancy note"
+          - "Drop acknowledgement"
+
+      - heading: "Table financial context"
+        content_blocks:
+          - "Chip inventory by denomination"
+          - "Drop and fill tracking across the session"
+          - "Bank summary and rundown report"
+
+      - heading: "Attribution at every step"
+        content_blocks:
+          - "Who entered the transaction"
+          - "Who confirmed the exception"
+          - "What changed and why"
+          - "What was noted at time of entry"
+
+    causal_adjacent_link:
+      text: "See how cash entries feed compliance thresholds"
+      href: "/compliance-audit"
+      routing_note: >
+        Bidirectional with DS2 (/compliance-audit → /financial-accountability).
+        Acceptable — each points to ONE adjacent causal peer, not to all surfaces.
+
+    positioning_constraint: >
+      This surface must not position the system as accounting or settlement
+      software. Operational financial records with attribution — not
+      financial totals or accounting authority.
+      Aligned with ADR-052 / ADR-053 / ADR-054 / ADR-055.
+
+    zachman:
+      what:   "Buy-ins, cash-outs, voids, fills, credits, chip inventory, bank summary"
+      how:    "Entry with live threshold feedback; void with lineage; confirmation with discrepancy capture; rundown"
+      where:  "Buy-in panel, cash-out panel, void workflow, table bank summary"
+      who:    "Pit boss (buy-ins, voids), cashier (cash-outs, confirmations, drops)"
+      when:   "At the cash event; within gaming-day scope; threshold proximity in real time"
+      why:    "Operational financial records must be attributed, immutable, and threshold-aware at entry — not reconstructed after the fact"
+
+  # ─────────────────────────────────────────────────────────────────
+  - id: DS4
+    label: Operational Intelligence
+    proposed_path: "/operational-intelligence"
+    inherits_from: "Wave 1 S5 — Operational Intelligence"
+    status: "NEW — no current sub-page equivalent"
+    priority: 4
+
+    buyer_question: "What can leadership see once floor activity is captured continuously?"
+    depth_allowed:  "Analysis depth — shift visibility, checkpoint comparison, anomaly patterns, trend analysis"
+    must_not_do:    "Become generic analytics or BI positioning. Introduce AI-first framing. Disconnect intelligence from floor activity origin."
+
+    content_scope:
+      note: >
+        No current sub-page exists. Content is scaffolded from the operational
+        telemetry the system already captures. The existing Shift Dashboard and
+        checkpoint features provide the majority of the intelligence surface content.
+        See SYSTEM-REALITY-MAP.md §1 WHEN and §2 F1 FLOOR OVERSIGHT for the
+        full feature inventory.
+
+    surface_sections:
+      - heading: "Intelligence derived from continuous floor activity"
+        content: >
+          The shift dashboard, checkpoint analysis, and anomaly surfaces are
+          credible because floor activity is captured across tables, sessions,
+          and cash movement. Shift visibility reflects what is happening on
+          the floor as it happens — not reconstructed from partial records.
+
+      - heading: "Shift-level operational visibility"
+        content_blocks:
+          - "Casino-wide KPIs across the active shift window"
+          - "Active table performance by pit and game type"
+          - "Session value distribution and cash velocity"
+          - "Coverage quality — rated vs. unrated at the table level"
+
+      - heading: "Checkpoint analysis"
+        content_blocks:
+          - "Mid-shift snapshot creation at any point"
+          - "Delta tracking: how metrics changed since the last checkpoint"
+          - "Comparison against multiple prior checkpoints"
+
+      - heading: "Operational anomaly detection"
+        content_blocks:
+          - "Coverage gaps and unrated player alerts"
+          - "Cash observation alerts by severity"
+          - "Threshold proximity warnings before events become compliance obligations"
+          - "Unresolved exceptions and pending confirmations"
+
+      - heading: "Trend visibility"
+        content_blocks:
+          - "Player activity patterns over configurable time ranges"
+          - "Session value and table performance trends"
+          - "Win/loss trends by pit"
+
+    causal_back_link:
+      text: "See how floor operations generate the floor activity record"
+      href: "/floor-operations"
+      rationale: "Intelligence is downstream of floor operations — close the loop, one step back"
+
+    zachman:
+      what:   "Shift KPIs, checkpoint deltas, table performance, player patterns, anomaly signals"
+      how:    "Dashboard review; checkpoint comparison; drill-down by pit/table/player; trend analysis"
+      where:  "Shift dashboard, checkpoint comparison view, table analytics panels, player activity timeline"
+      who:    "General Manager, Director of Operations, Shift Manager"
+      when:   "During shift for live view; post-checkpoint for delta analysis; configurable range for trends"
+      why:    "Operational decisions require grounded intelligence — derived from continuous floor activity, not reconstructed from partial records"
+
+  # ─────────────────────────────────────────────────────────────────
+  - id: DS5
+    label: Loyalty & Rewards
+    proposed_path: "/loyalty-rewards"
+    inherits_from: "Wave 1 S2 — Loyalty & Rewards domain (5th operational domain)"
+    status: "PROPOSED"
+    priority: 5
+
+    buyer_question: "What does the loyalty program actually look like, and can my property configure it?"
+    depth_allowed:  "Loyalty program depth — configurable economics, reward families, tier entitlements, promo programs, coupon lifecycle"
+    must_not_do: >
+      Claim vendor-default pricing.
+      Claim accounting authority for comp valuations.
+      Imply a one-size-fits-all program.
+      Position as a CDP or marketing automation platform.
+      Promise features deferred to future releases (earn config UI, eligibility admin UI).
+
+    content_scope:
+      note: >
+        No current marketing sub-page exists. app/(dashboard)/loyalty/page.tsx is a
+        stub ("Implementation pending — Phase 3"). Content is scaffolded from the
+        fully operational service layer and admin UI surfaces:
+          - services/loyalty/                     (bounded context: earn, redeem, promo)
+          - services/loyalty/reward/              (reward catalog: families, tiers, limits)
+          - services/loyalty/promo/               (promo programs: lifecycle, inventory)
+          - app/(dashboard)/admin/loyalty/        (admin config surfaces: working)
+          - components/admin/loyalty/rewards/     (reward catalog admin: working)
+          - components/admin/loyalty/promo-programs/ (promo program admin: working)
+        Feature inventory: 19 floor-facing features (working), 10 admin-config features
+        (10 working, 2 UI-deferred). See SYSTEM-REALITY-MAP.md §3 Loyalty claim.
+
+    surface_sections:
+      - heading: "A loyalty program your property configures — not a vendor default"
+        content: >
+          The system ships with the mechanism, not the policy. Operators define
+          their own point-to-dollar exchange rate, versioned with an effective date,
+          so the economics can change without losing historical accuracy. Reward
+          catalogs, tier benefits, and promo programs are all operator-defined.
+          Nothing is a factory default left in production.
+
+      - heading: "Two reward families, each with its own delivery model"
+        content_blocks:
+          - "**points_comp** — Redeemable comps: players exchange earned points for face-value credits. Each reward carries its own points cost and overdraw rule."
+          - "**entitlement** — Tier-gated benefits: match play and free play instruments with per-tier face values. Bronze earns a different amount than platinum."
+          - "Fulfillment type per reward: comp slip, coupon, or no-fulfillment (inline benefit)."
+          - "Every reward in the catalog is independently configurable — no shared global defaults."
+
+      - heading: "Promo programs with full lifecycle management"
+        content_blocks:
+          - "Match play and free play programs defined per property: face value, required match wager, and date window."
+          - "Programs can be always-valid (no start date) or time-bounded with an expiration."
+          - "Lifecycle management: draft → active → inactive → archived. Each transition is auditable."
+          - "Per-coupon inventory tracking: issued, outstanding, voided, replaced, expiring-soon counts."
+          - "Exposure reporting: total issued face value, patron risk exposure, cleared vs outstanding."
+          - "Anonymous coupon issuance supported — coupon can exist before a player is linked."
+
+      - heading: "Frequency rules that prevent over-issuance"
+        content_blocks:
+          - "Per-visit, per-gaming-day, per-week, and per-month scopes — independently configurable per reward."
+          - "Cooldown minutes between issuances of the same reward to the same player."
+          - "Note-required flag: certain limit rules can mandate a supervisor note at issuance."
+          - "One rule per scope per reward — no overlapping rules that create ambiguous ceilings."
+
+      - heading: "Tier entitlements that scale with player value"
+        content_blocks:
+          - "Each tier (bronze → silver → gold → platinum → diamond) can have its own benefit face value."
+          - "Match play and free play instruments are assigned per tier — not a flat rate across all tiers."
+          - "Tier entitlement config is managed per reward in the reward catalog — changes take effect on next eligibility check."
+          - "Tier assignment is driven by play activity, not manual override."
+
+      - heading: "Every loyalty transaction is permanent"
+        content_blocks:
+          - "The loyalty ledger is append-only — points accruals, redemptions, manual awards, and adjustments all remain in the record."
+          - "Corrections create reversal entries alongside the original — nothing is overwritten."
+          - "Promo coupon lifecycle is fully tracked: issued → cleared / voided / replaced / expired."
+          - "Idempotent issuance: the system rejects double-credits on retry without losing the original transaction."
+
+      - heading: "What operators configure today"
+        content_blocks:
+          - "Point redemption rate (cents per point) — versioned with effective date"
+          - "Reward catalog: name, kind, fulfillment type, active/inactive toggle"
+          - "Points cost per reward (points_comp family)"
+          - "Per-reward overdraw permission"
+          - "Tier entitlement benefit amounts per tier per reward (entitlement family)"
+          - "Frequency limits: per-visit / per-gaming-day / per-week / per-month per reward"
+          - "Cooldown minutes per limit rule"
+          - "Note-required flag per limit rule"
+          - "Promo program face value, required match wager, date windows"
+          - "Promo program lifecycle transitions"
+        deferred_note: >
+          Point earn rate (pointsPerTheo, multiplier, rounding) and reward eligibility
+          criteria (minTier, maxTier, visitKinds) are implemented in the service layer
+          but the admin UI is deferred to a future release. These are noted as
+          implementation-pending in the admin surface and are not claimed as available.
+
+    causal_back_link:
+      text: "See how session activity generates loyalty telemetry"
+      href: "/floor-operations"
+      rationale: >
+        Loyalty accrual is triggered by session close — the session record
+        is the causal input. DS5 points one step back to DS1, not to all surfaces.
+        No forward link from DS5 — it is a leaf in the causal chain.
+
+    positioning_constraint: >
+      This surface must not position the system as a CRM or marketing platform.
+      It is an operator-configurable loyalty mechanism built into shift operations —
+      configured by property management, executed during table sessions, settled at
+      session close. The differentiation claim is configurability and operational
+      integration, not points program breadth or player engagement analytics.
+
+    zachman:
+      what:   "Loyalty ledger, reward catalog (points_comp + entitlement), promo programs, coupon inventory, valuation policy, tier entitlements, frequency limits"
+      how:    "Points accrue at session close; operators configure rewards via catalog admin; promo programs created per property; coupons issued with lifecycle tracking; limits enforced per scope per reward"
+      where:  "Admin: /admin/loyalty/economics (valuation), /admin/loyalty/rewards (catalog), /admin/loyalty/promo-programs (promos). Floor: reward issuance from shift dashboard / rating slip flow."
+      who:    "Pit boss (reward issuance during shift), shift manager, property administrator (catalog and economics config)"
+      when:   "Accrual at session close; issuance eligibility checked per visit/day/week/month; promo programs within their configured date window; policy versioned by effective date"
+      why:    "Player loyalty economics must reflect each property's operational reality — configurable programs that run on the property's terms, with permanent audit records, prevent both under-reward and over-exposure"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# ROUTING ARCHITECTURE
+# ═══════════════════════════════════════════════════════════════════
+
+routing_architecture:
+
+  landing_to_derived:
+    - from:    "Wave 1 S2 / Floor Oversight domain"
+      to:      "/floor-operations"
+      wave_1_interim: "/floor-oversight"
+    - from:    "Wave 1 S2 / Session Tracking domain"
+      to:      "/floor-operations"
+      wave_1_interim: "/session-tracking"
+    - from:    "Wave 1 S2 / Cash Accountability domain"
+      to:      "/financial-accountability"
+      wave_1_interim: "/cash-accountability"
+    - from:    "Wave 1 S2 / Audit Compliance domain"
+      to:      "/compliance-audit"
+      wave_1_interim: "/audit-compliance"
+    - from:    "Wave 1 S4 (Operational Accountability) — detail route"
+      to:      "/compliance-audit"
+      wave_1_interim: "/audit-compliance"
+    - from:    "Wave 1 S4 (Operational Accountability) — detail route"
+      to:      "/financial-accountability"
+      wave_1_interim: "/cash-accountability"
+    - from:    "Wave 1 S5 (Operational Intelligence)"
+      to:      "/operational-intelligence"
+      wave_1_interim: null
+    - from:    "Wave 1 S2 / Loyalty & Rewards domain"
+      to:      "/loyalty-rewards"
+      wave_1_interim: null
+      wave_1_note: "Wave 1 card is informational only — no route exists until Wave 2 ships DS5"
+
+  derived_cross_links:
+    - from:    "/floor-operations"
+      to:      "/compliance-audit"
+      label:   "See how floor records become compliance visibility"
+    - from:    "/compliance-audit"
+      to:      "/financial-accountability"
+      label:   "See how cash events generate compliance records"
+    - from:    "/financial-accountability"
+      to:      "/compliance-audit"
+      label:   "See how cash entries feed compliance thresholds"
+    - from:    "/operational-intelligence"
+      to:      "/floor-operations"
+      label:   "See how floor operations generate the floor activity record"
+    - from:    "/loyalty-rewards"
+      to:      "/floor-operations"
+      label:   "See how session activity generates loyalty telemetry"
+
+  navigation_pattern:
+    current: mesh_all_to_all
+    note: >
+      Current sub-pages link to all three other sub-pages at the bottom of
+      each page. This creates a flat peer structure and obscures the causal chain.
+    proposed: causal_chain_directional
+    note: >
+      Each derived surface points forward or one step back along the causal chain.
+      Not sideways to all peers. The chain direction makes the operational
+      dependency visible in navigation.
+
+
+# ═══════════════════════════════════════════════════════════════════
+# OPEN QUESTIONS
+# Deferred from Wave 1. Must be resolved before relevant surfaces are built.
+# ═══════════════════════════════════════════════════════════════════
+
+open_questions:
+
+  - id: OQ-1
+    topic: "Loyalty & Rewards positioning"
+    status: RESOLVED
+    resolved_date: "2026-05-14"
+    blocks: [DS1, DS4]
+    question: >
+      Loyalty & Rewards is the largest operational domain (19 floor-facing + 10
+      admin-config working features) and the system's primary CRM differentiator.
+      Where does it fit in the causal chain?
+    decision: >
+      Option A + C combined:
+        A. Fifth operational domain added to Wave 1 S2 (ZACHMAN-LANDING-WIREFRAME-v3.yaml
+           updated — informational card, no Wave 1 route, anchors narrative claim).
+        C. DS5 /loyalty-rewards added as a standalone derived surface in Wave 2.
+      Decision rationale: Loyalty is a marketable differentiator at the property
+      level (configurable economics, not vendor defaults) — it earns its own S2 domain
+      card and a full derived surface. It is not a subsection of intelligence (DS4)
+      because its primary claim is operator configurability, not analytics output.
+    unblocks: [DS1, DS4]
+    wave1_change: >
+      ZACHMAN-LANDING-WIREFRAME-v3.yaml S2 now has five domains.
+      Loyalty card wave_1_href is null — informational only, no route in Wave 1.
+    wave2_surface: DS5
+
+  - id: OQ-2
+    topic: "Gaming-day temporal model"
+    blocks: [DS1]
+    question: >
+      The gaming-day boundary is a genuine system differentiator — most systems
+      treat days as midnight-to-midnight; this system does not. It currently
+      appears once in Wave 1 S4 (Shift Continuity) as a compressed mention.
+      Should it be surfaced as an explicit capability claim in DS1 (/floor-operations)?
+      Candidate: a dedicated section — "The gaming day as an operational boundary" —
+      explaining configurable start time, metric resets, and compliance threshold resets.
+      Resolves before DS1 build.
+
+  - id: OQ-3
+    topic: "Sub-page navigation migration"
+    blocks: [DS1, DS2, DS3, DS4]
+    question: >
+      Current sub-pages use an all-to-all CTA chain (mesh navigation).
+      Proposed derived surfaces use causal-chain directional cross-links.
+      When does the navigation model change?
+        A. When each derived surface ships (replaces its transitional sub-page)
+        B. As a separate Wave 1.5 pass to align current sub-pages before Wave 2 builds
+      Option A is simpler — no separate pass, navigation migrates as each surface ships.
+      Option B is cleaner — consistent navigation model before derived surfaces exist.
+      Resolves before DS1 build.
