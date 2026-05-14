@@ -70,6 +70,15 @@ This belongs in the current slice because the landing page is the primary narrat
 - No pricing strategy changes.
 - No animation system overhaul.
 - No new operational feature implementation.
+- **No changes to the established visual DNA** — color tokens, typography scale, component patterns, spacing rhythm, motion rules, and background treatments are locked.
+
+---
+
+> **Visual DNA Preservation — Locked**
+>
+> The exemplar's visual language is excellent and must not be altered during this refactor. The scope is strictly limited to operational narrative restructuring: copy, section order, content hierarchy, and semantic framing. Every color token, typography scale, card pattern, spacing value, motion rule, and background treatment defined in the canonical reference must remain intact.
+>
+> Canonical reference: [docs/00-vision/landing-page/exemplar/VISUAL-DNA.md](exemplar/VISUAL-DNA.md)
 
 ---
 

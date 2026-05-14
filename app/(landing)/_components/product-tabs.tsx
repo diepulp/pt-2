@@ -10,6 +10,7 @@ interface ProductSurface {
   label: string;
   title: string;
   description: string;
+  stub?: string;
 }
 
 export function ProductTabs({ surfaces }: { surfaces: ProductSurface[] }) {
@@ -75,10 +76,17 @@ export function ProductTabs({ surfaces }: { surfaces: ProductSurface[] }) {
           />
 
           <div className="relative flex aspect-[4/3] sm:aspect-[16/10] flex-col items-center justify-center p-5 sm:p-10">
-            <div className="text-center w-full">
+            <div className="text-center w-full max-w-lg mx-auto">
               <p className="font-mono text-[10px] tracking-[0.15em] text-accent/50 mb-4 sm:mb-6">
                 {surfaces[active].label.toUpperCase()}
               </p>
+              {surfaces[active].stub && (
+                <div className="mb-5 sm:mb-8 rounded-lg border border-dashed border-white/[0.12] px-4 py-3">
+                  <p className="font-mono text-[10px] tracking-[0.12em] text-[#95A2B3]/40">
+                    {surfaces[active].stub}
+                  </p>
+                </div>
+              )}
               <p className="text-base sm:text-lg font-semibold text-[#F7F8F8] mb-2 sm:mb-3">
                 {surfaces[active].title}
               </p>

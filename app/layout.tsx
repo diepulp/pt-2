@@ -10,7 +10,7 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: 'Player Tracker',
+  title: 'd3lt',
   description:
     'Shift-ready operations for table games. Track play, rewards, visits, and floor activity in one place.',
 };
