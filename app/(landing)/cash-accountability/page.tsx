@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+import { LandingNav } from '../_components/landing-nav';
+
 /* ─────────────────────────────────────────────────────────
  * CASH ACCOUNTABILITY — Supporting Page
  *
@@ -231,51 +233,7 @@ export default function CashAccountabilityPage() {
       </div>
 
       {/* ── Navigation ── */}
-      <nav className="sticky top-0 z-50 bg-[#000212]/80 backdrop-blur-xl border-b border-white/[0.06]">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-accent/90 transition-all duration-300 group-hover:bg-accent group-hover:shadow-[0_0_16px_hsl(189_94%_43%/0.3)]">
-              <span className="text-[11px] font-bold tracking-tight text-white">
-                PT
-              </span>
-            </div>
-            <span className="text-sm font-medium tracking-tight text-[#F7F8F8]">
-              Player Tracker
-            </span>
-          </Link>
-
-          <div className="hidden items-center gap-7 md:flex">
-            {[
-              ['Overview', '/'],
-              ['Contact', '/contact'],
-            ].map(([label, href]) => (
-              <Link
-                key={label}
-                href={href}
-                className="text-[13px] text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8]"
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Link
-              href="/auth/login"
-              className="hidden text-[13px] text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8] md:inline-block"
-            >
-              Sign in
-            </Link>
-            <Button
-              asChild
-              size="sm"
-              className="rounded-full bg-accent/90 text-white hover:bg-accent hover:shadow-[0_0_20px_hsl(189_94%_43%/0.3)] transition-all duration-300 text-[13px] px-5 h-8"
-            >
-              <Link href="/contact">Request a Demo</Link>
-            </Button>
-          </div>
-        </div>
-      </nav>
+      <LandingNav />
 
       {/* ═══════════════════════════════════════════════════
          S1: HERO
@@ -380,34 +338,37 @@ export default function CashAccountabilityPage() {
             </div>
           </Reveal>
 
-          {/* Screenshot placeholder */}
+          {/* Pit Terminal screenshot */}
           <Reveal delay={60}>
             <div className="group relative mb-16 overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] transition-all duration-500 hover:border-accent/20">
               <div
-                className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 z-10"
                 style={{
                   background:
                     'radial-gradient(ellipse at center, hsl(189 94% 43% / 0.04), transparent 70%)',
                 }}
               />
-              <div
-                className="absolute inset-0 opacity-[0.03]"
-                style={{
-                  backgroundImage:
-                    'linear-gradient(to right, rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.5) 1px, transparent 1px)',
-                  backgroundSize: '32px 32px',
-                }}
-              />
-              <div className="relative flex aspect-[16/9] items-center justify-center p-10">
-                <div className="text-center">
-                  <p className="font-mono text-[10px] tracking-[0.15em] text-accent/50 mb-4">
-                    BUY-IN WITH THRESHOLD FEEDBACK
-                  </p>
-                  <p className="text-sm text-[#95A2B3]/50">
-                    Live compliance proximity as the number is entered —
-                    progressive MTL alerts at $3K, CTR banner at $10K
-                  </p>
-                </div>
+              <div className="relative overflow-hidden">
+                <img
+                  src="/pit-terminal.png"
+                  alt="Pit Terminal — active tables, player sessions, and cash entry during the shift"
+                  className="w-full block"
+                  loading="lazy"
+                />
+                <div className="absolute bottom-0 inset-x-0 h-12 bg-gradient-to-t from-[#000212]/60 to-transparent pointer-events-none" />
+              </div>
+              <div className="relative px-5 py-4 border-t border-white/[0.06] bg-white/[0.01]">
+                <p className="font-mono text-[10px] tracking-[0.15em] text-accent/50 mb-1.5">
+                  PIT TERMINAL
+                </p>
+                <p className="text-[13px] font-semibold text-[#F7F8F8] mb-0.5">
+                  Floor Operations → Session Tracking → Cash Accountability
+                </p>
+                <p className="text-[12px] leading-relaxed text-[#95A2B3]/60">
+                  Active tables, open sessions, and cash entry in one surface.
+                  Buy-ins and cash-outs recorded at the point of activity with
+                  live threshold proximity feedback.
+                </p>
               </div>
             </div>
           </Reveal>

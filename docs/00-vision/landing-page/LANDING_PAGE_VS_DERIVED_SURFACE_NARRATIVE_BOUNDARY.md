@@ -134,14 +134,17 @@ They continue from the section that routed to them.
 
 ## 5. Surface Intent Matrix
 
-| Surface | Primary Intent | Buyer Question | Depth Allowed | Must Not Do |
-|---|---|---|---|---|
-| Landing page | Establish one operational system | “Is this coherent and relevant to my floor?” | Compressed | Explain full architecture |
-| `/floor-operations` | Expand live floor workflow | “How does this manage floor activity?” | Workflow depth | Become a general dashboard page |
-| `/player-intelligence` | Expand player profile and loyalty depth | “Who is this player and what is their operational value?” | Player profile + loyalty depth | Become a CDP or analytics platform. Restart the product pitch from the hero. |
-| `/compliance-audit` | Expand review and regulatory visibility | “Can this record hold up during review?” | Compliance depth | Claim legal or regulatory completion beyond scope |
-| `/financial-accountability` | Expand operational cash accountability | “Can I see cash movement with attribution?” | Cash-event depth | Claim accounting, settlement, or reconciliation authority |
-| `/operational-intelligence` | Expand managerial insight from floor activity | “What can leadership see once activity is captured?” | Analysis depth | Become a generic BI or analytics pitch |
+Post-FDCM consolidation: the landing page resolves into four executive-operational domains. Operational Intelligence is the emergent cross-cutting layer produced by all four domains interacting — it is not a standalone derived surface.
+
+| Surface | Executive Domain | Primary Intent | Buyer Question | Depth Allowed | Must Not Do |
+|---|---|---|---|---|---|
+| Landing page | — | Establish one operational system | “Is this coherent and relevant to my floor?” | Compressed | Explain full architecture |
+| `/floor-operations` | Floor Operations | Expand live floor workflow | “How does this manage floor activity?” | Workflow depth | Become a general dashboard page |
+| `/player-intelligence` | Player Intelligence | Expand player profile and loyalty depth | “Who is this player and what is their operational value?” | Player profile + loyalty depth | Become a CDP or analytics platform. Restart the product pitch from the hero. |
+| `/financial-accountability` | Financial Accountability | Expand operational cash accountability | “Can I see cash movement with attribution?” | Cash-event depth | Claim accounting, settlement, or reconciliation authority |
+| `/compliance-audit` | Compliance & Governance | Expand review and regulatory visibility | “Can this record hold up during review?” | Compliance depth | Claim legal or regulatory completion beyond scope |
+
+**Operational Intelligence is not a derived surface.** It is the emergent layer produced when all four domains interact. It appears on the landing page as a consequence of the operational chain — not as a standalone pillar or a route to a fifth page. Intelligence surfaces (shift anomalies, aging sessions, runtime KPIs) are embedded within domain-specific derived surfaces, not collected into a separate `/operational-intelligence` route.
 
 ---
 
@@ -476,25 +479,31 @@ Player value must remain visibly grounded in actual floor activity — session d
 
 ---
 
-### 13.6 Operational Intelligence
+### 13.6 Operational Intelligence — Cross-Cutting Layer (Not a Standalone Surface)
 
-`/operational-intelligence` should expand:
+Per FDCM consolidation, Operational Intelligence is not a standalone executive domain and does not map to a dedicated derived surface.
 
-- shift visibility,
-- checkpoint analysis,
-- anomaly visibility,
-- table performance,
-- player activity patterns,
-- trend visibility.
+It is the emergent layer produced by all four domains interacting:
 
-It should not become:
+```text
+Floor Operations
+        ↓
+Player Intelligence
+        ↓
+Financial Accountability
+        ↓
+Compliance & Governance
+        ↓
+Operational Intelligence
+```
 
-- generic analytics positioning,
-- AI-first positioning,
-- dashboard inventory,
-- a disconnected executive BI page.
+Intelligence signals — shift anomalies, aging sessions, runtime KPIs, theo integrity, floor efficiency metrics — are surfaced within the four domain pages where they are operationally grounded.
 
-Intelligence must remain visibly downstream of floor activity.
+**There is no `/operational-intelligence` derived surface.**
+
+Intelligence framing on the landing page is a consequence section, not a pillar. It shows the buyer what becomes visible when the operational chain is complete. It does not route to a fifth page.
+
+If intelligence-adjacent content grows to warrant a dedicated surface in a future wave, it must be scoped through a new FDCM amendment — not inherited from this document.
 
 ---
 

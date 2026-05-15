@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+import { LandingNav } from '../_components/landing-nav';
+
 /* ─────────────────────────────────────────────────────────
  * PT-2 CONTACT PAGE — Exemplar Visual DNA
  *
@@ -148,35 +150,7 @@ export default function ContactPage() {
       </div>
 
       {/* ── Navigation ── */}
-      <nav className="sticky top-0 z-50 bg-[#000212]/80 backdrop-blur-xl border-b border-white/[0.06]">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-accent/90 transition-all duration-300 group-hover:bg-accent group-hover:shadow-[0_0_16px_hsl(189_94%_43%/0.3)]">
-              <span className="text-[11px] font-bold tracking-tight text-white">
-                PT
-              </span>
-            </div>
-            <span className="text-sm font-medium tracking-tight text-[#F7F8F8]">
-              Player Tracker
-            </span>
-          </Link>
-
-          <div className="flex items-center gap-5">
-            <Link
-              href="/"
-              className="text-[13px] text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8]"
-            >
-              Overview
-            </Link>
-            <Link
-              href="/auth/login"
-              className="text-[13px] text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8]"
-            >
-              Sign in
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <LandingNav />
 
       {/* ── Hero + Form ── */}
       <section className="relative">

@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 
+import { LandingNav } from './_components/landing-nav';
 import { ProductTabs } from './_components/product-tabs';
 import { Reveal } from './_components/reveal';
 
@@ -54,28 +55,28 @@ const productSurfaces = [
     title: 'Floor Operations → Operational Intelligence',
     description:
       'Live floor picture: active tables, open sessions, cash activity, shift KPIs — with checkpoint delta tracking that shows how performance changes, not just where it stands.',
-    stub: '[Shift Dashboard — live floor picture with checkpoint delta tracking]',
+    screenshotSrc: '/shift-dash-scren.png',
   },
   {
     label: 'Player 360',
     title: 'Session Tracking → Operational Accountability',
     description:
       'Complete player operational record: identity, visit continuity, rating slips, financial activity, loyalty position, and a filterable interaction timeline.',
-    stub: '[Player 360 — full player record with visit continuity and rating slip history]',
+    screenshotSrc: '/player-360-screen.png',
   },
   {
-    label: 'Cash Threshold Monitor',
+    label: 'Compliance Dashboard',
     title: 'Cash Accountability → Compliance',
     description:
       'Buy-in entry with live threshold proximity — MTL at $3K, CTR visibility at $10K. Compliance feedback at point of entry, not after end-of-day reconciliation.',
-    stub: '[Cash Threshold Monitor — buy-in entry with live MTL and CTR proximity]',
+    screenshotSrc: '/mtl-screen.png',
   },
   {
     label: 'Pit Terminal',
     title: 'Floor Operations → Session Tracking → Cash Accountability',
     description:
       'One surface for active tables, player sessions, and floor activity during the shift. The seat map shows live occupancy across all pits.',
-    stub: '[Pit Terminal — live seat map with active sessions and pit occupancy]',
+    screenshotSrc: '/pit-terminal.png',
   },
 ];
 
@@ -143,51 +144,7 @@ export default function LandingPage() {
       </div>
 
       {/* ── Navigation ── */}
-      <nav className="fixed inset-x-0 top-0 z-50 bg-[#000212]/80 backdrop-blur-xl border-b border-white/[0.06]">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-accent/90 transition-all duration-300 group-hover:bg-accent group-hover:shadow-[0_0_16px_hsl(189_94%_43%/0.3)]">
-              <span className="text-[11px] font-bold tracking-tight text-white"></span>
-            </div>
-            <span className="text-lg font-medium tracking-tight text-[#F7F8F8]">
-              d3lt
-            </span>
-          </Link>
-
-          <div className="hidden items-center gap-7 md:flex">
-            {[
-              ['Operations', '#operations'],
-              ['Accountability', '#accountability'],
-              ['Intelligence', '#intelligence'],
-              ['Pricing', '/pricing'],
-            ].map(([label, href]) => (
-              <a
-                key={label}
-                href={href}
-                className="text-[13px] text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8]"
-              >
-                {label}
-              </a>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Link
-              href="/auth/login"
-              className="hidden text-[13px] text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8] md:inline-block"
-            >
-              Sign in
-            </Link>
-            <Button
-              asChild
-              size="sm"
-              className="rounded-full bg-accent/90 text-white hover:bg-accent hover:shadow-[0_0_20px_hsl(189_94%_43%/0.3)] transition-all duration-300 text-[13px] px-5 h-8"
-            >
-              <Link href="/contact">Request an operational walkthrough</Link>
-            </Button>
-          </div>
-        </div>
-      </nav>
+      <LandingNav />
 
       {/* ═══════════════════════════════════════════════════
          S1: HERO
