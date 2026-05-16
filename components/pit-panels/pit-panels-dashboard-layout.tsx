@@ -35,11 +35,11 @@ export function PitPanelsDashboardLayout({
           <div className="min-h-[420px]">
             <PitPanelsClient casinoId={casinoId} />
           </div>
-          <div className="min-h-[280px] rounded-lg border border-border/40 overflow-hidden">
-            <ExceptionsApprovalsPanel casinoId={casinoId} />
-          </div>
           <div className="min-h-[400px] rounded-lg border border-border/40 overflow-hidden">
             <ShiftOpsPanel />
+          </div>
+          <div className="min-h-[280px] rounded-lg border border-border/40 overflow-hidden">
+            <ExceptionsApprovalsPanel casinoId={casinoId} />
           </div>
         </div>
       </div>
@@ -55,13 +55,13 @@ export function PitPanelsDashboardLayout({
       <ResizablePanel defaultSize={36} minSize={24}>
         <ResizablePanelGroup direction="vertical" className="h-full">
           <ResizablePanel defaultSize={50} minSize={25}>
-            <div className="h-full border-b border-border/40">
-              <ExceptionsApprovalsPanel casinoId={casinoId} />
-            </div>
+            <ShiftOpsPanel />
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={50} minSize={25}>
-            <ShiftOpsPanel />
+            <div className="h-full border-t border-border/40">
+              <ExceptionsApprovalsPanel casinoId={casinoId} />
+            </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </ResizablePanel>
