@@ -127,6 +127,7 @@ function Field({
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   return (
     <div className="bg-[#000212] text-[#F7F8F8] min-h-screen antialiased selection:bg-accent/30">
@@ -313,9 +314,25 @@ export default function ContactPage() {
                   /* ── Form ── */
                   <form
                     className="relative space-y-5"
-                    onSubmit={(e) => {
+                    onSubmit={async (e) => {
                       e.preventDefault();
-                      setSubmitted(true);
+                      const fd = new FormData(e.currentTarget);
+                      setSubmitting(true);
+                      try {
+                        await fetch('/api/demo-request', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            name: fd.get('name'),
+                            email: fd.get('email'),
+                            company: fd.get('property') || undefined,
+                            message: fd.get('message') || undefined,
+                          }),
+                        });
+                      } finally {
+                        setSubmitting(false);
+                        setSubmitted(true);
+                      }
                     }}
                   >
                     <div className="grid gap-5 sm:grid-cols-2">
@@ -345,10 +362,11 @@ export default function ContactPage() {
 
                     <Button
                       type="submit"
+                      disabled={submitting}
                       size="lg"
-                      className="w-full rounded-xl bg-accent text-white hover:bg-accent/90 h-11 text-sm font-semibold tracking-wide shadow-[0_1px_40px_hsl(189_94%_43%/0.20)] hover:shadow-[0_1px_50px_hsl(189_94%_43%/0.30)] transition-all duration-300"
+                      className="w-full rounded-xl bg-accent text-white hover:bg-accent/90 h-11 text-sm font-semibold tracking-wide shadow-[0_1px_40px_hsl(189_94%_43%/0.20)] hover:shadow-[0_1px_50px_hsl(189_94%_43%/0.30)] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      Request a walkthrough
+                      {submitting ? 'Sending…' : 'Request a walkthrough'}
                     </Button>
 
                     <p className="text-center text-[11px] text-[#95A2B3]/40 leading-relaxed">

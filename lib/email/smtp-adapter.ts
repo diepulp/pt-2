@@ -28,7 +28,7 @@ export function createSmtpProvider(): EmailProvider {
     },
   });
 
-  const from = `noreply@${senderDomain}`;
+  const from = `D3LT <noreply@${senderDomain}>`;
 
   return {
     async send({ to, subject, html }) {
