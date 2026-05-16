@@ -1,3 +1,4 @@
+import { Network } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -7,11 +8,7 @@ export function LandingNav() {
     <nav className="fixed inset-x-0 top-0 z-50 bg-[#000212]/80 backdrop-blur-xl border-b border-white/[0.06]">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <img
-            src="/Gemini_Generated_Image_dil7iddil7iddil7.png"
-            alt="d3lt logo"
-            className="size-7 transition-all duration-300 group-hover:brightness-125 [mix-blend-mode:hard-light]"
-          />
+          <Network className="size-5 text-accent transition-all duration-300 group-hover:brightness-125" />
           <span
             className="text-lg tracking-wide text-[#F7F8F8]"
             style={{ fontFamily: 'var(--font-michroma)' }}

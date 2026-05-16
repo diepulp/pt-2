@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Milestone,
   Monitor,
+  Network,
   ScrollText,
   ShieldCheck,
   TrendingUp,
@@ -611,12 +612,11 @@ export default function LandingPage() {
       <footer className="border-t border-white/[0.06] py-10">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-5 sm:px-6 sm:flex-row">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-6 items-center justify-center rounded-md bg-accent/80">
-              <span className="text-[9px] font-bold tracking-tight text-white">
-                PT
-              </span>
-            </div>
-            <span className="text-[12px] font-medium text-[#95A2B3]/60">
+            <Network className="size-5 text-accent" />
+            <span
+              className="text-lg tracking-wide text-[#F7F8F8]"
+              style={{ fontFamily: 'var(--font-michroma)' }}
+            >
               d3lt
             </span>
           </div>
