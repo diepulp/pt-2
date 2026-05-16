@@ -7,10 +7,15 @@ export function LandingNav() {
     <nav className="fixed inset-x-0 top-0 z-50 bg-[#000212]/80 backdrop-blur-xl border-b border-white/[0.06]">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="flex size-7 items-center justify-center rounded-lg bg-accent/90 transition-all duration-300 group-hover:bg-accent group-hover:shadow-[0_0_16px_hsl(189_94%_43%/0.3)]">
-            <span className="text-[11px] font-bold tracking-tight text-white" />
-          </div>
-          <span className="text-lg font-medium tracking-tight text-[#F7F8F8]">
+          <img
+            src="/Gemini_Generated_Image_dil7iddil7iddil7.png"
+            alt="d3lt logo"
+            className="size-7 transition-all duration-300 group-hover:brightness-125 [mix-blend-mode:hard-light]"
+          />
+          <span
+            className="text-lg tracking-wide text-[#F7F8F8]"
+            style={{ fontFamily: 'var(--font-michroma)' }}
+          >
             d3lt
           </span>
         </Link>

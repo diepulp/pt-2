@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { DM_Sans, JetBrains_Mono } from 'next/font/google';
+import { DM_Sans, JetBrains_Mono, Michroma } from 'next/font/google';
 
 import './globals.css';
 import { Providers } from './providers';
@@ -14,6 +14,13 @@ export const metadata: Metadata = {
   description:
     'Shift-ready operations for table games. Track play, rewards, visits, and floor activity in one place.',
 };
+
+const michroma = Michroma({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: '400',
+  variable: '--font-michroma',
+});
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
@@ -35,7 +42,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${jetbrainsMono.variable} ${dmSans.variable} antialiased`}
+      className={`${michroma.variable} ${jetbrainsMono.variable} ${dmSans.variable} antialiased`}
       suppressHydrationWarning
     >
       <body suppressHydrationWarning>
