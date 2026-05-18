@@ -953,7 +953,7 @@ UPDATE table_session SET opening_inventory_snapshot_id = 'e2000000-0000-0000-000
 INSERT INTO table_buyin_telemetry (
   id, casino_id, table_id, gaming_day, telemetry_kind,
   amount_cents, tender_type, actor_id, rating_slip_id, visit_id,
-  source, occurred_at, created_at
+  source, occurred_at, created_at, event_type
 ) VALUES
   -- Today's buy-ins (from section 13 financial transactions)
   -- Player 1 buy-in at BJ-01
@@ -970,7 +970,8 @@ INSERT INTO table_buyin_telemetry (
     'b1000000-0000-0000-0000-000000000001',
     'finance_bridge',
     NOW() - INTERVAL '90 minutes',
-    NOW() - INTERVAL '90 minutes'
+    NOW() - INTERVAL '90 minutes',
+    'buyin.observed'
   ),
   -- Player 2 buy-in at BJ-01 (paused session)
   (
@@ -986,7 +987,8 @@ INSERT INTO table_buyin_telemetry (
     'b1000000-0000-0000-0000-000000000002',
     'finance_bridge',
     NOW() - INTERVAL '3 hours',
-    NOW() - INTERVAL '3 hours'
+    NOW() - INTERVAL '3 hours',
+    'buyin.observed'
   ),
   -- Player 3 buy-in at PK-01
   (
@@ -1002,7 +1004,8 @@ INSERT INTO table_buyin_telemetry (
     'b1000000-0000-0000-0000-000000000003',
     'finance_bridge',
     NOW() - INTERVAL '45 minutes',
-    NOW() - INTERVAL '45 minutes'
+    NOW() - INTERVAL '45 minutes',
+    'buyin.observed'
   ),
   -- Player 4 buy-in at RL-01
   (
@@ -1018,7 +1021,8 @@ INSERT INTO table_buyin_telemetry (
     'b1000000-0000-0000-0000-000000000004',
     'finance_bridge',
     NOW() - INTERVAL '15 minutes',
-    NOW() - INTERVAL '15 minutes'
+    NOW() - INTERVAL '15 minutes',
+    'buyin.observed'
   ),
   -- Casino 2: VIP baccarat buy-in
   (
@@ -1034,7 +1038,8 @@ INSERT INTO table_buyin_telemetry (
     'b1000000-0000-0000-0000-000000000010',
     'finance_bridge',
     NOW() - INTERVAL '2 hours',
-    NOW() - INTERVAL '2 hours'
+    NOW() - INTERVAL '2 hours',
+    'buyin.observed'
   );
 
 -- ============================================================================
