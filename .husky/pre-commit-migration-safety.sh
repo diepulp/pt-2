@@ -2,8 +2,8 @@
 # ==============================================================================
 # Migration Safety Check - RLS Policy Protection
 # ==============================================================================
-# Version: 4.0.0
-# Date: 2026-03-04
+# Version: 4.1.0
+# Date: 2026-05-18
 # References:
 #   - ADR-024: Authoritative context derivation (set_rls_context_from_staff)
 #   - ADR-030: Auth pipeline hardening
@@ -79,8 +79,8 @@ for FILE in $MIGRATION_FILES; do
   HAS_CREATE_POLICY=$(git diff --cached "$FILE" | grep -c '^+.*CREATE POLICY' || true)
 
   if [ "$HAS_DROP_POLICY" -gt 0 ] || [ "$HAS_CREATE_POLICY" -gt 0 ]; then
-    # Check for review markers (ADR-015, ADR-034, or explicit safe markers)
-    HAS_ADR_REFERENCE=$(git diff --cached "$FILE" | grep -c 'ADR-015\|ADR-034\|VERIFIED_SAFE\|RLS_REVIEW_COMPLETE' || true)
+    # Check for review markers (ADR-015, ADR-034, Wave 2 outbox ADRs, or explicit safe markers)
+    HAS_ADR_REFERENCE=$(git diff --cached "$FILE" | grep -c 'ADR-015\|ADR-034\|ADR-054\|ADR-056\|ADR-057\|VERIFIED_SAFE\|RLS_REVIEW_COMPLETE' || true)
     HAS_MIGRATION_HEADER=$(git diff --cached "$FILE" | grep -c '^+-- Migration:\|^+-- Description:\|^+-- Reference:' || true)
 
     if [ "$HAS_ADR_REFERENCE" -eq 0 ] || [ "$HAS_MIGRATION_HEADER" -lt 2 ]; then
@@ -99,6 +99,8 @@ for FILE in $MIGRATION_FILES; do
       echo "  1. Migration header with Description and Reference"
       echo "  2. One of these review markers:"
       echo "     - 'ADR-015' (for hybrid RLS pattern compliance)"
+      echo "     - 'ADR-034' (for write-path compatibility)"
+      echo "     - 'ADR-054' / 'ADR-056' / 'ADR-057' (for Wave 2 outbox policy changes)"
       echo "     - 'VERIFIED_SAFE' (for verified non-breaking changes)"
       echo "     - 'RLS_REVIEW_COMPLETE' (for manual review completion)"
       echo ""
@@ -168,11 +170,22 @@ done
 # ==============================================================================
 # Check 3a: Validate ADR-015 hybrid actor_id pattern (staff identity)
 # Policies using app.actor_id should include JWT fallback (staff_id)
+# NOTE: ADR-024 migrations using set_rls_context_from_staff() are exempt since
+#       they derive actor_id authoritatively from the staff table, not JWT.
+#       This includes SECURITY DEFINER RPCs and fn_finance_outbox_emit (Wave 2).
 # ==============================================================================
 for FILE in $MIGRATION_FILES; do
   HAS_ACTOR_ID_CHECK=$(git diff --cached "$FILE" | grep -c "current_setting('app.actor_id'" || true)
 
   if [ "$HAS_ACTOR_ID_CHECK" -gt 0 ]; then
+    # Check if using ADR-024 authoritative context injection (exempt from hybrid check)
+    HAS_ADR024_PATTERN=$(git diff --cached "$FILE" | grep -c 'set_rls_context_from_staff' || true)
+
+    if [ "$HAS_ADR024_PATTERN" -gt 0 ]; then
+      # ADR-024 pattern: actor_id is derived from staff table, not JWT
+      continue
+    fi
+
     HAS_ACTOR_HYBRID=$(git diff --cached "$FILE" | grep -c "COALESCE.*current_setting('app.actor_id'.*auth\.jwt.*app_metadata.*staff_id" || true)
 
     if [ "$HAS_ACTOR_HYBRID" -eq 0 ]; then
@@ -180,7 +193,10 @@ for FILE in $MIGRATION_FILES; do
       echo ""
       echo "File: $FILE"
       echo ""
-      echo "REQUIRED PATTERN (ADR-015 Hybrid):"
+      echo "PREFERRED SOLUTION (ADR-024):"
+      echo "  PERFORM set_rls_context_from_staff();  -- Derives actor_id from staff table"
+      echo ""
+      echo "ALTERNATIVE (ADR-015 Hybrid):"
       echo "  id = COALESCE("
       echo "    NULLIF(current_setting('app.actor_id', true), '')::uuid,"
       echo "    (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid"
@@ -398,6 +414,127 @@ for FILE in $MIGRATION_FILES; do
     echo "  3. Ensure JWT claims sync still works after migration"
     echo ""
     VIOLATIONS_FOUND=1
+  fi
+
+  # Protect Wave 2 outbox emission helper (ADR-054 R3)
+  HAS_OUTBOX_EMIT_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP FUNCTION.*fn_finance_outbox_emit' || true)
+  HAS_OUTBOX_EMIT_REPLACE=$(git diff --cached "$FILE" | grep -c '^+.*CREATE OR REPLACE FUNCTION.*fn_finance_outbox_emit' || true)
+
+  if [ "$HAS_OUTBOX_EMIT_DROP" -gt 0 ]; then
+    HAS_VERIFIED_SAFE=$(git diff --cached "$FILE" | grep -c 'VERIFIED_SAFE' || true)
+    HAS_RECREATE=$(git diff --cached "$FILE" | grep -c '^+.*CREATE.*FUNCTION.*fn_finance_outbox_emit' || true)
+
+    if [ "$HAS_VERIFIED_SAFE" -gt 0 ] && [ "$HAS_RECREATE" -gt 0 ]; then
+      echo "✅ CHECK 5: DROP+CREATE fn_finance_outbox_emit() — VERIFIED_SAFE"
+    else
+      echo "❌ CHECK 5 FAILED: Migration drops fn_finance_outbox_emit() (ADR-054 R3 critical)"
+      echo ""
+      echo "File: $FILE"
+      echo ""
+      echo "WHY THIS IS CRITICAL:"
+      echo "  • fn_finance_outbox_emit() is the sole authorized outbox insertion path"
+      echo "  • All fact-authoring RPCs call it within the same BEGIN…COMMIT (ADR-054 R3)"
+      echo "  • Dropping it silently removes the transactional outbox transport substrate"
+      echo ""
+      echo "If this is a DROP+CREATE for a signature change, add 'VERIFIED_SAFE' comment"
+      echo "above the DROP and ensure the function is recreated in the same migration."
+      echo ""
+      VIOLATIONS_FOUND=1
+    fi
+  fi
+
+  if [ "$HAS_OUTBOX_EMIT_REPLACE" -gt 0 ]; then
+    HAS_ADR054_REFERENCE=$(git diff --cached "$FILE" | grep -c 'ADR-054\|ADR-057' || true)
+    if [ "$HAS_ADR054_REFERENCE" -eq 0 ]; then
+      echo "⚠️  CHECK 5 WARNING: Migration modifies fn_finance_outbox_emit() without ADR-054/ADR-057 reference"
+      echo ""
+      echo "File: $FILE"
+      echo ""
+      echo "fn_finance_outbox_emit() is Wave 2 outbox transport infrastructure."
+      echo "Add 'ADR-054' or 'ADR-057' reference to confirm intentional change."
+      echo ""
+      WARNINGS_FOUND=1
+    fi
+  fi
+
+  # Protect Wave 2 relay RPCs (ADR-056)
+  HAS_CLAIM_BATCH_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP FUNCTION.*rpc_claim_outbox_batch' || true)
+  HAS_COMMIT_RECEIPT_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP FUNCTION.*rpc_commit_consumer_receipt' || true)
+
+  if [ "$HAS_CLAIM_BATCH_DROP" -gt 0 ]; then
+    echo "❌ CHECK 5 FAILED: Migration drops rpc_claim_outbox_batch() (relay infrastructure)"
+    echo ""
+    echo "File: $FILE"
+    echo ""
+    echo "WHY THIS IS CRITICAL:"
+    echo "  • rpc_claim_outbox_batch() is the relay worker's only read path for the outbox"
+    echo "  • Uses FOR UPDATE SKIP LOCKED for concurrent relay safety (ADR-056)"
+    echo "  • Dropping it breaks the outbox relay worker immediately"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+
+  if [ "$HAS_COMMIT_RECEIPT_DROP" -gt 0 ]; then
+    echo "❌ CHECK 5 FAILED: Migration drops rpc_commit_consumer_receipt() (relay infrastructure)"
+    echo ""
+    echo "File: $FILE"
+    echo ""
+    echo "WHY THIS IS CRITICAL:"
+    echo "  • rpc_commit_consumer_receipt() is the relay worker's idempotency commit path"
+    echo "  • Writes to processed_messages within the same transaction as projection updates"
+    echo "  • Dropping it breaks consumer idempotency enforcement (ADR-054 D5)"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+done
+
+# ==============================================================================
+# Check 5b: Protect outbox DDL tables from accidental DROP TABLE
+# finance_outbox and processed_messages are Wave 2 transport substrate.
+# Dropping them destroys the entire outbox pipeline.
+# ==============================================================================
+for FILE in $MIGRATION_FILES; do
+  if [ ! -f "$FILE" ]; then
+    continue
+  fi
+
+  HAS_DROP_OUTBOX=$(git diff --cached "$FILE" | grep -ciE '^+\s*DROP TABLE.*(finance_outbox|IF EXISTS.*finance_outbox)' || true)
+  HAS_DROP_PROCESSED=$(git diff --cached "$FILE" | grep -ciE '^+\s*DROP TABLE.*(processed_messages|IF EXISTS.*processed_messages)' || true)
+
+  if [ "$HAS_DROP_OUTBOX" -gt 0 ]; then
+    HAS_VERIFIED_SAFE=$(git diff --cached "$FILE" | grep -c 'VERIFIED_SAFE' || true)
+    if [ "$HAS_VERIFIED_SAFE" -eq 0 ]; then
+      echo "❌ CHECK 5B FAILED: Migration drops finance_outbox table"
+      echo ""
+      echo "File: $FILE"
+      echo ""
+      echo "WHY THIS IS CRITICAL:"
+      echo "  • finance_outbox is the Wave 2 transactional outbox DDL"
+      echo "  • Dropping it destroys all un-relayed outbox rows and breaks the relay worker"
+      echo "  • All producer RPCs (rpc_create_financial_txn, rpc_create_financial_adjustment,"
+      echo "    rpc_record_grind_observation) depend on this table"
+      echo ""
+      echo "If this DROP is intentional (schema replacement), add 'VERIFIED_SAFE' comment"
+      echo "and ensure the table is recreated with the Wave 2 ADR-054 schema in the same migration."
+      echo ""
+      VIOLATIONS_FOUND=1
+    fi
+  fi
+
+  if [ "$HAS_DROP_PROCESSED" -gt 0 ]; then
+    HAS_VERIFIED_SAFE=$(git diff --cached "$FILE" | grep -c 'VERIFIED_SAFE' || true)
+    if [ "$HAS_VERIFIED_SAFE" -eq 0 ]; then
+      echo "❌ CHECK 5B FAILED: Migration drops processed_messages table"
+      echo ""
+      echo "File: $FILE"
+      echo ""
+      echo "WHY THIS IS CRITICAL:"
+      echo "  • processed_messages is the consumer idempotency store"
+      echo "  • Dropping it loses all delivery receipts — consumers will replay all events"
+      echo "  • Breaks rpc_commit_consumer_receipt and I3 idempotency invariant"
+      echo ""
+      VIOLATIONS_FOUND=1
+    fi
   fi
 done
 

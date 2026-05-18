@@ -1,11 +1,14 @@
 {
   "_generated": "DO NOT EDIT. Run: npm run generate:category-a",
   "_source": "docs/80-adrs/ADR-030-auth-system-hardening.md",
-  "_extracted_at": "2026-04-03T00:00:00.000Z",
+  "_extracted_at": "2026-05-18T00:00:00.000Z",
+  "_note_wave2": "finance_outbox and processed_messages added 2026-05-18. Deny-by-default RLS (Wave 2 ADR-054). All writes go through RPCs: fn_finance_outbox_emit (via fact-authoring RPCs) and rpc_commit_consumer_receipt. TypeScript must never DML these tables directly.",
   "categoryA": [
     "company",
+    "finance_outbox",
     "player_casino",
     "player_exclusion",
+    "processed_messages",
     "staff",
     "staff_invite",
     "staff_pin_attempts"

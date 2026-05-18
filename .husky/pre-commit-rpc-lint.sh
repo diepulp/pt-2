@@ -2,8 +2,8 @@
 # ==============================================================================
 # RPC Self-Injection Pattern Lint
 # ==============================================================================
-# Version: 3.0.0
-# Date: 2026-03-04
+# Version: 3.1.0
+# Date: 2026-05-18
 # References:
 #   - ADR-024: Authoritative context derivation (set_rls_context_from_staff)
 #   - ADR-030: Auth pipeline hardening
@@ -55,7 +55,7 @@ for FILE in $MIGRATION_FILES; do
 
   # Check if file contains RPC function definitions
   # Pattern: CREATE OR REPLACE FUNCTION rpc_* (case insensitive)
-  RPC_COUNT=$(grep -icE 'CREATE\s+OR\s+REPLACE\s+FUNCTION\s+rpc_' "$FILE" || true)
+  RPC_COUNT=$(grep -icE 'CREATE\s+OR\s+REPLACE\s+FUNCTION\s+(public\.)?rpc_' "$FILE" || true)
 
   if [ "$RPC_COUNT" -gt 0 ]; then
     # RPC function(s) found - verify context injection call exists
@@ -123,7 +123,7 @@ for FILE in $MIGRATION_FILES; do
   fi
 
   # Only check files that define RPC functions
-  RPC_DEF_COUNT=$(grep -icE 'CREATE\s+(OR\s+REPLACE\s+)?FUNCTION\s+rpc_' "$FILE" || true)
+  RPC_DEF_COUNT=$(grep -icE 'CREATE\s+(OR\s+REPLACE\s+)?FUNCTION\s+(public\.)?rpc_' "$FILE" || true)
   if [ "$RPC_DEF_COUNT" -eq 0 ]; then
     continue
   fi
@@ -152,7 +152,7 @@ for FILE in $MIGRATION_FILES; do
     continue
   fi
 
-  RPC_DEF_COUNT=$(grep -icE 'CREATE\s+(OR\s+REPLACE\s+)?FUNCTION\s+rpc_' "$FILE" || true)
+  RPC_DEF_COUNT=$(grep -icE 'CREATE\s+(OR\s+REPLACE\s+)?FUNCTION\s+(public\.)?rpc_' "$FILE" || true)
   if [ "$RPC_DEF_COUNT" -eq 0 ]; then
     continue
   fi
@@ -247,6 +247,112 @@ for FILE in $MIGRATION_FILES; do
       else
         echo "✅ $FILE: SECURITY DEFINER RPC with casino_id validation (ADR-018 legacy)"
       fi
+    fi
+  fi
+done
+
+# ==============================================================================
+# Check 4: Fact-authoring RPCs must emit to finance_outbox (ADR-054 R3)
+# ==============================================================================
+# Any rpc_* function that INSERT INTOs player_financial_transaction or
+# table_buyin_telemetry MUST also include an outbox emission call. The only
+# authorized emission path is fn_finance_outbox_emit() (Phase 2.1+).
+#
+# This prevents silent producer additions that bypass the outbox transport
+# substrate established in Wave 2. I1 atomicity requires both the fact row
+# AND the outbox row to commit in the same BEGIN…COMMIT.
+#
+# Exemptions:
+#   - Migrations containing OUTBOX_EXEMPT marker (read-path or teardown migrations)
+#   - Migrations that operate on pre-Wave-2 legacy shape (Wave 1 backfills)
+# ==============================================================================
+for FILE in $MIGRATION_FILES; do
+  if [ ! -f "$FILE" ]; then
+    continue
+  fi
+
+  # Only check files that define rpc_* functions
+  RPC_DEF_COUNT=$(grep -icE 'CREATE\s+(OR\s+REPLACE\s+)?FUNCTION\s+(public\.)?rpc_' "$FILE" || true)
+  if [ "$RPC_DEF_COUNT" -eq 0 ]; then
+    continue
+  fi
+
+  # Check for exemption marker
+  HAS_OUTBOX_EXEMPT=$(grep -ic 'OUTBOX_EXEMPT' "$FILE" || true)
+  if [ "$HAS_OUTBOX_EXEMPT" -gt 0 ]; then
+    continue
+  fi
+
+  # Detect fact-authoring inserts
+  INSERTS_PFT=$(grep -icE 'INSERT\s+INTO\s+public\.player_financial_transaction' "$FILE" || true)
+  INSERTS_TBT=$(grep -icE 'INSERT\s+INTO\s+public\.table_buyin_telemetry' "$FILE" || true)
+
+  FACT_INSERT_FOUND=0
+  if [ "$INSERTS_PFT" -gt 0 ] || [ "$INSERTS_TBT" -gt 0 ]; then
+    FACT_INSERT_FOUND=1
+  fi
+
+  if [ "$FACT_INSERT_FOUND" -eq 1 ]; then
+    # Check this file first for outbox emission
+    HAS_OUTBOX_EMIT=$(grep -icE 'fn_finance_outbox_emit|INSERT\s+INTO\s+public\.finance_outbox' "$FILE" || true)
+
+    if [ "$HAS_OUTBOX_EMIT" -eq 0 ]; then
+      # Multi-migration slices (e.g. sig-restore + producer-ext staged together) are
+      # valid: the sig-restore file rewrites the RPC body without outbox, and a
+      # co-staged file in the same commit adds the outbox wiring. Check all other
+      # staged migrations for outbox emission before flagging as a violation.
+      CROSS_EMIT=0
+      for OTHER_FILE in $MIGRATION_FILES; do
+        if [ "$OTHER_FILE" = "$FILE" ] || [ ! -f "$OTHER_FILE" ]; then
+          continue
+        fi
+        OTHER_EMIT=$(grep -icE 'fn_finance_outbox_emit|INSERT\s+INTO\s+public\.finance_outbox' "$OTHER_FILE" || true)
+        if [ "$OTHER_EMIT" -gt 0 ]; then
+          CROSS_EMIT=1
+          break
+        fi
+      done
+
+      if [ "$CROSS_EMIT" -eq 1 ]; then
+        echo "✅ $FILE: Fact-authoring RPC — outbox emission in co-staged migration (ADR-054 R3)"
+      else
+        echo "❌ ADR-054 VIOLATION: $FILE"
+        echo ""
+        echo "   RPC function inserts into a financial fact table but does NOT emit"
+        echo "   to finance_outbox — violates ADR-054 R3 (outbox is the only propagation path)."
+        echo ""
+        echo "   Fact tables detected:"
+        [ "$INSERTS_PFT" -gt 0 ] && echo "     - INSERT INTO public.player_financial_transaction"
+        [ "$INSERTS_TBT" -gt 0 ] && echo "     - INSERT INTO public.table_buyin_telemetry"
+        echo ""
+        echo "   REQUIRED: Call fn_finance_outbox_emit() within the same transaction:"
+        echo "   ──────────────────────────────────────────────────────────────────"
+        echo "   PERFORM public.fn_finance_outbox_emit("
+        echo "     p_event_id     => public.generate_uuid_v7(),"
+        echo "     p_event_type   => 'your_event.recorded',"
+        echo "     p_fact_class   => 'ledger',        -- or 'operational'"
+        echo "     p_origin_label => 'actual',        -- or 'estimated'"
+        echo "     p_table_id     => v_table_id,"
+        echo "     p_aggregate_id => v_pft_row_id,"
+        echo "     p_payload      => to_jsonb(row_data)"
+        echo "   );"
+        echo "   ──────────────────────────────────────────────────────────────────"
+        echo ""
+        echo "   NOTE: fn_finance_outbox_emit is SECURITY DEFINER — do NOT add"
+        echo "   PERFORM set_rls_context_from_staff() inside fn_finance_outbox_emit."
+        echo "   The calling RPC already establishes context."
+        echo ""
+        echo "   STAGING TIP: If this is a signature-restore migration paired with a"
+        echo "   producer-extension migration, stage both files in the same commit."
+        echo "   Alternatively add '-- OUTBOX_EXEMPT: <reason>' to the migration header"
+        echo "   for read-path, teardown, or pre-Wave-2 backfill migrations."
+        echo ""
+        echo "   Reference: ADR-054 R3, ADR-057, outbox-knowledge-base.md"
+        echo ""
+        VIOLATIONS_FOUND=$((VIOLATIONS_FOUND + 1))
+      fi
+    else
+      echo "✅ $FILE: Fact-authoring RPC includes outbox emission (ADR-054 R3)"
     fi
   fi
 done
