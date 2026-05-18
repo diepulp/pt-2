@@ -12,8 +12,8 @@ export function HeroSection() {
               Replace your legacy table games system.
             </h1>
             <p className="max-w-[540px] text-base text-muted-foreground md:text-lg">
-              Player Tracker is a full replacement system of record for table
-              games operations — built for card rooms ready to move past aging
+              d3lt is a full replacement system of record for table games
+              operations — built for card rooms ready to move past aging
               software and manual workarounds.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">

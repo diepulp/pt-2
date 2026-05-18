@@ -67,7 +67,7 @@
 
 @layer base {
   :root {
-    /* PT-2 Industrial Light Theme */
+    /* d3lt Industrial Light Theme */
     --background: 40 33% 98%;
     --foreground: 24 10% 10%;
 
@@ -220,7 +220,7 @@
   }
 }
 :root {
-  /* PT-2 Industrial Light Sidebar */
+  /* d3lt Industrial Light Sidebar */
   --sidebar-background: 40 20% 96%;
   --sidebar-foreground: 24 10% 15%;
   --sidebar-primary: 189 94% 37%;
@@ -243,7 +243,7 @@
 }
 
 /* ============================================================================
- * PT-2 Landing Page
+ * d3lt Landing Page
  * Keyframes & utilities used by the marketing landing page.
  * ============================================================================ */
 
@@ -306,16 +306,16 @@
 }
 
 /* ============================================================================
- * PT-2 Sonner Toast Overrides
+ * d3lt Sonner Toast Overrides
  *
- * Override Sonner's default variant colors with PT-2 themed values.
+ * Override Sonner's default variant colors with d3lt themed values.
  * Light mode: tinted pastel backgrounds with dark text for readability.
  * Dark mode: deep-tinted backgrounds with bright text for contrast.
  *
  * The left-border accent + shadow-lg are applied via toastOptions.classNames
  * in components/ui/sonner.tsx. These CSS rules handle the fill colors only.
  *
- * Color convention matches PT-2 badge pattern (10% bg / 30% border).
+ * Color convention matches d3lt badge pattern (10% bg / 30% border).
  * ============================================================================ */
 
 /* --- Light theme variant overrides --- */

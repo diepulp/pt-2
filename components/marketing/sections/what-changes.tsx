@@ -30,7 +30,7 @@ export function WhatChangesSection() {
         What changes on day one.
       </h2>
       <p className="mt-3 max-w-2xl text-base text-muted-foreground md:text-lg">
-        Player Tracker replaces the patchwork. Here&apos;s what your floor gets
+        d3lt replaces the patchwork. Here&apos;s what your floor gets
         immediately.
       </p>
       <div className="mt-10 grid gap-8 sm:grid-cols-2">

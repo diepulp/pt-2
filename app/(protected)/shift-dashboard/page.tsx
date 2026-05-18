@@ -25,7 +25,7 @@ import { shiftDashboardKeys } from '@/hooks/shift-dashboard/keys';
 import type { ShiftTimeWindow } from '@/hooks/shift-dashboard/keys';
 
 export const metadata: Metadata = {
-  title: 'Shift Dashboard | PT-2',
+  title: 'Shift Dashboard | d3lt',
   description: 'Operational metrics and telemetry for the current shift',
 };
 

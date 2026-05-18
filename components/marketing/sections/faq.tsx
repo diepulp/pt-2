@@ -11,9 +11,9 @@ import { Section } from '../section';
 
 const faqs = [
   {
-    question: 'What does Player Tracker replace?',
+    question: 'What does d3lt replace?',
     answer:
-      'Player Tracker replaces legacy table games systems — the combination of paper rating slips, standalone tracking software, spreadsheets, and manual logs that most card rooms use to manage their floor. It becomes your system of record for player sessions, ratings, cash activity, and loyalty.',
+      'd3lt replaces legacy table games systems — the combination of paper rating slips, standalone tracking software, spreadsheets, and manual logs that most card rooms use to manage their floor. It becomes your system of record for player sessions, ratings, cash activity, and loyalty.',
   },
   {
     question: 'Who is this built for?',
@@ -23,7 +23,7 @@ const faqs = [
   {
     question: 'Is this a compliance product?',
     answer:
-      "No. Player Tracker is an operations platform with compliance built into the architecture — audit trails, immutable records, Title 31-aware cash tracking, and role-based access. It supports your compliance program; it doesn't replace it.",
+      "No. d3lt is an operations platform with compliance built into the architecture — audit trails, immutable records, Title 31-aware cash tracking, and role-based access. It supports your compliance program; it doesn't replace it.",
   },
   {
     question: 'How long does setup take?',
@@ -33,7 +33,7 @@ const faqs = [
   {
     question: 'Can I import data from my current system?',
     answer:
-      'Yes. Player Tracker includes a supervised import tool for player data and historical ratings. Imported records are quarantined, classified by match confidence, and only applied after admin review.',
+      'Yes. d3lt includes a supervised import tool for player data and historical ratings. Imported records are quarantined, classified by match confidence, and only applied after admin review.',
   },
   {
     question: 'What about pricing?',
@@ -43,7 +43,7 @@ const faqs = [
   {
     question: 'Do I need to talk to someone before I can use it?',
     answer:
-      'We recommend a short walkthrough so we can understand your floor and make sure Player Tracker is a good fit. Self-serve setup is available if you prefer to get started on your own.',
+      'We recommend a short walkthrough so we can understand your floor and make sure d3lt is a good fit. Self-serve setup is available if you prefer to get started on your own.',
   },
 ];
 

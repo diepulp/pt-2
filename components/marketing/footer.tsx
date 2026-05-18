@@ -6,7 +6,12 @@ export function MarketingFooter() {
       <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <p className="text-sm font-semibold">Player Tracker</p>
+            <p
+              className="text-sm tracking-wide"
+              style={{ fontFamily: 'var(--font-michroma)' }}
+            >
+              d3lt
+            </p>
             <p className="mt-2 text-sm text-muted-foreground">
               The table games system your card room has been waiting for.
             </p>
@@ -50,8 +55,7 @@ export function MarketingFooter() {
 
         <div className="mt-10 border-t pt-6">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} Player Tracker. All rights
-            reserved.
+            &copy; {new Date().getFullYear()} d3lt. All rights reserved.
           </p>
         </div>
       </div>

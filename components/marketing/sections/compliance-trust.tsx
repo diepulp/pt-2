@@ -30,9 +30,9 @@ export function ComplianceTrustSection() {
         Compliance built in, not bolted on.
       </h2>
       <p className="mt-3 max-w-2xl text-base text-muted-foreground md:text-lg">
-        Player Tracker isn&apos;t a compliance product — it&apos;s an operations
-        platform that happens to be audit-grade. The controls are structural,
-        not cosmetic.
+        d3lt isn&apos;t a compliance product — it&apos;s an operations platform
+        that happens to be audit-grade. The controls are structural, not
+        cosmetic.
       </p>
       <div className="mt-10 grid gap-8 sm:grid-cols-2">
         {trustSignals.map((signal) => (

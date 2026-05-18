@@ -74,7 +74,7 @@ export function RequestAccessForm({ className }: { className?: string }) {
             Request Access
           </h1>
           <p className="mt-2 text-[15px] text-[#95A2B3]">
-            PT-2 is currently in closed pilot. Tell us about your operation and
+            d3lt is currently in closed pilot. Tell us about your operation and
             we&apos;ll be in touch.
           </p>
         </div>

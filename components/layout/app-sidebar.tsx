@@ -216,11 +216,16 @@ export function AppSidebar() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary border border-sidebar-primary/20 cursor-default">
-                    <span className="font-mono text-sm font-bold">PT</span>
+                    <span
+                      className="text-[10px] tracking-wide"
+                      style={{ fontFamily: 'var(--font-michroma)' }}
+                    >
+                      d3lt
+                    </span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={8}>
-                  PT-2 Pit Station
+                  d3lt Pit Station
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -294,11 +299,19 @@ export function AppSidebar() {
         <div className="p-2">
           <div className="flex items-center gap-3 px-2 py-1.5">
             <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary border border-sidebar-primary/20">
-              <span className="font-mono text-sm font-bold">PT</span>
+              <span
+                className="text-[10px] tracking-wide"
+                style={{ fontFamily: 'var(--font-michroma)' }}
+              >
+                d3lt
+              </span>
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold text-sidebar-foreground">
-                PT-2
+              <span
+                className="truncate text-sidebar-foreground"
+                style={{ fontFamily: 'var(--font-michroma)' }}
+              >
+                d3lt
               </span>
               <span className="truncate text-xs text-muted-foreground">
                 Pit Station

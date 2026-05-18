@@ -18,7 +18,7 @@ interface UnderDevelopmentIndicatorProps {
 /**
  * Under Development Indicator
  *
- * PT-2 dark industrial design component for features in development.
+ * d3lt dark industrial design component for features in development.
  * Subtle but clear indication without disrupting the UI structure.
  */
 export function UnderDevelopmentIndicator({

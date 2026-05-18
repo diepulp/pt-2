@@ -24,7 +24,7 @@ import { ProductTabs } from './_components/product-tabs';
 import { Reveal } from './_components/reveal';
 
 /* ─────────────────────────────────────────────────────────
- * PT-2 LANDING PAGE — Narrative Spine
+ * d3lt LANDING PAGE — Narrative Spine
  *
  * Architecture: Hero → Operational Domains → Product → Accountability → Intelligence → CTA
  * Visual DNA: Linear-inspired dark ground, glassmorphic surfaces,

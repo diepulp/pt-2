@@ -207,9 +207,9 @@ export default function PricingPage() {
               How pricing works
             </h2>
             <p className="mt-4 text-[15px] text-[#95A2B3] leading-relaxed">
-              Player Tracker is priced per property. Every property gets the
-              full platform — same features, same support, no upsells. We'll
-              work with you to find the right arrangement for your operation.
+              d3lt is priced per property. Every property gets the full platform
+              — same features, same support, no upsells. We'll work with you to
+              find the right arrangement for your operation.
             </p>
             <Button
               asChild

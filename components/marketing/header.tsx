@@ -8,8 +8,12 @@ export function MarketingHeader() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="text-lg font-semibold">
-          Player Tracker
+        <Link
+          href="/"
+          className="text-lg tracking-wide"
+          style={{ fontFamily: 'var(--font-michroma)' }}
+        >
+          d3lt
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm md:flex">
