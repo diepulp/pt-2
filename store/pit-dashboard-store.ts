@@ -7,7 +7,6 @@ import type { DataOnly } from './types';
 
 export type PanelType =
   | 'tables'
-  | 'activity'
   | 'inventory'
   | 'analytics'
   | 'closed-sessions';

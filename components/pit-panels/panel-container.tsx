@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  Activity,
   ChevronLeft,
   ChevronRight,
   LayoutGrid,
@@ -38,7 +37,6 @@ import { cn } from '@/lib/utils';
 import type { RatingSlipWithPlayerDTO } from '@/services/rating-slip/dtos';
 import type { PanelType } from '@/store/pit-dashboard-store';
 
-import { ActivityPanel } from './activity-panel';
 import { AnalyticsPanel } from './analytics-panel';
 import { ClosedSessionsPanel } from './closed-sessions-panel';
 import { InventoryPanel } from './inventory-panel';
@@ -155,15 +153,13 @@ export function PanelContainer({
   }, [isCollapsed]);
 
   // Notification counts from real data
-  // PERF-003: Use stats.openSlipsCount instead of redundant useCasinoActivePlayers() call
   const notifications = React.useMemo(
     () => ({
       tables: activeSlips.length,
-      activity: stats?.openSlipsCount ?? 0,
       inventory: 0, // TODO: Wire to inventory data when available
       analytics: 0,
     }),
-    [activeSlips.length, stats?.openSlipsCount],
+    [activeSlips.length],
   );
 
   const panels = React.useMemo(
@@ -177,19 +173,11 @@ export function PanelContainer({
         notifications: notifications.tables,
       },
       {
-        id: 'activity',
-        label: 'Active Sessions',
-        description: '',
-        icon: Activity,
-        shortcut: `${modKey}2`,
-        notifications: notifications.activity,
-      },
-      {
         id: 'inventory',
         label: 'Inventory',
         description: '',
         icon: Package,
-        shortcut: `${modKey}3`,
+        shortcut: `${modKey}2`,
         notifications: notifications.inventory,
       },
       {
@@ -197,7 +185,7 @@ export function PanelContainer({
         label: 'Analytics',
         description: '',
         icon: TrendingUp,
-        shortcut: `${modKey}4`,
+        shortcut: `${modKey}3`,
         notifications: notifications.analytics,
       },
       {
@@ -205,7 +193,7 @@ export function PanelContainer({
         label: 'Sessions',
         description: '',
         icon: Users,
-        shortcut: `${modKey}5`,
+        shortcut: `${modKey}4`,
         notifications: 0,
       },
     ],
@@ -243,17 +231,13 @@ export function PanelContainer({
             break;
           case '2':
             e.preventDefault();
-            setActivePanel('activity');
+            setActivePanel('inventory');
             break;
           case '3':
             e.preventDefault();
-            setActivePanel('inventory');
-            break;
-          case '4':
-            e.preventDefault();
             setActivePanel('analytics');
             break;
-          case '5':
+          case '4':
             e.preventDefault();
             setActivePanel('closed-sessions');
             break;
@@ -286,8 +270,6 @@ export function PanelContainer({
             onSelectPit={onSelectPit}
           />
         );
-      case 'activity':
-        return <ActivityPanel onSlipClick={onSlipClick} />;
       case 'inventory':
         return (
           <InventoryPanel

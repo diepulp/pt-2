@@ -49,7 +49,7 @@ import {
   hasPendingUnsavedBuyIn,
 } from '@/hooks/rating-slip-modal';
 import { useCurrentTableSession } from '@/hooks/table-context/use-table-session';
-import { toast, useModal, usePitDashboardUI } from '@/hooks/ui';
+import { toast, useModal, useOpenSlip, usePitDashboardUI } from '@/hooks/ui';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -57,7 +57,6 @@ import {
   logError,
   isFetchError,
 } from '@/lib/errors/error-utils';
-import { createBrowserComponentClient } from '@/lib/supabase/client';
 import {
   groupTablesByPit,
   findPitIdForTable,
@@ -68,7 +67,6 @@ import {
   resumeRatingSlip,
   closeRatingSlip,
 } from '@/services/rating-slip/http';
-import { resolveCurrentSlipContext } from '@/services/rating-slip-modal/rpc';
 import { useRatingSlipModalStore } from '@/store/rating-slip-modal-store';
 
 import { NewSlipModal } from '../dashboard/new-slip-modal';
@@ -100,6 +98,9 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     open: openModal,
     close: closeModal,
   } = useModal();
+
+  // Shared slip opener — also used by ShiftOpsPanel's ActivityPanel
+  const openSlip = useOpenSlip();
 
   // Zustand: Pit dashboard UI state
   const {
@@ -448,10 +449,10 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     const seatNumber = String(index + 1);
 
     if (occupant) {
-      // Seat is occupied - use entry gate via handleSlipClick
+      // Seat is occupied - open via entry gate
       const slipOccupant = seatOccupants.get(seatNumber);
       if (slipOccupant?.slipId) {
-        await handleSlipClick(slipOccupant.slipId);
+        await openSlip(slipOccupant.slipId);
       }
     } else {
       // Guard: block new seating when session is not ACTIVE
@@ -466,28 +467,6 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   const handleNewSlip = () => {
     setNewSlipSeatNumber(undefined);
     openModal('new-slip', {});
-  };
-
-  // Handle slip click from active slips list
-  // GAP-ADR-026-UI-SHIPPABLE: Entry gate ensures current gaming day context
-  const handleSlipClick = async (slipId: string) => {
-    try {
-      const supabase = createBrowserComponentClient();
-      const ctx = await resolveCurrentSlipContext(supabase, slipId);
-
-      setSelectedSlip(ctx.slipIdCurrent);
-      openModal('rating-slip', { slipId: ctx.slipIdCurrent });
-
-      if (ctx.rolledOver) {
-        toast.info("Session rolled over to today's gaming day.");
-      }
-      if (ctx.readOnly) {
-        toast.info('Read-only: no player bound to this slip.');
-      }
-    } catch (error) {
-      toast.error('Error', { description: getErrorMessage(error) });
-      logError(error, { component: 'PitPanels', action: 'handleSlipClick' });
-    }
   };
 
   // Handle errors
@@ -534,7 +513,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     // Callbacks
     onSeatClick: handleSeatClick,
     onNewSlip: handleNewSlip,
-    onSlipClick: handleSlipClick,
+    onSlipClick: openSlip,
     // PRD-059: Reopen activation drawer from session action buttons
     onActivateRequest: () => setActivationDrawerOpen(true),
   };

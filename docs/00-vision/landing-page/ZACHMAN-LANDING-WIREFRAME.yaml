@@ -1,0 +1,757 @@
+# ZACHMAN-LANDING-WIREFRAME.yaml
+#
+# Purpose:  Machine-readable structural audit of the PT-2 landing page.
+#           Intended for refactor planning — not a FIB.
+#           Maps each section across Zachman's six interrogatives, embeds
+#           verbatim prose, and surfaces semantic / structural flaws.
+#
+# Source:   app/(landing)/page.tsx
+# Authored: 2026-05-13
+# Narrative architecture (per source comment):
+#   Hero → Operating Loops → Product → Trust → CTA
+
+meta:
+  schema_version: "1.0"
+  page: "/"
+  route_file: "app/(landing)/page.tsx"
+  components:
+    - "app/(landing)/_components/product-tabs.tsx"
+    - "app/(landing)/_components/reveal.tsx"
+  described_architecture: "Hero → Operating Loops → Product → Trust → CTA"
+  reference_docs:
+    - "docs/00-vision/landing-page/pt2-landing-page-direction-narrative-spine.md"
+    - "docs/00-vision/landing-page/SYSTEM-REALITY-MAP.md"
+  zachman_axes:
+    columns: [what, how, where, who, when, why]
+    rows: [nav, s1_hero, s2_operating_loops, s3_product, s4_trust, s5_cta, footer]
+  flag_severity_scale: [CRITICAL, HIGH, MEDIUM, LOW]
+
+# ═══════════════════════════════════════════════════════════════════
+# SECTION MAPPINGS
+# ═══════════════════════════════════════════════════════════════════
+
+sections:
+
+  # ───────────────────────────────────────────────────────────────
+  - id: NAV
+    label: Navigation Bar
+    position: sticky_top_z50
+    # ── Zachman ──
+    zachman:
+      what:
+        content: >
+          Brand identity (PT mark + 'Player Tracker' wordmark), three anchor
+          links (#operations, #product, #trust), sign-in link, one primary CTA.
+        entities: [brand, anchor_links, auth_entry, cta]
+      how:
+        content: >
+          Glassmorphic sticky bar (backdrop-blur-xl, 80% opacity fill).
+          Three same-page anchor scrolls + one external link (/auth/login).
+          Primary CTA routes to /contact (external page, not anchor).
+        mechanism: anchor_scroll_plus_page_navigation
+      where:
+        content: >
+          Viewport-fixed top. max-w-5xl centered. Left: brand. Center: nav
+          links (hidden below md breakpoint). Right: sign-in + CTA button.
+        layout: flex_justify_between
+      who:
+        content: >
+          Implied casino-management buyer browsing the page. No role
+          disambiguation — same nav serves evaluator, operator, and admin.
+        persona: unspecified_buyer
+      when:
+        content: Persistent across all scroll positions. Always visible.
+        timing: always_present
+      why:
+        content: >
+          Wayfinding + conversion gateway. Provides section anchors and a
+          single primary CTA path regardless of scroll position.
+    # ── Prose ──
+    prose:
+      brand: "Player Tracker"
+      nav_links:
+        - label: "Operations"
+          href: "#operations"
+        - label: "Product"
+          href: "#product"
+        - label: "Trust"
+          href: "#trust"
+      secondary_action:
+        label: "Sign in"
+        href: "/auth/login"
+      primary_cta:
+        label: "Request a Demo"
+        href: "/contact"
+    # ── Flags ──
+    flags:
+      - id: NAV-F1
+        severity: MEDIUM
+        type: structural_gap
+        issue: >
+          Nav omits Pricing link despite /pricing page existing. The buyer's
+          natural qualification question ('how much?') has no path from nav.
+      - id: NAV-F2
+        severity: MEDIUM
+        type: copy_fragmentation
+        issue: >
+          Three distinct labels resolve to one destination (/contact):
+          'Request a Demo' (nav), 'Start operational setup' (S1 primary CTA),
+          'Book a walkthrough' (S5 primary CTA). Each implies a different
+          commitment level. Label fragmentation dilutes conversion signal.
+
+  # ───────────────────────────────────────────────────────────────
+  - id: S1
+    label: Hero
+    position: above_fold
+    # ── Zachman ──
+    zachman:
+      what:
+        content: >
+          Badge, headline, subtitle, capability taxonomy strip (four domain
+          labels), CTA pair, proof micro-claims strip (three items).
+        entities: [badge, headline, subtitle, capability_strip, cta_pair, proof_strip]
+      how:
+        content: >
+          Intersection-observer Reveal component with staggered delay
+          (0 / 80 / 160 / 240 / 320 / 400 ms). Radial gradient hero glow.
+          Static text — no interactive elements except CTA buttons.
+        mechanism: staggered_reveal_animation
+      where:
+        content: >
+          max-w-3xl centered. Responsive top padding (pt-20 → pt-32 → pt-40).
+          All elements text-center. CTA row becomes flex-row at sm breakpoint.
+          Full bleed dot-grid texture behind (fixed, opacity 0.04).
+        layout: centered_column
+      who:
+        content: >
+          Broad. 'Casino management' is the frame — no role specificity
+          (GM vs. pit boss vs. compliance officer).
+        persona: casino_management_generic
+      when:
+        content: First impression. Entry point for all visitors.
+        timing: first_contact
+      why:
+        content: >
+          Establish product category, communicate value proposition,
+          and route visitor to deeper content or conversion path.
+    # ── Prose ──
+    prose:
+      badge: "OPERATIONAL INTELLIGENCE"
+      headline: "Operational Intelligence System for casino management"
+      subtitle: >
+        Floor oversight, session tracking, cash accountability, and audit
+        compliance — unified in one system built for how your team actually works.
+      capability_strip:
+        - "Floor Oversight"
+        - "Session Tracking"
+        - "Cash Accountability"
+        - "Audit Compliance"
+      primary_cta:
+        label: "Start operational setup"
+        href: "/contact"
+      secondary_cta:
+        label: "See the operations"
+        href: "#operations"
+      proof_strip:
+        - "Traceable numbers"
+        - "Attributed actions"
+        - "Compliance-aware workflows"
+    # ── Flags ──
+    flags:
+      - id: S1-F1
+        severity: HIGH
+        type: semantic_redundancy
+        issue: >
+          Badge ('OPERATIONAL INTELLIGENCE') and headline both assert the same
+          category claim. The badge should establish category; the headline
+          should carry the differentiating proof. Current structure:
+          [category] + [category restatement] — no delta between the two.
+      - id: S1-F2
+        severity: MEDIUM
+        type: structural_duplication
+        issue: >
+          Capability strip ('Floor Oversight / Session Tracking / Cash
+          Accountability / Audit Compliance') lists the same four domain labels
+          as the S2 Operating Loop cards. No information is added — it is a
+          smaller-type preview with no distinct semantic role. Either eliminate
+          or assign a purposeful function (e.g., signal scope depth, not names).
+      - id: S1-F3
+        severity: MEDIUM
+        type: structural_duplication
+        issue: >
+          Proof strip ('Traceable numbers', 'Attributed actions',
+          'Compliance-aware workflows') previews three of the four S4 Trust
+          section properties at one-third the information density. Creates a
+          semantic echo that fragments the trust argument rather than
+          building it cumulatively. Evaluate: is early trust positioning
+          worth the dilution?
+      - id: S1-F4
+        severity: MEDIUM
+        type: cta_destination_mismatch
+        issue: >
+          Primary CTA label 'Start operational setup' implies initiating
+          something concrete. Destination is /contact — a conversation-request
+          form. Label commitment level and actual action are mismatched.
+      - id: S1-F5
+        severity: LOW
+        type: audience_gap
+        issue: >
+          No audience anchor. 'Casino management' is a category, not a role.
+          GM (purchase authority), pit boss (workflow evaluator), and compliance
+          officer (risk evaluator) need different value frames. Hero addresses
+          none explicitly.
+
+  # ───────────────────────────────────────────────────────────────
+  - id: S2
+    label: Operating Loops
+    anchor: "#operations"
+    position: first_scroll_section
+    # ── Zachman ──
+    zachman:
+      what:
+        content: >
+          Four operating domains: Floor Oversight, Session Tracking, Cash
+          Accountability, Audit Compliance. Each card carries: domain label,
+          outcome statement, motion description, and link to a sub-page.
+        entities: [section_header, operating_loop_cards_x4]
+      how:
+        content: >
+          2×2 card grid (sm:grid-cols-2). Each card is a full-area anchor
+          link to a sub-page. Hover: accent glow overlay + arrow translation.
+          Cards share a gap-px border grid with bg-white/[0.03] separator.
+        mechanism: grid_link_cards_with_hover_glow
+      where:
+        content: >
+          max-w-5xl centered. Section eyebrow + heading left-aligned. Full-
+          width card grid. Section glow radiates from 20% / 30% (off-center left).
+        layout: left_header_full_grid
+      who:
+        content: >
+          Evaluating buyer mapping product capability to known floor pain points.
+          Assumes familiarity with pit floor operation concepts and vocabulary.
+        persona: evaluating_operator
+      when:
+        content: >
+          Second impression after hero. Transitions from 'what is it' to
+          'what does it do for me'. Evaluation entry point.
+        timing: evaluation_entry
+      why:
+        content: >
+          Bridge between category claim (hero) and UI proof (product tabs).
+          Each card is a narrative promise that routes to a detail page for
+          deeper qualification.
+    # ── Prose ──
+    prose:
+      section_eyebrow: "Operations"
+      section_heading: "What this system helps you do on a live casino floor."
+      cards:
+        - domain: "Floor Oversight"
+          outcome: "See the floor as it is now, not after the shift is over."
+          motion: >
+            Track tables, coverage, checkpoints, and exceptions as play moves.
+          link_label: "Explore floor oversight"
+          href: "/floor-oversight"
+        - domain: "Session Tracking"
+          outcome: "Follow every player from check-in to cash-out."
+          motion: >
+            Manage visits, table moves, rating slips, and session continuity
+            across breaks.
+          link_label: "Explore session tracking"
+          href: "/session-tracking"
+        - domain: "Cash Accountability"
+          outcome: "Every dollar attributed, every transaction traced."
+          motion: >
+            Record buy-ins with live threshold feedback. Process cash-outs
+            and voids with audit trail.
+          link_label: "Explore cash accountability"
+          href: "/cash-accountability"
+        - domain: "Audit Compliance"
+          outcome: "During the shift, not after it."
+          motion: >
+            Progressive MTL alerts, CTR banners at regulatory boundaries,
+            per-patron daily aggregates.
+          link_label: "Explore audit compliance"
+          href: "/audit-compliance"
+    # ── Flags ──
+    flags:
+      - id: S2-F1
+        severity: HIGH
+        type: semantic_frame_mismatch
+        issue: >
+          Section heading frames this as HOW ('what this system helps you do')
+          but card structure leads with WHY/WHAT ('outcome: See the floor as it
+          is now'). The heading sets a functional frame; the cards deliver
+          benefit statements. They operate in different registers. The heading
+          should match card structure, or vice versa.
+      - id: S2-F2
+        severity: HIGH
+        type: domain_omission
+        issue: >
+          Loyalty & Rewards is absent. It is the largest domain in
+          SYSTEM-REALITY-MAP (13 working features) and the system's primary
+          CRM differentiator. The current four-card split (Floor Oversight,
+          Session Tracking, Cash Accountability, Audit Compliance) omits the
+          reward/loyalty revenue surface that casino operators explicitly
+          evaluate. This is a material capability gap in the page narrative.
+      - id: S2-F3
+        severity: LOW
+        type: navigation_pattern_split
+        issue: >
+          Nav item 'Operations' anchors to #operations (same-page scroll).
+          Cards link to sub-pages (/floor-oversight, etc.) with no back-link
+          discipline guaranteed. Two navigation modes without hierarchy signal.
+          User journey from sub-page back to landing is not managed.
+
+  # ───────────────────────────────────────────────────────────────
+  - id: S3
+    label: Product (Visual Proof)
+    anchor: "#product"
+    position: second_scroll_section
+    # ── Zachman ──
+    zachman:
+      what:
+        content: >
+          Four UI surfaces: Shift Dashboard, Player 360, Cash Threshold,
+          Setup Wizard. Each has a label, title, and description string.
+        entities: [tab_selector, display_panel]
+      how:
+        content: >
+          Client component ProductTabs. Vertical tab list at lg / horizontal
+          scroll on mobile. Active tab changes title + description in display
+          panel. No screenshots — text only in a styled placeholder container.
+        mechanism: tab_interaction_text_description_panel
+      where:
+        content: >
+          max-w-5xl centered. At lg: 260px fixed tab column + flex-1 display
+          panel. Mobile: stacked. Panel is aspect-[4/3] → aspect-[16/10].
+        layout: sidebar_tabs_with_preview_panel
+      who:
+        content: >
+          Product evaluator wanting visual evidence before committing to a
+          demo conversation.
+        persona: product_evaluator
+      when:
+        content: >
+          After operating loops ('what it does') — transition to 'what it
+          looks like'. Proof stage before trust close.
+        timing: visual_proof_stage
+      why:
+        content: >
+          Credibility through UI concreteness. Differentiate the product from
+          category abstraction with real interface evidence.
+    # ── Prose ──
+    prose:
+      section_eyebrow: "Product"
+      section_heading: "What it looks like in operation."
+      section_subheading: "Real surfaces built for real shift pressure. Not mockups."
+      surfaces:
+        - label: "Shift Dashboard"
+          title: "Live floor picture with checkpoint deltas"
+          description: >
+            Active tables, open sessions, cash activity, shift KPIs. Take
+            mid-shift snapshots and see exactly how performance changes.
+        - label: "Player 360"
+          title: "Complete player profile in one screen"
+          description: >
+            Identity, visit history, rating slips, financial summary, loyalty
+            tier and ledger, filterable interaction timeline.
+        - label: "Cash Threshold"
+          title: "Live compliance feedback as you type"
+          description: >
+            Buy-in recording shows proximity to thresholds in real time.
+            Progressive MTL alerts at $3K, CTR banner at $10K.
+        - label: "Setup Wizard"
+          title: "Operational in one session"
+          description: >
+            Configure your property, import player records via CSV with column
+            mapping and validation. No legacy migration project.
+    # ── Flags ──
+    flags:
+      - id: S3-F1
+        severity: CRITICAL
+        type: credibility_contradiction
+        issue: >
+          Section claims 'Real surfaces built for real shift pressure. Not
+          mockups.' The display panel contains only a styled text block
+          (title + description) in an empty-field container. There are no
+          screenshots, no UI stills, no embedded frames. The anti-mockup claim
+          is backed by content that structurally functions as a mockup label.
+          This is the highest-severity semantic flaw on the page.
+      - id: S3-F2
+        severity: MEDIUM
+        type: surface_selection_gap
+        issue: >
+          Four surfaces chosen omit the Cashier Console entirely. Per
+          SYSTEM-REALITY-MAP §4, the Cashier Console is the only role surface
+          with no landing page representation. Additionally, Setup Wizard is
+          an onboarding surface, not an operational one — its inclusion in
+          'What it looks like in operation' is a category mismatch.
+      - id: S3-F3
+        severity: MEDIUM
+        type: visual_treatment_contradiction
+        issue: >
+          Panel aspect ratio (4:3 / 16:10) with large empty space around a
+          centred text block reads as a placeholder. For a section anchored
+          on 'real surfaces', the empty spatial field signals absence of
+          content rather than presence of a product.
+
+  # ───────────────────────────────────────────────────────────────
+  - id: S4
+    label: Trust (Structural Credibility)
+    anchor: "#trust"
+    position: third_scroll_section
+    # ── Zachman ──
+    zachman:
+      what:
+        content: >
+          Four structural properties: immutability of records, staff
+          attribution, append-only correction model, live anomaly surfacing.
+        entities: [section_header, trust_property_cards_x4]
+      how:
+        content: >
+          2×2 card grid. Each card: animated accent dot (glow-pulse animation
+          with staggered intervals), statement heading, proof subtext. Hover
+          glow on cards. bg-[#000212] base with white/[0.015] hover state.
+        mechanism: grid_property_cards_with_animated_indicators
+      where:
+        content: >
+          max-w-5xl centered. Section eyebrow + heading + subheading left-
+          aligned. Grid full-width. Glow radiates from 50% / 80% (bottom).
+        layout: left_header_full_grid
+      who:
+        content: >
+          Compliance-aware operator or decision-maker validating structural
+          integrity and data governance posture before adoption.
+        persona: compliance_evaluator
+      when:
+        content: >
+          After product proof. Pre-CTA. Position: convert skeptic before close.
+        timing: pre_close_credibility
+      why:
+        content: >
+          Establish structural trust before asking for commitment. Address
+          'can we rely on this?' before 'are you ready to engage?'
+    # ── Prose ──
+    prose:
+      section_eyebrow: "Trust"
+      section_heading: "Compliance built into the architecture, not bolted on."
+      section_subheading: >
+        These are structural properties of the system — not features you
+        enable, not modules you purchase.
+      properties:
+        - statement: "Every number is traceable"
+          proof: >
+            Permanent financial records. Append-only audit trail. Timestamps
+            on every mutation.
+        - statement: "Every action is attributed"
+          proof: >
+            Staff identity on every operation. Four roles with database-level
+            access control. No shared logins.
+        - statement: "Nothing gets rewritten"
+          proof: >
+            Corrections create new records with full lineage. The original
+            entry is preserved.
+        - statement: "Anomalies surface during operations"
+          proof: >
+            Live threshold feedback. Shift checkpoint deltas show change,
+            not just state.
+    # ── Flags ──
+    flags:
+      - id: S4-F1
+        severity: MEDIUM
+        type: sequencing_question
+        issue: >
+          Trust follows Product in the narrative arc (S3 → S4). For a
+          compliance-sensitive B2B buyer, trust validation is typically the
+          prerequisite to product evaluation — not its sequel. Consider whether
+          Trust → Product is more effective than Product → Trust for this
+          audience.
+      - id: S4-F2
+        severity: LOW
+        type: structural_duplication
+        issue: >
+          Hero proof strip (S1) previews three of these four properties at
+          lower resolution ('Traceable numbers', 'Attributed actions',
+          'Compliance-aware workflows'). The argument is split across two
+          sections rather than built cumulatively. The preview in S1 fragments
+          rather than scaffolds the S4 close.
+      - id: S4-F3
+        severity: LOW
+        type: register_shift_within_section
+        issue: >
+          'Anomalies surface during operations' is a workflow design claim
+          (about when you see information) while the other three properties
+          are data integrity claims (about what happens to records). The fourth
+          card shifts conceptual register mid-grid without signaling the shift.
+          Readers grouping all four as equivalent integrity properties will
+          misread the fourth.
+
+  # ───────────────────────────────────────────────────────────────
+  - id: S5
+    label: CTA (Outcome-Anchored Close)
+    position: bottom_of_page
+    # ── Zachman ──
+    zachman:
+      what:
+        content: >
+          Headline, supporting paragraph, two CTAs
+          ('Book a walkthrough' → /contact, 'Back to operations' → #operations).
+        entities: [headline, supporting_copy, cta_pair]
+      how:
+        content: >
+          Centered narrow text block. Same two-button layout pattern as S1.
+          Staggered Reveal (0 / 80 / 160 ms). Radial glow anchored to bottom
+          of section.
+        mechanism: centered_close_cta_pair_with_reveal
+      where:
+        content: >
+          max-w-2xl centered. py-20/32 vertical padding. Glow at section
+          bottom. Full viewport width but narrow content column.
+        layout: centered_narrow_column
+      who:
+        content: >
+          Buyer who has scrolled the full page and is at the conversion
+          decision point.
+        persona: bottom_funnel_buyer
+      when:
+        content: >
+          End of page. Last conversion opportunity before footer.
+        timing: conversion_close
+      why:
+        content: >
+          Convert evaluator to contact. Anchor the emotional case before
+          the transactional ask.
+    # ── Prose ──
+    prose:
+      headline: "Numbers you can stand behind."
+      supporting_copy: >
+        Talk to us about your floor. We'll walk through how Player Tracker
+        fits your property — your tables, your workflows, your operation.
+      primary_cta:
+        label: "Book a walkthrough"
+        href: "/contact"
+      secondary_cta:
+        label: "Back to operations"
+        href: "#operations"
+    # ── Flags ──
+    flags:
+      - id: S5-F1
+        severity: MEDIUM
+        type: orphaned_headline
+        issue: >
+          'Numbers you can stand behind' shifts to an emotional/personal
+          register. It could connect to the Trust section (traceability,
+          immutability) but S4 closes on anomaly detection — not on
+          personal accountability. The headline lands without a section
+          above it that specifically earns it.
+      - id: S5-F2
+        severity: LOW
+        type: cta_label_fragmentation
+        issue: >
+          Third label variant for /contact: 'Request a Demo' (NAV),
+          'Start operational setup' (S1), 'Book a walkthrough' (S5).
+          See XS-F3 for cross-section impact.
+      - id: S5-F3
+        severity: LOW
+        type: backward_navigation_at_close
+        issue: >
+          Secondary CTA 'Back to operations' routes to #operations — a
+          backward-navigation escape that sends a committed bottom-of-funnel
+          visitor away from conversion. Its presence here is structurally
+          unusual and may dilute the primary CTA action rate.
+
+  # ───────────────────────────────────────────────────────────────
+  - id: FOOTER
+    label: Footer
+    position: below_s5
+    # ── Zachman ──
+    zachman:
+      what:
+        content: PT logo mark, 'Player Tracker' wordmark, copyright string.
+        entities: [brand_mark, copyright]
+      how:
+        content: >
+          Single horizontal row. Brand left, copyright right. Stacks on mobile.
+        mechanism: minimal_horizontal_bar
+      where:
+        content: >
+          Full-width border-top. max-w-5xl centered. py-10.
+        layout: full_width_single_row
+      who:
+        content: Any visitor at bottom of page. Legal- or trust-seeking.
+        persona: any_visitor
+      when:
+        content: End of page. Post-CTA.
+        timing: post_close
+      why:
+        content: Brand closure. Legal minimum. No navigation function.
+    # ── Prose ──
+    prose:
+      brand: "Player Tracker"
+      copyright: "© {year} Player Tracker. All rights reserved."
+    # ── Flags ──
+    flags:
+      - id: FOOT-F1
+        severity: MEDIUM
+        type: structural_gap
+        issue: >
+          No legal links (Privacy Policy, Terms of Service). For a B2B
+          compliance-positioned product, absent legal footer links are a
+          procurement friction point and a trust signal gap.
+      - id: FOOT-F2
+        severity: LOW
+        type: structural_gap
+        issue: >
+          No navigation links in footer. Standard expectation for a multi-
+          section marketing page — allows visitors who reach the footer to
+          navigate without returning to the top.
+
+
+# ═══════════════════════════════════════════════════════════════════
+# CROSS-SECTION FLAW SURFACE
+# Structural issues spanning two or more sections
+# ═══════════════════════════════════════════════════════════════════
+
+cross_section_flags:
+
+  - id: XS-F1
+    severity: CRITICAL
+    type: credibility_integrity
+    sections: [S3]
+    issue: >
+      The single highest-severity structural flaw. S3 claims 'Real surfaces.
+      Not mockups.' while the display panel contains only text descriptions in
+      a styled empty container. No UI evidence exists anywhere on the page.
+      The claim and the content directly contradict each other. Refactor
+      must resolve this before any other change.
+
+  - id: XS-F2
+    severity: HIGH
+    type: domain_omission
+    sections: [S2, S3]
+    issue: >
+      Loyalty & Rewards (13 working features — the largest domain in
+      SYSTEM-REALITY-MAP) is absent from all page sections. It appears in
+      neither the Operating Loop cards (S2) nor the Product surfaces (S3).
+      The system's primary CRM differentiator is structurally invisible.
+
+  - id: XS-F3
+    severity: HIGH
+    type: cta_fragmentation
+    sections: [NAV, S1, S5]
+    issue: >
+      Three distinct CTA labels map to one destination (/contact):
+        NAV  → 'Request a Demo'
+        S1   → 'Start operational setup'
+        S5   → 'Book a walkthrough'
+      Each label implies a different commitment level and use-case context.
+      Fragmentation signals uncertainty about the product's conversion model.
+
+  - id: XS-F4
+    severity: MEDIUM
+    type: sequencing
+    sections: [S3, S4]
+    issue: >
+      Current order: Product proof → Trust signals (S3 → S4).
+      For a compliance-sensitive B2B buyer, trust validation typically
+      precedes product evaluation. Reversed order may cause evaluators to
+      reach the product section without the credibility baseline they need
+      to assess it accurately. Consider Trust → Product.
+
+  - id: XS-F5
+    severity: MEDIUM
+    type: audience_ambiguity
+    sections: [S1, S2, S3, S4, S5]
+    issue: >
+      No explicit audience anchor anywhere on the page. The system serves
+      four distinct operator roles (GM, pit boss, cashier, compliance officer)
+      and a distinct buyer persona (property decision-maker). The page
+      addresses a generic 'you' throughout. Neither the buyer evaluation
+      frame nor the operator workflow frame is selected or held.
+
+  - id: XS-F6
+    severity: MEDIUM
+    type: distributed_trust_argument
+    sections: [S1, S4]
+    issue: >
+      The trust argument is split between S1 proof strip and S4 Trust section.
+      S1 previews three trust properties at low density; S4 expands them with
+      proof copy. The early preview fragments the argument rather than building
+      toward it. Either commit to trust scaffolding in the hero with full
+      density, or reserve all trust signals for S4 and earn the S5 headline.
+
+  - id: XS-F7
+    severity: LOW
+    type: absent_role_surface
+    sections: [S2, S3]
+    issue: >
+      Cashier Console (3-tab role surface: cash-outs, confirmations, drops)
+      is absent from all sections. A buyer evaluating multi-role workflows
+      has an incomplete picture. Relevant for properties where cashier ops
+      are a distinct procurement concern.
+
+
+# ═══════════════════════════════════════════════════════════════════
+# ZACHMAN COLUMN SUMMARY
+# Cross-section view by interrogative — coverage and gaps
+# ═══════════════════════════════════════════════════════════════════
+
+zachman_summary:
+
+  what:
+    coverage: >
+      Well-covered. Core entities (players, visits, cash transactions,
+      compliance records) are named across sections. Capability strip and
+      Operating Loop cards enumerate domain scope.
+    gap: >
+      Loyalty & Rewards domain absent. Cashier role entities absent.
+      Gaming day and temporal entities not surfaced.
+
+  how:
+    coverage: >
+      Partially covered. Operating Loops describe mechanisms at a high level
+      via 'motion' copy. Product tabs name surfaces. No process flow narrative.
+    gap: >
+      No workflow narrative on the page. The 'how' is communicated through
+      outcome statements ('Follow every player from check-in to cash-out'),
+      not through process steps. The shift lifecycle, session continuation
+      model, and compliance workflow chain are invisible.
+
+  where:
+    coverage: >
+      Covered at surface-label level via Product Tabs (Shift Dashboard,
+      Player 360, Cash Threshold, Setup Wizard). Sub-pages extend spatial
+      detail for four of the five operating loops.
+    gap: >
+      Cashier Console surface absent. No architectural diagram or spatial
+      model showing how surfaces relate. Sub-page navigation not unified.
+
+  who:
+    coverage: >
+      Implicit only. 'Your team', 'casino management', 'your floor' appear
+      throughout. Four system roles exist (admin, pit boss, cashier, dealer)
+      but none are named on the landing page.
+    gap: >
+      No persona anchoring anywhere. Buyer roles (decision authority) and
+      operator roles (daily users) are conflated under a generic 'you'.
+      Role-specific value propositions are absent.
+
+  when:
+    coverage: >
+      Partial. Operating Loops hint at in-shift timing ('during the shift,
+      not after it'). Compliance section references thresholds with implicit
+      gaming-day scope.
+    gap: >
+      The temporal model — gaming day boundary, shift window, session
+      lifecycle, compliance threshold resets — is entirely absent from
+      the page narrative. This is a major differentiator (most systems
+      don't model a casino day) that goes unsurfaced.
+
+  why:
+    coverage: >
+      Trust section (S4) addresses WHY structural choices were made.
+      Operating Loops hint at WHY each domain matters via outcome statements.
+    gap: >
+      No competitive differentiation frame ('why this over existing options').
+      No consequence narrative ('what happens when this is missing'). No
+      origin claim. The WHY is present in architecture but absent in copy.
