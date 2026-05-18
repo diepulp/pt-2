@@ -1,0 +1,642 @@
+{
+  "meta": {
+    "artifact_type": "wave_2_progress_tracker",
+    "version": "1.0.0",
+    "source_of_truth": "WAVE-2-PROGRESS-TRACKER.md",
+    "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md",
+    "parent_tracker_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json",
+    "last_updated": "2026-05-17",
+    "update_rule": "Update both this file and WAVE-2-PROGRESS-TRACKER.md together when phase state changes. This file is the machine-readable projection of the .md; it does not own truth. Update parent ROLLOUT-TRACKER.json cursor when Wave 2 active_phase changes.",
+    "reading_order": "cursor → direction → phases → deferred_register → validation_matrix → open_decisions. Read roadmap_ref for phase deliverables and exit gates. Read parent_tracker_ref for Wave 1 history and Wave 2 entry criteria."
+  },
+
+  "direction": {
+    "roadmap": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md",
+    "principles": [
+      "Transport before consumers — no projection consumer PRD may be initiated until its required producer path exists and I1–I4 are verified. Phase 2.3 does not start before Phase 2.1 gates.",
+      "Producers expand one category at a time — Class A adjustment ships separately from Dependency Events. Within a category, intra-category parity applies: fills and credits are a symmetric Dependency Event rollout pair (ADR-055 / RULE-6 / FIB-H §G) and must land in the same slice.",
+      "ADR-055 parity is not relaxed — the exemplar proved Class A and Class B simultaneously. Subsequent expansion slices must still satisfy parity within each slice boundary.",
+      "Consumers are projection-only — no consumer slice may write to PFT, the grind authoring store, or any other authoring table. Consumers write only to projection stores and processed_messages. origin_label travels from authoring boundary to consumer unchanged.",
+      "Gates are pass/fail — each phase has a hard exit condition. No partial advancement. Phase N+1 PRD must land before Phase N+1 code begins.",
+      "No scope expansion without FIB amendment — FIB-S downstream_expansion_allowed_without_amendment: false applies to every phase. Any new operator-visible outcome, external consumer contract, or new surface not in the containment loop requires a FIB amendment.",
+      "Freeze discipline holds — ADR-052 through ADR-056 are frozen. If a phase surfaces a real conflict, write a superseding ADR. Do not patch frozen docs silently."
+    ],
+    "execution_protocol": "Every phase runs: /prd-writer → /lead-architect (EXEC-SPEC scaffold) → /build PRD-###. /build-pipeline dispatches domain-expert skills per workstream. No skill is invoked directly outside the build-pipeline chain. See WAVE-2-ROLLOUT-MAP.md §3.",
+    "phase_transition_rule": "Exiting Phase N → Opening Phase N+1 requires two documents: (1) Phase N exit gate met, (2) Phase N+1 PRD drafted and approved. No code written for Phase N+1 before its PRD lands.",
+    "non_goals": [
+      "No CDC / WAL relay (Debezium, pg_logical, WAL streaming) — post-pilot scale upgrade",
+      "No external consumer contract — no public event bus, no third-party event semantics, no reconciliation interface",
+      "No event sourcing — outbox does not reconstruct authoritative state",
+      "No authoritative totals — no Total Drop, shift-end settlement, or final money position",
+      "No multi-consumer fan-out registry — Wave 2 assumes a single internal consumer path",
+      "No UI-driven reconciliation — render completeness labels; never recompute financial state against authoring stores",
+      "No compliance domain scope — mtl_entry / MTLService remains parallel and isolated",
+      "No new PFT columns — player_financial_transaction is append-only"
+    ],
+    "wave_2_entry_criteria": [
+      "Wave 1 complete — met 2026-05-06",
+      "Pre-Wave-2 surface debt closed (PRD-080) — met 2026-05-06",
+      "Q1–Q4 open questions resolved — met 2026-05-06",
+      "Feature pipeline initiated — met 2026-05-10 (FIB-H-W2-OUTBOX-001)",
+      "I1–I4 harness proven against real implementation — met 2026-05-11 (EXEC-081)"
+    ]
+  },
+
+  "cursor": {
+    "wave": 2,
+    "active_phase": "2.1",
+    "phase_status": "teardown_authored_prd_pending",
+    "phase_label": "Phase 2.1 authorized (PRD-082 signoff 2026-05-12). PRD-082 harness teardown migration authored (20260517141021) — ready to apply. Phase 2.1 PRD not yet authored.",
+    "blocker": null,
+    "teardown_migration": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
+    "next_action": "1. Author Phase 2.1 PRD for rpc_create_financial_adjustment outbox emission. 2. /lead-architect EXEC-SPEC scaffold. 3. /build PRD-###.",
+    "next_action_prd": null,
+    "last_closed_phase": "prd-082",
+    "last_closed_date": "2026-05-12",
+    "last_closed_prd": "PRD-082",
+    "last_closed_exec": "EXEC-082",
+    "last_closed_commit": "b1d45302",
+    "exemplar_phase_commit": "8a1b8741",
+    "exemplar_phase_date": "2026-05-11",
+    "phase_2_1_authorization": {
+      "status": "authorized",
+      "authorized_by": "WAVE-2-INTEGRATION-PROOF-SIGNOFF.md",
+      "authorized_date": "2026-05-12",
+      "authorized_commit": "b1d45302",
+      "condition": "Teardown migration must be authored and applied before Phase 2.1 merge"
+    }
+  },
+
+  "phases": [
+    {
+      "id": "2.0",
+      "label": "Exemplar Proof Slice — GAP-F1 Closure",
+      "wave": 2,
+      "status": "complete",
+      "prd": "PRD-081",
+      "prd_path": "docs/10-prd/PRD-081-transactional-outbox-gap-f1-closure-v0.md",
+      "exec_spec": "EXEC-081",
+      "exec_spec_path": "docs/21-exec-spec/EXEC-081-transactional-outbox-gap-f1-exemplar.md",
+      "checkpoint": ".claude/skills/build-pipeline/checkpoints/PRD-081.json",
+      "exit_date": "2026-05-11",
+      "commit": "8a1b8741",
+      "entry_gate": "Wave 1 sign-off ✅ + Q1–Q4 resolved ✅ + I1–I4 harness invariants frozen ✅",
+      "scope_amendment": "Vertical collapse per PRD-081_VERTICAL_COLLAPSE_EXEMPLAR_DIRECTIVE.md: rpc_create_financial_txn (Class A) + rpc_record_grind_observation (Class B) only. rpc_create_financial_adjustment, rpc_request_table_fill, rpc_request_table_credit deferred.",
+      "exemplar_pair": {
+        "class_a": "rpc_create_financial_txn → buyin.recorded / cashout.recorded",
+        "class_b": "rpc_record_grind_observation → grind.observed"
+      },
+      "deliverables": [
+        "generate_uuid_v7() — migration 20260511134015",
+        "finance_outbox Wave 2 DDL — migration 20260511134100",
+        "table_buyin_telemetry reconcile (event_type NOT NULL) — migration 20260511134200",
+        "processed_messages — migration 20260511134300",
+        "rpc_claim_outbox_batch (FOR UPDATE SKIP LOCKED, service_role) — migration 20260511134400",
+        "rpc_commit_consumer_receipt (processed|duplicate, service_role) — migration 20260511134450",
+        "rpc_create_financial_txn outbox extension (Class A, ADR-054 D2) — migration 20260511134600",
+        "rpc_record_grind_observation (Class B, atomic TBT + outbox) — migration 20260511134700",
+        "RLS hardening: finance_outbox + processed_messages deny-by-default — migration 20260511134500",
+        "FinancialOutboxEventDTO — services/player-financial/dtos.ts",
+        "runConsumer — services/player-financial/outbox-consumer.ts",
+        "POST /api/internal/outbox-relay (CRON_SECRET bearer auth) — app/api/internal/outbox-relay/route.ts",
+        "Vercel cron (* * * * *) — vercel.json",
+        "tests/failure/ I1–I4 harness (19/19 PASS)",
+        "services/player-financial/__tests__ outbox suite (98/101 run, 3 skipped integration)",
+        "pgTAP outbox_transport_access.test.sql (10 tests, local only)",
+        "pgTAP outbox_legacy_shape.test.sql (10 tests, local only)",
+        "SRM footnote updated (ADR-054 + ADR-056 cited)",
+        "Event catalog entries: buyin.recorded, cashout.recorded, grind.observed"
+      ],
+      "invariants_proven": {
+        "I1_atomicity": "5/5 PASS — exemplar pair only; must re-prove per new producer",
+        "I2_durability": "4/4 PASS — transport baseline; inherited by 2.1–2.5",
+        "I3_idempotency": "5/5 PASS — transport baseline; consumer-level re-verified in 2.3/2.4",
+        "I4_replayability": "5/5 PASS — transport baseline; projection-level re-verified in 2.3/2.4"
+      },
+      "exit_gates_passed": [
+        "finance_outbox Wave 2 DDL live",
+        "rpc_create_financial_txn atomically emits outbox row (I1 proven — Class A exemplar)",
+        "rpc_record_grind_observation atomically emits outbox row (I1 proven — Class B exemplar)",
+        "Committed row survives relay failure (I2 proven)",
+        "Duplicate delivery produces one consumer side effect (I3 proven)",
+        "Replay from ordered history produces equivalent state (I4 proven)",
+        "test:failure 19/19 PASS; test:slice:player-financial 98/101 PASS (3 integration skipped)",
+        "type-check exit 0; lint exit 0; build exit 0"
+      ]
+    },
+    {
+      "id": "prd-082",
+      "label": "Integration Proof Runtime Gate",
+      "wave": 2,
+      "status": "complete",
+      "prd": "PRD-082",
+      "prd_path": "docs/10-prd/PRD-082-wave2-integration-proof-v0.md",
+      "exec_spec": "EXEC-082",
+      "exec_spec_path": "docs/21-exec-spec/EXEC-082-wave2-integration-proof.md",
+      "checkpoint": ".claude/skills/build-pipeline/checkpoints/PRD-082.json",
+      "exit_date": "2026-05-12",
+      "commit": "b1d45302",
+      "run_by": "Vladimir Ivanov",
+      "environment": "local Supabase (http://127.0.0.1:54321) — disposable, not shared/staging/production",
+      "entry_gate": "Phase 2.0 exit ✅",
+      "purpose": "Runtime validation gate proving I1–I5 against a real running Supabase instance before Phase 2.1 authorization. No business behavior change. Produces signed evidence artifact with decision field.",
+      "transport_bugs_fixed": [
+        {
+          "id": "Bug-1",
+          "rpc": "rpc_create_financial_txn",
+          "root_cause": "ON CONFLICT DO UPDATE — player_financial_transaction_no_updates (USING=false) rejects DO UPDATE on conflict-resolution scan path even without a real conflict (PostgreSQL 17 behavior with partial index targets)",
+          "fix": "Changed to DO NOTHING + SELECT fallback for idempotency replay"
+        },
+        {
+          "id": "Bug-2",
+          "rpc": "bridge_rated_buyin_to_telemetry() trigger",
+          "root_cause": "Migration 20260511134200 added event_type NOT NULL to table_buyin_telemetry but did not update this AFTER INSERT trigger",
+          "fix": "Added v_event_type = buyin.observed for RATED_BUYIN and RATED_ADJUSTMENT kinds"
+        },
+        {
+          "id": "Bug-3",
+          "rpc": "rpc_create_financial_adjustment",
+          "root_cause": "Same ON CONFLICT DO UPDATE denial-policy issue as Bug-1",
+          "fix": "Same DO NOTHING fix — adjustment RPC ready for Phase 2.1 outbox extension"
+        },
+        {
+          "id": "Bug-4",
+          "table": "finance_outbox",
+          "root_cause": "Migration 20260511134100 assumed SECURITY DEFINER RPCs for all outbox writes, but rpc_create_financial_txn is SECURITY INVOKER (ADR-040); no INSERT policy = default deny for authenticated role",
+          "fix": "Added finance_outbox_insert_staff INSERT policy + GRANT INSERT ON finance_outbox TO authenticated"
+        }
+      ],
+      "transport_bugs_migration": "supabase/migrations/20260512021632_fix_wave2_transport_path_bugs.sql",
+      "proof_results": {
+        "I1_atomicity": {
+          "result": "PASS",
+          "detail": "Class A success (PFT + 1 outbox row buyin.recorded/ledger/actual); Class A F14 rollback (exception + 0 rows both tables); Class B success (grind_id + 1 outbox row grind.observed/operational/estimated/player_id=NULL); Class B cross-casino rollback (exception + 0 rows)"
+        },
+        "I2_durability": {
+          "result": "PASS",
+          "detail": "delivery_attempts=1 post-crash; reclaimability confirmed; delivery_attempts=2 on retry; processed_at set after commit"
+        },
+        "I3_idempotency": {
+          "result": "PASS",
+          "detail": "First delivery: processed, 1 proof-state row; duplicate delivery: duplicate, still 1 proof-state row (SQL ON CONFLICT DO NOTHING)"
+        },
+        "I4_replayability": {
+          "result": "PASS",
+          "detail": "15 rows; live fingerprint = replay fingerprint = eaae205b1e02b9d8067c29766f34abde; deterministic ordering via UUIDv7 event_id"
+        },
+        "I5_cashout_non_emission": {
+          "result": "PASS",
+          "detail": "Cashout (direction=out, source=cage): PFT row created, 0 finance_outbox rows emitted"
+        },
+        "runtime_drift": {
+          "result": "ALL_NON_BLOCKING",
+          "detail": "8 checks PASS; no RELAY_AUTH_BROKEN, SERVICE_ROLE_RPC_ACCESS_BROKEN, or RLS_BOUNDARY_BROKEN"
+        }
+      },
+      "decision": "Phase 2.1 authorized",
+      "signoff_artifact": "docs/issues/gaps/financial-data-distribution-standard/wave-2/w-2-integration-proof/WAVE-2-INTEGRATION-PROOF-SIGNOFF.md",
+      "teardown_artifact": "docs/issues/gaps/financial-data-distribution-standard/wave-2/w-2-integration-proof/TEARDOWN-ARTIFACT-PRD-082.md",
+      "teardown_status": "migration_authored",
+      "teardown_migration": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
+      "teardown_note": "Teardown migration authored 2026-05-17. Must be applied before any Phase 2.1 producer-expansion artifact merges. Harness is local-only; not present in shared/remote environments.",
+      "harness_artifacts_delivered": [
+        "supabase/migrations/20260512000744_add_outbox_integration_proof_state.sql",
+        "supabase/migrations/20260512021632_fix_wave2_transport_path_bugs.sql",
+        "scripts/outbox-proof/seed.ts",
+        "scripts/outbox-proof/helpers.ts",
+        "scripts/outbox-proof/run-all.ts",
+        "scripts/outbox-proof/i1-atomicity.ts",
+        "scripts/outbox-proof/i2-durability.ts",
+        "scripts/outbox-proof/i3-idempotency.ts",
+        "scripts/outbox-proof/i4-replayability.ts",
+        "scripts/outbox-proof/i5-cashout-non-emission.ts",
+        "scripts/outbox-proof/drift-check.ts"
+      ],
+      "exit_gates_passed": [
+        "I1 Atomicity — PASS (both exemplar producers, failure injection, cross-casino rejection)",
+        "I2 Durability — PASS (crash simulation, reclaim, delivery_attempts increment)",
+        "I3 Idempotency — PASS (duplicate delivery returns duplicate; SQL ON CONFLICT DO NOTHING boundary)",
+        "I4 Replayability — PASS (live fingerprint = replay fingerprint = eaae205b1e02b9d8067c29766f34abde)",
+        "I5 Cashout Non-Emission — PASS (0 finance_outbox rows on cage cashout)",
+        "Runtime drift ALL_NON_BLOCKING — 8 checks PASS",
+        "Signoff artifact decision: Phase 2.1 authorized"
+      ]
+    },
+    {
+      "id": "2.1",
+      "label": "Producer Expansion A: Financial Adjustment",
+      "wave": 2,
+      "status": "not_started",
+      "prd": null,
+      "exec_spec": null,
+      "exit_date": null,
+      "commit": null,
+      "entry_gate": "Phase 2.0 exit ✅ + PRD-082 signoff ✅ + PRD-082 teardown migration ⚠️ (pending) + Phase 2.1 PRD (not yet authored)",
+      "scope": "Wire rpc_create_financial_adjustment to emit a finance_outbox row atomically within its existing transaction boundary. Bug-3 fix (DO NOTHING idempotency) already applied in PRD-082 migration 20260512021632 — the outbox INSERT is the only remaining work. No relay, consumer, or DDL schema changes.",
+      "semantic_contract": {
+        "event_type": "adjustment.recorded",
+        "fact_class": "ledger",
+        "origin_label": "actual",
+        "player_id": "NOT NULL — full attribution required",
+        "table_id": "mandatory",
+        "aggregate_id": "PFT row id for the adjustment"
+      },
+      "deliverables": [
+        "PRD-082 teardown migration (pre-merge gate) — supabase/migrations/<ts>_remove_prd082_harness_receipt_proof_state.sql",
+        "Migration extending rpc_create_financial_adjustment with outbox emission inside same BEGIN…COMMIT",
+        "Event catalog entry for adjustment.recorded (registered before producer ships)",
+        "FinancialOutboxEventDTO unchanged — no shape changes",
+        "Unit test: adjustment path calls single RPC (no TS-level outbox fallback)",
+        "I1 atomicity proof test for adjustment path (exemplar proof does not certify this producer)",
+        "npm run db:types-local exit 0",
+        "type-check, lint exit 0"
+      ],
+      "exit_gate": [
+        "rpc_create_financial_adjustment atomically emits finance_outbox row (I1 for adjustment path)",
+        "adjustment.recorded registered in Wave 2 event catalog",
+        "No second adjustment-to-outbox path in TypeScript",
+        "PRD-082 teardown migration applied",
+        "All gates pass"
+      ],
+      "skills": [
+        "backend-service-builder (RPC migration)",
+        "qa-specialist (I1 atomicity test)"
+      ]
+    },
+    {
+      "id": "2.2",
+      "label": "Producer Expansion B: Dependency Events (Fills + Credits)",
+      "wave": 2,
+      "status": "not_started",
+      "prd": null,
+      "exec_spec": null,
+      "exit_date": null,
+      "commit": null,
+      "entry_gate": "Phase 2.1 exit",
+      "scope": "Wire rpc_request_table_fill and rpc_request_table_credit to emit finance_outbox rows atomically. Both must ship simultaneously — symmetric Dependency Events; asymmetric rollout is not permitted (ADR-055 parity within the Dependency Event category). No relay, consumer, or DDL schema changes.",
+      "semantic_contract": {
+        "fact_class": "operational — Dependency Events are not Authority Facts",
+        "origin_label": "estimated — provenance label, not an accuracy qualifier; fills and credits are operationally auditable to the cent",
+        "player_id": "NULL unconditional — no player attribution",
+        "table_id": "mandatory",
+        "event_type_fill": "fill.recorded",
+        "event_type_credit": "credit.recorded",
+        "authority_conflation_forbidden": "origin_label must not be upgraded to actual by any consumer"
+      },
+      "deliverables": [
+        "Migration extending rpc_request_table_fill with outbox emission",
+        "Migration extending rpc_request_table_credit with outbox emission",
+        "Both migrations in same PR / deployment (ADR-055 simultaneous landing)",
+        "Event catalog entries for fill.recorded and credit.recorded",
+        "fact_class = operational and origin_label = estimated hardcoded in both RPCs (not caller-derived)",
+        "player_id = NULL enforced unconditionally in both RPCs",
+        "I1 atomicity proof test for fill path",
+        "I1 atomicity proof test for credit path",
+        "Tests proving origin_label cannot be upgraded by consumer",
+        "type-check, lint exit 0"
+      ],
+      "exit_gate": [
+        "Both rpc_request_table_fill and rpc_request_table_credit atomically emit finance_outbox rows",
+        "fill.recorded and credit.recorded registered in Wave 2 event catalog",
+        "fact_class = operational and origin_label = estimated verified in migration text",
+        "No authority conflation — consumer tests assert origin_label stays estimated",
+        "All gates pass"
+      ],
+      "skills": [
+        "backend-service-builder (2 RPC migrations, simultaneous)",
+        "qa-specialist (I1 atomicity + classification guard tests)"
+      ]
+    },
+    {
+      "id": "2.3",
+      "label": "First Consumer Slice: Lifecycle-Aware Completeness Projection",
+      "wave": 2,
+      "status": "not_started",
+      "prd": null,
+      "exec_spec": null,
+      "exit_date": null,
+      "commit": null,
+      "entry_gate": "Phase 2.1 exit (Class A adjustment producer wired)",
+      "scope": "First projection consumer. Resolves DEC-1: all visit-level financial aggregates currently emit completeness.status: unknown because the system has no lifecycle-aware projection mechanism. This slice builds the consumer infrastructure that makes complete and partial completeness signals possible.",
+      "dec_1_resolution": {
+        "decision_id": "DEC-1",
+        "current_state": "VisitFinancialSummaryDTO.total_in/total_out/net_amount and FinancialSectionDTO.totalCashIn/totalCashOut/netPosition emit completeness.status: unknown always",
+        "root_cause": "mtl_gaming_day_summary view and player_financial_transaction aggregates have no gaming-day lifecycle column signaling when a gaming day is closed",
+        "resolution_approach": "Projection store for visit-level Class A financial state + gaming-day lifecycle signal + consumer reading buyin.recorded, cashout.recorded, adjustment.recorded",
+        "affects_routes": [
+          "GET /api/v1/visits/{visitId}/financial-summary",
+          "GET /api/v1/rating-slips/{id}/modal-data (financial section)"
+        ]
+      },
+      "consumer_constraints": [
+        "Must use processed_messages idempotency before applying any side effect",
+        "Must pass origin_label through unchanged — no upgrade from estimated to actual",
+        "Must not write to player_financial_transaction or any authoring store",
+        "Reads fact_class and origin_label directly — never infers from payload content"
+      ],
+      "deliverables": [
+        "Projection store migration (gaming-day-scoped Class A financial state)",
+        "Consumer service reading finance_outbox for Class A event types",
+        "processed_messages idempotency wired within same transaction as projection update",
+        "Gaming-day lifecycle signal mechanism (close event or lifecycle column)",
+        "VisitFinancialSummaryDTO completeness: complete when gaming-day closed, partial when open, unknown only when no projection data",
+        "FinancialSectionDTO completeness updated equivalently",
+        "I3 consumer idempotency re-verification at consumer layer",
+        "I4 replay test: truncate projection store → replay Class A events → equivalent completeness state",
+        "type-check, lint, build exit 0"
+      ],
+      "exit_gate": [
+        "DEC-1 resolved — visit-level financial aggregates emit complete/partial when events are flowing",
+        "Consumer idempotency test passes: duplicate delivery of same event_id produces one projection update",
+        "Replay produces identical completeness state as live processing",
+        "Wave 1 surface rendering contract not broken — labels still visible",
+        "All gates pass"
+      ],
+      "skills": [
+        "backend-service-builder (projection store + consumer)",
+        "qa-specialist (idempotency + replay tests)",
+        "api-builder (if projection store surface exposed via existing routes)"
+      ]
+    },
+    {
+      "id": "2.4",
+      "label": "Consumer Expansion: Operational Telemetry Projection",
+      "wave": 2,
+      "status": "not_started",
+      "prd": null,
+      "exec_spec": null,
+      "exit_date": null,
+      "commit": null,
+      "entry_gate": "Phase 2.2 exit (all producers wired) + Phase 2.3 exit (consumer infrastructure established)",
+      "scope": "Projection consumer for Class B (grind) and Dependency Event (fills, credits) streams. Shift telemetry becomes event-driven rather than polling authoring stores.",
+      "events_consumed": [
+        "grind.observed (fact_class: operational, origin_label: estimated)",
+        "fill.recorded (same labels)",
+        "credit.recorded (same labels)"
+      ],
+      "authority_rule": "All three event types carry origin_label: estimated. Mixed-class surfaces aggregating alongside Class A events must degrade to estimated (Actual > Observed > Estimated). No surface may show a combined operational + ledger total without degradation labeling.",
+      "deliverables": [
+        "Operational projection store migration (shift-level Class B + Dependency Event state)",
+        "Consumer reading grind.observed, fill.recorded, credit.recorded from finance_outbox",
+        "processed_messages idempotency wired for operational consumer",
+        "Authority degradation enforced: mixed-class aggregates degrade to estimated",
+        "Completeness: partial during open shift, complete on gaming-day close",
+        "I4 replay test for operational projection",
+        "Shift telemetry surfaces updated to consume projection (not poll authoring store)",
+        "type-check, lint, build exit 0"
+      ],
+      "exit_gate": [
+        "Shift telemetry receives fresh Class B + Dependency Event data via outbox",
+        "Authority labels correct: type: estimated on all operationally-derived values",
+        "Mixed-class surface shows degraded authority (not spurious actual)",
+        "Completeness signals meaningful during shift lifecycle",
+        "All gates pass"
+      ],
+      "skills": [
+        "backend-service-builder (operational projection store + consumer)",
+        "qa-specialist (authority degradation tests; mixed-class aggregate tests)",
+        "frontend-design-pt-2 (if shift dashboard surface changes required)"
+      ]
+    },
+    {
+      "id": "2.5",
+      "label": "Observability + Sign-Off",
+      "wave": 2,
+      "status": "not_started",
+      "prd": null,
+      "exec_spec": null,
+      "exit_date": null,
+      "commit": null,
+      "entry_gate": "Phase 2.4 exit",
+      "scope": "Minimal relay health observability, outbox retention policy, and Wave 2 sign-off artifact.",
+      "deliverables": [
+        "outbox_backlog_size log line in relay worker (count of processed_at IS NULL rows per cycle)",
+        "processing_lag_ms log line (elapsed from finance_outbox.created_at to processed_at)",
+        "Retention policy for processed rows older than 7 days",
+        "Wave 2 sign-off artifact: docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-2-SIGN-OFF.md"
+      ],
+      "signoff_artifact_required_sections": [
+        "Summary of all phases completed",
+        "I1–I4 proof record per producer",
+        "DEC-1 resolution record",
+        "Known residual gaps (multi-consumer fan-out, CDC relay, external consumer contract)"
+      ],
+      "exit_gate": [
+        "Backlog and lag metrics appear in relay logs",
+        "Retention policy active (no indefinite accumulation)",
+        "Sign-off document authored and approved",
+        "All gates pass"
+      ],
+      "skills": [
+        "/lead-architect (sign-off artifact)",
+        "qa-specialist (final gate)"
+      ]
+    }
+  ],
+
+  "deferred_register": [
+    {
+      "id": "TEARDOWN-PRD-082",
+      "item": "PRD-082 harness teardown migration",
+      "status": "migration_authored",
+      "priority": "Must be applied before Phase 2.1 merge",
+      "artifact": "docs/issues/gaps/financial-data-distribution-standard/wave-2/w-2-integration-proof/TEARDOWN-ARTIFACT-PRD-082.md",
+      "migration_path": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
+      "required_actions": [
+        "Restore rpc_commit_consumer_receipt to non-harness body (remove proof-state write)",
+        "DROP TABLE IF EXISTS public.outbox_integration_proof_state",
+        "Revoke harness-only grants if applicable",
+        "Comments documenting teardown completion"
+      ],
+      "current_state": "Harness is local-only; not present in shared/remote environments",
+      "note": "outbox_integration_proof_state must not be reused as a projection store or consumer substrate."
+    },
+    {
+      "id": "WS_PRODUCER_ADJUSTMENT",
+      "item": "rpc_create_financial_adjustment outbox extension",
+      "status": "dormant",
+      "activates_in": "Phase 2.1",
+      "note": "Bug-3 (ON CONFLICT DO NOTHING) already patched in 20260512021632. Outbox INSERT is the only remaining work."
+    },
+    {
+      "id": "WS_PRODUCER_FILL",
+      "item": "rpc_request_table_fill Dependency Event wiring",
+      "status": "dormant",
+      "activates_in": "Phase 2.2",
+      "note": "Must ship simultaneously with WS_PRODUCER_CREDIT — symmetric Dependency Event rollout pair (ADR-055 intra-category parity)."
+    },
+    {
+      "id": "WS_PRODUCER_CREDIT",
+      "item": "rpc_request_table_credit Dependency Event wiring",
+      "status": "dormant",
+      "activates_in": "Phase 2.2",
+      "note": "Must ship simultaneously with WS_PRODUCER_FILL — symmetric Dependency Event rollout pair (ADR-055 intra-category parity)."
+    },
+    {
+      "id": "DEC-1-COMPLETENESS",
+      "item": "Completeness status unknown on visit-level and MTL gaming-day aggregates",
+      "status": "open",
+      "resolves_in": "Phase 2.3",
+      "affects": [
+        "VisitFinancialSummaryDTO.total_in / total_out / net_amount — completeness: unknown",
+        "FinancialSectionDTO.totalCashIn / totalCashOut / netPosition — completeness: unknown",
+        "MtlGamingDaySummaryDTO aggregates — completeness: unknown"
+      ],
+      "resolution_path": "Phase 2.3 builds lifecycle-aware completeness projection from finance_outbox Class A events. Until then, all visit-level and MTL gaming-day aggregates emit unknown.",
+      "routes_affected": [
+        "GET /api/v1/visits/{visitId}/financial-summary",
+        "GET /api/v1/rating-slips/{id}/modal-data (financial section)"
+      ]
+    },
+    {
+      "id": "CICD-PREREQUISITES",
+      "item": "Wave 2 CI/CD prerequisites deferred from Wave 1",
+      "status": "open",
+      "resolves_in": "Pre-merge or early Phase 2.1",
+      "items": [
+        "Staging Supabase project provisioned (schema migrations cannot go unverified when outbox and dual-layer stores are involved)",
+        "Branch protection on main enabled",
+        "deploy-staging.yml repaired and migration automation active",
+        "Preview environment isolation (separate Supabase project per preview or branch)"
+      ],
+      "note": "Deferred from EXEC-079 (Phase 1.5). Must be resolved before Wave 2 migrations reach remote environments."
+    }
+  ],
+
+  "validation_matrix": {
+    "I1_atomicity": {
+      "scope": "producer-specific — must re-prove per new producer",
+      "proofs": [
+        {
+          "producer": "rpc_create_financial_txn (Class A exemplar)",
+          "phase": "2.0",
+          "harness_result": "5/5 PASS (unit)",
+          "integration_result": "PASS (PRD-082 local run)",
+          "commit": "8a1b8741"
+        },
+        {
+          "producer": "rpc_record_grind_observation (Class B exemplar)",
+          "phase": "2.0",
+          "harness_result": "included in 5/5 PASS",
+          "integration_result": "PASS (PRD-082 local run)",
+          "commit": "8a1b8741"
+        },
+        {
+          "producer": "rpc_create_financial_adjustment",
+          "phase": "2.1",
+          "harness_result": null,
+          "integration_result": null,
+          "status": "pending — required deliverable in Phase 2.1"
+        },
+        {
+          "producer": "rpc_request_table_fill",
+          "phase": "2.2",
+          "harness_result": null,
+          "integration_result": null,
+          "status": "pending — required deliverable in Phase 2.2"
+        },
+        {
+          "producer": "rpc_request_table_credit",
+          "phase": "2.2",
+          "harness_result": null,
+          "integration_result": null,
+          "status": "pending — required deliverable in Phase 2.2"
+        }
+      ]
+    },
+    "I2_durability": {
+      "scope": "transport baseline — inherited by 2.1–2.5 unless relay architecture changes",
+      "proven_in": "2.0",
+      "harness_result": "4/4 PASS",
+      "integration_result": "PASS (PRD-082 local run — delivery_attempts=2 on retry after crash simulation)",
+      "commit": "8a1b8741",
+      "re_verify_trigger": "relay worker architecture change or ordering guarantee change"
+    },
+    "I3_idempotency": {
+      "scope": "transport baseline; consumer-level re-verified per new consumer projection",
+      "proven_in": "2.0",
+      "harness_result": "5/5 PASS",
+      "integration_result": "PASS (PRD-082 local run — duplicate returns duplicate; SQL ON CONFLICT DO NOTHING boundary)",
+      "commit": "8a1b8741",
+      "re_verify_phases": [
+        "2.3 (Class A projection consumer)",
+        "2.4 (operational telemetry consumer)"
+      ]
+    },
+    "I4_replayability": {
+      "scope": "transport baseline; projection-level re-verified per new consumer projection",
+      "proven_in": "2.0",
+      "harness_result": "5/5 PASS",
+      "integration_result": "PASS (PRD-082 local run — live fingerprint = replay fingerprint = eaae205b1e02b9d8067c29766f34abde)",
+      "commit": "8a1b8741",
+      "replay_ordering": "ORDER BY (table_id, event_id) — UUIDv7 monotonic guarantees determinism",
+      "re_verify_phases": [
+        "2.3 (Class A projection replay)",
+        "2.4 (operational projection replay)"
+      ]
+    },
+    "I5_truthfulness": {
+      "scope": "surface enforcement — Wave 1 baseline; inherited",
+      "proven_in": "Wave 1 Phase 1.4",
+      "harness_result": "PASS (EXEC-078)",
+      "integration_result": "PASS (PRD-082 local run — cashout non-emission confirmed)",
+      "commit_wave1": "Wave 1 EXEC-078",
+      "re_verify_trigger": "surface rendering contract change or new financial surface added"
+    }
+  },
+
+  "open_decisions": [
+    {
+      "id": "DEC-W2-1",
+      "question": "DEC-1: how does the system emit completeness complete/partial on visit-level financial aggregates?",
+      "status": "open",
+      "blocks": "Phase 2.3 scope definition",
+      "resolution_path": "Lifecycle-aware completeness projection built in Phase 2.3. Gaming-day lifecycle signal (close event or column) enables complete/partial emission.",
+      "until_resolved": "All visit-level financial aggregates emit completeness.status: unknown"
+    }
+  ],
+
+  "transport_infrastructure_posture": {
+    "status": "proven — inherited by all Phase 2.1–2.5 work",
+    "as_of_commit": "b1d45302",
+    "database_layer": [
+      "generate_uuid_v7() — migration 20260511134015",
+      "finance_outbox Wave 2 DDL (event_id UUIDv7 PK, all discriminator fields) — migration 20260511134100",
+      "table_buyin_telemetry event_type NOT NULL + bridge trigger fix — migration 20260511134200",
+      "processed_messages (event_id + casino_id UNIQUE) — migration 20260511134300",
+      "rpc_claim_outbox_batch (FOR UPDATE SKIP LOCKED, service_role) — migration 20260511134400",
+      "rpc_commit_consumer_receipt (processed|duplicate, SECURITY DEFINER, service_role) — migration 20260511134450",
+      "rpc_create_financial_txn outbox extension (Class A, SECURITY INVOKER) — migration 20260511134600",
+      "rpc_record_grind_observation new RPC (Class B, SECURITY DEFINER) — migration 20260511134700",
+      "finance_outbox_insert_staff INSERT policy + GRANT for authenticated role — migration 20260512021632",
+      "RLS hardening: finance_outbox + processed_messages deny-by-default — migration 20260511134500"
+    ],
+    "application_layer": [
+      "FinancialOutboxEventDTO — services/player-financial/dtos.ts",
+      "runConsumer() — services/player-financial/outbox-consumer.ts",
+      "POST /api/internal/outbox-relay (CRON_SECRET bearer auth) — app/api/internal/outbox-relay/route.ts",
+      "Vercel cron (* * * * *) — vercel.json"
+    ],
+    "test_layer": [
+      "tests/failure/i1-atomicity.test.ts (5 tests)",
+      "tests/failure/i2-durability.test.ts (4 tests)",
+      "tests/failure/i3-idempotency.test.ts (5 tests)",
+      "tests/failure/i4-replayability.test.ts (5 tests)",
+      "services/player-financial/__tests__/outbox-producers.test.ts (8 unit + 3 skipped integration)",
+      "services/player-financial/__tests__/outbox-relay.test.ts (8 tests)",
+      "services/player-financial/__tests__/outbox-consumer.test.ts (6 tests)",
+      "supabase/tests/security/outbox_transport_access.test.sql (10 pgTAP, local only)",
+      "supabase/tests/migrations/outbox_legacy_shape.test.sql (10 pgTAP, local only)"
+    ]
+  },
+
+  "governance_rules": {
+    "phase_entry": "Every phase requires PRD drafted & approved → EXEC-SPEC scaffolded → /build-pipeline executed to exit criteria. Tracker checkbox completion does NOT authorize starting the next phase.",
+    "skill_dispatch": "Skills are dispatched by /build-pipeline, not invoked directly. See WAVE-2-ROLLOUT-MAP.md §3.",
+    "parity_rule": "ADR-055 is not relaxed. No asymmetric rollout. Fills and credits are a symmetric Dependency Event rollout pair — intra-category parity; they must land in the same slice. Dependency Events must carry origin_label: estimated — not upgradeable.",
+    "frozen_docs": "ADR-052–056 are frozen. Violations require a superseding ADR — not patches to frozen docs.",
+    "i1_scope": "I1 atomicity is producer-scoped. Every new producer must ship with an explicit atomicity proof test. The exemplar proof does not certify future producers.",
+    "i2_i3_i4_scope": "I2–I4 are transport-substrate invariants. Proven once at relay/consumer architecture level. Re-verify only if relay worker, ordering guarantee, or idempotent-consumer implementation changes materially.",
+    "teardown_rule": "PRD-082 harness teardown migration must be authored and applied before any Phase 2.1 migration merges. See TEARDOWN-ARTIFACT-PRD-082.md."
+  }
+}

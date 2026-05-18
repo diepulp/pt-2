@@ -403,7 +403,6 @@ export function RatingSlipModal({
 
       try {
         await createAdjustment.mutateAsync({
-          casino_id: casinoId,
           player_id: modalData.player.id,
           visit_id: modalData.slip.visitId,
           delta_amount: data.deltaAmount * 100, // Convert to cents

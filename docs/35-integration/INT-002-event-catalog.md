@@ -798,7 +798,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 |---|---|---|---|---|---|
 | `buyin.recorded` | A | `ledger` | `actual` | `rpc_create_financial_txn` | Emits when `rating_slip_id` resolves to same-casino `rating_slip.table_id`. Pit cash and chips buy-ins. |
 | `cashout.recorded` | A | `ledger` | `actual` | `rpc_create_financial_txn` | **Reserved — no current eligible producer.** All `direction='out'` Class A paths are cage-scoped; cage cashouts lack a deterministic `rating_slip.table_id` per ADR-057 D2. Reserved for a future rated pit cashout path. Must not emit for cage cashouts. |
-| `adjustment.recorded` | A | `ledger` | `actual` | `rpc_create_financial_adjustment` | Emits only when inherited/current `rating_slip_id` resolves to same-casino `rating_slip.table_id`. Linked adjustments to eligible originals only. |
+| `adjustment.recorded` | A | `ledger` | `actual` | `rpc_create_financial_adjustment` | Emits only for linked adjustments whose original PFT recomputes as ADR-057-eligible: original `source='pit'`, `direction='in'`, `tender_type IN ('cash','chips')`, and inherited `rating_slip_id` resolves to same-casino `rating_slip.table_id`. |
 | `buyin.observed` | B | `operational` | `estimated` | `rpc_record_grind_observation` | Emits unconditionally for all Class B grind buy-in observations. |
 | `grind.observed` | B | `operational` | `estimated` | `rpc_record_grind_observation` | Emits unconditionally for all Class B grind observations. |
 | `fill.recorded` | Dep | `operational` | `estimated` | `rpc_request_table_fill` | Dependency Event. Emits unconditionally for table fill requests. |

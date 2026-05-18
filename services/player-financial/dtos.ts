@@ -269,8 +269,6 @@ export type AdjustmentReasonCode =
  * @see rpc_create_financial_adjustment in database
  */
 export interface CreateFinancialAdjustmentInput {
-  /** Casino ID (must match RLS context) */
-  casino_id: string;
   /** Player ID */
   player_id: string;
   /** Visit ID */

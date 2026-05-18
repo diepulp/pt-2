@@ -2,8 +2,8 @@
 
 ---
 
-status: Active — Phase 2.0 Complete (PRD-081, 2026-05-11). Phase 2.1 ready to initiate.
-date: 2026-05-11
+status: Active — Phase 2.0 Complete (PRD-081, 2026-05-11). PRD-082 Integration Proof complete (2026-05-12) — Phase 2.1 authorized. PRD-082 harness teardown required before Phase 2.1 merge.
+date: 2026-05-17
 phase_2_0_closed: 2026-05-11
 phase_2_0_prd: PRD-081
 phase_2_0_exec: EXEC-081

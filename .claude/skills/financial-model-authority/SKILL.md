@@ -1,6 +1,6 @@
 ---
 name: financial-model-authority
-description: Root authority on PT-2's global financial model overhaul. This skill is the final arbiter on conformance with ADR-052, ADR-053, ADR-054, and ADR-055. It governs the Wave 2 ubiquitous language (Authority Fact / Telemetry Fact / Dependency Event / Projection Input / Projection Artifact / Surface Value), the transitional bridge DTO contract, and open implementation gaps.
+description: Root authority on PT-2's global financial model overhaul. This skill is the final arbiter on conformance with ADR-052 through ADR-056. It governs the Wave 2 ubiquitous language (Authority Fact / Telemetry Fact / Dependency Event / Projection Input / Projection Artifact / Surface Value), the transport substrate posture (GAP-F1 closed, exemplar pair proven, Phase 2.1 authorized), and open implementation gaps.
 ---
 
 # Financial Model Authority — PT-2 Pilot
@@ -67,7 +67,7 @@ The discriminators (`fact_class`, `origin_label`) are **immutable**. Set at inse
 ## Wave 2 Ubiquitous Language
 
 > **Source:** `docs/issues/gaps/financial-data-distribution-standard/wave-2/PRE-WAVE-2-UBIQUITOUS-LANGUAGE-PROPOSITION.md`
-> **Status:** PROPOSED — must be adopted before Wave 2 producer wiring begins.
+> **Status:** ADOPTED — resolved as blocker B-1 (2026-05-07). All Wave 2 planning documents use these terms. See `wave-2/WAVE-2-UBIQUITOUS-LANGUAGE-CLARIFICATION.md` for the canonical stabilization note.
 > **Core rule:** Do not use **"financial event"** as an umbrella term. It is overloaded and invites scope drift. Use the six categories below.
 
 ### Category Definitions
@@ -214,39 +214,30 @@ These come up repeatedly. The answers do not change without a new ADR supersedin
 
 ## Active Bridge DTO (Transitional)
 
-**Status:** TRANSITIONAL — owned by PRD-072 / EXEC-072  
-**Affected fields:** `RecentSessionDTO.total_buy_in/cash_out/net`, `VisitLiveViewDTO.session_total_buy_in/cash_out/net`
+**Status:** NO ACTIVE BRIDGES — BRIDGE-001 retired in EXEC-074 (commit `e83a2c12`, 2026-04-30).
 
-```ts
-type FinancialValueBridge = {
-  value: number           // dollar-float (NOT canonical integer cents)
-  type: 'actual'
-  source: string
-  completeness: { status: 'complete' | 'unknown' }
-}
-```
+All `RecentSessionDTO` and `VisitLiveViewDTO` financial fields are now integer cents with `financialValueSchema.int()` enforcement. `formatDollars` replaced with `formatCents` at all render sites (EXEC-075, 2026-05-03).
 
-Bridge rules: preserve `/100` conversions; use `formatDollars(field.value)`; do not enforce `financialValueSchema`; do not canonicalize to cents.
-
-**Sunset trigger:** Phase 1.2 Financial Data Canonicalization PRD. Retirement actions: remove `/100`, make `value` integer cents, apply `financialValueSchema`, migrate renders to `formatCents`.
-
-Canonical target vs bridge DTO distinction: the catalog describes the destination; the active EXEC-SPEC describes the road. See `docs/issues/gaps/financial-data-distribution-standard/decisions/TRANSITIONAL-GOVERNANCE-CAVEAT.md`.
+For the bridge retirement history see `ROLLOUT-TRACKER.json → retired_bridges[id="BRIDGE-001"]`. For the transitional governance model that governed it see `docs/issues/gaps/financial-data-distribution-standard/decisions/TRANSITIONAL-GOVERNANCE-CAVEAT.md`.
 
 ---
 
 ## Open Implementation Gaps
 
-| Gap | Description | Severity |
-|---|---|---|
-| **GAP-F1** | `finance_outbox` has zero producers — outbox pattern not yet wired to PFT or grind write paths | Structural — ADR-054 is not yet enforced in code |
-| **FPT-001** | FACT-LOYALTY-REDEMPTION doc misclassified as broken; implementation is correct | Doc error (INTERIM) |
-| **FPT-002** | GAP-L2 accrual caller misidentified as UNKNOWN | Doc error (INTERIM) |
-| **FPT-003** | `mtlEntries={[]}` not connected; `onViewHistory` unwired — reason unestablished | Doc + omission (INTERIM) |
-| **FPT-004** | Trace staleness post Phase 1.1 — 4 stale findings + 1 new gap N1 | Doc staleness (INTERIM) |
+| Gap | Description | Severity | Status |
+|---|---|---|---|
+| **GAP-F1** | `finance_outbox` had zero producers — outbox pattern not wired to PFT or grind write paths | Structural — ADR-054 enforcement | **CLOSED** — Phase 2.0 (PRD-081, commit `8a1b8741`, 2026-05-11). Exemplar pair proven. I1–I4 PASS. |
+| **DEC-1** | Visit-level financial aggregates emit `completeness.status: 'unknown'` always — no lifecycle-aware projection exists | Functional — completeness signals | **OPEN** — resolves in Phase 2.3 (First Consumer Slice). See `WAVE-2-TRACKER.json → open_decisions`. |
+| **FPT-001** | FACT-LOYALTY-REDEMPTION doc misclassified as broken; implementation is correct | Doc error (INTERIM) | Open |
+| **FPT-002** | GAP-L2 accrual caller misidentified as UNKNOWN | Doc error (INTERIM) | Open |
+| **FPT-003** | `mtlEntries={[]}` not connected; `onViewHistory` unwired — reason unestablished | Doc + omission (INTERIM) | Open |
+| **FPT-004** | Trace staleness post Phase 1.1 — 4 stale findings + 1 new gap N1 | Doc staleness (INTERIM) | Open |
 
-GAP-F1 is the most structurally significant active gap. Any spec or implementation that assumes outbox producers exist must be flagged: that wire-up is pending.
+**GAP-F1 is closed.** Transport substrate is proven. The system now has a trustworthy spine: `finance_outbox` DDL + relay + idempotent consumer + I1–I4 harness + runtime-validated integration proof (PRD-082). What remains is controlled producer propagation (Phases 2.1–2.2) and projection consumers (Phases 2.3–2.4).
 
-Read `references/open-issues.md` for full gap detail. For the GAP-F1 closure checklist (6 concrete steps from DDL through consumer wiring), read §12 of the outbox knowledge base.
+**The system does NOT yet have** real projection consumers, lifecycle-aware completeness, operational telemetry projections, or mature replay-driven derived state. These are all in Phases 2.3–2.4. The transport substrate is established; the application layer above it is not yet built.
+
+Read `references/open-issues.md` for FPT-001–004 full detail. For Wave 2 phase status read `WAVE-2-TRACKER.json`.
 
 ---
 
@@ -258,7 +249,7 @@ When reviewing a PRD, EXEC-SPEC, FIB, or code, walk through this sequence:
 
 **2. Check the write boundary.** Class A writes go through `rpc_create_financial_txn` or `rpc_create_financial_adjustment`. Class B writes go through the grind authoring path. Direct inserts into `player_financial_transaction` outside seed/test are non-conformant.
 
-**3. Check outbox coupling.** Does the authoring write emit to `finance_outbox` in the same transaction? (Note GAP-F1: this is not yet implemented. If a spec assumes it is available, flag the dependency.) If the work involves designing or reviewing the outbox itself — DDL shape, trigger vs. RPC form, relay worker, consumer idempotency, or projection surface contract — read the outbox knowledge base: `docs/issues/gaps/financial-data-distribution-standard/wave-2/outbox-knowledge-base.md`.
+**3. Check outbox coupling.** Does the authoring write emit to `finance_outbox` in the same transaction? GAP-F1 is closed — the transport substrate exists. The exemplar pair (`rpc_create_financial_txn`, `rpc_record_grind_observation`) is wired. For Phase 2.1–2.2 work, verify the new producer extension follows the same pattern (same-transaction INSERT, no TypeScript fallback path, I1 atomicity proof test required per producer). For Phase 2.2 specifically: fills and credits are a **symmetric Dependency Event rollout pair** — intra-category parity (ADR-055) forbids landing one without the other in the same slice. If the work involves the outbox DDL, relay worker, consumer idempotency, or projection surface contract, read the outbox knowledge base: `docs/issues/gaps/financial-data-distribution-standard/wave-2/outbox-knowledge-base.md`.
 
 **4. Check discriminator fields.** Does every row set `fact_class` and `origin_label` explicitly at insert? Are these typed as enums, not free strings?
 
@@ -407,23 +398,37 @@ Read `references/fact-registry.md` for authority rules, forbidden uses, and inte
 
 ## Rollout State
 
-**Read these two files at the start of every session:**
+**Read these files at the start of every session:**
 
-**1. Tracker (current state):**
+**1. Wave 2 tracker — current phase state (JSON):**
+```
+docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-TRACKER.json
+```
+Key fields: `cursor` (active phase + blocker + next action + Phase 2.1 authorization), `phases` (per-phase status, deliverables, exit gates), `deferred_register` (teardown gate, dormant workstreams, DEC-1), `validation_matrix` (I1–I5 per producer and phase), `transport_infrastructure_posture` (what is proven and in place).
+
+**2. Wave 2 progress tracker — human-readable companion:**
+```
+docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-PROGRESS-TRACKER.md
+```
+Narrative form of the JSON tracker. Keep both in sync when phase state changes.
+
+**3. Parent tracker (Wave 1 history + Wave 2 cursor pointer):**
 ```
 docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json
 ```
-Key fields: `cursor` (active phase + blocker + next action), `direction.principles`, `direction.non_goals`, `deferred_register`, `active_bridges`, `api_contract_delta`.
+Key fields: `cursor.wave_2_progress_tracker_json`, `cursor.blocker`, `cursor.next_action`, Wave 1 phase records, `api_contract_delta`.
 
-**2. Roadmap (strategic direction):**
+**4. Wave 2 roadmap (phase plan + exit gates):**
+```
+docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md
+```
+Read §2 (rollout principles), §3 (execution protocol), §4 (phase table with deliverables and exit gates per phase), §5 (failure-simulation alignment), §6 (non-goals). The roadmap owns the *what must be built and how*; the tracker owns the *where we are now*.
+
+**5. Global rollout roadmap (strategic direction, Wave 1 history):**
 ```
 docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md
 ```
-Read §2 (rollout principles), §2.5 (execution protocol — the PRD/EXEC-SPEC/build-pipeline chain), §8 (non-goals), §9 (skill routing), §10 (exit criteria). The roadmap owns the *why* and the *scope boundary*; the tracker owns the *where we are now*.
-
-The five principles in `direction.principles` and the non-goals in `direction.non_goals` inside the tracker are extracted from the roadmap for quick access — the roadmap has the full rationale.
-
-The human-readable progress companion is `ROLLOUT-PROGRESS.md` in the same directory. Tracker JSON + ROLLOUT-PROGRESS.md must be kept in sync when phase state changes.
+Read §2 (rollout principles), §2.5 (execution protocol), §8 (non-goals), §9 (skill routing), §10 (exit criteria).
 
 ---
 
@@ -431,17 +436,22 @@ The human-readable progress companion is `ROLLOUT-PROGRESS.md` in the same direc
 
 | File | When to Read |
 |---|---|
+| `docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-TRACKER.json` | **Wave 2 current state** — cursor, phase status, teardown gate, dormant workstreams, DEC-1, I1–I5 validation matrix per producer, transport infrastructure posture |
+| `docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-PROGRESS-TRACKER.md` | Human-readable companion to WAVE-2-TRACKER.json — same content in narrative form; transport bugs fixed, per-phase deliverables and exit gates, immediate next actions |
+| `docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md` | Wave 2 phase plan: rollout principles (§2), execution protocol (§3), phase table with deliverables and exit gates (§4), invariant scope (§5), non-goals (§6) |
+| `docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json` | Parent tracker: Wave 1 history, Wave 2 cursor pointer, API contract delta |
+| `docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md` | Global rollout strategy: Wave 1 history, execution protocol (§2.5), non-goals (§8), skill routing (§9), exit criteria (§10) |
 | `references/adr-registry.md` | Deep decision rationale; full consequences and rejected alternatives for ADR-052–055 |
 | `references/fact-registry.md` | Authority matrix per fact type; interaction rules (allowed / forbidden); storage details |
 | `references/enforcement-guide.md` | Non-conformant patterns exhaustive list; conformance checklist per domain |
-| `references/open-issues.md` | FPT-001–004 and GAP-F1 full detail; pending analysis passes |
+| `references/open-issues.md` | FPT-001–004 full detail; GAP-F1 closure record |
 | `docs/60-release/FEATURE_INTAKE_BRIEF_FORM.md` | FIB-H template: all sections A–L, containment loop rules, exclusion format, adjacent-ideas table, intake amendment protocol, scaffold admission checks |
 | `docs/60-release/zachman_interpolated_feature_intake_recommendation.md` | FIB-S JSON schema, Zachman-to-intake mapping, FIB-S admission gates, downstream consumption rules, traceability chain example |
 | `docs/70-governance/FIB_GENERATION_SCOPE_GUARDRAIL.md` | GOV-FIB-001 full rule set: change class gate, coverage mode rules, adjacent consequence ledger, red flags, §13 review checklist |
-| `docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md` | High-level execution strategy: rollout principles (§2), execution protocol/PRD-EXEC-SPEC chain (§2.5), non-goals (§8), skill routing (§9), exit criteria (§10) |
-| `docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json` | Machine-readable current state: active phase cursor, per-service status, deferred register, active bridges, API contract delta |
-| `docs/issues/gaps/financial-data-distribution-standard/wave-2/outbox-knowledge-base.md` | Full outbox implementation contract: `finance_outbox` DDL, trigger classification (D2 vs D6), relay worker, idempotent consumer, origin_label immutability, surface rendering contract (§6.2), GAP-F1 closure checklist (§12) |
-| `docs/issues/gaps/financial-data-distribution-standard/wave-2/PRE-WAVE-2-UBIQUITOUS-LANGUAGE-PROPOSITION.md` | Wave 2 UL proposition: full definitions, non-examples, boundary table, outbox implication, TBT/grind clarification, DEC-UL-1–4. Substrate for WAVE-2-ROADMAP and all Wave 2 implementation work. |
+| `docs/issues/gaps/financial-data-distribution-standard/wave-2/outbox-knowledge-base.md` | Full outbox implementation contract: `finance_outbox` DDL, trigger classification (D2 vs D6), relay worker, idempotent consumer, `origin_label` immutability, surface rendering contract (§6.2) |
+| `docs/issues/gaps/financial-data-distribution-standard/wave-2/PRE-WAVE-2-UBIQUITOUS-LANGUAGE-PROPOSITION.md` | Wave 2 UL: full definitions, non-examples, boundary table, outbox implication, TBT/grind clarification, DEC-UL-1–4 |
+| `docs/issues/gaps/financial-data-distribution-standard/wave-2/w-2-integration-proof/PRD-082-precis.md` | Transport proof précis: what was validated (transport substrate only), what remains (projection consumers, lifecycle completeness, operational telemetry), 4 transport bugs fixed, Phase 2.1 gate status |
+| `docs/issues/gaps/financial-data-distribution-standard/wave-2/w-2-integration-proof/TEARDOWN-ARTIFACT-PRD-082.md` | PRD-082 harness teardown requirements — blocking Phase 2.1 merge; migration path and accepted/rejected teardown mechanisms |
 
 Source docs (read-only reference, do not patch):
 - `docs/issues/gaps/financial-data-distribution-standard/FACT-AUTHORITY-MATRX-FIN-DOMAIN.md`

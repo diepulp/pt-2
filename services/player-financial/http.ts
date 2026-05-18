@@ -167,7 +167,6 @@ export class FinancialAdjustmentError extends Error {
  * @example
  * ```ts
  * const adjustment = await createFinancialAdjustment({
- *   casino_id: 'uuid',
  *   player_id: 'uuid',
  *   visit_id: 'uuid',
  *   delta_amount: -100, // Reduce total by $100

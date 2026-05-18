@@ -109,7 +109,6 @@ export function useCreateFinancialTransaction() {
  *
  * // Reduce total by $100 due to data entry error
  * await createAdjustment.mutateAsync({
- *   casino_id: casinoId,
  *   player_id: playerId,
  *   visit_id: visitId,
  *   delta_amount: -100,
