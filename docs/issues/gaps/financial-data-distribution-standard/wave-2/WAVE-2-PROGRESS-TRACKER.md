@@ -5,7 +5,7 @@
 **Authority:** `WAVE-2-ROLLOUT-MAP.md` (phase plan) · `ROLLOUT-TRACKER.json` (parent machine state)  
 **First established:** 2026-05-17  
 **Last updated:** 2026-05-17  
-**Current position:** Phase 2.1 AUTHORIZED — teardown migration authored (20260517141021), ready to apply. Phase 2.1 PRD not yet authored.
+**Current position:** Phase 2.1 AUTHORIZED — teardown applied to local DB (20260517141021, 2026-05-17). Phase 2.1 PRD not yet authored.
 
 ---
 
@@ -15,7 +15,7 @@
 |-------|-------|--------|-----|--------|
 | 2.0 | Exemplar Proof Slice | ✅ COMPLETE | PRD-081 | `8a1b8741` |
 | PRD-082 | Integration Proof Runtime Gate | ✅ COMPLETE | PRD-082 | `b1d45302` |
-| **PRD-082 Teardown** | **Harness cleanup pre-2.1 merge** | **✅ MIGRATION AUTHORED** | `20260517141021` | — |
+| **PRD-082 Teardown** | **Harness cleanup pre-2.1 merge** | **✅ APPLIED** | `20260517141021` | 2026-05-17 |
 | 2.1 | Producer Expansion A: Financial Adjustment | 🔲 NOT STARTED | PRD to author | — |
 | 2.2 | Producer Expansion B: Dependency Events | 🔲 NOT STARTED | PRD to author | — |
 | 2.3 | First Consumer Slice: Completeness Projection | 🔲 NOT STARTED | PRD to author | — |

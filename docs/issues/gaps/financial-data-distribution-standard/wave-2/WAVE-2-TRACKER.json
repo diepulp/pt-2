@@ -45,8 +45,8 @@
   "cursor": {
     "wave": 2,
     "active_phase": "2.1",
-    "phase_status": "teardown_authored_prd_pending",
-    "phase_label": "Phase 2.1 authorized (PRD-082 signoff 2026-05-12). PRD-082 harness teardown migration authored (20260517141021) — ready to apply. Phase 2.1 PRD not yet authored.",
+    "phase_status": "teardown_applied_prd_pending",
+    "phase_label": "Phase 2.1 authorized (PRD-082 signoff 2026-05-12). PRD-082 harness teardown applied to local DB (20260517141021, 2026-05-17). Phase 2.1 PRD not yet authored.",
     "blocker": null,
     "teardown_migration": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
     "next_action": "1. Author Phase 2.1 PRD for rpc_create_financial_adjustment outbox emission. 2. /lead-architect EXEC-SPEC scaffold. 3. /build PRD-###.",
@@ -196,9 +196,10 @@
       "decision": "Phase 2.1 authorized",
       "signoff_artifact": "docs/issues/gaps/financial-data-distribution-standard/wave-2/w-2-integration-proof/WAVE-2-INTEGRATION-PROOF-SIGNOFF.md",
       "teardown_artifact": "docs/issues/gaps/financial-data-distribution-standard/wave-2/w-2-integration-proof/TEARDOWN-ARTIFACT-PRD-082.md",
-      "teardown_status": "migration_authored",
+      "teardown_status": "applied",
       "teardown_migration": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
-      "teardown_note": "Teardown migration authored 2026-05-17. Must be applied before any Phase 2.1 producer-expansion artifact merges. Harness is local-only; not present in shared/remote environments.",
+      "teardown_applied_date": "2026-05-17",
+      "teardown_note": "Teardown migration applied to local DB 2026-05-17. outbox_integration_proof_state dropped; rpc_commit_consumer_receipt restored to non-harness form. Verified clean.",
       "harness_artifacts_delivered": [
         "supabase/migrations/20260512000744_add_outbox_integration_proof_state.sql",
         "supabase/migrations/20260512021632_fix_wave2_transport_path_bugs.sql",
@@ -438,8 +439,9 @@
     {
       "id": "TEARDOWN-PRD-082",
       "item": "PRD-082 harness teardown migration",
-      "status": "migration_authored",
-      "priority": "Must be applied before Phase 2.1 merge",
+      "status": "applied",
+      "applied_date": "2026-05-17",
+      "priority": "COMPLETE — teardown applied to local DB",
       "artifact": "docs/issues/gaps/financial-data-distribution-standard/wave-2/w-2-integration-proof/TEARDOWN-ARTIFACT-PRD-082.md",
       "migration_path": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
       "required_actions": [

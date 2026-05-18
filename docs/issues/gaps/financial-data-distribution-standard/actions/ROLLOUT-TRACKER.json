@@ -50,8 +50,8 @@
   "cursor": {
     "wave": 2,
     "active_phase": "2.1",
-    "phase_status": "teardown_authored_prd_pending",
-    "phase_label": "Wave 2 ACTIVE. Phase 2.0 (PRD-081 exemplar — GAP-F1 closed) complete 2026-05-11. PRD-082 integration proof complete 2026-05-12 — Phase 2.1 authorized. PRD-082 harness teardown migration authored (20260517141021) — ready to apply. See WAVE-2-PROGRESS-TRACKER.md §5.",
+    "phase_status": "teardown_applied_prd_pending",
+    "phase_label": "Wave 2 ACTIVE. Phase 2.0 (PRD-081 exemplar — GAP-F1 closed) complete 2026-05-11. PRD-082 integration proof complete 2026-05-12 — Phase 2.1 authorized. PRD-082 harness teardown applied to local DB (2026-05-17). See WAVE-2-PROGRESS-TRACKER.md §5.",
     "blocker": null,
     "teardown_migration": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
     "next_action": "1. Author Phase 2.1 PRD for rpc_create_financial_adjustment outbox emission. 2. /lead-architect EXEC-SPEC scaffold. 3. /build PRD-###. See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.1 and WAVE-2-PROGRESS-TRACKER.md §6.",
