@@ -63,7 +63,7 @@
       "authorized_by": "WAVE-2-INTEGRATION-PROOF-SIGNOFF.md",
       "authorized_date": "2026-05-12",
       "authorized_commit": "b1d45302",
-      "condition": "Teardown migration must be authored and applied before Phase 2.1 merge"
+      "condition": "Teardown migration must be authored and applied before Phase 2.1 merge — MET (20260517141021, 2026-05-17)"
     }
   },
 
@@ -232,7 +232,7 @@
       "exec_spec": null,
       "exit_date": null,
       "commit": null,
-      "entry_gate": "Phase 2.0 exit ✅ + PRD-082 signoff ✅ + PRD-082 teardown migration ⚠️ (pending) + Phase 2.1 PRD (not yet authored)",
+      "entry_gate": "Phase 2.0 exit ✅ + PRD-082 signoff ✅ + PRD-082 teardown migration ✅ (applied 2026-05-17) + Phase 2.1 PRD (not yet authored)",
       "scope": "Wire rpc_create_financial_adjustment to emit a finance_outbox row atomically within its existing transaction boundary. Bug-3 fix (DO NOTHING idempotency) already applied in PRD-082 migration 20260512021632 — the outbox INSERT is the only remaining work. No relay, consumer, or DDL schema changes.",
       "semantic_contract": {
         "event_type": "adjustment.recorded",
@@ -243,7 +243,7 @@
         "aggregate_id": "PFT row id for the adjustment"
       },
       "deliverables": [
-        "PRD-082 teardown migration (pre-merge gate) — supabase/migrations/<ts>_remove_prd082_harness_receipt_proof_state.sql",
+        "PRD-082 teardown migration ✅ applied — supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
         "Migration extending rpc_create_financial_adjustment with outbox emission inside same BEGIN…COMMIT",
         "Event catalog entry for adjustment.recorded (registered before producer ships)",
         "FinancialOutboxEventDTO unchanged — no shape changes",
@@ -256,7 +256,7 @@
         "rpc_create_financial_adjustment atomically emits finance_outbox row (I1 for adjustment path)",
         "adjustment.recorded registered in Wave 2 event catalog",
         "No second adjustment-to-outbox path in TypeScript",
-        "PRD-082 teardown migration applied",
+        "PRD-082 teardown migration applied ✅ (20260517141021, 2026-05-17)",
         "All gates pass"
       ],
       "skills": [
