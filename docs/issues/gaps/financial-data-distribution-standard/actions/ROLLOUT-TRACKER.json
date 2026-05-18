@@ -49,19 +49,19 @@
 
   "cursor": {
     "wave": 2,
-    "active_phase": "2.1",
-    "phase_status": "teardown_applied_prd_pending",
-    "phase_label": "Wave 2 ACTIVE. Phase 2.0 (PRD-081 exemplar — GAP-F1 closed) complete 2026-05-11. PRD-082 integration proof complete 2026-05-12 — Phase 2.1 authorized. PRD-082 harness teardown applied to local DB (2026-05-17). See WAVE-2-PROGRESS-TRACKER.md §5.",
+    "active_phase": "2.2",
+    "phase_status": "active_phase_2_2_prd_pending",
+    "phase_label": "Wave 2 ACTIVE. Phase 2.1 (PRD-083 — rpc_create_financial_adjustment outbox expansion) complete 2026-05-17. Phase 2.2 PRD (rpc_request_table_fill + rpc_request_table_credit) not yet authored. See WAVE-2-PROGRESS-TRACKER.md §7.",
     "blocker": null,
     "teardown_migration": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
-    "next_action": "1. Author Phase 2.1 PRD for rpc_create_financial_adjustment outbox emission. 2. /lead-architect EXEC-SPEC scaffold. 3. /build PRD-###. See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.1 and WAVE-2-PROGRESS-TRACKER.md §6.",
+    "next_action": "1. Author Phase 2.2 PRD for rpc_request_table_fill + rpc_request_table_credit (simultaneous — ADR-055 intra-category parity). 2. /lead-architect EXEC-SPEC scaffold. 3. /build PRD-###. See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.2 and WAVE-2-PROGRESS-TRACKER.md §6.",
     "next_action_prd": null,
     "wave_2_progress_tracker_md": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-PROGRESS-TRACKER.md",
     "wave_2_progress_tracker_json": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-TRACKER.json",
-    "last_closed_phase": "2.0",
-    "last_closed_date": "2026-05-11",
-    "last_closed_exec": "EXEC-081",
-    "last_closed_commit": "8a1b8741",
+    "last_closed_phase": "2.1",
+    "last_closed_date": "2026-05-17",
+    "last_closed_exec": "EXEC-083",
+    "last_closed_commit": null,
     "wave_1_status": "closed",
     "wave_1_closed_date": "2026-05-06",
     "wave_1_signoff_artifact": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-PHASE-1.5-SIGNOFF.md",
@@ -560,6 +560,51 @@
         "Branch protection on main enabled",
         "deploy-staging.yml repaired and migration automation active",
         "Preview environment isolation (separate Supabase project per preview or branch)"
+      ]
+    },
+    {
+      "id": "2.1",
+      "label": "Producer Expansion A: Financial Adjustment",
+      "wave": 2,
+      "status": "complete",
+      "prd": "PRD-083",
+      "prd_path": "docs/10-prd/PRD-083-wave2-phase2-1-adjustment-producer-expansion-v0.md",
+      "exec_spec": "EXEC-083",
+      "exec_spec_path": "docs/21-exec-spec/EXEC-083-wave2-phase2-1-adjustment-producer.md",
+      "exit_date": "2026-05-17",
+      "commit": null,
+      "entry_gate": "Phase 2.0 exit ✅ + PRD-082 signoff ✅ + PRD-082 teardown migration ✅ (applied 2026-05-17) + Phase 2.1 PRD ✅",
+      "scope": "Wire rpc_create_financial_adjustment to emit adjustment.recorded finance_outbox rows atomically for ADR-057-eligible linked adjustments. fn_finance_outbox_emit SECURITY DEFINER helper introduced (Option A hardening). RPC signature remediated — stale p_casino_id overload dropped, canonical 7-param ADR-040 shape restored. TypeScript: casino_id removed from CreateFinancialAdjustmentInput.",
+      "workstreams_closed": [
+        "WS1_TEARDOWN",
+        "WS2_CATALOG",
+        "WS3_SIG",
+        "WS4_PRODUCER",
+        "WS5_TS",
+        "WS6_TESTS",
+        "WS7_TRACKER"
+      ],
+      "deliverables": [
+        "PRD-082 teardown migration — supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
+        "WS3 RPC signature remediation — supabase/migrations/20260517233745_wave2_adj_sig_restore.sql",
+        "WS4 producer extension + fn_finance_outbox_emit + Option A hardening — supabase/migrations/20260517234015_wave2_adj_producer_ext.sql",
+        "Event catalog: adjustment.recorded registered in INT-002",
+        "TypeScript: CreateFinancialAdjustmentInput casino_id removed from dtos.ts, http.ts, hooks",
+        "I1 atomicity proof: tests/failure/i1-atomicity-adjustment.test.ts T1-T7 PASS (7/7 unit)",
+        "Source-level proof: services/player-financial/__tests__/outbox-adjustment-producer.test.ts T15/T18 PASS"
+      ],
+      "invariants_proven": {
+        "I1_atomicity": "T1-T7 PASS (7/7 unit) — tests/failure/i1-atomicity-adjustment.test.ts"
+      },
+      "exit_gates_passed": [
+        "rpc_create_financial_adjustment atomically emits adjustment.recorded outbox row (I1 T1-T7 unit PASS)",
+        "adjustment.recorded registered in Wave 2 event catalog (INT-002)",
+        "No TypeScript finance_outbox INSERT path — single RPC call (source-level proof T18)",
+        "No p_casino_id in canonical 7-param signature (post-state assertion in migration)",
+        "Option A: authenticated INSERT denied; SECURITY DEFINER helper route preserved",
+        "type-check exit 0",
+        "lint exit 0",
+        "127 tests pass, 25 skipped (integration — RUN_INTEGRATION_TESTS=true required)"
       ]
     }
   ],

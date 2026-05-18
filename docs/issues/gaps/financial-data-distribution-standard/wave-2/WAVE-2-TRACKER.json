@@ -44,18 +44,18 @@
 
   "cursor": {
     "wave": 2,
-    "active_phase": "2.1",
-    "phase_status": "teardown_applied_prd_pending",
-    "phase_label": "Phase 2.1 authorized (PRD-082 signoff 2026-05-12). PRD-082 harness teardown applied to local DB (20260517141021, 2026-05-17). Phase 2.1 PRD not yet authored.",
+    "active_phase": "2.2",
+    "phase_status": "complete_2_1_phase_2_2_pending",
+    "phase_label": "Phase 2.1 COMPLETE — PRD-083 / EXEC-083 implemented 2026-05-17. All 7 workstreams pass. rpc_create_financial_adjustment now emits adjustment.recorded outbox rows for ADR-057-eligible linked adjustments. Phase 2.2 PRD (rpc_request_table_fill + rpc_request_table_credit) not yet authored.",
     "blocker": null,
     "teardown_migration": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
-    "next_action": "1. Author Phase 2.1 PRD for rpc_create_financial_adjustment outbox emission. 2. /lead-architect EXEC-SPEC scaffold. 3. /build PRD-###.",
+    "next_action": "1. Author Phase 2.2 PRD for rpc_request_table_fill + rpc_request_table_credit (simultaneous — ADR-055 intra-category parity). 2. /lead-architect EXEC-SPEC scaffold. 3. /build PRD-###.",
     "next_action_prd": null,
-    "last_closed_phase": "prd-082",
-    "last_closed_date": "2026-05-12",
-    "last_closed_prd": "PRD-082",
-    "last_closed_exec": "EXEC-082",
-    "last_closed_commit": "b1d45302",
+    "last_closed_phase": "2.1",
+    "last_closed_date": "2026-05-17",
+    "last_closed_prd": "PRD-083",
+    "last_closed_exec": "EXEC-083",
+    "last_closed_commit": null,
     "exemplar_phase_commit": "8a1b8741",
     "exemplar_phase_date": "2026-05-11",
     "phase_2_1_authorization": {
@@ -227,12 +227,14 @@
       "id": "2.1",
       "label": "Producer Expansion A: Financial Adjustment",
       "wave": 2,
-      "status": "not_started",
-      "prd": null,
-      "exec_spec": null,
-      "exit_date": null,
+      "status": "complete",
+      "prd": "PRD-083",
+      "prd_path": "docs/10-prd/PRD-083-wave2-phase2-1-adjustment-producer-expansion-v0.md",
+      "exec_spec": "EXEC-083",
+      "exec_spec_path": "docs/21-exec-spec/EXEC-083-wave2-phase2-1-adjustment-producer.md",
+      "exit_date": "2026-05-17",
       "commit": null,
-      "entry_gate": "Phase 2.0 exit ✅ + PRD-082 signoff ✅ + PRD-082 teardown migration ✅ (applied 2026-05-17) + Phase 2.1 PRD (not yet authored)",
+      "entry_gate": "Phase 2.0 exit ✅ + PRD-082 signoff ✅ + PRD-082 teardown migration ✅ (applied 2026-05-17) + Phase 2.1 PRD ✅",
       "scope": "Wire rpc_create_financial_adjustment to emit a finance_outbox row atomically within its existing transaction boundary. Bug-3 fix (DO NOTHING idempotency) already applied in PRD-082 migration 20260512021632 — the outbox INSERT is the only remaining work. No relay, consumer, or DDL schema changes.",
       "semantic_contract": {
         "event_type": "adjustment.recorded",
@@ -456,9 +458,16 @@
     {
       "id": "WS_PRODUCER_ADJUSTMENT",
       "item": "rpc_create_financial_adjustment outbox extension",
-      "status": "dormant",
-      "activates_in": "Phase 2.1",
-      "note": "Bug-3 (ON CONFLICT DO NOTHING) already patched in 20260512021632. Outbox INSERT is the only remaining work."
+      "status": "complete",
+      "completed_in": "Phase 2.1",
+      "completed_date": "2026-05-17",
+      "prd": "PRD-083",
+      "exec_spec": "EXEC-083",
+      "migrations": [
+        "supabase/migrations/20260517233745_wave2_adj_sig_restore.sql",
+        "supabase/migrations/20260517234015_wave2_adj_producer_ext.sql"
+      ],
+      "note": "WS3: dropped stale p_casino_id overload, restored canonical 7-param ADR-040 signature. WS4: fn_finance_outbox_emit SD helper + Option A REVOKE INSERT + conditional ADR-057 outbox emission. I1 T1-T7 unit proof delivered."
     },
     {
       "id": "WS_PRODUCER_FILL",
@@ -526,9 +535,11 @@
         {
           "producer": "rpc_create_financial_adjustment",
           "phase": "2.1",
-          "harness_result": null,
+          "harness_result": "T1-T7 PASS (7/7 unit)",
           "integration_result": null,
-          "status": "pending — required deliverable in Phase 2.1"
+          "status": "complete",
+          "commit": null,
+          "note": "Unit proof: tests/failure/i1-atomicity-adjustment.test.ts (T1-T7). Integration (RUN_INTEGRATION_TESTS=true) deferred pending local Supabase fixture seeding."
         },
         {
           "producer": "rpc_request_table_fill",

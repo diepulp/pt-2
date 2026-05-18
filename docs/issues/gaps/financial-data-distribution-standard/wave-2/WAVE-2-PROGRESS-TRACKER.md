@@ -5,7 +5,7 @@
 **Authority:** `WAVE-2-ROLLOUT-MAP.md` (phase plan) · `ROLLOUT-TRACKER.json` (parent machine state)  
 **First established:** 2026-05-17  
 **Last updated:** 2026-05-17  
-**Current position:** Phase 2.1 AUTHORIZED — teardown applied to local DB (20260517141021, 2026-05-17). Phase 2.1 PRD not yet authored.
+**Current position:** Phase 2.1 COMPLETE — PRD-083 / EXEC-083 implemented (2026-05-17). All gates pass. Phase 2.2 PRD not yet authored.
 
 ---
 
@@ -16,7 +16,7 @@
 | 2.0 | Exemplar Proof Slice | ✅ COMPLETE | PRD-081 | `8a1b8741` |
 | PRD-082 | Integration Proof Runtime Gate | ✅ COMPLETE | PRD-082 | `b1d45302` |
 | **PRD-082 Teardown** | **Harness cleanup pre-2.1 merge** | **✅ APPLIED** | `20260517141021` | 2026-05-17 |
-| 2.1 | Producer Expansion A: Financial Adjustment | 🔲 NOT STARTED | PRD to author | — |
+| 2.1 | Producer Expansion A: Financial Adjustment | ✅ COMPLETE | PRD-083 / EXEC-083 | PENDING_MERGE |
 | 2.2 | Producer Expansion B: Dependency Events | 🔲 NOT STARTED | PRD to author | — |
 | 2.3 | First Consumer Slice: Completeness Projection | 🔲 NOT STARTED | PRD to author | — |
 | 2.4 | Consumer Expansion: Operational Telemetry | 🔲 NOT STARTED | PRD to author | — |
@@ -111,7 +111,7 @@ Four real transport bugs were uncovered during the PRD-082 integration proof run
 
 ## 5. PRD-082 Teardown Gate
 
-**Status: PENDING — blocking Phase 2.1 merge**
+**Status: ✅ APPLIED — 2026-05-17 (migration 20260517141021, local DB verified clean, commit fe327c45)**
 
 The PRD-082 integration proof introduced harness-only infrastructure that must not survive into Phase 2.1 production code.
 
@@ -149,14 +149,19 @@ Authority: `TEARDOWN-ARTIFACT-PRD-082.md`
        supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql
        Restores rpc_commit_consumer_receipt; drops outbox_integration_proof_state. (2026-05-17)
 
-2. [ ] Author Phase 2.1 PRD
-       Scope: rpc_create_financial_adjustment → 'adjustment.recorded' outbox emission
+2. [x] Author Phase 2.1 PRD
+       PRD-083 authored. EXEC-083 generated, patched (5 compact patches), and approved. (2026-05-17)
+
+3. [x] /lead-architect EXEC-SPEC scaffold for Phase 2.1
+       EXEC-083 scaffolded. (2026-05-17)
+
+4. [x] /build PRD-083 execute Phase 2.1
+       All 7 workstreams complete. 127 tests pass, 25 skipped. type-check + lint exit 0. (2026-05-17)
+
+5. [ ] Author Phase 2.2 PRD
+       Scope: rpc_request_table_fill + rpc_request_table_credit → 'fill.recorded' + 'credit.recorded' (simultaneous — ADR-055 intra-category parity)
        Chain: /prd-writer → /lead-architect (EXEC-SPEC) → /build PRD-###
-       See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.1 for deliverables and exit gate.
-
-3. [ ] /lead-architect EXEC-SPEC scaffold for Phase 2.1
-
-4. [ ] /build PRD-### execute Phase 2.1
+       See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.2 for deliverables and exit gate.
 ```
 
 ---
@@ -167,8 +172,8 @@ Authority: `TEARDOWN-ARTIFACT-PRD-082.md`
 
 ### Phase 2.1 — Producer Expansion A: Financial Adjustment
 
-**Status:** 🔲 NOT STARTED  
-**Entry gate:** Phase 2.0 exit ✅ + PRD-082 signoff ✅ + PRD-082 teardown migration ⚠️ + Phase 2.1 PRD (not yet authored)
+**Status:** ✅ COMPLETE — PRD-083 / EXEC-083 (2026-05-17)  
+**Entry gate:** Phase 2.0 exit ✅ + PRD-082 signoff ✅ + PRD-082 teardown migration ✅ + Phase 2.1 PRD ✅
 
 **Scope:** Wire `rpc_create_financial_adjustment` to emit a `finance_outbox` row atomically. The adjustment RPC already has Bug 3 fixed (`DO NOTHING` idempotency) — the outbox extension is the only remaining work. No relay, consumer, or DDL schema changes needed.
 
@@ -184,14 +189,15 @@ Authority: `TEARDOWN-ARTIFACT-PRD-082.md`
 | `aggregate_id` | PFT row id for the adjustment |
 
 **Deliverables:**
-- [ ] Teardown migration for PRD-082 harness (pre-merge gate)
-- [ ] Migration extending `rpc_create_financial_adjustment` with outbox emission inside same `BEGIN…COMMIT`
-- [ ] Event catalog entry for `adjustment.recorded` (registered before producer ships)
-- [ ] `FinancialOutboxEventDTO` unchanged — no shape changes needed
-- [ ] Unit test proving adjustment path calls single RPC (no TS-level outbox fallback)
-- [ ] I1 atomicity proof test for adjustment path (exemplar proof does not certify this producer)
-- [ ] `npm run db:types-local` exit 0
-- [ ] type-check, lint exit 0
+- [x] Teardown migration for PRD-082 harness (pre-merge gate) — `20260517141021` ✅
+- [x] WS3: RPC signature remediation — drops stale `p_casino_id` overload, restores canonical 7-param ADR-040 signature — `20260517233745`
+- [x] WS4: Producer extension migration — conditional ADR-057-eligible outbox emission, `fn_finance_outbox_emit` SD helper, Option A security hardening — `20260517234015`
+- [x] WS2: Event catalog entry for `adjustment.recorded` registered in INT-002
+- [x] `FinancialOutboxEventDTO` unchanged — no shape changes
+- [x] WS5: TypeScript layer — `casino_id` removed from `CreateFinancialAdjustmentInput` / DTOs / hooks; type-check exit 0
+- [x] WS6: I1 atomicity proof test for adjustment path — `tests/failure/i1-atomicity-adjustment.test.ts` T1–T7 PASS (7/7 unit)
+- [x] WS6: Source-level proof — `services/player-financial/__tests__/outbox-adjustment-producer.test.ts` T15/T18 PASS
+- [x] type-check, lint exit 0
 
 **Exit gate:**
 - `rpc_create_financial_adjustment` atomically emits `finance_outbox` row (I1 for adjustment path)
@@ -345,7 +351,7 @@ Authority: `TEARDOWN-ARTIFACT-PRD-082.md`
 
 | Invariant | Scope | 2.0 | 2.1 | 2.2 | 2.3 | 2.4 | 2.5 |
 |-----------|-------|-----|-----|-----|-----|-----|-----|
-| I1 Atomicity | Producer-specific — re-prove per producer | ✅ exemplar | re-prove: adjustment | re-prove: fill + credit | inherited | inherited | inherited |
+| I1 Atomicity | Producer-specific — re-prove per producer | ✅ exemplar | ✅ T1–T7 PASS (PRD-083) | re-prove: fill + credit | inherited | inherited | inherited |
 | I2 Durability | Transport baseline — inherited | ✅ proven | inherited | inherited | inherited | inherited | inherited |
 | I3 Idempotency | Transport baseline — consumer-level re-verify | ✅ proven | inherited | inherited | re-verify: consumer layer | re-verify: operational consumer | inherited |
 | I4 Replayability | Transport baseline — projection-level re-verify | ✅ proven | inherited | inherited | re-verify: Class A projection | re-verify: operational projection | inherited |

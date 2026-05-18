@@ -127,7 +127,7 @@ Approved JSON blobs (all others require first-class columns):
 | **Operational**  | ShiftIntelligenceService | table_metric_baseline, shift_alert, alert_acknowledgment                                                                  | Shift anomaly detection, rolling baselines & alert maturity |
 | **Telemetry**    | RatingSlipService       | rating_slip, rating_slip_pause, pit_cash_observation                                                                       | Gameplay measurement                                        |
 | **Reward**       | LoyaltyService          | player_loyalty, loyalty_ledger, loyalty_outbox, promo_program, promo_coupon, reward_catalog, reward_price_points, reward_entitlement_tier, reward_limits, reward_eligibility, loyalty_earn_config | Reward policy & assignment                                  |
-| **Finance**      | PlayerFinancialService  | player_financial_transaction                                                                                               | Financial ledger (SoT) ¹                                    |
+| **Finance**      | PlayerFinancialService  | player_financial_transaction, finance_outbox ¹                                                                              | Financial ledger (SoT) + Wave 2 transport infrastructure    |
 | **Compliance**   | MTLService              | mtl_entry, mtl_audit_note                                                                                                  | AML/CTR compliance                                          |
 | **Onboarding**   | PlayerImportService     | import_batch, import_row                                                                                                   | CSV player import & staging ⁵                               |
 | **Analytics**    | Player360DashboardService ⁷ | (read-only aggregation across LoyaltyService + PromoService)                                                          | Player 360 dashboard data aggregation                       |
@@ -687,9 +687,7 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 
 ## PlayerFinancialService (Finance Context) ✅ IMPLEMENTED
 
-**Owns**: `player_financial_transaction`
-
-**Planned (post-MVP)**: `finance_outbox` — ADR-016 for payment gateway integration
+**Owns**: `player_financial_transaction`, `finance_outbox` ¹
 
 **Bounded Context**: "What monetary transactions occurred?"
 
@@ -735,8 +733,8 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 - **Trigger**: `trg_fin_gaming_day` populates `gaming_day` (callers MUST omit)
 - **Immutability**: Append-only ledger; no deletes
 - **View**: `visit_financial_summary` - Aggregated totals per visit (total_in, total_out, net_amount)
-- **MVP Egress**: Synchronous only; no external side effects. MTLService integration via triggers.
-- **Outbox (post-MVP)**: `finance_outbox` for payment gateway integration (ADR-016 planned)
+- **MVP Egress**: Synchronous ledger writes plus Wave 2 internal transport via `finance_outbox`. MTLService integration via triggers.
+- **Outbox**: `finance_outbox` is Wave 2 transport infrastructure for table-scoped financial events (ADR-054/ADR-056/PRD-081). The earlier ADR-016 payment-gateway placeholder is superseded.
 
 ### DTOs (Pattern A - Manual)
 
@@ -1144,6 +1142,7 @@ create type import_row_status as enum ('staged','created','linked','skipped','co
 | LoyaltyService      | RatingSlipService  | `rating_slip_id` FK, telemetry DTOs                          |
 | LoyaltyService      | VisitService       | Visit DTOs, `visit_kind` check                               |
 | FinanceService      | VisitService       | `visit_id` FK (**required for MVP**)                         |
+| FinanceService      | RatingSlipService  | Narrow ADR-057 producer eligibility lookup: same-casino `rating_slip_id` → `rating_slip.table_id` only |
 | MTLService          | FinanceService     | Reconciliation via triggers                                  |
 | TableContextService | RatingSlipService  | Published query/DTO `hasOpenSlipsForTable` (open-slip guard) |
 | TableContextService | FloorLayoutService | `floor_layout.activated` events                              |

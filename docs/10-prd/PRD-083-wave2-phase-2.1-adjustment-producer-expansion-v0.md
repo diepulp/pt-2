@@ -30,10 +30,10 @@ http_boundary: false
 
 ### Goals
 
-1. `rpc_create_financial_adjustment` emits one `finance_outbox` row atomically within the same `BEGIN…COMMIT` as the `player_financial_transaction` insert for each ADR-057-eligible linked adjustment — I1 atomicity proven for this producer path.
+1. `rpc_create_financial_adjustment` emits one `finance_outbox` row atomically within the same PostgreSQL RPC transaction boundary as the `player_financial_transaction` insert for each ADR-057-eligible linked adjustment — I1 atomicity proven for this producer path.
 2. `adjustment.recorded` is verified in the canonical Wave 2 event catalog before the producer migration ships.
 3. Excluded adjustments remain valid PFT rows and emit no `finance_outbox` row.
-4. No second adjustment-to-outbox path exists anywhere in the TypeScript application layer, and direct authenticated `finance_outbox` writes are denied at the database boundary.
+4. No TypeScript-layer adjustment producer insert path exists for `finance_outbox`, and direct authenticated `finance_outbox` writes are denied at the database boundary.
 5. The PRD-082 integration harness is fully removed from the database before any Phase 2.1 artifact merges.
 6. Phase 2.2 entry gate is unblocked (Phase 2.1 exit clears the way for Dependency Event wiring).
 
@@ -72,17 +72,21 @@ The lifecycle-aware completeness projection (Phase 2.3) consumes eligible table-
 
 ## 4. Scope & Feature List
 
-- [ ] PRD-082 teardown migration `20260517141021_remove_prd082_harness_receipt_proof_state.sql` is applied (see §5 Functional Requirements — Pre-merge gate). This is a precondition for Phase 2.1 merge.
+- [ ] PRD-082 teardown migration `20260517141021_remove_prd082_harness_receipt_proof_state.sql` is applied in every target database environment before Phase 2.1 migration merge (see §5 Functional Requirements — Pre-merge gate). File presence alone does not satisfy this gate.
 - [ ] A SQL migration restores the ADR-040/PRD-044 `rpc_create_financial_adjustment` signature with no caller-supplied `p_casino_id`, matching the existing TypeScript caller and authoritative context derivation. The migration must explicitly drop/revoke stale caller-supplied casino overloads so no executable adjustment RPC accepts execution tenant identity from the client.
-- [ ] A SQL migration extends `rpc_create_financial_adjustment` with a conditional `finance_outbox` INSERT inside its existing `BEGIN…COMMIT` for ADR-057-eligible linked adjustments only. The INSERT uses `generate_uuid_v7()` for `event_id` and hardcodes all discriminator fields (not caller-derived).
+- [ ] A SQL migration extends `rpc_create_financial_adjustment` with a conditional `finance_outbox` INSERT inside the same RPC transaction boundary for ADR-057-eligible linked adjustments only. The INSERT uses `generate_uuid_v7()` for `event_id` and hardcodes all discriminator fields (not caller-derived).
 - [ ] The `finance_outbox` row emitted by `rpc_create_financial_adjustment` carries: `event_type = 'adjustment.recorded'`, `fact_class = 'ledger'`, `origin_label = 'actual'`, `player_id NOT NULL`, `table_id NOT NULL`, `aggregate_id` = the PFT row id for the adjustment.
 - [ ] Unlinked adjustments and linked adjustments to excluded originals author valid PFT rows with zero `finance_outbox` rows.
 - [ ] `adjustment.recorded` is verified in the canonical Wave 2 event catalog (`docs/35-integration/INT-002-event-catalog.md`) before the producer migration ships; if stale, the entry is updated before implementation proceeds.
-- [ ] A unit test proves the adjustment authoring path calls the single RPC with no TypeScript-layer outbox fallback path.
+- [ ] A unit test proves the adjustment authoring path calls the single RPC with no TypeScript-layer adjustment outbox producer fallback path.
 - [ ] `CreateFinancialAdjustmentInput` docs/types no longer present `casino_id` as required caller input for the final adjustment RPC path.
-- [ ] A database access test proves an authenticated client cannot directly insert forged `finance_outbox` rows; only the producer RPC can write valid adjustment events.
+- [ ] Phase 2.1 selects **Option A — SECURITY DEFINER outbox insertion boundary**: direct authenticated `finance_outbox` INSERT is revoked, producer outbox writes run only through governed SECURITY DEFINER SQL with ADR-018 safeguards, and existing producer business semantics remain unchanged.
+- [ ] A database access test proves an authenticated client cannot directly insert forged `finance_outbox` rows, including after `set_rls_context_from_staff()` context establishment; only governed producer SQL can write valid adjustment events.
 - [ ] A producer idempotency guard prevents duplicate `adjustment.recorded` rows for the same adjustment aggregate, using a mandatory database uniqueness constraint on `(aggregate_id, event_type)`. The constraint includes a pre-state duplicate assertion that fails loudly before DDL is applied.
 - [ ] An I1 atomicity proof test covers the eligible adjustment producer path: controlled rollback injection after PFT insert and before outbox insert confirms both the `player_financial_transaction` row and the `finance_outbox` row are absent post-rollback; success path confirms both rows are present. Excluded adjustment tests confirm PFT row present and zero outbox rows.
+- [ ] The Phase 2.1 migration asserts zero authenticated `finance_outbox` INSERT grants/policies after remediation, no stale `p_casino_id` adjustment overloads, PRD-082 teardown applied, and no duplicate `(aggregate_id, event_type)` rows before adding uniqueness.
+- [ ] SRM is updated to mark `finance_outbox` as Wave 2 transport infrastructure and to allow the narrow ADR-057 FinanceService → RatingSlipService same-casino `rating_slip_id → table_id` lookup.
+- [ ] No projection store, consumer branch, event bus, generic dispatcher, envelope change, or producer business-semantics rewrite is introduced in Phase 2.1.
 - [ ] `npm run db:types-local` exits 0 after the extension migration.
 - [ ] `npm run type-check`, `npm run lint`, `npm run build` all exit 0.
 
@@ -94,7 +98,7 @@ The lifecycle-aware completeness projection (Phase 2.3) consumes eligible table-
 
 #### Pre-merge gate (PRD-082 teardown — executed in parallel)
 
-The following must be true before any Phase 2.1 migration is merged. The teardown migration is authored as `supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql` and must be applied before the Phase 2.1 producer migration.
+The following must be true before any Phase 2.1 migration is merged. The teardown migration is authored as `supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql` and must be applied in every target database environment before the Phase 2.1 producer migration. File presence without applied database state is insufficient.
 
 - `rpc_commit_consumer_receipt` is restored to its non-harness body: `processed_messages` INSERT with `ON CONFLICT DO NOTHING` duplicate guard, Wave 2 consumer side-effect placeholder comment, returns `'processed'`/`'duplicate'`. The `outbox_integration_proof_state` INSERT block is fully removed.
 - `DROP TABLE IF EXISTS public.outbox_integration_proof_state` is executed.
@@ -105,7 +109,7 @@ Authority: `docs/issues/gaps/financial-data-distribution-standard/wave-2/w-2-int
 
 #### Phase 2.1 producer extension
 
-**FR-1 — ADR-057 eligibility-gated atomic outbox emission.** `rpc_create_financial_adjustment` must INSERT one row into `finance_outbox` within the same PostgreSQL transaction as the `player_financial_transaction` INSERT only when the adjustment is ADR-057 eligible. A single `BEGIN…COMMIT` encompasses both inserts. If either insert fails for an eligible adjustment, the entire transaction rolls back with no partial state.
+**FR-1 — ADR-057 eligibility-gated atomic outbox emission.** `rpc_create_financial_adjustment` must INSERT one row into `finance_outbox` within the same PostgreSQL RPC transaction boundary as the `player_financial_transaction` INSERT only when the adjustment is ADR-057 eligible. PostgreSQL function execution gives both inserts one atomic transaction scope under the caller transaction. If either insert fails for an eligible adjustment, the entire transaction rolls back with no partial state.
 
 Eligibility is recomputed from the original PFT row, not from caller input and not from the existence of a prior outbox row:
 
@@ -138,17 +142,18 @@ If an inherited `rating_slip_id` is present but does not resolve to a same-casin
 - `aggregate_id` — the PFT row id for this adjustment
 - `casino_id` — derived from the existing adjustment authoring context
 
-**FR-4 — No TypeScript fallback path or direct authenticated write path.** No application code, service layer, or route handler may insert into `finance_outbox` on behalf of the adjustment path. Authenticated clients must not be able to directly `INSERT` forged `finance_outbox` rows through the table API, including same-casino `adjustment.recorded`, same-casino `buyin.recorded`, and arbitrary payload attempts after context establishment. The only write path for adjustment outbox rows is the SQL producer boundary.
+**FR-4 — No TypeScript producer fallback path or direct authenticated write path.** No application code, service layer, or route handler may insert into `finance_outbox` on behalf of the adjustment producer path. Legitimate relay lifecycle reads/updates remain in scope for the existing relay worker, but TypeScript must not author adjustment outbox rows. Authenticated clients must not be able to directly `INSERT` forged `finance_outbox` rows through the table API, including same-casino `adjustment.recorded`, same-casino `buyin.recorded`, and arbitrary payload attempts after context establishment. The only write path for adjustment outbox rows is the governed SQL producer boundary.
 
-Phase 2.1 must choose and implement exactly one producer-provenance design:
-- **Option A — SECURITY DEFINER producer boundary:** revoke direct authenticated `finance_outbox` INSERT and run producer inserts through governed SECURITY DEFINER functions with ADR-018 safeguards.
-- **Option B — SECURITY INVOKER producer marker:** preserve SECURITY INVOKER producers, but require a transaction-local producer marker that ordinary authenticated table API calls cannot set; RLS `WITH CHECK` must require that marker plus valid envelope semantics.
+Phase 2.1 selects **Option A — SECURITY DEFINER outbox insertion boundary**:
+- Revoke direct authenticated `finance_outbox` INSERT and remove authenticated INSERT policies.
+- Run outbox table writes through governed SECURITY DEFINER SQL with ADR-018 safeguards (`SET search_path = ''`, explicit grants, no caller-supplied tenant identity, and minimal body scope).
+- Preserve existing public producer RPC business semantics and caller contracts; the SECURITY DEFINER boundary may be a narrow helper invoked from SECURITY INVOKER producer RPCs after authoritative context derivation.
 
-The chosen design must preserve existing `rpc_create_financial_txn` and `rpc_record_grind_observation` producer success while denying direct table API forgery.
+The selected design must preserve existing `rpc_create_financial_txn` and `rpc_record_grind_observation` producer success while denying direct table API forgery. SECURITY INVOKER marker/GUC designs are explicitly out of scope for Phase 2.1 unless a later ADR proves the marker is unforgeable by authenticated SQL clients.
 
 **FR-5 — Event catalog verification.** `adjustment.recorded` must be present in the canonical Wave 2 event catalog (`docs/35-integration/INT-002-event-catalog.md`) with its `fact_class`, `origin_label`, producer RPC, and ADR-057 eligibility rule before the producer migration is applied. `WAVE-2-ROLLOUT-MAP.md §4` is a phase tracker, not the catalog source of truth.
 
-**FR-6 — No table-envelope or transport shape changes.** `finance_outbox` envelope columns, `processed_messages` columns, relay worker, `rpc_claim_outbox_batch`, and `rpc_commit_consumer_receipt` (post-teardown) are unchanged. RLS/grant hardening and a duplicate-prevention uniqueness constraint are in scope if required to enforce this PRD's security and idempotency invariants, but any RLS/grant change must preserve existing SECURITY INVOKER producer success for `rpc_create_financial_txn` and `rpc_record_grind_observation`.
+**FR-6 — No table-envelope or transport shape changes.** `finance_outbox` envelope columns, `processed_messages` columns, relay worker, `rpc_claim_outbox_batch`, and `rpc_commit_consumer_receipt` (post-teardown) are unchanged. RLS/grant hardening and a duplicate-prevention uniqueness constraint are in scope to enforce this PRD's security and idempotency invariants, but the remediation must not change the outbox envelope, event catalog, relay/consumer contracts, or producer business semantics beyond provenance enforcement.
 
 **FR-7 — RPC signature and RLS posture.** The adjustment RPC is SECURITY INVOKER (ADR-040), matching `rpc_create_financial_txn`, and must derive casino context via `set_rls_context_from_staff()` rather than accepting caller-supplied `p_casino_id`. Phase 2.1 must reconcile migration `20260512021632` with the ADR-040/PRD-044 signature by removing the required `p_casino_id` parameter from the final function shape. Phase 2.1 must also prove direct authenticated `finance_outbox` table writes are denied while valid adjustment producer writes and existing exemplar producer writes still succeed.
 
@@ -164,7 +169,7 @@ The chosen design must preserve existing `rpc_create_financial_txn` and `rpc_rec
 
 `note` may be omitted or redacted if sensitive.
 
-**FR-11 — Migration pre-state gates.** The Phase 2.1 migration must fail loudly before mutating producer code unless all pre-state gates pass: PRD-082 teardown has been applied, no duplicate `(aggregate_id, event_type)` rows exist, and stale `p_casino_id` overloads are either absent or explicitly dropped in the same migration.
+**FR-11 — Migration pre-state and post-state gates.** The Phase 2.1 migration must fail loudly before mutating producer code unless all pre-state gates pass: PRD-082 teardown has been applied, no duplicate `(aggregate_id, event_type)` rows exist, and stale `p_casino_id` overloads are either absent or explicitly dropped in the same migration. The migration must also assert post-state invariants before commit: zero authenticated `finance_outbox` INSERT grants/policies, no executable `rpc_create_financial_adjustment` overload with caller-supplied `p_casino_id`, and a unique database invariant on `(aggregate_id, event_type)`.
 
 ### Non-Functional Requirements
 
@@ -181,7 +186,7 @@ The chosen design must preserve existing `rpc_create_financial_txn` and `rpc_rec
 This PRD introduces no operator-visible surface changes. The internal flow post-Phase 2.1:
 
 1. Staff records a financial adjustment through the existing UI → adjustment route handler calls `rpc_create_financial_adjustment`.
-2. `rpc_create_financial_adjustment` opens a transaction → inserts `player_financial_transaction` row (adjustment) → recomputes ADR-057 eligibility from the linked original PFT → if eligible, inserts `finance_outbox` row with `event_type = 'adjustment.recorded'` → commits atomically.
+2. `rpc_create_financial_adjustment` executes within one PostgreSQL RPC transaction boundary → inserts `player_financial_transaction` row (adjustment) → recomputes ADR-057 eligibility from the linked original PFT → if eligible, inserts `finance_outbox` row with `event_type = 'adjustment.recorded'` through the governed SQL producer boundary → commits atomically with the caller transaction.
 3. Relay worker (`POST /api/internal/outbox-relay`) polls `finance_outbox WHERE processed_at IS NULL` on its cron schedule → claims eligible adjustment rows → delivers them to `runConsumer`.
 4. `runConsumer` calls `rpc_commit_consumer_receipt` → `processed_messages` INSERT confirms new event → returns `'processed'`. (Wave 2 consumer side effect remains a placeholder until Phase 2.3.)
 5. Relay marks the outbox row `processed_at = NOW()`.
@@ -213,7 +218,7 @@ Operator-observable effect: none at Phase 2.1. The completeness signal on visit-
 
 **R-4 — ADR-057 scope violation.** Treating all adjustments as outbox-eligible would either fail on `finance_outbox.table_id NOT NULL` or fabricate an anchor for standalone/cage-linked adjustments. Mitigation: encode ADR-057 eligibility in the RPC and test excluded adjustment classes.
 
-**R-5 — Direct authenticated outbox insertion.** If authenticated clients can insert into `finance_outbox` through the table API, a same-casino staff client can forge projection input without a valid producer aggregate. Mitigation: prove table-API insert denial under authenticated credentials and prove producer RPC inserts still succeed. Do not blindly revoke `authenticated` INSERT if that breaks existing SECURITY INVOKER producers; prefer a policy posture that requires transaction-local producer context.
+**R-5 — Direct authenticated outbox insertion.** If authenticated clients can insert into `finance_outbox` through the table API, a same-casino staff client can forge projection input without a valid producer aggregate. Mitigation: select Option A, revoke direct authenticated INSERT, remove authenticated INSERT policies, route producer outbox writes through governed SECURITY DEFINER SQL, and prove producer RPC inserts still succeed.
 
 **R-6 — Payload drift.** If `adjustment.recorded` uses `amount_cents` while the Class A exemplar uses `amount`, consumers may misread units or silently drop adjustment amounts. Mitigation: preserve `amount` numeric in payload and make any cents field additive with explicit conversion semantics.
 
@@ -228,6 +233,7 @@ Operator-observable effect: none at Phase 2.1. The completeness signal on visit-
 None. All design decisions relevant to this phase are locked:
 - Q1–Q4 resolved 2026-05-06 (ROLLOUT-TRACKER.json)
 - Fills/credits routing frozen in FIB-H §G (Phase 2.2 scope, not here)
+- Producer provenance frozen to Option A — governed SECURITY DEFINER outbox insertion boundary; SECURITY INVOKER marker/GUC designs are out of scope for Phase 2.1
 - No open questions permitted at Phase 2.1 per FIB-S governance block
 
 ---
@@ -250,9 +256,10 @@ The release is considered **Done** when:
 - [ ] `adjustment.recorded` payload includes `amount`, `pft_direction`, `delta_direction`, and `reason_code`; any `amount_cents` field is additive and explicitly converted
 
 **Security & Access**
-- [ ] No TypeScript-layer outbox write path exists for adjustments — confirmed by unit test and grep
+- [ ] No TypeScript-layer adjustment producer insert path exists for `finance_outbox` — confirmed by unit test and grep; existing relay lifecycle reads/updates remain allowed
 - [ ] Authenticated direct `INSERT` into `finance_outbox` through the table API is denied; adjustment producer emission and existing exemplar producer emission still succeed
 - [ ] Same-casino forged table API insert attempts for `adjustment.recorded`, `buyin.recorded`, and arbitrary payload rows are denied after context establishment
+- [ ] Direct authenticated `finance_outbox` INSERT grant/policy is absent after Phase 2.1 migration; outbox writes run through governed SECURITY DEFINER SQL only
 - [ ] `rpc_create_financial_adjustment` final signature has no caller-supplied `p_casino_id`; casino scope is derived from `set_rls_context_from_staff()`
 - [ ] No executable stale `rpc_create_financial_adjustment` overload accepts caller-supplied `p_casino_id`
 - [ ] PRD-082 harness teardown migration is applied: `outbox_integration_proof_state` is dropped; `rpc_commit_consumer_receipt` runs its non-harness body; harness grants revoked
@@ -280,6 +287,8 @@ The release is considered **Done** when:
 - [ ] I1 validation matrix entry for `rpc_create_financial_adjustment` updated in `WAVE-2-TRACKER.json` with `harness_result` and `phase: "2.1"`
 - [ ] `WAVE-2-TRACKER.json` and `WAVE-2-PROGRESS-TRACKER.md` updated: Phase 2.1 status → `complete`, teardown status → `done`
 - [ ] `ROLLOUT-TRACKER.json` cursor updated: `active_phase → "2.2"`, `last_closed_phase → "2.1"`
+- [ ] SRM updated: `finance_outbox` marked as Wave 2 transport infrastructure, and FinanceService → RatingSlipService ADR-057 table-anchor lookup is explicitly allowlisted
+- [ ] Phase 2.1 introduces no projection store, consumer branch, generic event bus, generic dispatcher, envelope change, or producer business-semantics rewrite
 
 ---
 
@@ -376,6 +385,27 @@ BEGIN
 END $$;
 ```
 
+After provenance remediation, assert direct authenticated outbox insertion is impossible:
+
+```sql
+DO $$
+BEGIN
+  ASSERT NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'finance_outbox'
+      AND roles::text LIKE '%authenticated%'
+      AND cmd IN ('INSERT', 'ALL')
+  ), 'POST-STATE FAIL: authenticated INSERT policy still exists on finance_outbox';
+
+  ASSERT NOT has_table_privilege('authenticated', 'public.finance_outbox', 'INSERT'),
+    'POST-STATE FAIL: authenticated still has INSERT privilege on finance_outbox';
+END $$;
+```
+
+The outbox insertion implementation must use the selected Option A posture: a governed SECURITY DEFINER SQL boundary for `finance_outbox` writes, with no authenticated table INSERT grant. If implemented as a helper callable from SECURITY INVOKER producer RPCs, the helper must be narrowly scoped to deterministic envelope insertion, must derive tenant context from existing authoritative session context, and must not accept caller-supplied execution `casino_id`.
+
 ### Teardown migration — body to restore
 
 `rpc_commit_consumer_receipt` must be restored to the body in `20260511134450_wave2_rpc_commit_consumer_receipt.sql` (no proof-state block). The function signature, SECURITY DEFINER, `SET search_path = ''`, grant pattern, and `'processed'`/`'duplicate'` semantics are identical to that migration's form.
@@ -407,3 +437,4 @@ The proof does not re-certify I2–I4 (transport-substrate invariants, inherited
 | v1.1 | 2026-05-17 | Codex / Devil's Advocate | Clarified direct-write denial for SECURITY INVOKER producers and ADR-057 precedence over rollout-map placeholders |
 | v1.2 | 2026-05-17 | Codex / Devil's Advocate | Added stale overload cleanup, INT-002 catalog authority, payload contract, uniqueness pre-state assertion, and concurrency/rollback test gates |
 | v1.3 | 2026-05-17 | Codex / Devil's Advocate swarm | Applied final three-review consensus: producer provenance choice, mandatory uniqueness, direction semantics, teardown pre-state, relay operability, and DTO caller-input cleanup |
+| v1.4 | 2026-05-17 | Codex / Devil's Advocate swarm | Locked producer provenance to Option A, clarified RPC transaction-boundary language, scoped TS fallback checks, added authenticated INSERT post-state assertions, and required SRM boundary cleanup |
