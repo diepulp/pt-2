@@ -111,7 +111,7 @@
       "id": "WS7_SECURITY",
       "completed_at": "2026-05-11T17:15:00Z",
       "outputs": [
-        "supabase/migrations/20260511134500_wave2_finance_outbox_rls_hardening.sql",
+        "supabase/migrations/20260511134741_wave2_finance_outbox_rls_hardening.sql",
         "supabase/tests/security/outbox_transport_access.test.sql",
         "supabase/tests/migrations/outbox_legacy_shape.test.sql"
       ],
@@ -131,11 +131,11 @@
       "completed_at": "2026-05-11T14:45:00Z",
       "outputs": [
         "supabase/migrations/20260511134015_add_generate_uuid_v7.sql",
-        "supabase/migrations/20260511134100_wave2_finance_outbox_transform.sql",
-        "supabase/migrations/20260511134200_wave2_table_buyin_telemetry_reconcile.sql",
-        "supabase/migrations/20260511134300_wave2_processed_messages.sql",
-        "supabase/migrations/20260511134400_wave2_rpc_claim_outbox_batch.sql",
-        "supabase/migrations/20260511134450_wave2_rpc_commit_consumer_receipt.sql",
+        "supabase/migrations/20260511134129_wave2_finance_outbox_transform.sql",
+        "supabase/migrations/20260511134257_wave2_table_buyin_telemetry_reconcile.sql",
+        "supabase/migrations/20260511134418_wave2_processed_messages.sql",
+        "supabase/migrations/20260511134531_wave2_rpc_claim_outbox_batch.sql",
+        "supabase/migrations/20260511134638_wave2_rpc_commit_consumer_receipt.sql",
         "types/database.types.ts"
       ]
     },
@@ -143,7 +143,7 @@
       "id": "WS2_PRODUCER_A",
       "completed_at": "2026-05-11T16:00:00Z",
       "outputs": [
-        "supabase/migrations/20260511134600_wave2_rpc_create_financial_txn_ext.sql"
+        "supabase/migrations/20260511134903_wave2_rpc_create_financial_txn_ext.sql"
       ],
       "notes": "Extends rpc_create_financial_txn with F13/F14/F15 outbox emission logic. ADR-040 11-param SECURITY INVOKER shape preserved. Uses public.generate_uuid_v7(). Dispatched in same Skill message as WS3 per ADR-055 P4."
     },
@@ -151,7 +151,7 @@
       "id": "WS3_PRODUCER_B",
       "completed_at": "2026-05-11T16:00:00Z",
       "outputs": [
-        "supabase/migrations/20260511134700_wave2_rpc_record_grind_observation.sql"
+        "supabase/migrations/20260511135047_wave2_rpc_record_grind_observation.sql"
       ],
       "notes": "New rpc_record_grind_observation SECURITY DEFINER SET search_path=''. Atomic table_buyin_telemetry + finance_outbox INSERT in one transaction. event_type hardcoded grind.observed, player_id unconditionally NULL. Compat wrapper rpc_log_table_buyin_telemetry updated: GRIND_BUYIN routes to new RPC, RATED_BUYIN/RATED_ADJUSTMENT adds event_type='buyin.observed' for Wave 2 NOT NULL constraint. No second GRIND_BUYIN write path remains."
     }

@@ -35,14 +35,14 @@ The following infrastructure is in place and proven. Phases 2.1–2.5 inherit it
 | Artifact | Migration | Notes |
 |----------|-----------|-------|
 | `generate_uuid_v7()` | `20260511134015` | UUIDv7 monotonic counter; must be called explicitly — no DEFAULT |
-| `finance_outbox` Wave 2 DDL | `20260511134100` | `event_id` UUID PK, `envelope_version`, `fact_class`, `origin_label`, `event_type`, `aggregate_id`, `casino_id`, `table_id`, `player_id`, `actor_id`, `gaming_day`, `payload`, `processed_at`, `claimed_until`, `delivery_attempts`, `last_error` |
-| `table_buyin_telemetry` reconcile | `20260511134200` | Added `event_type NOT NULL`; `bridge_rated_buyin_to_telemetry()` trigger updated |
-| `processed_messages` | `20260511134300` | Idempotent consumer receipts; `(event_id, casino_id)` UNIQUE |
-| `rpc_claim_outbox_batch` | `20260511134400` | `FOR UPDATE SKIP LOCKED`; `service_role`; returns batch with `claimed_until` lease |
-| `rpc_commit_consumer_receipt` | `20260511134450` | `(event_id, casino_id)` → `'processed'`/`'duplicate'`; SECURITY DEFINER; `service_role` |
-| Class A outbox extension | `20260511134600` | `rpc_create_financial_txn` amended; outbox row in same transaction |
-| Class B RPC | `20260511134700` | `rpc_record_grind_observation` new; atomic `table_buyin_telemetry` + `finance_outbox` INSERT |
-| RLS hardening | `20260511134500` | `finance_outbox`: no authenticated policies (deny-by-default); `processed_messages`: same |
+| `finance_outbox` Wave 2 DDL | `20260511134129` | `event_id` UUID PK, `envelope_version`, `fact_class`, `origin_label`, `event_type`, `aggregate_id`, `casino_id`, `table_id`, `player_id`, `actor_id`, `gaming_day`, `payload`, `processed_at`, `claimed_until`, `delivery_attempts`, `last_error` |
+| `table_buyin_telemetry` reconcile | `20260511134257` | Added `event_type NOT NULL`; `bridge_rated_buyin_to_telemetry()` trigger updated |
+| `processed_messages` | `20260511134418` | Idempotent consumer receipts; `(event_id, casino_id)` UNIQUE |
+| `rpc_claim_outbox_batch` | `20260511134531` | `FOR UPDATE SKIP LOCKED`; `service_role`; returns batch with `claimed_until` lease |
+| `rpc_commit_consumer_receipt` | `20260511134638` | `(event_id, casino_id)` → `'processed'`/`'duplicate'`; SECURITY DEFINER; `service_role` |
+| Class A outbox extension | `20260511134903` | `rpc_create_financial_txn` amended; outbox row in same transaction |
+| Class B RPC | `20260511135047` | `rpc_record_grind_observation` new; atomic `table_buyin_telemetry` + `finance_outbox` INSERT |
+| RLS hardening | `20260511134741` | `finance_outbox`: no authenticated policies (deny-by-default); `processed_messages`: same |
 | Transport path bug fixes | `20260512021632` | Fixes Bug 1–4 uncovered during PRD-082 proof (see §3 below) |
 
 ### 2.2 Application layer
@@ -75,7 +75,7 @@ Four real transport bugs were uncovered during the PRD-082 integration proof run
 | Bug | Root Cause | Fix Applied |
 |-----|-----------|-------------|
 | Bug 1 — `rpc_create_financial_txn` RLS failure | `ON CONFLICT DO UPDATE` causes PostgreSQL 17 to check SELECT policy on conflict-resolution scan path; `player_financial_transaction_no_updates` (USING=false) denies it even when no real conflict exists | Changed to `DO NOTHING` + SELECT fallback |
-| Bug 2 — `bridge_rated_buyin_to_telemetry()` trigger | Migration `20260511134200` added `event_type NOT NULL` to `table_buyin_telemetry` but did not update this AFTER INSERT trigger; rated buy-ins failed with NOT NULL violation | Added `v_event_type = 'buyin.observed'` for RATED_BUYIN and RATED_ADJUSTMENT kinds |
+| Bug 2 — `bridge_rated_buyin_to_telemetry()` trigger | Migration `20260511134257` added `event_type NOT NULL` to `table_buyin_telemetry` but did not update this AFTER INSERT trigger; rated buy-ins failed with NOT NULL violation | Added `v_event_type = 'buyin.observed'` for RATED_BUYIN and RATED_ADJUSTMENT kinds |
 | Bug 3 — `rpc_create_financial_adjustment` RLS failure | Same `DO UPDATE` denial-policy issue as Bug 1 | Same `DO NOTHING` fix — **adjustment RPC is now ready for Phase 2.1 outbox extension** |
 | Bug 4 — `finance_outbox` INSERT default-deny | `rpc_create_financial_txn` is SECURITY INVOKER (ADR-040); no INSERT policy on `finance_outbox` = default deny for `authenticated` role | Added `finance_outbox_insert_staff` INSERT policy + `GRANT INSERT ON finance_outbox TO authenticated` |
 

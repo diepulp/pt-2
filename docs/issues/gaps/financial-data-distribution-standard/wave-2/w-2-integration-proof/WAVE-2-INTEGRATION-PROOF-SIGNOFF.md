@@ -18,9 +18,9 @@ transport_path_patches_applied: |
      Root cause: player_financial_transaction_no_updates (USING=false) causes RLS failure
      even without a real conflict when ON CONFLICT specifies a partial index target.
   2. bridge_rated_buyin_to_telemetry() trigger: added event_type column (NOT NULL since Wave 2).
-     Root cause: migration 20260511134200 added event_type NOT NULL but did not update trigger.
+     Root cause: migration 20260511134257 added event_type NOT NULL but did not update trigger.
   3. finance_outbox INSERT policy: added finance_outbox_insert_staff policy for authenticated role.
-     Root cause: migration 20260511134100 assumed SECURITY DEFINER RPCs for all outbox writes,
+     Root cause: migration 20260511134129 assumed SECURITY DEFINER RPCs for all outbox writes,
      but rpc_create_financial_txn is SECURITY INVOKER (per ADR-040); no INSERT policy = default deny.
   Seed bug fixed: player_casino record for proof player was missing; SELECT RLS policy on
   player_financial_transaction requires player_casino for visibility.

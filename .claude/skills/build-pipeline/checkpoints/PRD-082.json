@@ -67,7 +67,7 @@
         "scripts/outbox-proof/i5-cashout-non-emission.ts",
         "scripts/outbox-proof/drift-check.ts"
       ],
-      "notes": "rpc_record_grind_observation was missing from local DB; applied migration 20260511134700 via docker exec psql; registered all Wave 2 migration versions in schema_migrations; db:types-local regenerated; npx tsc --project tsconfig.json --noEmit: 0 errors in proof scripts."
+      "notes": "rpc_record_grind_observation was missing from local DB; applied migration 20260511135047 via docker exec psql; registered all Wave 2 migration versions in schema_migrations; db:types-local regenerated; npx tsc --project tsconfig.json --noEmit: 0 errors in proof scripts."
     },
     "WS4_PROOF_EXECUTE": {
       "status": "completed",

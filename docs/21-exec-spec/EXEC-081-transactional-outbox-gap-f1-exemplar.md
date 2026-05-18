@@ -44,11 +44,11 @@ workstreams:
     traces_to: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, infrastructure]
     outputs:
       - supabase/migrations/20260511134015_add_generate_uuid_v7.sql
-      - supabase/migrations/20260511134100_wave2_finance_outbox_transform.sql
-      - supabase/migrations/20260511134200_wave2_table_buyin_telemetry_reconcile.sql
-      - supabase/migrations/20260511134300_wave2_processed_messages.sql
-      - supabase/migrations/20260511134400_wave2_rpc_claim_outbox_batch.sql
-      - supabase/migrations/20260511134450_wave2_rpc_commit_consumer_receipt.sql
+      - supabase/migrations/20260511134129_wave2_finance_outbox_transform.sql
+      - supabase/migrations/20260511134257_wave2_table_buyin_telemetry_reconcile.sql
+      - supabase/migrations/20260511134418_wave2_processed_messages.sql
+      - supabase/migrations/20260511134531_wave2_rpc_claim_outbox_batch.sql
+      - supabase/migrations/20260511134638_wave2_rpc_commit_consumer_receipt.sql
     gate: schema-validation
     estimated_complexity: high
 
@@ -69,7 +69,7 @@ workstreams:
     depends_on: [WS1_DDL]
     traces_to: [CAP-1, RULE-1, RULE-2, STEP-1, STEP-2]
     outputs:
-      - supabase/migrations/20260511134600_wave2_rpc_create_financial_txn_ext.sql
+      - supabase/migrations/20260511134903_wave2_rpc_create_financial_txn_ext.sql
     gate: type-check
     estimated_complexity: high
     parity_constraint: "ADR-055 P4 — MUST be dispatched in same Skill message as WS3_PRODUCER_B"
@@ -91,7 +91,7 @@ workstreams:
     depends_on: [WS1_DDL]
     traces_to: [CAP-1, RULE-1, RULE-2, RULE-6, RULE-8, STEP-1, STEP-2]
     outputs:
-      - supabase/migrations/20260511134700_wave2_rpc_record_grind_observation.sql
+      - supabase/migrations/20260511135047_wave2_rpc_record_grind_observation.sql
     gate: type-check
     estimated_complexity: high
     parity_constraint: "ADR-055 P4 — MUST be dispatched in same Skill message as WS2_PRODUCER_A"
@@ -173,7 +173,7 @@ workstreams:
     depends_on: [WS1_DDL]
     traces_to: [infrastructure, RULE-3]
     outputs:
-      - supabase/migrations/20260511134500_wave2_finance_outbox_rls_hardening.sql
+      - supabase/migrations/20260511134741_wave2_finance_outbox_rls_hardening.sql
       - supabase/tests/security/outbox_transport_access.test.sql
       - supabase/tests/migrations/outbox_legacy_shape.test.sql
     gate: test-pass
@@ -441,7 +441,7 @@ END $$;
 
 ---
 
-#### `20260511134100_wave2_finance_outbox_transform.sql`
+#### `20260511134129_wave2_finance_outbox_transform.sql`
 
 **Pre-state check (fail loudly if legacy shape absent):**
 ```sql
@@ -569,7 +569,7 @@ RLS: `ALTER TABLE public.finance_outbox ENABLE ROW LEVEL SECURITY;` — no authe
 
 ---
 
-#### `20260511134200_wave2_table_buyin_telemetry_reconcile.sql`
+#### `20260511134257_wave2_table_buyin_telemetry_reconcile.sql`
 
 **Pre-state check:**
 ```sql
@@ -624,7 +624,7 @@ No `player_id` column may be added — absent by DDL construction (ADR-052 R5).
 
 ---
 
-#### `20260511134300_wave2_processed_messages.sql`
+#### `20260511134418_wave2_processed_messages.sql`
 
 ```sql
 CREATE TABLE public.processed_messages (
@@ -646,7 +646,7 @@ GRANT SELECT, INSERT ON public.processed_messages TO service_role;
 
 ---
 
-#### `20260511134400_wave2_rpc_claim_outbox_batch.sql`
+#### `20260511134531_wave2_rpc_claim_outbox_batch.sql`
 
 Claims unprocessed rows using `FOR UPDATE SKIP LOCKED` and immediately marks them in-flight (`last_attempted_at`, `delivery_attempts`) in the same atomic statement. Prevents concurrent relay workers from claiming the same batch.
 
@@ -694,7 +694,7 @@ COMMENT ON FUNCTION public.rpc_claim_outbox_batch(INTEGER) IS
 
 ---
 
-#### `20260511134450_wave2_rpc_commit_consumer_receipt.sql`
+#### `20260511134638_wave2_rpc_commit_consumer_receipt.sql`
 
 Atomic consumer receipt: inserts into `processed_messages` and applies the consumer side effect within **one PostgreSQL transaction**. This is the atomicity boundary for I3. TypeScript cannot provide this — it must live in SQL.
 
@@ -780,7 +780,7 @@ COMMENT ON FUNCTION public.rpc_commit_consumer_receipt(UUID, UUID) IS
 
 **ADR-055 P4 constraint: dispatched in the same Skill message as WS3_PRODUCER_B.**
 
-**Migration:** `20260511134600_wave2_rpc_create_financial_txn_ext.sql`
+**Migration:** `20260511134903_wave2_rpc_create_financial_txn_ext.sql`
 
 Extends the existing ADR-040 `rpc_create_financial_txn` function without reintroducing spoofable identity or casino parameters. Current shape to preserve: 11 parameters, `SECURITY INVOKER`, `set_rls_context_from_staff()` at function start, `v_casino_id`/`v_actor_id` derived from session context, `v_row player_financial_transaction%ROWTYPE`, and `RETURNS player_financial_transaction`. The extension adds the following logic **after** the PFT `INSERT ... RETURNING t.* INTO v_row`, **before** `RETURN v_row`:
 
@@ -857,7 +857,7 @@ END;
 
 **ADR-055 P4 constraint: dispatched in the same Skill message as WS2_PRODUCER_A.**
 
-**Migration:** `20260511134700_wave2_rpc_record_grind_observation.sql`
+**Migration:** `20260511135047_wave2_rpc_record_grind_observation.sql`
 
 **New function signature:**
 ```sql
@@ -1134,9 +1134,9 @@ export async function runConsumer(
 
 ### WS7_SECURITY: RLS Hardening + SQL Security Tests
 
-**Migration:** `20260511134500_wave2_finance_outbox_rls_hardening.sql`
+**Migration:** `20260511134741_wave2_finance_outbox_rls_hardening.sql`
 
-**Note:** The four legacy `finance_outbox` authenticated policies (`finance_outbox_select`, `finance_outbox_insert`, `finance_outbox_no_updates`, `finance_outbox_no_deletes`) were already **dropped in WS1_DDL** (`20260511134100_wave2_finance_outbox_transform.sql`) as part of the explicit dependency cleanup before `DROP TABLE`. This migration focuses on post-recreate hardening: confirming no authenticated policies exist on the new table, enabling RLS on `processed_messages`, and running SQL security tests.
+**Note:** The four legacy `finance_outbox` authenticated policies (`finance_outbox_select`, `finance_outbox_insert`, `finance_outbox_no_updates`, `finance_outbox_no_deletes`) were already **dropped in WS1_DDL** (`20260511134129_wave2_finance_outbox_transform.sql`) as part of the explicit dependency cleanup before `DROP TABLE`. This migration focuses on post-recreate hardening: confirming no authenticated policies exist on the new table, enabling RLS on `processed_messages`, and running SQL security tests.
 
 **Post-recreate assertion (verify no authenticated policies leaked in):**
 ```sql

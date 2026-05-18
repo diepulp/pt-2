@@ -2,7 +2,7 @@
 # ==============================================================================
 # RPC Self-Injection Pattern Lint
 # ==============================================================================
-# Version: 3.1.0
+# Version: 3.2.0
 # Date: 2026-05-18
 # References:
 #   - ADR-024: Authoritative context derivation (set_rls_context_from_staff)
@@ -58,6 +58,18 @@ for FILE in $MIGRATION_FILES; do
   RPC_COUNT=$(grep -icE 'CREATE\s+OR\s+REPLACE\s+FUNCTION\s+(public\.)?rpc_' "$FILE" || true)
 
   if [ "$RPC_COUNT" -gt 0 ]; then
+    # service_role-only exemption: relay RPCs (rpc_claim_outbox_batch,
+    # rpc_commit_consumer_receipt) are called exclusively by the background relay
+    # worker via service_role. They cannot call set_rls_context_from_staff()
+    # because they have no staff JWT. Detected by: GRANT TO service_role present
+    # and GRANT TO authenticated absent.
+    HAS_SROLE_GRANT=$(grep -icE 'GRANT\s+EXECUTE\s+ON\s+FUNCTION.*TO\s+service_role' "$FILE" || true)
+    HAS_AUTH_GRANT=$(grep -icE 'GRANT\s+EXECUTE\s+ON\s+FUNCTION.*TO\s+authenticated' "$FILE" || true)
+    if [ "$HAS_SROLE_GRANT" -gt 0 ] && [ "$HAS_AUTH_GRANT" -eq 0 ]; then
+      echo "✅ $FILE: $RPC_COUNT RPC function(s) — service_role-only relay (context injection exempt)"
+      continue
+    fi
+
     # RPC function(s) found - verify context injection call exists
     # ADR-024: set_rls_context_from_staff() is the ONLY accepted pattern
     # NOTE: set_rls_context() was DROPPED in SEC-007 and no longer exists.
@@ -157,6 +169,14 @@ for FILE in $MIGRATION_FILES; do
     continue
   fi
 
+  # service_role-only relay RPCs (e.g. rpc_commit_consumer_receipt) receive
+  # p_casino_id explicitly from the relay worker — no staff context exists.
+  HAS_SROLE_GRANT=$(grep -icE 'GRANT\s+EXECUTE\s+ON\s+FUNCTION.*TO\s+service_role' "$FILE" || true)
+  HAS_AUTH_GRANT=$(grep -icE 'GRANT\s+EXECUTE\s+ON\s+FUNCTION.*TO\s+authenticated' "$FILE" || true)
+  if [ "$HAS_SROLE_GRANT" -gt 0 ] && [ "$HAS_AUTH_GRANT" -eq 0 ]; then
+    continue
+  fi
+
   HAS_P_CASINO_ID=$(grep -icE 'p_casino_id\s+uuid' "$FILE" || true)
   if [ "$HAS_P_CASINO_ID" -gt 0 ]; then
     echo "❌ IDENTITY PARAMETER VIOLATION: $FILE"
@@ -199,6 +219,14 @@ for FILE in $MIGRATION_FILES; do
   # This is the high-risk pattern that needs validation
   HAS_SECURITY_DEFINER=$(grep -icE 'SECURITY\s+DEFINER' "$FILE" || true)
   HAS_P_CASINO_ID=$(grep -icE 'p_casino_id\s+uuid' "$FILE" || true)
+
+  # service_role-only relay RPCs accept p_casino_id from the relay worker — no
+  # authenticated attacker can reach them (REVOKE from PUBLIC, GRANT to service_role).
+  HAS_SROLE_GRANT=$(grep -icE 'GRANT\s+EXECUTE\s+ON\s+FUNCTION.*TO\s+service_role' "$FILE" || true)
+  HAS_AUTH_GRANT=$(grep -icE 'GRANT\s+EXECUTE\s+ON\s+FUNCTION.*TO\s+authenticated' "$FILE" || true)
+  if [ "$HAS_SROLE_GRANT" -gt 0 ] && [ "$HAS_AUTH_GRANT" -eq 0 ]; then
+    continue
+  fi
 
   if [ "$HAS_SECURITY_DEFINER" -gt 0 ] && [ "$HAS_P_CASINO_ID" -gt 0 ]; then
     # Check if using ADR-024 pattern (exempt from p_casino_id validation)

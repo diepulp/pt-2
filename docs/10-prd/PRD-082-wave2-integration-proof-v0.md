@@ -139,12 +139,12 @@ This slice has no operator-visible UI. The "UX" is the developer execution flow:
 
 | Artifact | Status |
 |---|---|
-| `finance_outbox` DDL | Migration `20260511134100` ✓ |
-| `processed_messages` DDL | Migration `20260511134300` ✓ |
-| `rpc_claim_outbox_batch` | Migration `20260511134400` ✓ |
-| `rpc_commit_consumer_receipt` | Migration `20260511134450` ✓ |
-| `rpc_create_financial_txn` (outbox-emitting) | Migration `20260511134600` ✓ |
-| `rpc_record_grind_observation` | Migration `20260511134700` ✓ |
+| `finance_outbox` DDL | Migration `20260511134129` ✓ |
+| `processed_messages` DDL | Migration `20260511134418` ✓ |
+| `rpc_claim_outbox_batch` | Migration `20260511134531` ✓ |
+| `rpc_commit_consumer_receipt` | Migration `20260511134638` ✓ |
+| `rpc_create_financial_txn` (outbox-emitting) | Migration `20260511134903` ✓ |
+| `rpc_record_grind_observation` | Migration `20260511135047` ✓ |
 | Relay route | `app/api/internal/outbox-relay/route.ts` ✓ |
 | Local Supabase stack | Required; must be resetable |
 

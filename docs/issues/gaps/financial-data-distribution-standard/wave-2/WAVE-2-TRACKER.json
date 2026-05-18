@@ -88,14 +88,14 @@
       },
       "deliverables": [
         "generate_uuid_v7() — migration 20260511134015",
-        "finance_outbox Wave 2 DDL — migration 20260511134100",
-        "table_buyin_telemetry reconcile (event_type NOT NULL) — migration 20260511134200",
-        "processed_messages — migration 20260511134300",
-        "rpc_claim_outbox_batch (FOR UPDATE SKIP LOCKED, service_role) — migration 20260511134400",
-        "rpc_commit_consumer_receipt (processed|duplicate, service_role) — migration 20260511134450",
-        "rpc_create_financial_txn outbox extension (Class A, ADR-054 D2) — migration 20260511134600",
-        "rpc_record_grind_observation (Class B, atomic TBT + outbox) — migration 20260511134700",
-        "RLS hardening: finance_outbox + processed_messages deny-by-default — migration 20260511134500",
+        "finance_outbox Wave 2 DDL — migration 20260511134129",
+        "table_buyin_telemetry reconcile (event_type NOT NULL) — migration 20260511134257",
+        "processed_messages — migration 20260511134418",
+        "rpc_claim_outbox_batch (FOR UPDATE SKIP LOCKED, service_role) — migration 20260511134531",
+        "rpc_commit_consumer_receipt (processed|duplicate, service_role) — migration 20260511134638",
+        "rpc_create_financial_txn outbox extension (Class A, ADR-054 D2) — migration 20260511134903",
+        "rpc_record_grind_observation (Class B, atomic TBT + outbox) — migration 20260511135047",
+        "RLS hardening: finance_outbox + processed_messages deny-by-default — migration 20260511134741",
         "FinancialOutboxEventDTO — services/player-financial/dtos.ts",
         "runConsumer — services/player-financial/outbox-consumer.ts",
         "POST /api/internal/outbox-relay (CRON_SECRET bearer auth) — app/api/internal/outbox-relay/route.ts",
@@ -150,7 +150,7 @@
         {
           "id": "Bug-2",
           "rpc": "bridge_rated_buyin_to_telemetry() trigger",
-          "root_cause": "Migration 20260511134200 added event_type NOT NULL to table_buyin_telemetry but did not update this AFTER INSERT trigger",
+          "root_cause": "Migration 20260511134257 added event_type NOT NULL to table_buyin_telemetry but did not update this AFTER INSERT trigger",
           "fix": "Added v_event_type = buyin.observed for RATED_BUYIN and RATED_ADJUSTMENT kinds"
         },
         {
@@ -162,7 +162,7 @@
         {
           "id": "Bug-4",
           "table": "finance_outbox",
-          "root_cause": "Migration 20260511134100 assumed SECURITY DEFINER RPCs for all outbox writes, but rpc_create_financial_txn is SECURITY INVOKER (ADR-040); no INSERT policy = default deny for authenticated role",
+          "root_cause": "Migration 20260511134129 assumed SECURITY DEFINER RPCs for all outbox writes, but rpc_create_financial_txn is SECURITY INVOKER (ADR-040); no INSERT policy = default deny for authenticated role",
           "fix": "Added finance_outbox_insert_staff INSERT policy + GRANT INSERT ON finance_outbox TO authenticated"
         }
       ],
@@ -614,15 +614,15 @@
     "as_of_commit": "b1d45302",
     "database_layer": [
       "generate_uuid_v7() — migration 20260511134015",
-      "finance_outbox Wave 2 DDL (event_id UUIDv7 PK, all discriminator fields) — migration 20260511134100",
-      "table_buyin_telemetry event_type NOT NULL + bridge trigger fix — migration 20260511134200",
-      "processed_messages (event_id + casino_id UNIQUE) — migration 20260511134300",
-      "rpc_claim_outbox_batch (FOR UPDATE SKIP LOCKED, service_role) — migration 20260511134400",
-      "rpc_commit_consumer_receipt (processed|duplicate, SECURITY DEFINER, service_role) — migration 20260511134450",
-      "rpc_create_financial_txn outbox extension (Class A, SECURITY INVOKER) — migration 20260511134600",
-      "rpc_record_grind_observation new RPC (Class B, SECURITY DEFINER) — migration 20260511134700",
+      "finance_outbox Wave 2 DDL (event_id UUIDv7 PK, all discriminator fields) — migration 20260511134129",
+      "table_buyin_telemetry event_type NOT NULL + bridge trigger fix — migration 20260511134257",
+      "processed_messages (event_id + casino_id UNIQUE) — migration 20260511134418",
+      "rpc_claim_outbox_batch (FOR UPDATE SKIP LOCKED, service_role) — migration 20260511134531",
+      "rpc_commit_consumer_receipt (processed|duplicate, SECURITY DEFINER, service_role) — migration 20260511134638",
+      "rpc_create_financial_txn outbox extension (Class A, SECURITY INVOKER) — migration 20260511134903",
+      "rpc_record_grind_observation new RPC (Class B, SECURITY DEFINER) — migration 20260511135047",
       "finance_outbox_insert_staff INSERT policy + GRANT for authenticated role — migration 20260512021632",
-      "RLS hardening: finance_outbox + processed_messages deny-by-default — migration 20260511134500"
+      "RLS hardening: finance_outbox + processed_messages deny-by-default — migration 20260511134741"
     ],
     "application_layer": [
       "FinancialOutboxEventDTO — services/player-financial/dtos.ts",

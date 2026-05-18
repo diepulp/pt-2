@@ -23,7 +23,7 @@ scope_amendment:
 overengineering_guardrail: docs/issues/gaps/financial-data-distribution-standard/OVERENGINEERING_GUARDRAIL_OUTBOX_WAVE2.md
 
 claim_reclaim_finding: >
-  rpc_claim_outbox_batch (migration 20260511134400) uses WHERE processed_at IS NULL with
+  rpc_claim_outbox_batch (migration 20260511134531) uses WHERE processed_at IS NULL with
   FOR UPDATE SKIP LOCKED. No persistent claim-lock state — lock releases when function
   transaction commits; processed_at remains NULL. Row is immediately reclaimable on next
   relay cycle. VERDICT: reclaimability inherent. No unclaim helper required. I2 pre-check
@@ -243,7 +243,7 @@ decisions:
       rpc_claim_outbox_batch uses WHERE processed_at IS NULL with FOR UPDATE SKIP LOCKED.
       No persistent claim-lock state exists. Reclaimability is inherent in the design.
     rationale: >
-      Verified by reading migration 20260511134400. The function updates last_attempted_at
+      Verified by reading migration 20260511134531. The function updates last_attempted_at
       and delivery_attempts but never sets a claim-lock column. processed_at IS NULL
       persists after claim; row re-enters batch on next relay cycle naturally.
     impact_on_scope: none
@@ -371,7 +371,7 @@ The supporting review note remains useful context, but execution authority lives
 
 ## Architecture Context
 
-All exemplar infrastructure is from PRD-081 (migrations 20260511134015–20260511134700,
+All exemplar infrastructure is from PRD-081 (migrations 20260511134015–20260511135047,
 relay route `app/api/internal/outbox-relay/route.ts`). This slice adds only one migration.
 Bounded context: financial-outbox (PlayerFinancialService). No new bounded context.
 

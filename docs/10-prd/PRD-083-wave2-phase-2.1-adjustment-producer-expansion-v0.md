@@ -305,8 +305,8 @@ The release is considered **Done** when:
 | `docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-H-TRANSACTIONAL-OUTBOX.md` | Parent FIB — scope authority |
 | `docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-S-TRANSACTIONAL-OUTBOX.json` | Structured FIB companion |
 | `docs/issues/gaps/financial-data-distribution-standard/wave-2/outbox-knowledge-base.md` | Outbox implementation contract — DDL, relay, consumer, D2 vs D6 trigger classification |
-| `supabase/migrations/20260511134600_wave2_rpc_create_financial_txn_ext.sql` | Exemplar pattern — Class A outbox extension to follow |
-| `supabase/migrations/20260511134450_wave2_rpc_commit_consumer_receipt.sql` | Non-harness `rpc_commit_consumer_receipt` body — teardown target |
+| `supabase/migrations/20260511134903_wave2_rpc_create_financial_txn_ext.sql` | Exemplar pattern — Class A outbox extension to follow |
+| `supabase/migrations/20260511134638_wave2_rpc_commit_consumer_receipt.sql` | Non-harness `rpc_commit_consumer_receipt` body — teardown target |
 | `supabase/migrations/20260512000744_add_outbox_integration_proof_state.sql` | Harness body to be replaced by teardown migration |
 | `supabase/migrations/20260512021632_fix_wave2_transport_path_bugs.sql` | Bug-3 (DO NOTHING) + Bug-4 (INSERT policy) already applied |
 | `tests/failure/i1-atomicity.test.ts` | I1 harness pattern — follow for adjustment producer proof |
@@ -319,7 +319,7 @@ The release is considered **Done** when:
 
 ### Extension migration — pattern to follow
 
-The Class A exemplar extension in `20260511134600_wave2_rpc_create_financial_txn_ext.sql` is the canonical pattern. The adjustment extension must match it structurally, with ADR-057 eligibility gating before the outbox insert:
+The Class A exemplar extension in `20260511134903_wave2_rpc_create_financial_txn_ext.sql` is the canonical pattern. The adjustment extension must match it structurally, with ADR-057 eligibility gating before the outbox insert:
 
 ```sql
 -- Inside rpc_create_financial_adjustment, after the PFT INSERT and before RETURN:
@@ -408,7 +408,7 @@ The outbox insertion implementation must use the selected Option A posture: a go
 
 ### Teardown migration — body to restore
 
-`rpc_commit_consumer_receipt` must be restored to the body in `20260511134450_wave2_rpc_commit_consumer_receipt.sql` (no proof-state block). The function signature, SECURITY DEFINER, `SET search_path = ''`, grant pattern, and `'processed'`/`'duplicate'` semantics are identical to that migration's form.
+`rpc_commit_consumer_receipt` must be restored to the body in `20260511134638_wave2_rpc_commit_consumer_receipt.sql` (no proof-state block). The function signature, SECURITY DEFINER, `SET search_path = ''`, grant pattern, and `'processed'`/`'duplicate'` semantics are identical to that migration's form.
 
 ---
 

@@ -288,7 +288,7 @@ workstreams:
       === Outbox extension for rpc_create_financial_adjustment ===
 
       Follow the Class A exemplar pattern from
-      supabase/migrations/20260511134600_wave2_rpc_create_financial_txn_ext.sql.
+      supabase/migrations/20260511134903_wave2_rpc_create_financial_txn_ext.sql.
       After the PFT INSERT (with DO NOTHING idempotency and SELECT replay from WS3),
       before RETURN v_row, add the ADR-057 eligibility check and conditional outbox INSERT:
 
@@ -745,7 +745,7 @@ dod:
 
 references:
   - "PRD-083: docs/10-prd/PRD-083-wave2-phase-2.1-adjustment-producer-expansion-v0.md"
-  - "Exemplar pattern: supabase/migrations/20260511134600_wave2_rpc_create_financial_txn_ext.sql"
+  - "Exemplar pattern: supabase/migrations/20260511134903_wave2_rpc_create_financial_txn_ext.sql"
   - "Bug-3 fix (current stale state): supabase/migrations/20260512021632_fix_wave2_transport_path_bugs.sql"
   - "PRD-044 canonical no-p_casino_id precedent: supabase/migrations/20260306224345_prd044_cleanup_adjustment_compat.sql"
   - "Teardown migration: supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql"
