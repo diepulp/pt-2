@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 import { redirect } from 'next/navigation';
 
 import { createClient } from '@/lib/supabase/server';
@@ -5,6 +7,8 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { canonicalizeEmail, checkAllowlistGate } from '@/services/pilot/crud';
 
 export const dynamic = 'force-dynamic';
+
+const DEMO_CASINO_ID = 'ca000000-0000-0000-0000-000000000001';
 
 export default async function StartGatewayPage() {
   const supabase = await createClient();
@@ -28,7 +32,16 @@ export default async function StartGatewayPage() {
     redirect('/request-access');
   }
 
-  // 2. Check staff binding
+  // 1c. Admin shortcut: pilot admins go straight to review surface
+  const adminEmails = (process.env.PILOT_ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (adminEmails.includes(canonicalizeEmail(user.email!))) {
+    redirect('/pilot-review');
+  }
+
+  // 2. Check staff binding (existing active staff → operational runtime, unchanged)
   const { data: staff, error: staffError } = await supabase
     .from('staff')
     .select('id, status, casino_id')
@@ -36,47 +49,43 @@ export default async function StartGatewayPage() {
     .maybeSingle();
 
   if (staffError) {
-    // DB/RLS error — don't misroute to bootstrap (causes redirect loop)
+    // DB/RLS error — fail closed
     redirect('/signin?error=service_unavailable');
   }
 
-  if (!staff) {
-    // Check for pending company registration
-    const { data: registration } = await supabase
-      .from('onboarding_registration')
-      .select('id')
-      .eq('status', 'pending')
-      .maybeSingle();
-
-    if (registration) {
-      // Has pending registration — proceed to bootstrap
-      redirect('/bootstrap');
-    }
-
-    // No registration — needs to register company first
-    redirect('/register');
+  if (staff?.status === 'active') {
+    redirect('/pit');
   }
 
-  if (staff.status !== 'active') {
-    // Staff exists but inactive
-    redirect('/signin?error=inactive');
-  }
-
-  // 3. Check casino setup status
-  const { data: settings, error: settingsError } = await supabase
-    .from('casino_settings')
-    .select('setup_status')
-    .eq('casino_id', staff.casino_id)
+  // 3. No active staff binding — idempotency check before creating demo binding
+  const { data: existingDemo } = await serviceClient
+    .from('staff')
+    .select('id')
+    .eq('casino_id', DEMO_CASINO_ID)
+    .eq('user_id', user.id)
     .maybeSingle();
 
-  if (settingsError || !settings) {
-    redirect('/setup');
+  if (existingDemo) {
+    redirect('/pit');
   }
 
-  if (settings.setup_status !== 'ready') {
-    redirect('/setup');
+  // 4. Auto-create Casino 1 demo staff binding
+  // first_name / last_name: email username + 'Demo' (no pilot_access_requests lookup in this slice)
+  // rls-break-glass: service-role client — ADR-034 §170 explicitly excludes createServiceClient() writes expires:2099-01-01
+  const emailUsername = canonicalizeEmail(user.email!).split('@')[0] ?? 'demo';
+  const { error: insertError } = await serviceClient.from('staff').insert({
+    casino_id: DEMO_CASINO_ID,
+    role: 'pit_boss',
+    employee_id: `DEMO-${randomUUID().substring(0, 6).toUpperCase()}`,
+    user_id: user.id,
+    email: canonicalizeEmail(user.email!),
+    first_name: emailUsername,
+    last_name: 'Demo',
+  });
+
+  if (insertError) {
+    redirect('/signin?error=service_unavailable');
   }
 
-  // 4. All checks passed — go to app
   redirect('/pit');
 }

@@ -268,7 +268,7 @@ export default function LandingPage() {
                 size="lg"
                 className="rounded-full bg-accent text-white hover:bg-accent/90 px-8 h-12 text-sm font-semibold tracking-wide shadow-[0_1px_40px_hsl(189_94%_43%/0.25)] hover:shadow-[0_1px_50px_hsl(189_94%_43%/0.35)] transition-all duration-300 w-full sm:w-auto"
               >
-                <Link href="/contact">Request an operational walkthrough</Link>
+                <Link href="/signin">Explore Interactive Demo</Link>
               </Button>
               <Button
                 asChild
@@ -276,7 +276,7 @@ export default function LandingPage() {
                 size="lg"
                 className="rounded-full border border-white/[0.08] bg-white/[0.04] text-[#95A2B3] hover:bg-white/[0.08] hover:text-[#F7F8F8] backdrop-blur-sm px-8 h-12 text-sm font-medium tracking-wide transition-all duration-300 w-full sm:w-auto"
               >
-                <a href="#operations">Explore operational domains</a>
+                <Link href="/request-access">Request Production Pilot</Link>
               </Button>
             </div>
           </Reveal>
@@ -601,7 +601,7 @@ export default function LandingPage() {
                 size="lg"
                 className="rounded-full bg-accent text-white hover:bg-accent/90 px-8 h-12 text-sm font-semibold tracking-wide shadow-[0_1px_40px_hsl(189_94%_43%/0.25)] hover:shadow-[0_1px_50px_hsl(189_94%_43%/0.35)] transition-all duration-300 w-full sm:w-auto"
               >
-                <Link href="/contact">Request an operational walkthrough</Link>
+                <Link href="/signin">Explore Interactive Demo</Link>
               </Button>
             </div>
           </Reveal>

@@ -7,17 +7,23 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { canonicalizeEmail, checkAllowlistGate } from '@/services/pilot/crud';
 import type { Database } from '@/types/database.types';
 
+export interface RequireApprovedPilotSessionOpts {
+  // When true, additionally verifies the caller is in PILOT_ADMIN_EMAILS after the
+  // allowlist gate. Fail-closed: if PILOT_ADMIN_EMAILS is unset or empty and this
+  // option is true, throws FORBIDDEN — no provisioning access granted by default.
+  requireProvisioningAuth?: boolean;
+}
+
 // Pre-staff onboarding authorization guard.
-// Verifies: authenticated Supabase session + active allowlist entry.
-// Intentionally does NOT require a staff binding — onboarding is pre-staff.
-// Valid ONLY for registerCompanyAction and bootstrapAction (EXEC-SPEC §4.3.1).
+// Default: verifies authenticated Supabase session + active allowlist entry.
+// With requireProvisioningAuth:true: additionally requires PILOT_ADMIN_EMAILS membership.
 //
-// This guard is the explicit replacement for the implicit skipAuth assumption.
-// withServerAction(skipAuth:true) must still be used for the actions themselves
-// because withAuth checks for a staff binding that does not yet exist at
-// registration/bootstrap time.
+// Valid for registerCompanyAction and bootstrapAction (EXEC-SPEC §WS_GUARDS).
+// Uses withServerAction(skipAuth:true) on those actions — withAuth checks staff
+// binding which does not yet exist at registration/bootstrap time.
 export async function requireApprovedPilotSession(
   supabase: SupabaseClient<Database>,
+  opts?: RequireApprovedPilotSessionOpts,
 ): Promise<{ email: string }> {
   const {
     data: { user },
@@ -36,6 +42,19 @@ export async function requireApprovedPilotSession(
 
   if (result !== 'approved') {
     throw new DomainError('FORBIDDEN', 'Pilot access required');
+  }
+
+  // Provisioning authorization check — only when explicitly requested.
+  if (opts?.requireProvisioningAuth) {
+    const adminEmails = (process.env.PILOT_ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+
+    // Fail closed: unset or empty PILOT_ADMIN_EMAILS denies all provisioning access.
+    if (adminEmails.length === 0 || !adminEmails.includes(canonical)) {
+      throw new DomainError('FORBIDDEN', 'Provisioning authorization required');
+    }
   }
 
   return { email: canonical };

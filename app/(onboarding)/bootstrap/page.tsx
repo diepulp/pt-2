@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation';
 
 import { BootstrapForm } from '@/components/onboarding/bootstrap-form';
+import { DomainError } from '@/lib/errors/domain-errors';
+import { requireApprovedPilotSession } from '@/lib/server-actions/guards/require-approved-pilot-session';
 import { isDevAuthBypassEnabled } from '@/lib/supabase/dev-context';
 import { createClient } from '@/lib/supabase/server';
-import { createServiceClient } from '@/lib/supabase/service';
-import { canonicalizeEmail, checkAllowlistGate } from '@/services/pilot/crud';
 
 export default async function BootstrapPage() {
   const supabase = await createClient();
@@ -18,25 +18,23 @@ export default async function BootstrapPage() {
     redirect('/signin?redirect=/bootstrap');
   }
 
-  // Skip allowlist + redirect checks in dev bypass (no real user/claims to evaluate)
+  // Skip guards in dev bypass (no real user/claims to evaluate)
   if (!devBypass) {
-    // Pilot allowlist gate (DEC-6)
-    const serviceClient = createServiceClient();
-    const allowlistResult = await checkAllowlistGate(
-      serviceClient,
-      canonicalizeEmail(user!.email!),
-    );
-    if (allowlistResult !== 'approved') {
-      redirect('/request-access');
+    // Guard: approved session + provisioning authorization (admin-only in this pilot slice)
+    // Approved non-admin users redirect to /demo (defense-in-depth containment, PRD-084)
+    try {
+      await requireApprovedPilotSession(supabase, {
+        requireProvisioningAuth: true,
+      });
+    } catch (err) {
+      if (err instanceof DomainError) {
+        if (err.code === 'FORBIDDEN') redirect('/demo');
+        redirect('/signin?redirect=/bootstrap');
+      }
+      redirect('/signin?redirect=/bootstrap');
     }
 
-    // If user already has a staff binding (casino_id in claims), send to gateway
-    const casinoId = user!.app_metadata?.casino_id;
-    if (casinoId) {
-      redirect('/start');
-    }
-
-    // PRD-060: Require pending registration before bootstrap
+    // Only reached by allowlisted pilot admins with provisioning authorization
     const { data: registration } = await supabase
       .from('onboarding_registration')
       .select('id')
@@ -50,7 +48,7 @@ export default async function BootstrapPage() {
 
   return (
     <div className="space-y-8">
-      <div className="text-center space-y-2">
+      <div className="space-y-2 text-center">
         <h1
           className="text-sm font-bold uppercase tracking-widest text-foreground"
           style={{ fontFamily: 'monospace' }}

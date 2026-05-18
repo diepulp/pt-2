@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto';
 import { ZodError } from 'zod';
 
 import type { ServiceResult } from '@/lib/http/service-response';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { requestAccessSchema, submitAccessRequest } from '@/services/pilot';
 
 // Submit a pilot access request (public form, no auth required).
@@ -50,8 +50,11 @@ export async function requestPilotAccessAction(
   }
 
   try {
-    // Anon INSERT is allowed by RLS policy on pilot_access_requests.
-    const supabase = await createClient();
+    // SERVICE_ROLE_EXEMPTION: PRD-083 — pilot_access_requests INSERT policy is anon-only.
+    // Authenticated users redirected to /request-access would be rejected by RLS under the
+    // authenticated role. Service-role bypasses this; action is server-side only and inputs
+    // are fully Zod-validated before reaching the DB.
+    const supabase = createServiceClient();
     await submitAccessRequest(supabase, parsed);
 
     return {

@@ -71,10 +71,25 @@ export async function sendMagicLinkAction(
   }
 
   // Approved: issue OTP via server client (cookie-aware for auth flow).
+  // emailRedirectTo must point to the current host — without it Supabase uses the
+  // project's configured Site URL (Vercel), which won't establish a session on localhost.
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000');
+
   const supabase = await createClient();
+  // shouldCreateUser: true — the allowlist gate above is the containment barrier.
+  // Approved users may not exist in auth.users yet (first sign-in after approval).
+  // shouldCreateUser: false would silently drop the OTP for new users (RULE-2 only
+  // bans signUp() calls, not Supabase auto-provisioning via OTP for allowlisted emails).
   const { error: otpError } = await supabase.auth.signInWithOtp({
     email: canonicalEmail,
-    options: { shouldCreateUser: false },
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: `${siteUrl}/auth/confirm`,
+    },
   });
 
   if (otpError) {

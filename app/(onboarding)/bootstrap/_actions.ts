@@ -19,7 +19,9 @@ export async function bootstrapAction(
   // Guard: requires authenticated session + active allowlist entry.
   // Runs before withServerAction because withAuth checks staff binding (pre-staff state).
   try {
-    await requireApprovedPilotSession(supabase);
+    await requireApprovedPilotSession(supabase, {
+      requireProvisioningAuth: true,
+    });
   } catch (err) {
     const reqId = randomUUID();
     if (err instanceof DomainError) {

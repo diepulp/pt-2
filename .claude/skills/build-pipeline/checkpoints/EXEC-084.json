@@ -1,0 +1,74 @@
+{
+  "id": "EXEC-084",
+  "prd": "PRD-084",
+  "exec_spec": "docs/21-exec-spec/EXEC-084-pilot-sandbox-demo-routing.md",
+  "status": "complete",
+  "complexity_prescreen": "streamlined",
+  "gov010_check": "waived:ADRs-verified-in-body",
+  "fib_s_loaded": false,
+  "write_path_classification": "detected",
+  "e2e_mandate_waiver": null,
+  "created_at": "2026-05-18T20:09:40Z",
+  "updated_at": "2026-05-18T21:30:00Z",
+  "current_phase": 4,
+  "pending_workstreams": [],
+  "in_progress_workstreams": [],
+  "completed_workstreams": ["WS_GATEWAY", "WS_DEMO", "WS_GUARDS", "WS_LANDING", "WS_E2E"],
+  "dormant_workstreams": [],
+  "artifacts": {
+    "WS_GATEWAY": {
+      "status": "complete",
+      "outputs": [
+        "app/(public)/start/page.tsx",
+        "app/(public)/start/__tests__/start-gateway.test.ts"
+      ],
+      "notes": "Removed casino_settings query and setup redirect branches. Added idempotent Casino 1 demo staff binding creation. first_name/last_name derived from email username. 10 tests passing."
+    },
+    "WS_DEMO": {
+      "status": "complete",
+      "outputs": [
+        "app/(public)/demo/page.tsx",
+        "app/(public)/demo/__tests__/demo-page.test.ts"
+      ],
+      "notes": "New server component. Auth→allowlist→admin→staff check sequence. Holding page for approved non-admin with no active staff. Staff query failure falls back gracefully with structured diagnostic (no PII). 8 tests passing."
+    },
+    "WS_GUARDS": {
+      "status": "complete",
+      "outputs": [
+        "lib/server-actions/guards/require-approved-pilot-session.ts",
+        "app/(onboarding)/register/page.tsx",
+        "app/(onboarding)/bootstrap/page.tsx",
+        "app/(onboarding)/register/_actions.ts",
+        "app/(onboarding)/bootstrap/_actions.ts",
+        "lib/server-actions/guards/__tests__/require-approved-pilot-session.test.ts"
+      ],
+      "notes": "Guard extended with requireProvisioningAuth option. Fail-closed when PILOT_ADMIN_EMAILS unset. All 4 setup surfaces wired. 15 tests passing. Type-check: 0 errors."
+    },
+    "WS_LANDING": {
+      "status": "complete",
+      "outputs": [
+        "app/(landing)/page.tsx"
+      ],
+      "notes": "3 CTA locations updated. Hero primary (line 271): /contact→/signin 'Explore Interactive Demo'. Hero secondary (line 279): #operations→/request-access 'Request Production Pilot' (<a>→<Link>). Bottom close (line 604): /contact→/signin 'Explore Interactive Demo'. Build gate: PASS (tsc exit 0, next build exit 0, compiled in 2.4min)."
+    },
+    "WS_E2E": {
+      "status": "complete",
+      "outputs": [
+        "e2e/pilot-auth/demo-routing.spec.ts"
+      ],
+      "notes": "3 Playwright scenarios: S1 happy path (auto-bind INSERT + DB verify DEMO- row), S2 idempotency serial (pre-inserted DEMO- row, 2 visits, no duplicate INSERT), S3 regression (non-DEMO staff binding at DEMO_CASINO_ID, idempotency check prevents new INSERT). Mode B (browser login via /auth/login). RLS note documented: staff_read policy requires app.casino_id=current_setting which is unset in /start context; active-staff branch returns null, idempotency serviceClient check is the operative path. Advisory tier per QA-006. Type-check: PASS (exit 0)."
+    }
+  },
+  "gate_results": {
+    "phase_1_unit_tests": "PASS — 33/33 tests",
+    "type_check": "PASS — tsc --noEmit --strict exit 0",
+    "phase_2_build": "PASS — next build exit 0, compiled in 2.4min",
+    "phase_3_e2e": "ADVISORY — spec written, requires local Supabase + dev server to execute"
+  },
+  "next_steps": [
+    "Run DoD gate: npm run lint, npm run test:ci, final type-check",
+    "Mark PRD-084 status Accepted in docs/10-prd/PRD-084-pilot-sandbox-demo-routing.md",
+    "Update docs/issues/gaps/pilot-auth-containment/sign-in-flow-containment-plan.md deliverables",
+    "Optional: run E2E spec against local Supabase (advisory, not blocking)"
+  ]
+}
