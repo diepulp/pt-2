@@ -4,8 +4,8 @@
 **Machine-readable companion:** `WAVE-2-TRACKER.json` (same directory — keep in sync)  
 **Authority:** `WAVE-2-ROLLOUT-MAP.md` (phase plan) · `ROLLOUT-TRACKER.json` (parent machine state)  
 **First established:** 2026-05-17  
-**Last updated:** 2026-05-17  
-**Current position:** Phase 2.1 COMPLETE — PRD-083 / EXEC-083 implemented (2026-05-17). All gates pass. Phase 2.2 PRD not yet authored.
+**Last updated:** 2026-05-18  
+**Current position:** Phase 2.1 CERTIFIED — PRD-083 / EXEC-083 implemented + PRD-084 live certification 20/20 (2026-05-18). All gates pass. Phase 2.2 PRD not yet authored.
 
 ---
 
@@ -16,7 +16,7 @@
 | 2.0 | Exemplar Proof Slice | ✅ COMPLETE | PRD-081 | `8a1b8741` |
 | PRD-082 | Integration Proof Runtime Gate | ✅ COMPLETE | PRD-082 | `b1d45302` |
 | **PRD-082 Teardown** | **Harness cleanup pre-2.1 merge** | **✅ APPLIED** | `20260517141021` | 2026-05-17 |
-| 2.1 | Producer Expansion A: Financial Adjustment | ✅ COMPLETE | PRD-083 / EXEC-083 | PENDING_MERGE |
+| 2.1 | Producer Expansion A: Financial Adjustment | ✅ CERTIFIED | PRD-083 / PRD-084 | PENDING_MERGE |
 | 2.2 | Producer Expansion B: Dependency Events | 🔲 NOT STARTED | PRD to author | — |
 | 2.3 | First Consumer Slice: Completeness Projection | 🔲 NOT STARTED | PRD to author | — |
 | 2.4 | Consumer Expansion: Operational Telemetry | 🔲 NOT STARTED | PRD to author | — |
@@ -205,6 +205,9 @@ Authority: `TEARDOWN-ARTIFACT-PRD-082.md`
 - No second adjustment-to-outbox path in TypeScript
 - PRD-082 teardown migration applied
 - All gates pass
+
+**PRD-084 Live Certification (2026-05-18):** 20/20 cases pass — see `phase-2-1-certification/CERTIFICATION-RESULT-083.md`.
+Infrastructure fix applied: migration `20260518105926` adds `ON CONFLICT (aggregate_id, event_type) DO NOTHING` to `fn_finance_outbox_emit` (idempotency fix for SECURITY INVOKER callers that cannot SELECT from `finance_outbox`).
 
 ---
 

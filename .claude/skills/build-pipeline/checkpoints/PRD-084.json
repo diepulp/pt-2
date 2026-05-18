@@ -1,0 +1,25 @@
+{
+  "id": "PRD-084",
+  "prd": "docs/10-prd/PRD-084-wave2-phase-2.1-producer-runtime-certification-v0.md",
+  "exec_spec": "docs/21-exec-spec/EXEC-084-wave2-phase2-1-producer-runtime-certification.md",
+  "status": "complete",
+  "created_at": "2026-05-18T10:23:42Z",
+  "updated_at": "2026-05-18T18:53:00Z",
+  "gov010_check": "waived:certification-slice-no-new-mechanism-decisions",
+  "complexity_prescreen": "streamlined",
+  "fib_s_loaded": false,
+  "write_path_classification": "none",
+  "e2e_mandate_waiver": "no-application-write-paths-introduced",
+  "current_phase": 2,
+  "completed_workstreams": ["WS1_PROOF_SCRIPT", "WS2_CERTIFY"],
+  "pending_workstreams": [],
+  "dormant_workstreams": [],
+  "artifacts": {
+    "WS1_PROOF_SCRIPT": "scripts/outbox-proof/phase-2-1-adjustment-certification.ts",
+    "WS1_gate_test-pass": "PASS — script exists; 20 cases confirmed; zero errors under project tsconfig",
+    "WS2_CERTIFY_proof-run": "20/20 PASS — cert-1779127587926",
+    "WS2_CERTIFY_result-doc": "docs/issues/gaps/financial-data-distribution-standard/wave-2/phase-2-1-certification/CERTIFICATION-RESULT-083.md",
+    "WS2_CERTIFY_infra-fix-migration": "supabase/migrations/20260518105926_fix_fn_finance_outbox_emit_idempotency.sql",
+    "WS2_gate_certification-pass": "PASS — all 14 boolean gate conditions satisfied"
+  }
+}
