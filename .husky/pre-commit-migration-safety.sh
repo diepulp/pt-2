@@ -460,6 +460,7 @@ for FILE in $MIGRATION_FILES; do
   # Protect Wave 2 relay RPCs (ADR-056)
   HAS_CLAIM_BATCH_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP FUNCTION.*rpc_claim_outbox_batch' || true)
   HAS_COMMIT_RECEIPT_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP FUNCTION.*rpc_commit_consumer_receipt' || true)
+  HAS_ACKNOWLEDGE_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP FUNCTION.*rpc_acknowledge_outbox_delivery' || true)
 
   if [ "$HAS_CLAIM_BATCH_DROP" -gt 0 ]; then
     echo "❌ CHECK 5 FAILED: Migration drops rpc_claim_outbox_batch() (relay infrastructure)"
@@ -483,6 +484,20 @@ for FILE in $MIGRATION_FILES; do
     echo "  • rpc_commit_consumer_receipt() is the relay worker's idempotency commit path"
     echo "  • Writes to processed_messages within the same transaction as projection updates"
     echo "  • Dropping it breaks consumer idempotency enforcement (ADR-054 D5)"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+
+  if [ "$HAS_ACKNOWLEDGE_DROP" -gt 0 ]; then
+    echo "❌ CHECK 5 FAILED: Migration drops rpc_acknowledge_outbox_delivery() (relay infrastructure)"
+    echo ""
+    echo "File: $FILE"
+    echo ""
+    echo "WHY THIS IS CRITICAL:"
+    echo "  • rpc_acknowledge_outbox_delivery() is the authorized terminal delivery-state write path"
+    echo "  • Sole function that may set processed_at or last_error on finance_outbox rows"
+    echo "  • Dropping it eliminates the governed acknowledgement path (ADR-054 R3, ADR-056)"
+    echo "  • The relay worker will have no write path for delivery acknowledgement"
     echo ""
     VIOLATIONS_FOUND=1
   fi

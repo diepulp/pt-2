@@ -61,42 +61,6 @@ export type Database = {
           },
         ]
       }
-      approved_email_allowlist: {
-        Row: {
-          casino_id: string | null
-          company_id: string | null
-          created_at: string
-          email: string
-          expires_at: string | null
-          id: string
-          invited_by: string | null
-          status: string
-          used_at: string | null
-        }
-        Insert: {
-          casino_id?: string | null
-          company_id?: string | null
-          created_at?: string
-          email: string
-          expires_at?: string | null
-          id?: string
-          invited_by?: string | null
-          status?: string
-          used_at?: string | null
-        }
-        Update: {
-          casino_id?: string | null
-          company_id?: string | null
-          created_at?: string
-          email?: string
-          expires_at?: string | null
-          id?: string
-          invited_by?: string | null
-          status?: string
-          used_at?: string | null
-        }
-        Relationships: []
-      }
       audit_log: {
         Row: {
           action: string
@@ -1565,90 +1529,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      outbox_integration_proof_state: {
-        Row: {
-          aggregate_id: string
-          casino_id: string
-          consumed_at: string
-          event_id: string
-          event_type: string
-          fact_class: string
-          origin_label: string
-          payload: Json
-          player_id: string | null
-          seq: number
-          table_id: string
-        }
-        Insert: {
-          aggregate_id: string
-          casino_id: string
-          consumed_at?: string
-          event_id: string
-          event_type: string
-          fact_class: string
-          origin_label: string
-          payload: Json
-          player_id?: string | null
-          seq?: number
-          table_id: string
-        }
-        Update: {
-          aggregate_id?: string
-          casino_id?: string
-          consumed_at?: string
-          event_id?: string
-          event_type?: string
-          fact_class?: string
-          origin_label?: string
-          payload?: Json
-          player_id?: string | null
-          seq?: number
-          table_id?: string
-        }
-        Relationships: []
-      }
-      pilot_access_requests: {
-        Row: {
-          casino_name: string
-          created_at: string
-          email: string
-          estimated_table_count: number | null
-          id: string
-          message: string | null
-          name: string
-          reviewed_at: string | null
-          reviewed_by: string | null
-          role: string
-          status: string
-        }
-        Insert: {
-          casino_name: string
-          created_at?: string
-          email: string
-          estimated_table_count?: number | null
-          id?: string
-          message?: string | null
-          name: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          role: string
-          status?: string
-        }
-        Update: {
-          casino_name?: string
-          created_at?: string
-          email?: string
-          estimated_table_count?: number | null
-          id?: string
-          message?: string | null
-          name?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          role?: string
-          status?: string
-        }
-        Relationships: []
       }
       pit_cash_observation: {
         Row: {
@@ -4542,6 +4422,19 @@ export type Database = {
           suggested_theo: number
         }[]
       }
+      fn_finance_outbox_emit: {
+        Args: {
+          p_aggregate_id: string
+          p_event_id: string
+          p_event_type: string
+          p_fact_class: string
+          p_origin_label: string
+          p_payload: Json
+          p_player_id: string
+          p_table_id: string
+        }
+        Returns: undefined
+      }
       generate_uuid_v7: { Args: never; Returns: string }
       get_player_exclusion_status: {
         Args: { p_casino_id: string; p_player_id: string }
@@ -4611,6 +4504,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rpc_acknowledge_outbox_delivery: {
+        Args: {
+          p_error_detail?: string
+          p_event_id: string
+          p_success: boolean
+        }
+        Returns: undefined
       }
       rpc_activate_floor_layout: {
         Args: { p_layout_version_id: string; p_request_id: string }
@@ -4716,7 +4617,6 @@ export type Database = {
           staff_role: string
         }[]
       }
-      rpc_bootstrap_casino_pit_layout: { Args: never; Returns: Json }
       rpc_check_table_seat_availability: {
         Args: { p_seat_number: number; p_table_id: string }
         Returns: Json

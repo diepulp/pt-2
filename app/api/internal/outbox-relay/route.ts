@@ -51,17 +51,19 @@ export async function POST(req: Request): Promise<Response> {
     // 'duplicate' = prior rpc_commit_consumer_receipt committed atomically (safe durable
     //   prior commit — not a partial prior attempt). Both are safe to mark processed_at.
     if (result === 'processed' || result === 'duplicate') {
-      await supabase
-        .from('finance_outbox')
-        .update({ processed_at: new Date().toISOString() })
-        .eq('event_id', row.event_id);
+      await supabase.rpc('rpc_acknowledge_outbox_delivery', {
+        p_event_id: row.event_id,
+        p_success: true,
+      });
       processed++;
     } else {
-      // Delivery failure: row stays processed_at IS NULL; last_error bounded to 2000 chars.
-      await supabase
-        .from('finance_outbox')
-        .update({ last_error: String(result).slice(0, 2000) })
-        .eq('event_id', row.event_id);
+      // Delivery failure: row stays processed_at IS NULL for retry.
+      // SQL does LEFT(p_error_detail, 2000) — VARCHAR(2000) constraint enforced in RPC.
+      await supabase.rpc('rpc_acknowledge_outbox_delivery', {
+        p_event_id: row.event_id,
+        p_success: false,
+        p_error_detail: String(result),
+      });
       failed++;
     }
   }

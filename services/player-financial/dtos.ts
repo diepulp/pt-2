@@ -329,6 +329,10 @@ export type VisitCashInWithAdjustmentsDTO = {
 // directly; payload narrowed from Json → Record<string, unknown>; union types narrowed.
 type FinancialOutboxRow = Database['public']['Tables']['finance_outbox']['Row'];
 
+/**
+ * Exposure: consumer-facing event envelope for downstream adjustment processors.
+ * Excludes: delivery_attempts, last_attempted_at, last_error (internal retry/error state — ADR-054 Wave 2).
+ */
 export type FinancialOutboxEventDTO = Pick<
   FinancialOutboxRow,
   | 'event_id'

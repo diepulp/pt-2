@@ -1,6 +1,7 @@
 /** @jest-environment node */
 
 import { POST } from '@/app/api/internal/outbox-relay/route';
+
 import type { FinancialOutboxEventDTO } from '../dtos';
 
 jest.mock('@/lib/supabase/service', () => ({
@@ -14,7 +15,7 @@ jest.mock('@/services/player-financial/outbox-consumer', () => ({
 const { createServiceClient } = require('@/lib/supabase/service') as {
   createServiceClient: jest.Mock;
 };
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+
 const { runConsumer } =
   require('@/services/player-financial/outbox-consumer') as {
     runConsumer: jest.Mock;
@@ -56,20 +57,21 @@ function makeSupabase(
   claimRows: FinancialOutboxEventDTO[] = [],
   backlogCount = 0,
 ) {
-  const eqFn = jest.fn().mockResolvedValue({ error: null });
-  const updateFn = jest.fn().mockReturnValue({ eq: eqFn });
   const isFn = jest
     .fn()
     .mockResolvedValue({ count: backlogCount, error: null });
   const selectFn = jest.fn().mockReturnValue({ is: isFn });
-  const fromFn = jest
+  const fromFn = jest.fn().mockReturnValue({ select: selectFn });
+  // First rpc call is rpc_claim_outbox_batch; subsequent calls are
+  // rpc_acknowledge_outbox_delivery (one per processed row).
+  const rpcFn = jest
     .fn()
-    .mockReturnValue({ update: updateFn, select: selectFn });
-  const rpcFn = jest.fn().mockResolvedValue({ data: claimRows, error: null });
+    .mockResolvedValueOnce({ data: claimRows, error: null })
+    .mockResolvedValue({ data: null, error: null });
 
   return {
     supabase: { rpc: rpcFn, from: fromFn },
-    mocks: { rpcFn, fromFn, updateFn, eqFn },
+    mocks: { rpcFn, fromFn },
   };
 }
 
@@ -122,7 +124,7 @@ describe('outbox relay', () => {
     expect(body.backlog).toBe(0);
   });
 
-  it('processes rows and sets processed_at on success', async () => {
+  it('processes rows and calls rpc_acknowledge_outbox_delivery with p_success=true', async () => {
     const { supabase, mocks } = makeSupabase([makeRow()]);
     createServiceClient.mockReturnValue(supabase);
     runConsumer.mockResolvedValue('processed');
@@ -134,12 +136,16 @@ describe('outbox relay', () => {
     expect(body.processed).toBe(1);
     expect(body.failed).toBe(0);
     expect(runConsumer).toHaveBeenCalledTimes(1);
-    expect(mocks.updateFn).toHaveBeenCalledWith(
-      expect.objectContaining({ processed_at: expect.any(String) }),
+    expect(mocks.rpcFn).toHaveBeenCalledWith(
+      'rpc_acknowledge_outbox_delivery',
+      {
+        p_event_id: 'ev-relay-0001',
+        p_success: true,
+      },
     );
   });
 
-  it('marks duplicate rows processed_at (duplicate = safe durable prior commit)', async () => {
+  it('marks duplicate rows as success (duplicate = safe durable prior commit)', async () => {
     const { supabase, mocks } = makeSupabase([makeRow({ event_id: 'ev-dup' })]);
     createServiceClient.mockReturnValue(supabase);
     runConsumer.mockResolvedValue('duplicate');
@@ -148,12 +154,16 @@ describe('outbox relay', () => {
     const body = await res.json();
 
     expect(body.processed).toBe(1);
-    expect(mocks.updateFn).toHaveBeenCalledWith(
-      expect.objectContaining({ processed_at: expect.any(String) }),
+    expect(mocks.rpcFn).toHaveBeenCalledWith(
+      'rpc_acknowledge_outbox_delivery',
+      {
+        p_event_id: 'ev-dup',
+        p_success: true,
+      },
     );
   });
 
-  it('leaves processed_at NULL and records last_error when consumer returns Error', async () => {
+  it('calls rpc_acknowledge_outbox_delivery with p_success=false on consumer failure', async () => {
     const { supabase, mocks } = makeSupabase([
       makeRow({ event_id: 'ev-fail' }),
     ]);
@@ -166,18 +176,25 @@ describe('outbox relay', () => {
     expect(res.status).toBe(200);
     expect(body.processed).toBe(0);
     expect(body.failed).toBe(1);
-    expect(mocks.updateFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        last_error: expect.stringContaining('downstream timeout'),
-      }),
+    expect(mocks.rpcFn).toHaveBeenCalledWith(
+      'rpc_acknowledge_outbox_delivery',
+      {
+        p_event_id: 'ev-fail',
+        p_success: false,
+        p_error_detail: expect.stringContaining('downstream timeout'),
+      },
     );
-    // processed_at must NOT be set on failure
-    expect(mocks.updateFn).not.toHaveBeenCalledWith(
-      expect.objectContaining({ processed_at: expect.anything() }),
+    // Success overload must NOT have been called for this row
+    expect(mocks.rpcFn).not.toHaveBeenCalledWith(
+      'rpc_acknowledge_outbox_delivery',
+      {
+        p_event_id: 'ev-fail',
+        p_success: true,
+      },
     );
   });
 
-  it('last_error is truncated to 2000 chars', async () => {
+  it('passes full error string to RPC (SQL does LEFT to 2000 chars)', async () => {
     const longMessage = 'x'.repeat(5000);
     const { supabase, mocks } = makeSupabase([
       makeRow({ event_id: 'ev-long-err' }),
@@ -187,8 +204,17 @@ describe('outbox relay', () => {
 
     await POST(makeRequest());
 
-    const updateArg = mocks.updateFn.mock.calls[0][0] as Record<string, string>;
-    expect(updateArg.last_error.length).toBeLessThanOrEqual(2000);
+    const acknowledgeCall = mocks.rpcFn.mock.calls.find(
+      ([name]: [string]) => name === 'rpc_acknowledge_outbox_delivery',
+    );
+    expect(acknowledgeCall).toBeDefined();
+    const [, params] = acknowledgeCall as [
+      string,
+      { p_success: boolean; p_error_detail: string },
+    ];
+    expect(params.p_success).toBe(false);
+    // TypeScript passes full string; VARCHAR(2000) is enforced in the RPC via LEFT()
+    expect(params.p_error_detail).toBe(`Error: ${longMessage}`);
   });
 
   it('two concurrent requests do not double-process rows (SKIP LOCKED)', async () => {

@@ -126,6 +126,15 @@ const eslintConfig = [
           message:
             'ANTI-PATTERN: Class-based services are banned (PRD §3.3). Use functional factories instead.',
         },
+        {
+          // ADR-024/SEC-007: set_rls_context() was DROPPED. The string literal
+          // 'set_rls_context' has no valid use in production service code.
+          // Context is set internally by SECURITY DEFINER RPCs via
+          // set_rls_context_from_staff() — TypeScript never calls it directly.
+          selector: "Literal[value='set_rls_context']",
+          message:
+            "ADR-024/SEC-007: set_rls_context() was DROPPED. Use a SECURITY DEFINER RPC that calls set_rls_context_from_staff() internally. TypeScript must never call context-setting functions directly. See ADR-024.",
+        },
       ],
 
       // Enforce named exports only in services (no default exports)
@@ -209,12 +218,14 @@ const eslintConfig = [
     },
   },
   // ==========================================================================
-  // ADR-034: RLS Write-Path enforcement for server actions & lib paths
+  // ADR-034: RLS Write-Path enforcement for server actions, lib, and hooks
   // Prevents PostgREST DML against Category A tables outside services/ and app/api/
-  // Covers: app/**/_actions.ts, app/**/actions.ts, lib/**/*.ts
+  // Covers: app/**/_actions.ts, app/**/actions.ts, lib/**/*.ts, hooks/**/*.ts
+  // hooks/ added for Wave 2: finance_outbox and processed_messages are Category A;
+  // direct DML from hook files is also prohibited (ADR-054).
   // ==========================================================================
   {
-    files: ['app/**/_actions.ts', 'app/**/actions.ts', 'lib/**/*.ts'],
+    files: ['app/**/_actions.ts', 'app/**/actions.ts', 'lib/**/*.ts', 'hooks/**/*.ts'],
     ignores: [
       'app/api/**', // Already covered by security-rules block above
       'app/actions/**', // Already covered by security-rules block above
