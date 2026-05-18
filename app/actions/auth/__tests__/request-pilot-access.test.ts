@@ -6,6 +6,18 @@
  * Verifies: valid submission, duplicate email idempotency, validation errors.
  */
 
+const mockSendNotification = jest.fn().mockResolvedValue(undefined);
+const mockSendConfirmation = jest.fn().mockResolvedValue(undefined);
+
+jest.mock('@/lib/email/send-demo-request-notification', () => ({
+  sendDemoRequestNotification: (...args: unknown[]) =>
+    mockSendNotification(...args),
+}));
+jest.mock('@/lib/email/send-demo-request-confirmation', () => ({
+  sendDemoRequestConfirmation: (...args: unknown[]) =>
+    mockSendConfirmation(...args),
+}));
+
 const mockSubmitAccessRequest = jest.fn();
 jest.mock('@/services/pilot', () => ({
   requestAccessSchema: {
@@ -49,6 +61,8 @@ describe('requestPilotAccessAction', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSubmitAccessRequest.mockResolvedValue(undefined);
+    mockSendNotification.mockResolvedValue(undefined);
+    mockSendConfirmation.mockResolvedValue(undefined);
   });
 
   it('returns ok:true for a valid submission', async () => {
@@ -97,5 +111,36 @@ describe('requestPilotAccessAction', () => {
     expect(result.requestId).toBeDefined();
     expect(typeof result.durationMs).toBe('number');
     expect(result.timestamp).toBeDefined();
+  });
+
+  it('fires admin notification and requester confirmation on success', async () => {
+    await requestPilotAccessAction(makeFormData(validFields));
+
+    expect(mockSendNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Jane Smith',
+        email: 'jane@casino.com',
+        company: 'Grand Casino',
+      }),
+    );
+    expect(mockSendConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Jane Smith', email: 'jane@casino.com' }),
+    );
+  });
+
+  it('returns ok:true even when email sending fails', async () => {
+    mockSendNotification.mockRejectedValue(new Error('smtp error'));
+    mockSendConfirmation.mockRejectedValue(new Error('smtp error'));
+
+    const result = await requestPilotAccessAction(makeFormData(validFields));
+    expect(result.ok).toBe(true);
+  });
+
+  it('does not fire emails when DB insert fails', async () => {
+    mockSubmitAccessRequest.mockRejectedValue(new Error('DB error'));
+
+    await requestPilotAccessAction(makeFormData(validFields));
+    expect(mockSendNotification).not.toHaveBeenCalled();
+    expect(mockSendConfirmation).not.toHaveBeenCalled();
   });
 });

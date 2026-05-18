@@ -186,6 +186,39 @@ export async function approvePilotAccessAction(
     };
   }
 
+  // Send magic link to approved evaluator so they can sign in without returning
+  // to /signin manually. Best-effort: allowlist row is committed regardless.
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000');
+
+  const { error: otpError } = await supabase.auth.signInWithOtp({
+    email: targetEmail,
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: `${siteUrl}/auth/confirm`,
+    },
+  });
+
+  if (otpError) {
+    emitTelemetry({
+      eventType: 'pilot_review.approve.otp_warning',
+      timestamp: new Date().toISOString(),
+      correlationId,
+      metadata: {
+        action: 'approve',
+        result: 'otp_send_failed',
+        targetEmail,
+        actorEmail: adminEmail,
+        requestId,
+        error: safeErrorDetails(otpError),
+      },
+      severity: 'warn',
+    });
+  }
+
   emitTelemetry({
     eventType: 'pilot_review.approve.success',
     timestamp: new Date().toISOString(),
@@ -196,6 +229,7 @@ export async function approvePilotAccessAction(
       targetEmail,
       actorEmail: adminEmail,
       requestId,
+      magicLinkSent: !otpError,
     },
     severity: 'info',
   });

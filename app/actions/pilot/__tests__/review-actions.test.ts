@@ -39,9 +39,13 @@ function makeChain(result: MockQueryResult) {
 // ── Auth mocks ───────────────────────────────────────────────────────────────
 
 const mockGetUser = jest.fn();
+const mockSignInWithOtp = jest.fn().mockResolvedValue({ error: null });
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn().mockResolvedValue({
-    auth: { getUser: () => mockGetUser() },
+    auth: {
+      getUser: () => mockGetUser(),
+      signInWithOtp: (...args: unknown[]) => mockSignInWithOtp(...args),
+    },
   }),
 }));
 
@@ -121,6 +125,7 @@ describe('approvePilotAccessAction', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockServiceClientImpl = makeServiceClientMock();
+    mockSignInWithOtp.mockResolvedValue({ error: null });
   });
 
   afterEach(() => {
@@ -192,6 +197,44 @@ describe('approvePilotAccessAction', () => {
     const result = await reviewActions.approvePilotAccessAction('nonexistent');
     expect(result.ok).toBe(false);
     expect(result.code).toBe('NOT_FOUND');
+  });
+
+  it('sends magic link OTP to approved evaluator on success', async () => {
+    setAdminUser();
+    await reviewActions.approvePilotAccessAction('req-1');
+
+    expect(mockSignInWithOtp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'jane@casino.com',
+        options: expect.objectContaining({
+          shouldCreateUser: true,
+          emailRedirectTo: expect.stringContaining('/auth/confirm'),
+        }),
+      }),
+    );
+  });
+
+  it('returns ok:true and emits otp_warning when OTP send fails, but approve still succeeds', async () => {
+    setAdminUser();
+    mockSignInWithOtp.mockResolvedValue({
+      error: { message: 'smtp failure' },
+    });
+
+    const result = await reviewActions.approvePilotAccessAction('req-1');
+
+    expect(result.ok).toBe(true);
+    const warnEvent = mockEmitTelemetry.mock.calls.find(
+      ([e]: [{ eventType: string }]) =>
+        e.eventType === 'pilot_review.approve.otp_warning',
+    );
+    expect(warnEvent).toBeDefined();
+    // Success telemetry still emitted, with magicLinkSent: false
+    const successEvent = mockEmitTelemetry.mock.calls.find(
+      ([e]: [{ eventType: string; metadata: { magicLinkSent: boolean } }]) =>
+        e.eventType === 'pilot_review.approve.success',
+    );
+    expect(successEvent).toBeDefined();
+    expect(successEvent[0].metadata.magicLinkSent).toBe(false);
   });
 });
 

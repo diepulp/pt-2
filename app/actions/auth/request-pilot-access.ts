@@ -4,6 +4,8 @@ import { randomUUID } from 'crypto';
 
 import { ZodError } from 'zod';
 
+import { sendDemoRequestConfirmation } from '@/lib/email/send-demo-request-confirmation';
+import { sendDemoRequestNotification } from '@/lib/email/send-demo-request-notification';
 import type { ServiceResult } from '@/lib/http/service-response';
 import { createServiceClient } from '@/lib/supabase/service';
 import { requestAccessSchema, submitAccessRequest } from '@/services/pilot';
@@ -56,15 +58,6 @@ export async function requestPilotAccessAction(
     // are fully Zod-validated before reaching the DB.
     const supabase = createServiceClient();
     await submitAccessRequest(supabase, parsed);
-
-    return {
-      ok: true,
-      code: 'OK',
-      data: undefined,
-      requestId,
-      durationMs: Date.now() - startedAt,
-      timestamp: new Date().toISOString(),
-    };
   } catch {
     return {
       ok: false,
@@ -75,4 +68,28 @@ export async function requestPilotAccessAction(
       timestamp: new Date().toISOString(),
     };
   }
+
+  // Best-effort: fire notification + confirmation emails after DB insert succeeds.
+  // Email failure does not fail the action — the request is already persisted.
+  void Promise.all([
+    sendDemoRequestNotification({
+      name: parsed.name,
+      email: parsed.email,
+      company: parsed.casino_name,
+      message: parsed.message,
+    }),
+    sendDemoRequestConfirmation({
+      name: parsed.name,
+      email: parsed.email,
+    }),
+  ]).catch(() => {});
+
+  return {
+    ok: true,
+    code: 'OK',
+    data: undefined,
+    requestId,
+    durationMs: Date.now() - startedAt,
+    timestamp: new Date().toISOString(),
+  };
 }
