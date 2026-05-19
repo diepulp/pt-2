@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Activity,
   Banknote,
   Gift,
   LayoutDashboard,
@@ -71,7 +72,8 @@ const navGroups: NavGroup[] = [
         icon: LayoutDashboard,
         children: [
           { title: 'Overview', url: '/shift-dashboard' },
-          { title: 'Shift Report', url: '/admin/reports/shift-summary' },
+          { title: 'Cash Observations', url: '/shift-dashboard?view=cash' },
+          { title: 'Staff Performance', url: '/shift-dashboard?view=staff' },
         ],
       },
       {
@@ -111,6 +113,11 @@ const navGroups: NavGroup[] = [
           { title: 'Programs', url: '/admin/loyalty/promo-programs' },
           { title: 'Economics', url: '/admin/loyalty/economics' },
         ],
+      },
+      {
+        title: 'Outbox Observability',
+        url: '/admin/outbox-observability',
+        icon: Activity,
       },
       {
         title: 'Settings',
@@ -211,6 +218,21 @@ export function AppSidebar() {
         >
           {/* Collapsed content - icon-only view */}
           <div className="flex flex-col h-full">
+            <div className="p-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary border border-sidebar-primary/20 cursor-default">
+                    <span className="text-[10px] font-bold tracking-tight">
+                      d3lt
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  d3lt
+                </TooltipContent>
+              </Tooltip>
+            </div>
+
             <div className="flex-1 flex flex-col items-center py-2 gap-1">
               {flatNavItems.map((item) => {
                 const Icon = item.icon;
@@ -276,6 +298,23 @@ export function AppSidebar() {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
+        {/* Header */}
+        <div className="p-2">
+          <div className="flex items-center gap-3 px-2 py-1.5">
+            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary border border-sidebar-primary/20">
+              <span className="text-[10px] font-bold tracking-tight">d3lt</span>
+            </div>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-semibold text-sidebar-foreground">
+                d3lt
+              </span>
+              <span className="truncate text-xs text-muted-foreground">
+                Pit Station
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Main Navigation - Grouped with collapsible trees */}
         <div className="flex-1 overflow-auto py-2">
           <NavMain groups={navGroups} />

@@ -4,8 +4,30 @@
 **Machine-readable companion:** `WAVE-2-TRACKER.json` (same directory — keep in sync)  
 **Authority:** `WAVE-2-ROLLOUT-MAP.md` (phase plan) · `ROLLOUT-TRACKER.json` (parent machine state)  
 **First established:** 2026-05-17  
-**Last updated:** 2026-05-19  
-**Current position:** Phase 2.2 COMPLETE — PRD-085 / EXEC-085 implemented 2026-05-19 (3/3 workstreams PASS). rpc_request_table_fill and rpc_request_table_credit both emit fill.recorded / credit.recorded outbox rows atomically. I1 T1-T12 unit PASS for both producers. Phase 2.3 (First Consumer Slice: Completeness Projection) is next.
+**Last updated:** 2026-05-19 (PRD-086 / EXEC-086 complete — Phase 2.3a Operational Outbox Observability delivered; cursor advanced to Phase 2.3)
+**Current position:** Phase 2.3a COMPLETE (PRD-086 / EXEC-086, 2026-05-19). Admin outbox observability surface delivered. Phase 2.3 (Lifecycle-Aware Completeness Projection) PRD-087 in progress. See §0 for parallelization model.
+
+---
+
+## 0. Phase Sequencing Model (updated 2026-05-19)
+
+Beginning after Phase 2.2 completion, Wave 2 transitions from **transport-certification sequencing** to **bounded operational rollout sequencing**.
+
+**Phase 2.3a and Phase 2.3 may proceed in parallel.** They operate on different architectural layers:
+
+- **Phase 2.3a** — read-only runtime verification surface for the existing transactional substrate. Does not mutate producer semantics, relay behavior, replay ordering, `processed_messages`, or projection state.
+- **Phase 2.3** — first projection consumer with derived completeness state. Reads `finance_outbox` events and writes to a projection store.
+
+Parallelization is permitted while **all four conditions hold**:
+
+1. Relay topology remains frozen
+2. Replay ordering semantics remain unchanged
+3. No projection logic is introduced into the observability surface
+4. No write/replay/repair actions are added to the admin observability boundary
+
+If any condition breaks, parallelization reverts to sequential. This model is authoritative in `WAVE-2-TRACKER.json → direction.principles[parallelization_rule]`.
+
+Phase 2.3a is expected to become the preferred runtime-confidence and debugging surface before broader projection rollout and operational validation proceed.
 
 ---
 
@@ -18,11 +40,12 @@
 | **PRD-082 Teardown** | **Harness cleanup pre-2.1 merge** | **✅ APPLIED** | `20260517141021` | 2026-05-17 |
 | 2.1 | Producer Expansion A: Financial Adjustment | ✅ CERTIFIED | PRD-083 / PRD-084 | PENDING_MERGE |
 | 2.2 | Producer Expansion B: Dependency Events | ✅ COMPLETE | PRD-085 / EXEC-085 | PENDING_MERGE |
-| 2.3 | First Consumer Slice: Completeness Projection | 🔲 NOT STARTED | PRD to author | — |
+| **2.3a** | **Operational Outbox Observability** | **✅ COMPLETE** | **PRD-086 / EXEC-086** | **PENDING_MERGE** |
+| **2.3** | **First Consumer Slice: Completeness Projection** | **🔷 PRD AUTHORED** | **PRD-087** | **—** |
 | 2.4 | Consumer Expansion: Operational Telemetry | 🔲 NOT STARTED | PRD to author | — |
 | 2.5 | Observability + Sign-Off | 🔲 NOT STARTED | PRD to author | — |
 
-**Wave 2 completion:** all five producers wired + DEC-1 resolved + shift telemetry event-driven + sign-off artifact
+**Wave 2 completion:** all producers wired + DEC-1 resolved + shift telemetry event-driven + observability surface live + sign-off artifact
 
 ---
 
@@ -162,12 +185,24 @@ Authority: `TEARDOWN-ARTIFACT-PRD-082.md`
        PRD-085 authored (2026-05-18). EXEC-085 scaffolded and approved. /build PRD-085 executed.
        WS1 (migration 20260518134715), WS2 (i1 fill/credit proof tests), WS3 (governance) all complete. (2026-05-19)
 
-6. [ ] Author Phase 2.3 PRD
-       Scope: First Consumer Slice — Lifecycle-Aware Completeness Projection resolving DEC-1.
-       visit-level financial aggregates (VisitFinancialSummaryDTO, FinancialSectionDTO) currently emit completeness.status: 'unknown'.
-       Phase 2.3 builds projection store + consumer reading buyin.recorded/cashout.recorded/adjustment.recorded + gaming-day lifecycle signal.
-       Chain: /prd-writer → /lead-architect (EXEC-SPEC) → /build PRD-###
-       See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.3 for deliverables and exit gate.
+6. [x] Author Phase 2.3a PRD
+       PRD-086 authored 2026-05-19. FIB-H-W2-OUTBOX-OBS-001 v0 reviewed and frozen.
+       Parallelization model with Phase 2.3 authorized and documented in tracker.
+
+7. [x] /build PRD-086 — Phase 2.3a complete (EXEC-086 scaffolded, all 4 workstreams executed 2026-05-19)
+       WS1: admin RPCs (migration 20260519010436) + DTOs. WS2: GET /api/internal/outbox-observability.
+       WS3: /admin/outbox-observability page + sidebar link. WS4: tracker update (this entry).
+
+8. [x] Author Phase 2.3 PRD  ← Track B (complete 2026-05-19)
+       PRD-087 authored: docs/10-prd/PRD-087-wave2-phase-2.3-lifecycle-aware-completeness-projection-v0.md
+       Scope: gaming_day_lifecycle table + visit_class_a_projection table + rpc_process_class_a_projection consumer +
+       relay dispatch branch for fact_class='ledger' + completeness resolution in two affected routes.
+       Governs: FIB-H-W2-OUTBOX-001 (original wave 2 FIB — no new FIB required).
+
+9. [ ] /lead-architect EXEC-SPEC scaffold for Phase 2.3 (PRD-087)  ← Track B next
+       Pre-EXEC gate: verify payload.visit_id presence in migrations 20260511134903 + 20260517234015.
+       Chain: /lead-architect → /build PRD-087
+       See docs/10-prd/PRD-087-wave2-phase-2.3-lifecycle-aware-completeness-projection-v0.md
 ```
 
 ---
@@ -261,10 +296,54 @@ Infrastructure fix applied: migration `20260518105926` adds `ON CONFLICT (aggreg
 
 ---
 
+### Phase 2.3a — Operational Outbox Observability
+
+**Status:** ✅ COMPLETE — PRD-086 / EXEC-086 (2026-05-19)  
+**Entry gate:** Phase 2.2 exit ✅ (2026-05-19)  
+**Parallelization:** Proceeded concurrently with Phase 2.3; parallelization conditions remain in force
+
+**Scope:** Read-only internal admin surface at `/admin/outbox-observability`. Makes `finance_outbox` row state and relay delivery status inspectable without SQL access. Provides relay health summary, event queue with full semantic envelope, poison-candidate labeling (`delivery_attempts >= 3` — pilot heuristic, non-authoritative), and search/filter. Does not build projection consumers, write to any authoring store, or process events.
+
+**What this phase does NOT do:**
+- No writes to `finance_outbox` or any authoring table
+- No replay, retry, repair, or dead-letter routing
+- No projection consumers — that is Phase 2.3
+- No changes to relay behavior, producer semantics, or replay ordering
+
+**New artifacts:**
+- `rpc_get_outbox_relay_health` + `rpc_get_outbox_event_page` — SECURITY DEFINER RPCs (service_role)
+- `OutboxAdminEventDTO` — standalone `Pick<FinancialOutboxRow, ...>` (not extending consumer DTO)
+- `OutboxRelayHealthDTO` — includes `processed_count_24h` (last 24h window)
+- `GET /api/internal/outbox-observability` — admin session auth, service-role DB client
+- `app/(dashboard)/admin/outbox-observability/page.tsx`
+
+**Deliverables:**
+- [x] Migration with `rpc_get_outbox_relay_health` + `rpc_get_outbox_event_page` — `20260519010436`
+- [x] `OutboxAdminEventDTO` and `OutboxRelayHealthDTO` in `services/player-financial/dtos.ts`
+- [x] `GET /api/internal/outbox-observability` route (WS2) — two-client auth pattern (session + service-role)
+- [x] Admin page `app/(dashboard)/admin/outbox-observability/page.tsx` + `OutboxObservabilityClient.tsx` (WS3)
+- [x] Sidebar nav link (Activity icon) — `components/layout/app-sidebar.tsx`
+- [x] Unit + integration tests: 401 guard, correct casino scope, poison candidate classification
+- [x] type-check (app/ + components/ scope) exit 0; lint exit 0; Turbopack compile exit 0
+
+**Exit gate:**
+- ✅ Admin surface renders relay health summary and event queue without SQL
+- ✅ `origin_label` rendered with uniform neutral badge — no upgrade at display layer (ADR-054 D5 compliant)
+- ✅ `delivery_attempts >= 3` labeled as poison candidate (heuristic, non-authoritative)
+- ✅ Zero writes to `finance_outbox` or any authoring table
+- ✅ `finance_outbox` read path routes through SECURITY DEFINER RPCs
+- ✅ All gates pass
+
+**Phase 2.5 boundary note:** Phase 2.5 delivers relay log-line metrics (`outbox_backlog_size`, `processing_lag_ms`). This phase delivers the interactive surface. No duplication.
+
+---
+
 ### Phase 2.3 — First Consumer Slice: Lifecycle-Aware Completeness Projection
 
-**Status:** 🔲 NOT STARTED  
-**Entry gate:** Phase 2.1 exit (Class A adjustment producer wired)
+**Status:** 🔷 PRD AUTHORED — PRD-087 (2026-05-19)  
+**Entry gate:** Phase 2.1 exit (Class A adjustment producer wired) ✅  
+**Parallelization:** May proceed concurrently with Phase 2.3a while parallelization conditions hold (see §0)  
+**Pre-EXEC gate:** Verify `payload.visit_id` presence in migrations `20260511134903` (rpc_create_financial_txn) and `20260517234015` (rpc_create_financial_adjustment) before EXEC-087 scaffold
 
 **Scope:** First projection consumer that closes DEC-1. Currently all visit-level financial aggregates emit `completeness.status: 'unknown'` because no lifecycle-aware projection exists. This slice builds the consumer infrastructure and lifecycle signal that enables `'complete'` and `'partial'`.
 
@@ -282,22 +361,25 @@ Infrastructure fix applied: migration `20260518105926` adds `ON CONFLICT (aggreg
 - Must not write to `player_financial_transaction` or any authoring store
 - Reads `fact_class` and `origin_label` directly — never infers from payload content
 
-**Deliverables:**
-- [ ] Projection store migration (gaming-day-scoped Class A financial state)
-- [ ] Consumer service reading `finance_outbox` for Class A event types
-- [ ] `processed_messages` idempotency wired within same transaction as projection update
-- [ ] Gaming-day lifecycle signal mechanism
-- [ ] `VisitFinancialSummaryDTO` completeness: `'complete'` when gaming-day closed, `'partial'` when open, `'unknown'` only when no projection data
-- [ ] `FinancialSectionDTO` completeness updated equivalently
-- [ ] I3 consumer idempotency re-verification (consumer layer)
-- [ ] I4 replay test: truncate projection store → replay Class A events → equivalent completeness state
-- [ ] type-check, lint, build exit 0
+**Deliverables (PRD-087):**
+- [ ] WS1: `gaming_day_lifecycle` table + `rpc_close_gaming_day` migration (SECURITY DEFINER, service_role)
+- [ ] WS1: `visit_class_a_projection` table + `rpc_process_class_a_projection` migration (SECURITY DEFINER, service_role)
+- [ ] WS1: `GamingDayLifecycleDTO`, `VisitClassAProjectionDTO`, `resolveCompleteness()` added to `services/player-financial/dtos.ts`
+- [ ] WS2: `services/player-financial/outbox-class-a-consumer.ts` — `runClassAProjectionConsumer()`
+- [ ] WS2: Relay route dispatch branch (`fact_class === 'ledger'` → `runClassAProjectionConsumer()`)
+- [ ] WS3: `app/api/v1/visits/[visitId]/financial-summary/route.ts` — projection + lifecycle fetch
+- [ ] WS3: `toVisitFinancialSummaryDTO()` updated to accept `CompletenessStatus` parameter
+- [ ] WS3: `app/api/v1/rating-slips/[id]/modal-data/route.ts` + `FinancialSectionDTO` mapper equivalently
+- [ ] WS4: I3 re-verify — `tests/failure/i3-idempotency-class-a-projection.test.ts`
+- [ ] WS4: I4 re-verify — `tests/failure/i4-replay-class-a-projection.test.ts`
+- [ ] WS4: Completeness signal tests (partial / complete / unknown)
+- [ ] WS5: Tracker update — DEC-1 resolved, Phase 2.3 complete
 
 **Exit gate:**
-- DEC-1 resolved — visit-level financial aggregates emit `'complete'`/`'partial'` when events are flowing
-- Consumer idempotency test passes: duplicate delivery of same `event_id` produces one projection update
-- Replay produces identical completeness state as live processing
-- Wave 1 surface rendering contract not broken
+- DEC-1 resolved — `completeness.status: 'partial'` when gaming day open + projection exists; `'complete'` after `rpc_close_gaming_day`; `'unknown'` when no projection data
+- Consumer idempotency test passes (I3 re-verify)
+- Replay test passes — equivalent totals after truncate + replay (I4 re-verify)
+- Wave 1 surface rendering contract not broken — `type`, `source`, `completeness` all present
 - All gates pass
 
 ---
@@ -362,13 +444,13 @@ Infrastructure fix applied: migration `20260518105926` adds `ON CONFLICT (aggreg
 
 ## 8. Invariant Scope per Phase
 
-| Invariant | Scope | 2.0 | 2.1 | 2.2 | 2.3 | 2.4 | 2.5 |
-|-----------|-------|-----|-----|-----|-----|-----|-----|
-| I1 Atomicity | Producer-specific — re-prove per producer | ✅ exemplar | ✅ T1–T7 PASS (PRD-083) | ✅ T1-T12 PASS fill+credit | inherited | inherited | inherited |
-| I2 Durability | Transport baseline — inherited | ✅ proven | inherited | inherited | inherited | inherited | inherited |
-| I3 Idempotency | Transport baseline — consumer-level re-verify | ✅ proven | inherited | inherited | re-verify: consumer layer | re-verify: operational consumer | inherited |
-| I4 Replayability | Transport baseline — projection-level re-verify | ✅ proven | inherited | inherited | re-verify: Class A projection | re-verify: operational projection | inherited |
-| I5 Truthfulness | Surface enforcement (Wave 1 baseline) | ✅ proven (Wave 1) | inherited | inherited | inherited | inherited | inherited |
+| Invariant | Scope | 2.0 | 2.1 | 2.2 | 2.3a | 2.3 | 2.4 | 2.5 |
+|-----------|-------|-----|-----|-----|------|-----|-----|-----|
+| I1 Atomicity | Producer-specific — re-prove per producer | ✅ exemplar | ✅ T1–T7 PASS (PRD-083) | ✅ T1-T12 PASS fill+credit | N/A (read-only surface) | inherited | inherited | inherited |
+| I2 Durability | Transport baseline — inherited | ✅ proven | inherited | inherited | inherited (no relay change) | inherited | inherited | inherited |
+| I3 Idempotency | Transport baseline — consumer-level re-verify | ✅ proven | inherited | inherited | inherited (no consumer write) | re-verify: consumer layer | re-verify: operational consumer | inherited |
+| I4 Replayability | Transport baseline — projection-level re-verify | ✅ proven | inherited | inherited | inherited (no projection state) | re-verify: Class A projection | re-verify: operational projection | inherited |
+| I5 Truthfulness | Surface enforcement (Wave 1 baseline) | ✅ proven (Wave 1) | inherited | inherited | enforced (origin_label rendered as-authored, no upgrade) | inherited | inherited | inherited |
 
 ---
 

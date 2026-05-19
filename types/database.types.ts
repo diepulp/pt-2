@@ -5226,6 +5226,53 @@ export type Database = {
       }
       rpc_get_dashboard_stats: { Args: never; Returns: Json }
       rpc_get_dashboard_tables_with_counts: { Args: never; Returns: Json }
+      rpc_get_outbox_event_page: {
+        Args: {
+          p_casino_id: string
+          p_event_type?: string | null
+          p_limit?: number | null
+          p_search_id?: string | null
+          p_status?: string | null
+        }
+        Returns: {
+          aggregate_id: string
+          casino_id: string
+          created_at: string
+          delivery_attempts: number
+          event_id: string
+          event_type: string
+          fact_class: string
+          last_attempted_at: string | null
+          last_error: string | null
+          origin_label: string
+          payload: Json
+          player_id: string | null
+          processed_at: string | null
+          table_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "finance_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      rpc_get_outbox_relay_health: {
+        Args: { p_casino_id: string }
+        Returns: {
+          oldest_pending_age_seconds: number | null
+          pending_count: number
+          poison_candidate_count: number
+          processed_count_24h: number
+          retry_row_count: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "finance_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       rpc_get_player_exclusion_status: {
         Args: { p_player_id: string }
         Returns: string

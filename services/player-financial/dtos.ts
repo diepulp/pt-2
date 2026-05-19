@@ -348,3 +348,44 @@ export type FinancialOutboxEventDTO = Pick<
   origin_label: 'actual' | 'estimated' | 'observed' | 'compliance';
   payload: Record<string, unknown>;
 };
+
+// === Admin Observability DTOs (Wave 2 Phase 2.3a — PRD-086) ===
+//
+// Standalone types — NOT extending FinancialOutboxEventDTO.
+// FinancialOutboxEventDTO is the frozen consumer contract (excludes relay fields).
+// OutboxAdminEventDTO is the observability contract (includes relay lifecycle fields).
+// Both derive from the same DB row source but evolve independently.
+
+/**
+ * Full outbox row shape for the internal admin observability surface.
+ * Includes relay lifecycle fields (delivery_attempts, last_attempted_at, last_error)
+ * that are intentionally absent from FinancialOutboxEventDTO.
+ * origin_label and fact_class pass through from the DB row unchanged — no synthetic
+ * reconstruction or upgrade is permitted at any layer (ADR-054 D5).
+ */
+export type OutboxAdminEventDTO = Pick<
+  FinancialOutboxRow,
+  | 'event_id'
+  | 'event_type'
+  | 'casino_id'
+  | 'table_id'
+  | 'player_id'
+  | 'aggregate_id'
+  | 'created_at'
+  | 'processed_at'
+  | 'delivery_attempts'
+  | 'last_attempted_at'
+  | 'last_error'
+> & {
+  fact_class: 'ledger' | 'operational';
+  origin_label: 'actual' | 'estimated' | 'observed' | 'compliance';
+  payload: Record<string, unknown>;
+};
+
+/**
+ * Relay health summary for the internal admin observability surface.
+ * Derived from rpc_get_outbox_relay_health Returns[number] — single health row.
+ * oldest_pending_age_seconds is null when there are no pending rows.
+ */
+export type OutboxRelayHealthDTO =
+  Database['public']['Functions']['rpc_get_outbox_relay_health']['Returns'][number];

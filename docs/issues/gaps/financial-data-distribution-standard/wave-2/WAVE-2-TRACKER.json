@@ -5,7 +5,7 @@
     "source_of_truth": "WAVE-2-PROGRESS-TRACKER.md",
     "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md",
     "parent_tracker_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json",
-    "last_updated": "2026-05-19",
+    "last_updated": "2026-05-19 (PRD-086 / EXEC-086 complete — Phase 2.3a Operational Outbox Observability delivered; cursor advanced to Phase 2.3)",
     "update_rule": "Update both this file and WAVE-2-PROGRESS-TRACKER.md together when phase state changes. This file is the machine-readable projection of the .md; it does not own truth. Update parent ROLLOUT-TRACKER.json cursor when Wave 2 active_phase changes.",
     "reading_order": "cursor → direction → phases → deferred_register → validation_matrix → open_decisions. Read roadmap_ref for phase deliverables and exit gates. Read parent_tracker_ref for Wave 1 history and Wave 2 entry criteria."
   },
@@ -19,7 +19,8 @@
       "Consumers are projection-only — no consumer slice may write to PFT, the grind authoring store, or any other authoring table. Consumers write only to projection stores and processed_messages. origin_label travels from authoring boundary to consumer unchanged.",
       "Gates are pass/fail — each phase has a hard exit condition. No partial advancement. Phase N+1 PRD must land before Phase N+1 code begins.",
       "No scope expansion without FIB amendment — FIB-S downstream_expansion_allowed_without_amendment: false applies to every phase. Any new operator-visible outcome, external consumer contract, or new surface not in the containment loop requires a FIB amendment.",
-      "Freeze discipline holds — ADR-052 through ADR-056 are frozen. If a phase surfaces a real conflict, write a superseding ADR. Do not patch frozen docs silently."
+      "Freeze discipline holds — ADR-052 through ADR-056 are frozen. If a phase surfaces a real conflict, write a superseding ADR. Do not patch frozen docs silently.",
+      "Parallelization rule (effective 2026-05-19, post Phase 2.2) — Phase 2.3a (Operational Outbox Observability) and Phase 2.3 (Lifecycle-Aware Completeness Projection) may proceed in parallel. They operate on different architectural layers: 2.3a is a read-only runtime verification surface; 2.3 is the first projection consumer with derived completeness state. Parallelization is permitted while: (1) relay topology is frozen, (2) replay ordering semantics are unchanged, (3) no projection logic is introduced into the observability surface, (4) no write/replay/repair actions are added to the admin observability boundary. If any condition breaks, parallelization reverts to sequential. This marks the transition from transport stabilization to bounded operationalization of a stabilized propagation substrate."
     ],
     "execution_protocol": "Every phase runs: /prd-writer → /lead-architect (EXEC-SPEC scaffold) → /build PRD-###. /build-pipeline dispatches domain-expert skills per workstream. No skill is invoked directly outside the build-pipeline chain. See WAVE-2-ROLLOUT-MAP.md §3.",
     "phase_transition_rule": "Exiting Phase N → Opening Phase N+1 requires two documents: (1) Phase N exit gate met, (2) Phase N+1 PRD drafted and approved. No code written for Phase N+1 before its PRD lands.",
@@ -45,19 +46,20 @@
   "cursor": {
     "wave": 2,
     "active_phase": "2.3",
-    "phase_status": "complete_2_2_phase_2_3_pending",
-    "phase_label": "Phase 2.2 COMPLETE — PRD-085 / EXEC-085 implemented 2026-05-19 (3/3 workstreams PASS). rpc_request_table_fill and rpc_request_table_credit both emit finance_outbox rows atomically via fn_finance_outbox_emit. SECURITY DEFINER SET search_path='' hardening + full idempotency (FOR UPDATE replay + DO NOTHING) delivered. I1 atomicity proof T1-T12 unit PASS for both producers. Phase 2.3 (First Consumer Slice: Completeness Projection) is next.",
+    "phase_status": "complete_2_3a_phase_2_3_in_progress",
+    "phase_label": "Phase 2.3a COMPLETE — PRD-086 / EXEC-086 implemented 2026-05-19. Admin outbox observability surface delivered (relay health + event queue + search/filter). Phase 2.3 (Lifecycle-Aware Completeness Projection) PRD-087 in progress. Parallelization conditions remain in force.",
     "blocker": null,
     "teardown_migration": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
-    "next_action": "Phase 2.2 complete (2026-05-19). 1. Author Phase 2.3 PRD (Lifecycle-Aware Completeness Projection — DEC-1 resolution). 2. /lead-architect EXEC-SPEC scaffold. 3. /build PRD-###. See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.3.",
-    "next_action_prd": null,
-    "last_closed_phase": "2.2",
+    "next_action": "Phase 2.3 PRD — Lifecycle-Aware Completeness Projection",
+    "next_action_prd": "PRD-087 (Track B — Phase 2.3 in progress)",
+    "last_closed_phase": "2.3a",
     "last_closed_date": "2026-05-19",
-    "last_closed_prd": "PRD-085",
-    "last_closed_exec": "EXEC-085",
+    "last_closed_prd": "PRD-086",
+    "last_closed_exec": "EXEC-086",
     "last_closed_commit": null,
     "exemplar_phase_commit": "8a1b8741",
     "exemplar_phase_date": "2026-05-11",
+    "phase_model_transition": "Wave 2 transitions from transport-certification sequencing to bounded operational rollout sequencing as of 2026-05-19 (Phase 2.2 complete). Phases 2.3a and 2.3 are the first parallel tracks; see direction.principles for the governing rule.",
     "phase_2_1_authorization": {
       "status": "authorized",
       "authorized_by": "WAVE-2-INTEGRATION-PROOF-SIGNOFF.md",
@@ -324,15 +326,84 @@
       ]
     },
     {
+      "id": "2.3a",
+      "label": "Operational Outbox Observability",
+      "wave": 2,
+      "status": "complete",
+      "prd": "PRD-086",
+      "prd_path": "docs/10-prd/PRD-086-wave2-phase-2.3a-operational-outbox-observability-v0.md",
+      "prd_authored_date": "2026-05-19",
+      "exec_spec": "EXEC-086",
+      "exec_spec_path": "docs/21-exec-spec/EXEC-086-wave2-phase-2.3a-operational-outbox-observability.md",
+      "checkpoint": ".claude/skills/build-pipeline/checkpoints/PRD-086.json",
+      "exit_date": "2026-05-19",
+      "commit": null,
+      "entry_gate": "Phase 2.2 exit ✅ (2026-05-19)",
+      "parallelization": {
+        "parallel_with": "2.3",
+        "authorized": true,
+        "authorized_date": "2026-05-19",
+        "rationale": "Phase 2.3a is a read-only runtime verification surface for the existing transactional substrate. Phase 2.3 introduces the first projection consumer. They operate on different architectural layers and have no shared write surface. Phase 2.3a does not mutate producer semantics, relay behavior, replay ordering, processed_messages, or projection state.",
+        "parallelization_conditions": [
+          "relay topology remains frozen",
+          "replay ordering semantics remain unchanged",
+          "no projection logic introduced into the observability surface",
+          "no write/replay/repair actions added to the admin observability boundary"
+        ],
+        "reverts_to_sequential_if": "any parallelization condition above is violated"
+      },
+      "scope": "Read-only internal admin surface at /admin/outbox-observability. Makes finance_outbox row state and relay delivery status inspectable without SQL. Relay health summary, event queue with full semantic envelope, poison candidate labeling (delivery_attempts >= 3, non-authoritative pilot heuristic), and search/filter. Does not build projection consumers, write to any authoring store, or process events.",
+      "fib": "FIB-H-W2-OUTBOX-OBS-001",
+      "fib_path": "docs/issues/gaps/financial-data-distribution-standard/wave-2/phase-2.3a/FIB-H-W2-OUTBOX-OBS-001-operational-outbox-observability.md",
+      "deliverables": [
+        "rpc_get_outbox_relay_health(p_casino_id UUID) — SECURITY DEFINER, service_role",
+        "rpc_get_outbox_event_page(p_casino_id UUID, ...) — SECURITY DEFINER, service_role, hard-cap 100 rows",
+        "OutboxAdminEventDTO — standalone Pick from FinancialOutboxRow (not extending FinancialOutboxEventDTO)",
+        "OutboxRelayHealthDTO — processed_count_24h (last 24h window)",
+        "GET /api/internal/outbox-observability — admin session auth, service-role DB client",
+        "app/(dashboard)/admin/outbox-observability/page.tsx — relay health + event queue + search/filter",
+        "Unit + integration tests (401 guard, correct casino scope, poison candidate count)",
+        "WAVE-2-TRACKER.json and WAVE-2-PROGRESS-TRACKER.md updated with 2.3a entry"
+      ],
+      "exit_gate": [
+        "Admin surface renders relay health summary and event queue without SQL",
+        "Real workflow action (buy-in, fill, or adjustment) produces visible outbox row with correct labels",
+        "origin_label rendered as authored — no upgrade visible in any rendered row",
+        "delivery_attempts >= 3 rows labeled as poison candidates (heuristic, non-authoritative)",
+        "Zero writes to finance_outbox or any authoring table",
+        "finance_outbox read path routes through SECURITY DEFINER RPC",
+        "type-check, lint, build exit 0"
+      ],
+      "skills": [
+        "backend-service-builder (WS1: RPCs + DTOs)",
+        "api-builder (WS2: /api/internal/outbox-observability route)",
+        "frontend-design-pt-2 (WS3: admin page)"
+      ],
+      "phase_2_5_boundary": "Phase 2.5 delivers relay log-line metrics (outbox_backlog_size, processing_lag_ms). Phase 2.3a delivers the interactive admin surface. No duplication — the Phase 2.5 log lines remain deferred.",
+      "exit_gates_passed": [
+        "Admin surface renders relay health summary and event queue without SQL",
+        "rpc_get_outbox_relay_health + rpc_get_outbox_event_page SECURITY DEFINER RPCs live (migration 20260519010436)",
+        "OutboxAdminEventDTO + OutboxRelayHealthDTO standalone types in services/player-financial/dtos.ts",
+        "GET /api/internal/outbox-observability admin-auth route (session client + service-role client split)",
+        "app/(dashboard)/admin/outbox-observability page delivered (relay health card + event table + sidebar link)",
+        "origin_label rendered with uniform neutral badge — no upgrade at display layer (ADR-054 D5 compliant)",
+        "delivery_attempts >= 3 rows labeled as poison candidates (heuristic, non-authoritative)",
+        "Zero writes to finance_outbox or any authoring table",
+        "type-check (app/ + components/ scope) exit 0; lint exit 0; Turbopack compile exit 0"
+      ]
+    },
+    {
       "id": "2.3",
       "label": "First Consumer Slice: Lifecycle-Aware Completeness Projection",
       "wave": 2,
-      "status": "not_started",
-      "prd": null,
+      "status": "prd_authored",
+      "prd": "PRD-087",
+      "prd_path": "docs/10-prd/PRD-087-wave2-phase-2.3-lifecycle-aware-completeness-projection-v0.md",
+      "prd_authored_date": "2026-05-19",
       "exec_spec": null,
       "exit_date": null,
       "commit": null,
-      "entry_gate": "Phase 2.1 exit (Class A adjustment producer wired)",
+      "entry_gate": "Phase 2.1 exit (Class A adjustment producer wired) — may begin in parallel with Phase 2.3a; see direction.principles[parallelization_rule]",
       "scope": "First projection consumer. Resolves DEC-1: all visit-level financial aggregates currently emit completeness.status: unknown because the system has no lifecycle-aware projection mechanism. This slice builds the consumer infrastructure that makes complete and partial completeness signals possible.",
       "dec_1_resolution": {
         "decision_id": "DEC-1",
@@ -656,12 +727,17 @@
       "PRD-082 harness teardown — migration 20260517141021",
       "rpc_acknowledge_outbox_delivery SECURITY DEFINER terminal delivery write (ADR-054 R3) — migration 20260518014252",
       "fn_finance_outbox_emit ON CONFLICT (aggregate_id, event_type) DO NOTHING idempotency fix — migration 20260518105926",
-      "Phase 2.2: rpc_request_table_fill + rpc_request_table_credit SECURITY DEFINER rewrite + outbox emission (fill.recorded / credit.recorded, operational, estimated) + rpc_create_financial_adjustment SECURITY DEFINER compatibility upgrade + fn_finance_outbox_emit REVOKE authenticated — migration 20260518134715"
+      "Phase 2.2: rpc_request_table_fill + rpc_request_table_credit SECURITY DEFINER rewrite + outbox emission (fill.recorded / credit.recorded, operational, estimated) + rpc_create_financial_adjustment SECURITY DEFINER compatibility upgrade + fn_finance_outbox_emit REVOKE authenticated — migration 20260518134715",
+      "Phase 2.3a: rpc_get_outbox_relay_health + rpc_get_outbox_event_page SECURITY DEFINER admin read RPCs (service_role, hard-cap 100) — migration 20260519010436"
     ],
     "application_layer": [
       "FinancialOutboxEventDTO — services/player-financial/dtos.ts",
+      "OutboxAdminEventDTO, OutboxRelayHealthDTO — services/player-financial/dtos.ts",
       "runConsumer() — services/player-financial/outbox-consumer.ts",
       "POST /api/internal/outbox-relay (CRON_SECRET bearer auth) — app/api/internal/outbox-relay/route.ts",
+      "GET /api/internal/outbox-observability (admin session auth + service-role DB client) — app/api/internal/outbox-observability/route.ts",
+      "app/(dashboard)/admin/outbox-observability/page.tsx + OutboxObservabilityClient.tsx — relay health card + event table + search/filter",
+      "Outbox Observability sidebar link (Activity icon) — components/layout/app-sidebar.tsx",
       "Vercel cron (* * * * *) — vercel.json"
     ],
     "test_layer": [
