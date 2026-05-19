@@ -1,6 +1,6 @@
 # ADR-032: Frontend Error Boundary Architecture
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-02-02
 **Owner:** Platform/Frontend
 **Applies to:** All route segments under `app/`, all multi-panel layouts

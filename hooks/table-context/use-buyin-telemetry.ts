@@ -10,6 +10,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { normalizeClientError } from '@/lib/errors/normalize-client-error';
 import { createBrowserComponentClient } from '@/lib/supabase/client';
 import { tableContextKeys } from '@/services/table-context/keys';
 
@@ -48,7 +49,7 @@ export function useGrindBuyinTotal(
         .lte('created_at', shiftWindow.endTs);
 
       if (error) {
-        throw new Error(error.message);
+        throw normalizeClientError(error);
       }
 
       const total = (data ?? []).reduce(
@@ -102,7 +103,7 @@ export function useLogGrindBuyin(tableId: string, _casinoId: string) {
       );
 
       if (error) {
-        throw new Error(error.message);
+        throw normalizeClientError(error);
       }
 
       return data;
@@ -144,7 +145,7 @@ export function useUndoGrindBuyin(tableId: string, _casinoId: string) {
       );
 
       if (error) {
-        throw new Error(error.message);
+        throw normalizeClientError(error);
       }
 
       return data;

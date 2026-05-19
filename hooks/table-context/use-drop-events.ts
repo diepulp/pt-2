@@ -11,6 +11,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { normalizeClientError } from '@/lib/errors/normalize-client-error';
 import { createBrowserComponentClient } from '@/lib/supabase/client';
 import { logDropEvent } from '@/services/table-context/chip-custody';
 import type {
@@ -55,7 +56,7 @@ export function useDropEvents(
       const { data, error } = await query;
 
       if (error) {
-        throw new Error(error.message);
+        throw normalizeClientError(error);
       }
 
       return data as TableDropEventDTO[];

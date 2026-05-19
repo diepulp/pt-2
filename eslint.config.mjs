@@ -13,6 +13,7 @@ import noReturnTypeInference from './.eslint-rules/no-return-type-inference.js';
 import noServiceResultReturn from './.eslint-rules/no-service-result-return.js';
 import noTemporalBypass from './.eslint-rules/no-temporal-bypass.js';
 import noUnsafeErrorDetails from './.eslint-rules/no-unsafe-error-details.js';
+import noRawProviderMessage from './.eslint-rules/no-raw-provider-message.js';
 import noForbiddenFinancialLabel from './.eslint-rules/no-forbidden-financial-label.js';
 import noUnlabeledFinancialValue from './.eslint-rules/no-unlabeled-financial-value.js';
 
@@ -298,6 +299,42 @@ const eslintConfig = [
     },
     rules: {
       'error-safety/no-unsafe-error-details': 'error',
+    },
+  },
+  // ==========================================================================
+  // PRD-081 WS4: Client-Side Error Handling Standardization
+  // Prevents raw Supabase/provider error fields (message/hint/details) from
+  // crossing user-visible or client-thrown boundaries in client components,
+  // hooks, and app routes.  Use normalizeClientError() or getErrorMessage().
+  // ==========================================================================
+  {
+    files: [
+      'hooks/**/*.ts',
+      'hooks/**/*.tsx',
+      'app/**/*.ts',
+      'app/**/*.tsx',
+      'components/**/*.ts',
+      'components/**/*.tsx',
+    ],
+    ignores: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.spec.ts',
+      '**/*.spec.tsx',
+      '**/__tests__/**',
+      '**/__mocks__/**',
+      'lib/errors/normalize-client-error.ts',
+      'lib/errors/error-utils.ts',
+    ],
+    plugins: {
+      'client-error-safety': {
+        rules: {
+          'no-raw-provider-message': noRawProviderMessage,
+        },
+      },
+    },
+    rules: {
+      'client-error-safety/no-raw-provider-message': 'error',
     },
   },
   // Financial enforcement — UI surfaces (PRD-078 Phase 1.4)
