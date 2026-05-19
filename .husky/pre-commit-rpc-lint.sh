@@ -73,10 +73,12 @@ for FILE in $MIGRATION_FILES; do
     # RPC function(s) found - verify context injection call exists
     # ADR-024: set_rls_context_from_staff() is the ONLY accepted pattern
     # NOTE: set_rls_context() was DROPPED in SEC-007 and no longer exists.
-    CONTEXT_CALL_ADR024=$(grep -icE 'PERFORM\s+set_rls_context_from_staff\s*\(' "$FILE" || true)
+    # NOTE: SECURITY DEFINER functions with SET search_path = '' MUST use the
+    #       fully qualified public.set_rls_context_from_staff() form — both are accepted.
+    CONTEXT_CALL_ADR024=$(grep -icE 'PERFORM\s+(public\.)?set_rls_context_from_staff\s*\(' "$FILE" || true)
 
     # Detect usage of dropped function (hard fail with clear message)
-    CONTEXT_CALL_DROPPED=$(grep -icE 'PERFORM\s+set_rls_context\s*\(' "$FILE" | grep -v 'set_rls_context_from_staff\|set_rls_context_internal' || true)
+    CONTEXT_CALL_DROPPED=$(grep -icE 'PERFORM\s+(public\.)?set_rls_context\s*\(' "$FILE" | grep -v 'set_rls_context_from_staff\|set_rls_context_internal' || true)
     if [ -z "$CONTEXT_CALL_DROPPED" ]; then
       CONTEXT_CALL_DROPPED=0
     fi
@@ -230,7 +232,8 @@ for FILE in $MIGRATION_FILES; do
 
   if [ "$HAS_SECURITY_DEFINER" -gt 0 ] && [ "$HAS_P_CASINO_ID" -gt 0 ]; then
     # Check if using ADR-024 pattern (exempt from p_casino_id validation)
-    HAS_ADR024_PATTERN=$(grep -icE 'PERFORM\s+set_rls_context_from_staff\s*\(' "$FILE" || true)
+    # Accept both unqualified and public.-qualified form (required by SET search_path='')
+    HAS_ADR024_PATTERN=$(grep -icE 'PERFORM\s+(public\.)?set_rls_context_from_staff\s*\(' "$FILE" || true)
 
     if [ "$HAS_ADR024_PATTERN" -gt 0 ]; then
       # ADR-024 pattern: casino_id is derived authoritatively, not from p_casino_id

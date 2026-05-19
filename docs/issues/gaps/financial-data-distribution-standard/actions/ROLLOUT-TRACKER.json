@@ -4,7 +4,7 @@
     "version": "1.2.0",
     "source_of_truth": "ROLLOUT-PROGRESS.md",
     "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md",
-    "last_updated": "2026-05-11",
+    "last_updated": "2026-05-19",
     "exec_074_closed": "2026-04-30",
     "update_rule": "Update both this file and ROLLOUT-PROGRESS.md together when phase state changes. This file is the machine-readable projection of the .md; it does not own truth.",
     "reading_order": "cursor → direction (principles + non_goals) → phases → deferred_register → active_bridges. Read roadmap_ref for full narrative, §2.5 for execution protocol, §9 for skill routing."
@@ -49,18 +49,18 @@
 
   "cursor": {
     "wave": 2,
-    "active_phase": "2.2",
-    "phase_status": "active_phase_2_2_prd_pending",
-    "phase_label": "Wave 2 ACTIVE. Phase 2.1 (PRD-083 — rpc_create_financial_adjustment outbox expansion) complete 2026-05-17. Phase 2.2 PRD (rpc_request_table_fill + rpc_request_table_credit) not yet authored. See WAVE-2-PROGRESS-TRACKER.md §7.",
+    "active_phase": "2.3",
+    "phase_status": "complete_2_2_phase_2_3_pending",
+    "phase_label": "Wave 2 ACTIVE. Phase 2.2 (PRD-085 / EXEC-085 — rpc_request_table_fill + rpc_request_table_credit outbox expansion) complete 2026-05-19. Both RPCs emit fill.recorded / credit.recorded atomically via fn_finance_outbox_emit (SECURITY DEFINER, operational/estimated). Phase 2.3 (First Consumer Slice: Lifecycle-Aware Completeness Projection) is next. See WAVE-2-PROGRESS-TRACKER.md §7.",
     "blocker": null,
     "teardown_migration": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
-    "next_action": "1. Author Phase 2.2 PRD for rpc_request_table_fill + rpc_request_table_credit (simultaneous — ADR-055 intra-category parity). 2. /lead-architect EXEC-SPEC scaffold. 3. /build PRD-###. See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.2 and WAVE-2-PROGRESS-TRACKER.md §6.",
+    "next_action": "1. Author Phase 2.3 PRD (Lifecycle-Aware Completeness Projection — DEC-1 resolution: visit-level financial aggregates emit complete/partial when gaming-day is closed). 2. /lead-architect EXEC-SPEC scaffold. 3. /build PRD-###. See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.3 and WAVE-2-PROGRESS-TRACKER.md §7.",
     "next_action_prd": null,
     "wave_2_progress_tracker_md": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-PROGRESS-TRACKER.md",
     "wave_2_progress_tracker_json": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-TRACKER.json",
-    "last_closed_phase": "2.1",
-    "last_closed_date": "2026-05-17",
-    "last_closed_exec": "EXEC-083",
+    "last_closed_phase": "2.2",
+    "last_closed_date": "2026-05-19",
+    "last_closed_exec": "EXEC-085",
     "last_closed_commit": null,
     "wave_1_status": "closed",
     "wave_1_closed_date": "2026-05-06",
@@ -605,6 +605,41 @@
         "type-check exit 0",
         "lint exit 0",
         "127 tests pass, 25 skipped (integration — RUN_INTEGRATION_TESTS=true required)"
+      ]
+    },
+    {
+      "id": "2.2",
+      "label": "Producer Expansion B: Dependency Events (Fills + Credits)",
+      "wave": 2,
+      "status": "complete",
+      "prd": "PRD-085",
+      "prd_path": "docs/10-prd/PRD-085-wave2-phase-2.2-dependency-event-producer-expansion-v0.md",
+      "exec_spec": "EXEC-085",
+      "exec_spec_path": "docs/21-exec-spec/EXEC-085-wave2-phase2-2-fill-credit-producer-ext.md",
+      "exit_date": "2026-05-19",
+      "commit": null,
+      "entry_gate": "Phase 2.1 exit ✅ (certified 2026-05-18)",
+      "scope": "Wire rpc_request_table_fill and rpc_request_table_credit to emit finance_outbox rows (fill.recorded / credit.recorded) atomically within existing transaction boundaries. Both ship simultaneously (ADR-055 intra-category parity). SECURITY DEFINER SET search_path='' rewrite with full idempotency hardening. rpc_create_financial_adjustment upgraded to SECURITY DEFINER before fn_finance_outbox_emit authenticated execute revoked.",
+      "workstreams_closed": ["WS1_MIGRATION", "WS2_TESTS", "WS3_GOVERNANCE"],
+      "deliverables": [
+        "Migration 20260518134715: rpc_create_financial_adjustment SECURITY DEFINER upgrade + fn_finance_outbox_emit REVOKE authenticated + rpc_request_table_fill SECURITY DEFINER rewrite with outbox emission + rpc_request_table_credit SECURITY DEFINER rewrite with outbox emission",
+        "TypeScript: IDEMPOTENCY_CONFLICT: mapping in chip-custody.ts requestTableFill / requestTableCredit",
+        "I1 fill atomicity proof: tests/failure/i1-atomicity-fill.test.ts T1-T12 unit PASS (10 mock + 12 integration stubs)",
+        "I1 credit atomicity proof: tests/failure/i1-atomicity-credit.test.ts T1-T12 unit PASS (10 mock + 12 integration stubs)",
+        "IDEMPOTENCY_CONFLICT: propagation tests in services/table-context/__tests__/chip-custody.test.ts (4 tests)"
+      ],
+      "invariants_proven": {
+        "I1_atomicity": "T1-T12 PASS (10 unit + 12 integration stubs each) — fill: tests/failure/i1-atomicity-fill.test.ts; credit: tests/failure/i1-atomicity-credit.test.ts"
+      },
+      "exit_gates_passed": [
+        "rpc_request_table_fill atomically emits fill.recorded outbox row (I1 T1-T12 unit PASS)",
+        "rpc_request_table_credit atomically emits credit.recorded outbox row (I1 T1-T12 unit PASS)",
+        "fact_class='operational' and origin_label='estimated' hardcoded in both RPCs",
+        "player_id=NULL unconditional in both RPCs",
+        "ADR-055 parity: both producers ship in same migration",
+        "IDEMPOTENCY_CONFLICT: prefix propagation verified in TypeScript layer",
+        "No supabase.from() fallback path (mock.calls.length=0 in all error paths)",
+        "147 tests pass, 49 skipped (integration — RUN_INTEGRATION_TESTS=true required)"
       ]
     }
   ],

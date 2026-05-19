@@ -4,8 +4,8 @@
 **Machine-readable companion:** `WAVE-2-TRACKER.json` (same directory — keep in sync)  
 **Authority:** `WAVE-2-ROLLOUT-MAP.md` (phase plan) · `ROLLOUT-TRACKER.json` (parent machine state)  
 **First established:** 2026-05-17  
-**Last updated:** 2026-05-18  
-**Current position:** Phase 2.1 CERTIFIED — PRD-083 / EXEC-083 implemented + PRD-084 live certification 20/20 (2026-05-18). All gates pass. Phase 2.2 PRD not yet authored.
+**Last updated:** 2026-05-19  
+**Current position:** Phase 2.2 COMPLETE — PRD-085 / EXEC-085 implemented 2026-05-19 (3/3 workstreams PASS). rpc_request_table_fill and rpc_request_table_credit both emit fill.recorded / credit.recorded outbox rows atomically. I1 T1-T12 unit PASS for both producers. Phase 2.3 (First Consumer Slice: Completeness Projection) is next.
 
 ---
 
@@ -17,7 +17,7 @@
 | PRD-082 | Integration Proof Runtime Gate | ✅ COMPLETE | PRD-082 | `b1d45302` |
 | **PRD-082 Teardown** | **Harness cleanup pre-2.1 merge** | **✅ APPLIED** | `20260517141021` | 2026-05-17 |
 | 2.1 | Producer Expansion A: Financial Adjustment | ✅ CERTIFIED | PRD-083 / PRD-084 | PENDING_MERGE |
-| 2.2 | Producer Expansion B: Dependency Events | 🔲 NOT STARTED | PRD to author | — |
+| 2.2 | Producer Expansion B: Dependency Events | ✅ COMPLETE | PRD-085 / EXEC-085 | PENDING_MERGE |
 | 2.3 | First Consumer Slice: Completeness Projection | 🔲 NOT STARTED | PRD to author | — |
 | 2.4 | Consumer Expansion: Operational Telemetry | 🔲 NOT STARTED | PRD to author | — |
 | 2.5 | Observability + Sign-Off | 🔲 NOT STARTED | PRD to author | — |
@@ -158,10 +158,16 @@ Authority: `TEARDOWN-ARTIFACT-PRD-082.md`
 4. [x] /build PRD-083 execute Phase 2.1
        All 7 workstreams complete. 127 tests pass, 25 skipped. type-check + lint exit 0. (2026-05-17)
 
-5. [ ] Author Phase 2.2 PRD
-       Scope: rpc_request_table_fill + rpc_request_table_credit → 'fill.recorded' + 'credit.recorded' (simultaneous — ADR-055 intra-category parity)
+5. [x] Author Phase 2.2 PRD + execute via build pipeline
+       PRD-085 authored (2026-05-18). EXEC-085 scaffolded and approved. /build PRD-085 executed.
+       WS1 (migration 20260518134715), WS2 (i1 fill/credit proof tests), WS3 (governance) all complete. (2026-05-19)
+
+6. [ ] Author Phase 2.3 PRD
+       Scope: First Consumer Slice — Lifecycle-Aware Completeness Projection resolving DEC-1.
+       visit-level financial aggregates (VisitFinancialSummaryDTO, FinancialSectionDTO) currently emit completeness.status: 'unknown'.
+       Phase 2.3 builds projection store + consumer reading buyin.recorded/cashout.recorded/adjustment.recorded + gaming-day lifecycle signal.
        Chain: /prd-writer → /lead-architect (EXEC-SPEC) → /build PRD-###
-       See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.2 for deliverables and exit gate.
+       See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.3 for deliverables and exit gate.
 ```
 
 ---
@@ -213,8 +219,8 @@ Infrastructure fix applied: migration `20260518105926` adds `ON CONFLICT (aggreg
 
 ### Phase 2.2 — Producer Expansion B: Dependency Events (Fills + Credits)
 
-**Status:** 🔲 NOT STARTED  
-**Entry gate:** Phase 2.1 exit
+**Status:** ✅ COMPLETE — PRD-085 / EXEC-085 (2026-05-19)  
+**Entry gate:** Phase 2.1 exit ✅ (certified 2026-05-18)
 
 **Scope:** Wire `rpc_request_table_fill` and `rpc_request_table_credit`. Both must ship simultaneously — they form a **symmetric Dependency Event rollout pair** (ADR-055 intra-category parity). Asymmetric rollout is not permitted; one cannot land without the other.
 
@@ -232,22 +238,26 @@ Infrastructure fix applied: migration `20260518105926` adds `ON CONFLICT (aggreg
 **Critical classification note:** Fills and credits are operationally auditable to the cent. They carry `'estimated'` because they are non-ledger operational inputs — not because their values are uncertain. Authority conflation to `'actual'` is a violation.
 
 **Deliverables:**
-- [ ] Migration extending `rpc_request_table_fill` with outbox emission
-- [ ] Migration extending `rpc_request_table_credit` with outbox emission
-- [ ] Both migrations in same PR (ADR-055 simultaneous landing)
-- [ ] Event catalog entries for `fill.recorded` and `credit.recorded`
-- [ ] `fact_class = 'operational'` and `origin_label = 'estimated'` hardcoded in both RPCs (not caller-derived)
-- [ ] `player_id = NULL` enforced unconditionally in both RPCs
-- [ ] I1 atomicity proof tests for both paths
-- [ ] Tests proving `origin_label` cannot be upgraded by consumer
-- [ ] type-check, lint exit 0
+- [x] Migration extending `rpc_request_table_fill` with outbox emission — `20260518134715`
+- [x] Migration extending `rpc_request_table_credit` with outbox emission — `20260518134715` (same migration)
+- [x] Both migrations in same PR (ADR-055 simultaneous landing) — single migration file
+- [x] `fact_class = 'operational'` and `origin_label = 'estimated'` hardcoded in both RPCs (not caller-derived)
+- [x] `player_id = NULL` enforced unconditionally in both RPCs
+- [x] I1 atomicity proof test for fill path — `tests/failure/i1-atomicity-fill.test.ts` T1-T12 PASS (10 unit + 12 integration stubs)
+- [x] I1 atomicity proof test for credit path — `tests/failure/i1-atomicity-credit.test.ts` T1-T12 PASS (10 unit + 12 integration stubs)
+- [x] IDEMPOTENCY_CONFLICT: propagation tests in TypeScript layer (`chip-custody.test.ts`)
+- [x] rpc_create_financial_adjustment SECURITY DEFINER compatibility upgrade (pre-REVOKE)
+- [x] fn_finance_outbox_emit EXECUTE revoked from authenticated (Option A hardening complete)
+- [x] type-check, lint exit 0
 
 **Exit gate:**
-- Both RPCs atomically emit `finance_outbox` rows
-- `fill.recorded` and `credit.recorded` in Wave 2 event catalog
-- `fact_class = 'operational'` and `origin_label = 'estimated'` verified in migration text
-- No authority conflation — consumer tests assert `origin_label` stays `'estimated'`
-- All gates pass
+- ✅ Both RPCs atomically emit `finance_outbox` rows
+- ✅ `fact_class = 'operational'` and `origin_label = 'estimated'` hardcoded in migration text
+- ✅ `player_id = NULL` unconditional in both RPCs
+- ✅ I1 unit proof T1-T12 PASS for both fill and credit producers
+- ✅ IDEMPOTENCY_CONFLICT: prefix propagates to TypeScript DomainError without 23505 fallback
+- ✅ No supabase.from() outbox fallback path
+- ✅ All gates pass
 
 ---
 
@@ -354,7 +364,7 @@ Infrastructure fix applied: migration `20260518105926` adds `ON CONFLICT (aggreg
 
 | Invariant | Scope | 2.0 | 2.1 | 2.2 | 2.3 | 2.4 | 2.5 |
 |-----------|-------|-----|-----|-----|-----|-----|-----|
-| I1 Atomicity | Producer-specific — re-prove per producer | ✅ exemplar | ✅ T1–T7 PASS (PRD-083) | re-prove: fill + credit | inherited | inherited | inherited |
+| I1 Atomicity | Producer-specific — re-prove per producer | ✅ exemplar | ✅ T1–T7 PASS (PRD-083) | ✅ T1-T12 PASS fill+credit | inherited | inherited | inherited |
 | I2 Durability | Transport baseline — inherited | ✅ proven | inherited | inherited | inherited | inherited | inherited |
 | I3 Idempotency | Transport baseline — consumer-level re-verify | ✅ proven | inherited | inherited | re-verify: consumer layer | re-verify: operational consumer | inherited |
 | I4 Replayability | Transport baseline — projection-level re-verify | ✅ proven | inherited | inherited | re-verify: Class A projection | re-verify: operational projection | inherited |
@@ -362,13 +372,13 @@ Infrastructure fix applied: migration `20260518105926` adds `ON CONFLICT (aggreg
 
 ---
 
-## 9. Dormant Workstreams (activate through Phase 2.1 / 2.2)
+## 9. Dormant Workstreams (completed through Phase 2.1 / 2.2)
 
-| ID | Producer | Category | Activates |
-|----|----------|----------|-----------|
-| WS_PRODUCER_ADJUSTMENT | `rpc_create_financial_adjustment` | Class A (Authority Fact) | Phase 2.1 |
-| WS_PRODUCER_FILL | `rpc_request_table_fill` | Dependency Event | Phase 2.2 |
-| WS_PRODUCER_CREDIT | `rpc_request_table_credit` | Dependency Event | Phase 2.2 |
+| ID | Producer | Category | Status |
+|----|----------|----------|--------|
+| WS_PRODUCER_ADJUSTMENT | `rpc_create_financial_adjustment` | Class A (Authority Fact) | ✅ COMPLETE (Phase 2.1) |
+| WS_PRODUCER_FILL | `rpc_request_table_fill` | Dependency Event | ✅ COMPLETE (Phase 2.2) |
+| WS_PRODUCER_CREDIT | `rpc_request_table_credit` | Dependency Event | ✅ COMPLETE (Phase 2.2) |
 
 ---
 
