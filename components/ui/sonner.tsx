@@ -11,16 +11,16 @@ import { useTheme } from 'next-themes';
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
 
 /**
- * PT-2 Toaster — accent-colored, high-contrast toast notifications.
+ * d3lt Toaster — accent-colored, high-contrast toast notifications.
  *
- * Uses Sonner's `richColors` mode with PT-2 themed CSS variable overrides
+ * Uses Sonner's `richColors` mode with d3lt themed CSS variable overrides
  * (defined in globals.css) so variant toasts have strong visual identity
  * in both light and dark themes.
  *
  * Adds a left-border accent + elevated shadow so toasts remain visible
  * over Sheet overlays (e.g. the activation drawer / custody chain drawer).
  *
- * @see app/globals.css — PT-2 Sonner Toast Overrides section
+ * @see app/globals.css — d3lt Sonner Toast Overrides section
  */
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = 'system' } = useTheme();

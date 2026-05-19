@@ -1,6 +1,4 @@
-import Link from 'next/link';
-
-import { LoginForm } from '@/components/login-form';
+import { MagicLinkForm } from '@/components/magic-link-form';
 
 export default function SignInPage() {
   return (
@@ -28,17 +26,8 @@ export default function SignInPage() {
       />
 
       <div className="relative flex min-h-[70vh] items-center justify-center px-5 py-16 sm:px-6">
-        <div className="w-full max-w-[420px] space-y-6">
-          <LoginForm />
-          <p className="text-center text-[13px] text-[#95A2B3]/60">
-            Not sure where to start?{' '}
-            <Link
-              href="/contact"
-              className="text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8]"
-            >
-              Request a demo
-            </Link>
-          </p>
+        <div className="w-full max-w-[420px]">
+          <MagicLinkForm />
         </div>
       </div>
     </div>

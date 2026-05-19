@@ -87,8 +87,7 @@ export function useSignOut() {
         if (error) {
           setErrorState({
             show: true,
-            message:
-              error.message || 'Could not reach the authentication server.',
+            message: 'Could not reach the authentication server.',
           });
           return; // Hard fail: do NOT proceed
         }

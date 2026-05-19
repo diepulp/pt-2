@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 
 import { RegisterForm } from '@/components/onboarding/register-form';
+import { DomainError } from '@/lib/errors/domain-errors';
+import { requireApprovedPilotSession } from '@/lib/server-actions/guards/require-approved-pilot-session';
 import { isDevAuthBypassEnabled } from '@/lib/supabase/dev-context';
 import { createClient } from '@/lib/supabase/server';
 
@@ -16,9 +18,23 @@ export default async function RegisterPage() {
     redirect('/signin?redirect=/register');
   }
 
-  // Skip registration check in dev bypass (no real user to query against)
+  // Skip guards in dev bypass (no real user to evaluate)
   if (!devBypass) {
-    // If user already has a pending registration, skip to bootstrap
+    // Guard: approved session + provisioning authorization (admin-only in this pilot slice)
+    // Approved non-admin users redirect to /demo (defense-in-depth containment, PRD-084)
+    try {
+      await requireApprovedPilotSession(supabase, {
+        requireProvisioningAuth: true,
+      });
+    } catch (err) {
+      if (err instanceof DomainError) {
+        if (err.code === 'FORBIDDEN') redirect('/demo');
+        redirect('/signin?redirect=/register');
+      }
+      redirect('/signin?redirect=/register');
+    }
+
+    // Only reached by allowlisted pilot admins with provisioning authorization
     const { data: registration } = await supabase
       .from('onboarding_registration')
       .select('id')
@@ -32,7 +48,7 @@ export default async function RegisterPage() {
 
   return (
     <div className="space-y-8">
-      <div className="text-center space-y-2">
+      <div className="space-y-2 text-center">
         <h1
           className="text-sm font-bold uppercase tracking-widest text-foreground"
           style={{ fontFamily: 'monospace' }}

@@ -5,22 +5,15 @@ export default function OnboardingLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-      {/* PT-2 Branding Mark */}
-      <div className="mb-8 flex items-center gap-3">
-        <div className="h-8 w-8 rounded border-2 border-accent/50 bg-accent/10 flex items-center justify-center">
-          <span
-            className="text-sm font-bold text-accent"
-            style={{ fontFamily: 'monospace' }}
-          >
-            PT
-          </span>
-        </div>
+      {/* d3lt Branding Mark */}
+      <div className="mb-8 flex flex-col items-center">
         <span
-          className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
-          style={{ fontFamily: 'monospace' }}
+          className="text-lg tracking-wide text-accent/80"
+          style={{ fontFamily: 'var(--font-michroma)' }}
         >
-          Pit Station
+          d3lt
         </span>
+        <div className="h-px w-12 bg-gradient-to-r from-transparent via-accent/25 to-transparent" />
       </div>
 
       <div className="w-full max-w-3xl px-6">{children}</div>

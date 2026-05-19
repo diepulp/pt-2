@@ -464,6 +464,17 @@ export const COMPANY_ERROR_MESSAGES: Record<CompanyErrorCode, string> = {
 };
 
 // ============================================================================
+// PILOT CONTAINMENT DOMAIN ERRORS (PRD-083)
+// ============================================================================
+
+export type PilotErrorCode = 'PILOT_ADMIN_REQUIRED' | 'PILOT_REQUEST_NOT_FOUND';
+
+export const PILOT_ERROR_MESSAGES: Record<PilotErrorCode, string> = {
+  PILOT_ADMIN_REQUIRED: 'Pilot admin authority required for this operation.',
+  PILOT_REQUEST_NOT_FOUND: 'Pilot access request not found.',
+};
+
+// ============================================================================
 // COMBINED DOMAIN ERROR TYPE
 // ============================================================================
 
@@ -479,7 +490,8 @@ export type DomainErrorCode =
   | CasinoErrorCode
   | CompanyErrorCode
   | FloorLayoutErrorCode
-  | ImportErrorCode;
+  | ImportErrorCode
+  | PilotErrorCode;
 
 // ============================================================================
 // DOMAIN ERROR CLASS
@@ -522,6 +534,7 @@ export class DomainError extends Error {
       COMPANY_ERROR_MESSAGES,
       FLOOR_LAYOUT_ERROR_MESSAGES,
       IMPORT_ERROR_MESSAGES,
+      PILOT_ERROR_MESSAGES,
     ];
 
     for (const map of messageMaps) {

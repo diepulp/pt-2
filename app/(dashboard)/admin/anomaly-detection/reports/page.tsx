@@ -21,7 +21,7 @@ import { fetchMeasurementSummary } from '@/hooks/measurement/http';
 import { measurementKeys } from '@/hooks/measurement/keys';
 
 export const metadata: Metadata = {
-  title: 'Measurement Reports | PT-2',
+  title: 'Measurement Reports | d3lt',
 };
 
 export default async function AnomalyDetectionReportsPage() {

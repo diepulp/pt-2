@@ -12,7 +12,7 @@ import type { Metadata } from 'next';
 import { ImportWizard } from '@/components/player-import/import-wizard';
 
 export const metadata: Metadata = {
-  title: 'Import Players | PT-2',
+  title: 'Import Players | d3lt',
   description: 'Import player data from vendor CSV exports',
 };
 

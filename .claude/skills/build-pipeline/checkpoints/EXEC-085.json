@@ -1,0 +1,21 @@
+{
+  "id": "EXEC-085",
+  "prd": "PRD-085",
+  "exec_spec": "docs/21-exec-spec/EXEC-085-external-oversight-admin-auth-isolation.md",
+  "status": "in-progress",
+  "gov010_check": "waived:containment-patch-no-new-mechanism-decisions",
+  "complexity_prescreen": "streamlined",
+  "complexity_override": "streamlined",
+  "fib_s_loaded": false,
+  "write_path_classification": "none",
+  "e2e_mandate_waiver": "guard-addition-to-existing-write-paths",
+  "created_at": "2026-05-18T00:00:00.000Z",
+  "updated_at": "2026-05-18T00:01:00.000Z",
+  "current_phase": 2,
+  "completed_workstreams": ["WS0"],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5"],
+  "dormant_workstreams": [],
+  "artifacts": {
+    "WS0": ["lib/pilot/is-pilot-admin.ts", "lib/pilot/__tests__/is-pilot-admin.test.ts"]
+  }
+}

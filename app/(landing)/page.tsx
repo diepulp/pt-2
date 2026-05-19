@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Milestone,
   Monitor,
-  Network,
   ScrollText,
   ShieldCheck,
   TrendingUp,
@@ -24,7 +23,7 @@ import { ProductTabs } from './_components/product-tabs';
 import { Reveal } from './_components/reveal';
 
 /* ─────────────────────────────────────────────────────────
- * PT-2 LANDING PAGE — Narrative Spine
+ * d3lt LANDING PAGE — Narrative Spine
  *
  * Architecture: Hero → Operational Domains → Product → Accountability → Intelligence → CTA
  * Visual DNA: Linear-inspired dark ground, glassmorphic surfaces,
@@ -268,7 +267,7 @@ export default function LandingPage() {
                 size="lg"
                 className="rounded-full bg-accent text-white hover:bg-accent/90 px-8 h-12 text-sm font-semibold tracking-wide shadow-[0_1px_40px_hsl(189_94%_43%/0.25)] hover:shadow-[0_1px_50px_hsl(189_94%_43%/0.35)] transition-all duration-300 w-full sm:w-auto"
               >
-                <Link href="/contact">Request an operational walkthrough</Link>
+                <Link href="/signin">Explore Interactive Demo</Link>
               </Button>
               <Button
                 asChild
@@ -276,7 +275,7 @@ export default function LandingPage() {
                 size="lg"
                 className="rounded-full border border-white/[0.08] bg-white/[0.04] text-[#95A2B3] hover:bg-white/[0.08] hover:text-[#F7F8F8] backdrop-blur-sm px-8 h-12 text-sm font-medium tracking-wide transition-all duration-300 w-full sm:w-auto"
               >
-                <a href="#operations">Explore operational domains</a>
+                <Link href="/request-access">Request Production Pilot</Link>
               </Button>
             </div>
           </Reveal>
@@ -601,7 +600,7 @@ export default function LandingPage() {
                 size="lg"
                 className="rounded-full bg-accent text-white hover:bg-accent/90 px-8 h-12 text-sm font-semibold tracking-wide shadow-[0_1px_40px_hsl(189_94%_43%/0.25)] hover:shadow-[0_1px_50px_hsl(189_94%_43%/0.35)] transition-all duration-300 w-full sm:w-auto"
               >
-                <Link href="/contact">Request an operational walkthrough</Link>
+                <Link href="/signin">Explore Interactive Demo</Link>
               </Button>
             </div>
           </Reveal>
@@ -611,14 +610,14 @@ export default function LandingPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-white/[0.06] py-10">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-5 sm:px-6 sm:flex-row">
-          <div className="flex items-center gap-2.5">
-            <Network className="size-5 text-accent" />
+          <div className="flex flex-col items-start">
             <span
-              className="text-lg tracking-wide text-[#F7F8F8]"
+              className="text-lg tracking-wide text-[hsl(189_94%_43%)]/80"
               style={{ fontFamily: 'var(--font-michroma)' }}
             >
               d3lt
             </span>
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-[hsl(189_94%_43%)]/25 to-transparent" />
           </div>
           <p className="text-[11px] text-[#95A2B3]/40">
             &copy; {year} by Liminal Tech. All rights reserved.

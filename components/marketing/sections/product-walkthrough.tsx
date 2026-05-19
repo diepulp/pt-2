@@ -39,8 +39,8 @@ export function ProductWalkthroughSection() {
         See what you&apos;re getting.
       </h2>
       <p className="mt-3 max-w-2xl text-base text-muted-foreground md:text-lg">
-        Player Tracker is built for the way card rooms actually operate — from
-        shift start to close.
+        d3lt is built for the way card rooms actually operate — from shift start
+        to close.
       </p>
       <div className="mt-12 space-y-16">
         {features.map((feature) => (

@@ -3,7 +3,7 @@ import Link from 'next/link';
 /**
  * Auth layout — Visual DNA dark shell for all authentication pages.
  * Matches the landing page's #000212 ground, dot-grid texture,
- * cyan ambient glow, and PT-2 brand mark.
+ * cyan ambient glow, and d3lt brand mark.
  */
 export default function AuthLayout({
   children,
@@ -44,8 +44,11 @@ export default function AuthLayout({
           href="/"
           className="mb-10 flex flex-col items-center gap-3 transition-opacity duration-300 hover:opacity-80"
         >
-          <span className="font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-[hsl(189_94%_43%)]/80">
-            Player Tracker
+          <span
+            className="text-[15px] tracking-wide text-[hsl(189_94%_43%)]/80"
+            style={{ fontFamily: 'var(--font-michroma)' }}
+          >
+            d3lt
           </span>
           <div className="h-px w-20 bg-gradient-to-r from-transparent via-[hsl(189_94%_43%)]/25 to-transparent" />
         </Link>

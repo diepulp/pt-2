@@ -71,11 +71,14 @@ export async function updateSession(request: NextRequest) {
     '/cash-accountability', // Landing supporting page
     '/audit-compliance', // Landing supporting page
     '/auth', // Existing auth flows
-    ...(process.env.NODE_ENV === 'development' ? ['/review'] : []), // Dev review pages — auth-gated in production
+    ...(process.env.NODE_ENV === 'development' ? ['/review', '/dev'] : []), // Dev-only preview routes — auth-gated in production
     '/login', // Backwards compat
     '/bootstrap', // Onboarding (internal auth check)
     '/setup', // Setup wizard (internal auth check)
     '/api', // API routes handle their own auth via withServerAction
+    '/request-access', // Public pilot access request form (PRD-083)
+    '/register', // First-login company registration (pre-staff, auth checked internally)
+    '/admin/login', // Admin password login (PRD-083 — owner uses creds, not OTP)
   ];
 
   const isPublicPath = publicPaths.some(
@@ -86,6 +89,10 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone();
+    if (request.nextUrl.pathname.startsWith('/pilot-review')) {
+      url.pathname = '/admin/login';
+      return NextResponse.redirect(url);
+    }
     url.pathname = '/signin';
     return NextResponse.redirect(url);
   }
