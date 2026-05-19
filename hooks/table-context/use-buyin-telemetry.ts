@@ -48,7 +48,7 @@ export function useGrindBuyinTotal(
         .lte('created_at', shiftWindow.endTs);
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error('Failed to load buy-in data');
       }
 
       const total = (data ?? []).reduce(
@@ -102,7 +102,7 @@ export function useLogGrindBuyin(tableId: string, _casinoId: string) {
       );
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error('Failed to log buy-in');
       }
 
       return data;
@@ -144,7 +144,7 @@ export function useUndoGrindBuyin(tableId: string, _casinoId: string) {
       );
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error('Failed to undo buy-in');
       }
 
       return data;

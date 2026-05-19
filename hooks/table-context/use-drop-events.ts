@@ -55,7 +55,7 @@ export function useDropEvents(
       const { data, error } = await query;
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error('Failed to load drop events');
       }
 
       return data as TableDropEventDTO[];

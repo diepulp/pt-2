@@ -5,17 +5,22 @@ const INTERNAL_RECIPIENT = 'vladimir.ivanov.dev@gmail.com';
 export async function sendDemoRequestNotification({
   name,
   email,
+  phone,
   company,
   message,
 }: {
   name: string;
   email: string;
+  phone?: string;
   company?: string;
   message?: string;
 }): Promise<void> {
   const rows = [
     `<tr><td style="padding:8px 0;color:#95A2B3;font-size:13px;">Name</td><td style="padding:8px 0;color:#F7F8F8;font-size:13px;">${name}</td></tr>`,
     `<tr><td style="padding:8px 0;color:#95A2B3;font-size:13px;">Email</td><td style="padding:8px 0;color:#F7F8F8;font-size:13px;">${email}</td></tr>`,
+    phone
+      ? `<tr><td style="padding:8px 0;color:#95A2B3;font-size:13px;">Phone</td><td style="padding:8px 0;color:#F7F8F8;font-size:13px;">${phone}</td></tr>`
+      : '',
     company
       ? `<tr><td style="padding:8px 0;color:#95A2B3;font-size:13px;">Property</td><td style="padding:8px 0;color:#F7F8F8;font-size:13px;">${company}</td></tr>`
       : '',

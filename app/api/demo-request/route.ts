@@ -26,9 +26,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const { name, email, company, message } = body as {
+  const { name, email, phone, company, message } = body as {
     name: string;
     email: string;
+    phone?: string;
     company?: string;
     message?: string;
   };
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
   }
 
   await Promise.all([
-    sendDemoRequestNotification({ name, email, company, message }),
+    sendDemoRequestNotification({ name, email, phone, company, message }),
     sendDemoRequestConfirmation({ name, email }),
   ]);
 

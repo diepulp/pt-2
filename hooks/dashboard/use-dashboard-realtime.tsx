@@ -281,7 +281,7 @@ export function RealtimeStatusIndicator({
 }) {
   if (error) {
     return (
-      <div className={className} title={`Realtime error: ${error.message}`}>
+      <div className={className} title="Realtime connection error">
         <div className="h-2 w-2 rounded-full bg-destructive" />
       </div>
     );

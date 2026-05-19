@@ -43,7 +43,7 @@ export async function fetchDashboardTables(
   );
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error('Failed to load dashboard tables');
   }
 
   return (data as unknown as DashboardTableDTO[]) ?? [];
@@ -61,7 +61,7 @@ export async function fetchDashboardStats(
   const { data, error } = await supabase.rpc('rpc_get_dashboard_stats');
 
   if (error) {
-    throw new Error(`Failed to fetch dashboard stats: ${error.message}`);
+    throw new Error('Failed to load dashboard statistics');
   }
 
   if (!data) {
@@ -92,7 +92,7 @@ export async function fetchGamingDayServer(
   const { data, error } = await supabase.rpc('rpc_current_gaming_day');
 
   if (error) {
-    throw new Error(`Failed to fetch gaming day: ${error.message}`);
+    throw new Error('Failed to load current gaming day');
   }
 
   return {

@@ -193,8 +193,7 @@ export default function ContactPage() {
               <Reveal delay={80}>
                 <p className="mt-5 text-[15px] text-[#95A2B3] leading-relaxed">
                   We&apos;ll walk through how d3lt fits your property — your
-                  tables, your workflows, your operation. No sales pitch. Just
-                  an operational walkthrough.
+                  tables, your workflows, your operation.
                 </p>
               </Reveal>
 
@@ -210,11 +209,6 @@ export default function ContactPage() {
                       label: 'Import assessment',
                       detail:
                         "Bring a sample export from your current system. We'll show you the migration path.",
-                    },
-                    {
-                      label: 'Property-specific pricing',
-                      detail:
-                        'One product, one price per property. No tiers, no per-seat fees.',
                     },
                   ].map((item, i) => (
                     <div key={item.label} className="flex gap-3.5">
@@ -299,6 +293,7 @@ export default function ContactPage() {
                           body: JSON.stringify({
                             name: fd.get('name'),
                             email: fd.get('email'),
+                            phone: fd.get('phone'),
                             company: fd.get('property') || undefined,
                             message: fd.get('message') || undefined,
                           }),
@@ -318,6 +313,13 @@ export default function ContactPage() {
                         placeholder="you@property.com"
                       />
                     </div>
+
+                    <Field
+                      label="Work phone"
+                      name="phone"
+                      type="tel"
+                      placeholder="+1 (555) 000-0000"
+                    />
 
                     <Field
                       label="Property name"
