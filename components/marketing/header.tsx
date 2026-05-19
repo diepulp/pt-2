@@ -10,10 +10,15 @@ export function MarketingHeader() {
       <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="text-lg tracking-wide"
-          style={{ fontFamily: 'var(--font-michroma)' }}
+          className="flex flex-col items-start transition-opacity duration-300 hover:opacity-80"
         >
-          d3lt
+          <span
+            className="text-lg tracking-wide text-accent/80"
+            style={{ fontFamily: 'var(--font-michroma)' }}
+          >
+            d3lt
+          </span>
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-accent/25 to-transparent" />
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm md:flex">

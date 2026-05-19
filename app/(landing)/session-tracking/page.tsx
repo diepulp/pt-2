@@ -792,21 +792,14 @@ export default function SessionTrackingPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-white/[0.06] py-10">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-6 items-center justify-center rounded-md bg-accent/80">
-              <span
-                className="text-[7px] tracking-wide text-white"
-                style={{ fontFamily: 'var(--font-michroma)' }}
-              >
-                d3lt
-              </span>
-            </div>
+          <div className="flex flex-col items-start">
             <span
-              className="text-[12px] tracking-wide text-[#95A2B3]/60"
+              className="text-lg tracking-wide text-[hsl(189_94%_43%)]/80"
               style={{ fontFamily: 'var(--font-michroma)' }}
             >
               d3lt
             </span>
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-[hsl(189_94%_43%)]/25 to-transparent" />
           </div>
           <p className="text-[11px] text-[#95A2B3]/40">
             &copy; {new Date().getFullYear()} d3lt. All rights reserved.

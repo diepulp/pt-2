@@ -39,11 +39,17 @@ export default async function DashboardLayout({
       <div className="min-h-screen w-full bg-background">
         {/* Fixed header bar - stays at top of viewport */}
         <header className="fixed top-0 left-0 right-0 z-50 flex h-16 bg-background border-b">
-          {/* Logo placeholder - matches collapsed sidebar width */}
-          <div className="flex h-16 w-14 shrink-0 items-center justify-center gap-1.5 bg-background">
-            <div className="w-2 h-2 rounded-full bg-red-500/60" />
-            <div className="w-2 h-2 rounded-full bg-amber-500/60" />
-            <div className="w-2 h-2 rounded-full bg-emerald-500/60" />
+          {/* Brand mark - matches collapsed sidebar width */}
+          <div className="flex h-16 w-14 shrink-0 items-center justify-center border-r border-border">
+            <div className="flex flex-col items-center">
+              <span
+                className="text-sm tracking-wide text-accent/80"
+                style={{ fontFamily: 'var(--font-michroma)' }}
+              >
+                d3lt
+              </span>
+              <div className="h-px w-8 bg-gradient-to-r from-transparent via-accent/25 to-transparent" />
+            </div>
           </div>
           <div className="flex-1">
             <Header />

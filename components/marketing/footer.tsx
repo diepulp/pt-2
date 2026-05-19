@@ -6,12 +6,15 @@ export function MarketingFooter() {
       <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <p
-              className="text-sm tracking-wide"
-              style={{ fontFamily: 'var(--font-michroma)' }}
-            >
-              d3lt
-            </p>
+            <div className="flex flex-col items-start">
+              <span
+                className="text-lg tracking-wide text-accent/80"
+                style={{ fontFamily: 'var(--font-michroma)' }}
+              >
+                d3lt
+              </span>
+              <div className="h-px w-full bg-gradient-to-r from-transparent via-accent/25 to-transparent" />
+            </div>
             <p className="mt-2 text-sm text-muted-foreground">
               The table games system your card room has been waiting for.
             </p>

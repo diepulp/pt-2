@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Milestone,
   Monitor,
-  Network,
   ScrollText,
   ShieldCheck,
   TrendingUp,
@@ -611,14 +610,14 @@ export default function LandingPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-white/[0.06] py-10">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-5 sm:px-6 sm:flex-row">
-          <div className="flex items-center gap-2.5">
-            <Network className="size-5 text-accent" />
+          <div className="flex flex-col items-start">
             <span
-              className="text-lg tracking-wide text-[#F7F8F8]"
+              className="text-lg tracking-wide text-[hsl(189_94%_43%)]/80"
               style={{ fontFamily: 'var(--font-michroma)' }}
             >
               d3lt
             </span>
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-[hsl(189_94%_43%)]/25 to-transparent" />
           </div>
           <p className="text-[11px] text-[#95A2B3]/40">
             &copy; {year} by Liminal Tech. All rights reserved.

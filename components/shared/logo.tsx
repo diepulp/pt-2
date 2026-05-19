@@ -14,22 +14,14 @@ export function Logo() {
       <SidebarMenuItem>
         <SidebarMenuButton size="lg" asChild>
           <Link href="/pit">
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+            <div className="flex flex-col items-start">
               <span
-                className="text-[10px] tracking-wide"
+                className="text-sm tracking-wide text-accent/80"
                 style={{ fontFamily: 'var(--font-michroma)' }}
               >
                 d3lt
               </span>
-            </div>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span
-                className="truncate text-sm"
-                style={{ fontFamily: 'var(--font-michroma)' }}
-              >
-                d3lt
-              </span>
-              <span className="truncate text-xs">Pit Station</span>
+              <div className="h-px w-full bg-gradient-to-r from-transparent via-accent/25 to-transparent" />
             </div>
           </Link>
         </SidebarMenuButton>

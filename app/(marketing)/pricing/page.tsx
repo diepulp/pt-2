@@ -90,15 +90,17 @@ export default function PricingPage() {
       {/* ── Navigation ── */}
       <nav className="fixed inset-x-0 top-0 z-50 bg-[#000212]/80 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <img
-              src="/Gemini_Generated_Image_dil7iddil7iddil7.png"
-              alt="d3lt logo"
-              className="size-7 transition-all duration-300 group-hover:brightness-125 [mix-blend-mode:hard-light]"
-            />
-            <span className="text-lg font-medium tracking-tight text-[#F7F8F8]">
+          <Link
+            href="/"
+            className="flex flex-col items-start transition-opacity duration-300 hover:opacity-80"
+          >
+            <span
+              className="text-lg tracking-wide text-[hsl(189_94%_43%)]/80"
+              style={{ fontFamily: 'var(--font-michroma)' }}
+            >
               d3lt
             </span>
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-[hsl(189_94%_43%)]/25 to-transparent" />
           </Link>
 
           <div className="hidden items-center gap-7 md:flex">
@@ -208,8 +210,8 @@ export default function PricingPage() {
             </h2>
             <p className="mt-4 text-[15px] text-[#95A2B3] leading-relaxed">
               d3lt is priced per property. Every property gets the full platform
-              — same features, same support, no upsells. We'll work with you to
-              find the right arrangement for your operation.
+              — same features, same support. We'll work with you to find the
+              right arrangement for your operation.
             </p>
             <Button
               asChild
@@ -225,13 +227,14 @@ export default function PricingPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-white/[0.06] py-10">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-5 sm:px-6 sm:flex-row">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-6 items-center justify-center rounded-md bg-accent/80">
-              <span className="text-[9px] font-bold tracking-tight text-white" />
-            </div>
-            <span className="text-[12px] font-medium text-[#95A2B3]/60">
+          <div className="flex flex-col items-start">
+            <span
+              className="text-lg tracking-wide text-[hsl(189_94%_43%)]/80"
+              style={{ fontFamily: 'var(--font-michroma)' }}
+            >
               d3lt
             </span>
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-[hsl(189_94%_43%)]/25 to-transparent" />
           </div>
           <p className="text-[11px] text-[#95A2B3]/40">
             &copy; {new Date().getFullYear()} d3lt. All rights reserved.
