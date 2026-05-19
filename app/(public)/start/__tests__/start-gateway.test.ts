@@ -183,6 +183,25 @@ describe('StartGatewayPage routing table', () => {
   });
 });
 
+describe('StartGatewayPage admin path (PRD-085)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    delete process.env.PILOT_ADMIN_EMAILS;
+    mockCanonicalizeEmail.mockImplementation((e: string) =>
+      e.toLowerCase().trim(),
+    );
+  });
+
+  it('admin path: createServiceClient is never called', async () => {
+    process.env.PILOT_ADMIN_EMAILS = 'admin@example.com';
+    const adminUser = { id: 'admin-1', email: 'admin@example.com' };
+    const supabase = makeUserSupabase(adminUser, { data: null, error: null });
+    mockCreateClient.mockResolvedValue(supabase as never);
+    await StartGatewayPage().catch(() => {});
+    expect(mockCreateServiceClient).not.toHaveBeenCalled();
+  });
+});
+
 describe('StartGatewayPage security invariants', () => {
   beforeEach(() => {
     jest.clearAllMocks();

@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 
 import { redirect } from 'next/navigation';
 
+import { isPilotAdmin } from '@/lib/pilot/is-pilot-admin';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canonicalizeEmail, checkAllowlistGate } from '@/services/pilot/crud';
@@ -22,7 +23,13 @@ export default async function StartGatewayPage() {
     redirect('/signin');
   }
 
-  // 1b. Pilot allowlist gate (DEC-6): must be approved before staff-binding check
+  // 1b. Admin shortcut fires before allowlist gate — service-role client never
+  // instantiated on the admin path (PRD-085 WS1 ordering fix).
+  if (isPilotAdmin(canonicalizeEmail(user.email!))) {
+    redirect('/pilot-review');
+  }
+
+  // 1c. Pilot allowlist gate (DEC-6): must be approved before staff-binding check
   const serviceClient = createServiceClient();
   const allowlistResult = await checkAllowlistGate(
     serviceClient,
@@ -30,15 +37,6 @@ export default async function StartGatewayPage() {
   );
   if (allowlistResult !== 'approved') {
     redirect('/request-access');
-  }
-
-  // 1c. Admin shortcut: pilot admins go straight to review surface
-  const adminEmails = (process.env.PILOT_ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  if (adminEmails.includes(canonicalizeEmail(user.email!))) {
-    redirect('/pilot-review');
   }
 
   // 2. Check staff binding (existing active staff → operational runtime, unchanged)

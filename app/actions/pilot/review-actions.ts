@@ -7,6 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { DomainError } from '@/lib/errors/domain-errors';
 import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { ServiceResult } from '@/lib/http/service-response';
+import { isPilotAdmin } from '@/lib/pilot/is-pilot-admin';
 import { createClient } from '@/lib/supabase/server';
 // SERVICE_ROLE_EXEMPTION: PRD-083 — approved_email_allowlist and pilot_access_requests
 // require service-role for all reads/writes (admin review path, no RLS SELECT for
@@ -33,14 +34,9 @@ async function requirePilotAdminSession(
     throw new DomainError('UNAUTHORIZED', 'Authentication required');
   }
 
-  const adminEmails = (process.env.PILOT_ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-
   const canonical = canonicalizeEmail(user.email);
 
-  if (!adminEmails.includes(canonical)) {
+  if (!isPilotAdmin(canonical)) {
     throw new DomainError(
       'PILOT_ADMIN_REQUIRED',
       'Pilot admin authority required',
@@ -188,19 +184,26 @@ export async function approvePilotAccessAction(
 
   // Send magic link to approved evaluator so they can sign in without returning
   // to /signin manually. Best-effort: allowlist row is committed regardless.
+  // Skip OTP entirely for admin target emails (PRD-085 WS5).
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL ??
     (process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3000');
 
-  const { error: otpError } = await supabase.auth.signInWithOtp({
-    email: targetEmail,
-    options: {
-      shouldCreateUser: true,
-      emailRedirectTo: `${siteUrl}/auth/confirm`,
-    },
-  });
+  let otpError: Awaited<
+    ReturnType<typeof supabase.auth.signInWithOtp>
+  >['error'] = null;
+  if (!isPilotAdmin(targetEmail)) {
+    const { error } = await supabase.auth.signInWithOtp({
+      email: targetEmail,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: `${siteUrl}/auth/confirm`,
+      },
+    });
+    otpError = error;
+  }
 
   if (otpError) {
     emitTelemetry({
@@ -229,7 +232,7 @@ export async function approvePilotAccessAction(
       targetEmail,
       actorEmail: adminEmail,
       requestId,
-      magicLinkSent: !otpError,
+      magicLinkSent: !isPilotAdmin(targetEmail) && !otpError,
     },
     severity: 'info',
   });

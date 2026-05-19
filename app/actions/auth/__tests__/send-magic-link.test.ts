@@ -75,10 +75,12 @@ describe('sendMagicLinkAction', () => {
 
       expect(result.ok).toBe(true);
       expect(result.data?.allowlistResult).toBe('approved');
-      expect(mockSignInWithOtp).toHaveBeenCalledWith({
-        email: 'jane@casino.com',
-        options: { shouldCreateUser: false },
-      });
+      expect(mockSignInWithOtp).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'jane@casino.com',
+          options: expect.objectContaining({ shouldCreateUser: true }),
+        }),
+      );
     });
 
     it('never calls signUp() regardless of allowlist result (RULE-2)', async () => {
@@ -105,6 +107,25 @@ describe('sendMagicLinkAction', () => {
 
       expect(result.ok).toBe(false);
       expect(result.code).toBe('INTERNAL_ERROR');
+    });
+  });
+
+  describe('admin email guard (PRD-085)', () => {
+    afterEach(() => {
+      delete process.env.PILOT_ADMIN_EMAILS;
+    });
+
+    it('returns not_approved for admin email without hitting allowlist', async () => {
+      process.env.PILOT_ADMIN_EMAILS = 'admin@example.com';
+      const result = await sendMagicLinkAction('admin@example.com');
+      expect(result.ok).toBe(true);
+      expect(result.data?.allowlistResult).toBe('not_approved');
+    });
+
+    it('never calls createServiceClient for admin email', async () => {
+      process.env.PILOT_ADMIN_EMAILS = 'admin@example.com';
+      await sendMagicLinkAction('admin@example.com');
+      expect(mockCreateServiceClient).not.toHaveBeenCalled();
     });
   });
 

@@ -89,6 +89,10 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone();
+    if (request.nextUrl.pathname.startsWith('/pilot-review')) {
+      url.pathname = '/admin/login';
+      return NextResponse.redirect(url);
+    }
     url.pathname = '/signin';
     return NextResponse.redirect(url);
   }

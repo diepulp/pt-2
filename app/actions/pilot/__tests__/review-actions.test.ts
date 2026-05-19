@@ -188,6 +188,25 @@ describe('approvePilotAccessAction', () => {
     expect(partialEvent).toBeDefined();
   });
 
+  it('skips OTP and returns ok:true when approved target email is an admin email (PRD-085)', async () => {
+    const adminEmail = 'admin@casino.com';
+    process.env.PILOT_ADMIN_EMAILS = adminEmail;
+    mockGetUser.mockResolvedValue({
+      data: { user: { email: adminEmail } },
+      error: null,
+    });
+    mockServiceClientImpl = makeServiceClientMock({
+      fetchResult: {
+        data: { id: 'req-admin', email: adminEmail },
+        error: null,
+      },
+    });
+
+    const result = await reviewActions.approvePilotAccessAction('req-admin');
+    expect(result.ok).toBe(true);
+    expect(mockSignInWithOtp).not.toHaveBeenCalled();
+  });
+
   it('returns ok:false NOT_FOUND when request does not exist', async () => {
     setAdminUser();
     mockServiceClientImpl = makeServiceClientMock({

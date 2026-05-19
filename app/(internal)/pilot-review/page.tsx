@@ -11,6 +11,7 @@
 
 import { redirect } from 'next/navigation';
 
+import { isPilotAdmin } from '@/lib/pilot/is-pilot-admin';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canonicalizeEmail, listPendingRequests } from '@/services/pilot/crud';
@@ -27,18 +28,13 @@ export default async function PilotReviewPage() {
   } = await supabase.auth.getUser();
 
   if (!user?.email) {
-    redirect('/signin');
+    redirect('/admin/login');
   }
 
-  // Admin authority check (DEC-1) — mirrors requirePilotAdminSession guard
-  const adminEmails = (process.env.PILOT_ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-
+  // Admin authority check (DEC-1) — uses isPilotAdmin shared helper (PRD-085 WS2)
   const canonical = canonicalizeEmail(user.email);
 
-  if (!adminEmails.includes(canonical)) {
+  if (!isPilotAdmin(canonical)) {
     // Non-revealing redirect for authenticated non-admin users (RULE-9)
     redirect('/request-access');
   }

@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { ZodError } from 'zod';
 
 import type { ServiceResult } from '@/lib/http/service-response';
+import { isPilotAdmin } from '@/lib/pilot/is-pilot-admin';
 import { createClient } from '@/lib/supabase/server';
 // SERVICE_ROLE_EXEMPTION: PRD-083 — approved_email_allowlist has no SELECT RLS policy
 // for any role by design (RULE-1). Allowlist gate reads must use service-role client.
@@ -45,6 +46,19 @@ export async function sendMagicLinkAction(
       ok: false,
       code: 'INTERNAL_ERROR',
       error: 'An unexpected error occurred.',
+      requestId,
+      durationMs: Date.now() - startedAt,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  // Admin email guard: block OTP issuance for PILOT_ADMIN_EMAILS members before
+  // the allowlist query. Response shape is identical to not_approved (RULE-7).
+  if (isPilotAdmin(canonicalEmail)) {
+    return {
+      ok: true,
+      code: 'OK',
+      data: { allowlistResult: 'not_approved' as AllowlistGateResult },
       requestId,
       durationMs: Date.now() - startedAt,
       timestamp: new Date().toISOString(),
