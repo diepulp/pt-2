@@ -82,8 +82,8 @@ export function MagicLinkForm({ className }: { className?: string }) {
         ) : state.status === 'not_approved' ? (
           <div className="space-y-4">
             <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-5 text-sm text-[#95A2B3]">
-              This is a closed pilot. Request access to be notified when a spot
-              opens.
+              This is a closed pilot. Request access to be granted entry
+              privileges
             </div>
             <Link
               href="/request-access"

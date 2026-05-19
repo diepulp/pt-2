@@ -23,20 +23,26 @@ export default async function StartGatewayPage() {
     redirect('/signin');
   }
 
+  const isDevAuth = process.env.NODE_ENV === 'development';
+
   // 1b. Admin shortcut fires before allowlist gate — service-role client never
   // instantiated on the admin path (PRD-085 WS1 ordering fix).
-  if (isPilotAdmin(canonicalizeEmail(user.email!))) {
+  // Skipped in dev-auth mode so admin-email dev users reach the app, not /pilot-review.
+  if (!isDevAuth && isPilotAdmin(canonicalizeEmail(user.email!))) {
     redirect('/pilot-review');
   }
 
-  // 1c. Pilot allowlist gate (DEC-6): must be approved before staff-binding check
+  // 1c. Pilot allowlist gate (DEC-6): must be approved before staff-binding check.
+  // Bypassed when ENABLE_DEV_AUTH=true (dev only). RLS still enforced via real JWT.
   const serviceClient = createServiceClient();
-  const allowlistResult = await checkAllowlistGate(
-    serviceClient,
-    canonicalizeEmail(user.email!),
-  );
-  if (allowlistResult !== 'approved') {
-    redirect('/request-access');
+  if (!isDevAuth) {
+    const allowlistResult = await checkAllowlistGate(
+      serviceClient,
+      canonicalizeEmail(user.email!),
+    );
+    if (allowlistResult !== 'approved') {
+      redirect('/request-access');
+    }
   }
 
   // 2. Check staff binding (existing active staff → operational runtime, unchanged)

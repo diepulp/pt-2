@@ -22,14 +22,17 @@ export default async function DemoPage() {
     redirect('/signin');
   }
 
-  // 2. Allowlist check (service-role client — RULE-1: no SELECT policy for authenticated role)
-  const serviceClient = createServiceClient();
-  const allowlistResult = await checkAllowlistGate(
-    serviceClient,
-    canonicalizeEmail(user.email!),
-  );
-  if (allowlistResult !== 'approved') {
-    redirect('/request-access');
+  // 2. Allowlist check (service-role client — RULE-1: no SELECT policy for authenticated role).
+  // Bypassed in development — user still holds a real JWT and RLS is enforced normally.
+  if (process.env.NODE_ENV !== 'development') {
+    const serviceClient = createServiceClient();
+    const allowlistResult = await checkAllowlistGate(
+      serviceClient,
+      canonicalizeEmail(user.email!),
+    );
+    if (allowlistResult !== 'approved') {
+      redirect('/request-access');
+    }
   }
 
   // 3. Admin shortcut
