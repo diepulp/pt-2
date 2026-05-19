@@ -1,6 +1,9 @@
+import { DevLoginForm } from '@/components/dev-login-form';
 import { MagicLinkForm } from '@/components/magic-link-form';
 
 export default function SignInPage() {
+  const isDev = process.env.NODE_ENV === 'development';
+
   return (
     <div className="relative min-h-[70vh] overflow-hidden bg-[#000212]">
       {/* Dot grid texture */}
@@ -28,6 +31,7 @@ export default function SignInPage() {
       <div className="relative flex min-h-[70vh] items-center justify-center px-5 py-16 sm:px-6">
         <div className="w-full max-w-[420px]">
           <MagicLinkForm />
+          {isDev && <DevLoginForm />}
         </div>
       </div>
     </div>

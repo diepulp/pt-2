@@ -27,14 +27,17 @@ export default async function ProtectedLayout({
     redirect('/signin');
   }
 
-  // Pilot allowlist gate (DEC-6): fail-closed; unapproved users go to request-access
-  const serviceClient = createServiceClient();
-  const allowlistResult = await checkAllowlistGate(
-    serviceClient,
-    canonicalizeEmail(user.email!),
-  );
-  if (allowlistResult !== 'approved') {
-    redirect('/request-access');
+  // Pilot allowlist gate (DEC-6): fail-closed; unapproved users go to request-access.
+  // Bypassed in development — user still holds a real JWT and RLS is enforced normally.
+  if (process.env.NODE_ENV !== 'development') {
+    const serviceClient = createServiceClient();
+    const allowlistResult = await checkAllowlistGate(
+      serviceClient,
+      canonicalizeEmail(user.email!),
+    );
+    if (allowlistResult !== 'approved') {
+      redirect('/request-access');
+    }
   }
 
   // Main sidebar collapsed width: 56px (3.5rem / w-14)
