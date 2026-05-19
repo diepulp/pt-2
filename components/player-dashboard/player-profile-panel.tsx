@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePlayer } from '@/hooks/player/use-player';
 import { usePlayerDashboard } from '@/hooks/ui/use-player-dashboard';
+import { getErrorMessage } from '@/lib/errors/error-utils';
 import { cn } from '@/lib/utils';
 
 import { PlayerEditModal } from './player-edit-modal';
@@ -65,7 +66,7 @@ export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
             Error loading profile
           </p>
           <p className="text-xs text-muted-foreground/60 mt-1">
-            {error.message || 'Unknown error'}
+            {getErrorMessage(error)}
           </p>
         </div>
       </div>

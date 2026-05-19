@@ -35,6 +35,7 @@ import {
   usePitAssignmentState,
 } from '@/hooks/floor-layout';
 import { useAuth } from '@/hooks/use-auth';
+import { getErrorMessage } from '@/lib/errors/error-utils';
 import type {
   AssignedTableRef,
   FloorPitDTO,
@@ -165,8 +166,7 @@ export function PitConfigurationPanel() {
         <div className="flex items-start gap-2.5 rounded-lg border-2 border-destructive/30 bg-destructive/5 px-3 py-2.5">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
           <p className="min-w-0 break-words text-sm text-destructive">
-            {mutationError.message ||
-              'The pit-assignment change could not be saved.'}
+            {getErrorMessage(mutationError)}
           </p>
         </div>
       )}

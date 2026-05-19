@@ -6,6 +6,7 @@ import * as React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { usePlayerDashboard } from '@/hooks/ui/use-player-dashboard';
 import { useActiveVisit } from '@/hooks/visit/use-active-visit';
+import { getErrorMessage } from '@/lib/errors/error-utils';
 import { cn } from '@/lib/utils';
 
 import { UnderDevelopmentIndicator } from './under-development-indicator';
@@ -58,7 +59,7 @@ export function SessionControlPanel({ className }: SessionControlPanelProps) {
             Error loading session
           </p>
           <p className="text-[10px] text-muted-foreground/60 mt-1">
-            {error.message || 'Unknown error'}
+            {getErrorMessage(error)}
           </p>
         </div>
       </div>

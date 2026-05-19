@@ -21,6 +21,7 @@ import * as React from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getErrorMessage } from '@/lib/errors/error-utils';
 import { formatDollars } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { PromoExposureRollupDTO } from '@/services/loyalty/rollups';
@@ -133,7 +134,7 @@ export function PromoExposurePanel({
           Promo Data Unavailable
         </div>
         <p className="mt-1 text-[10px] text-muted-foreground">
-          {error.message}
+          {getErrorMessage(error)}
         </p>
       </Card>
     );

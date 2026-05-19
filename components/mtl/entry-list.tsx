@@ -37,6 +37,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useMtlEntries } from '@/hooks/mtl/use-mtl-entries';
+import { getErrorMessage } from '@/lib/errors/error-utils';
 import { formatCents } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { MtlEntryDTO } from '@/services/mtl/dtos';
@@ -142,7 +143,7 @@ export function EntryList({
         )}
       >
         <p className="text-sm text-destructive">
-          Failed to load entries: {error.message}
+          Failed to load entries: {getErrorMessage(error)}
         </p>
         <Button
           variant="outline"

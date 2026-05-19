@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { usePlayerLoyalty } from '@/hooks/loyalty/use-loyalty-queries';
 import { usePlayerDashboard } from '@/hooks/ui/use-player-dashboard';
 import { useAuth } from '@/hooks/use-auth';
+import { getErrorMessage } from '@/lib/errors/error-utils';
 import { cn } from '@/lib/utils';
 
 type LoyaltyTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
@@ -108,7 +109,7 @@ export function LoyaltyPanel({ className }: LoyaltyPanelProps) {
             Error loading loyalty
           </p>
           <p className="text-[10px] text-muted-foreground/60 mt-1">
-            {error.message || 'Unknown error'}
+            {getErrorMessage(error)}
           </p>
         </div>
       </div>

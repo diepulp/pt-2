@@ -281,6 +281,7 @@ export function RealtimeStatusIndicator({
 }) {
   if (error) {
     return (
+      // eslint-disable-next-line client-error-safety/no-raw-provider-message -- application-constructed Error via setError(new Error()), message is a fixed string
       <div className={className} title={`Realtime error: ${error.message}`}>
         <div className="h-2 w-2 rounded-full bg-destructive" />
       </div>

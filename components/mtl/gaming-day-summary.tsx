@@ -42,6 +42,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useGamingDaySummary } from '@/hooks/mtl/use-gaming-day-summary';
+import { getErrorMessage } from '@/lib/errors/error-utils';
 import { cn } from '@/lib/utils';
 import type { MtlGamingDaySummaryDTO } from '@/services/mtl/dtos';
 
@@ -118,7 +119,7 @@ export function GamingDaySummary({
         )}
       >
         <p className="text-sm text-destructive">
-          Failed to load summary: {error.message}
+          Failed to load summary: {getErrorMessage(error)}
         </p>
         <Button
           variant="outline"

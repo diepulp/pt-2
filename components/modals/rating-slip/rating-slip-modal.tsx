@@ -32,6 +32,7 @@ import {
 import { useRatingSlipModalData } from '@/hooks/rating-slip-modal';
 import { useRatingSlipModal } from '@/hooks/ui/use-rating-slip-modal';
 import { useAuth } from '@/hooks/use-auth';
+import { getErrorMessage } from '@/lib/errors/error-utils';
 import type { AdjustmentReasonCode } from '@/services/player-financial/dtos';
 
 import { AdjustmentModal } from './adjustment-modal';
@@ -451,7 +452,7 @@ export function RatingSlipModal({
       },
       onError: (err) => {
         toast.error('Failed to pause session', {
-          description: err.message,
+          description: getErrorMessage(err),
         });
       },
     });
@@ -469,7 +470,7 @@ export function RatingSlipModal({
       },
       onError: (err) => {
         toast.error('Failed to resume session', {
-          description: err.message,
+          description: getErrorMessage(err),
         });
       },
     });
@@ -501,7 +502,7 @@ export function RatingSlipModal({
             </DialogDescription>
           </DialogHeader>
           <div className="p-4 bg-red-950/80 text-red-200 border border-red-800 rounded-lg font-medium">
-            {fetchError.message || 'Failed to load rating slip data'}
+            {getErrorMessage(fetchError)}
           </div>
           <Button onClick={onClose}>Close</Button>
         </DialogContent>
