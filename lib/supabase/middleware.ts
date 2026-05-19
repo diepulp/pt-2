@@ -71,7 +71,7 @@ export async function updateSession(request: NextRequest) {
     '/cash-accountability', // Landing supporting page
     '/audit-compliance', // Landing supporting page
     '/auth', // Existing auth flows
-    ...(process.env.NODE_ENV === 'development' ? ['/review'] : []), // Dev review pages — auth-gated in production
+    ...(process.env.NODE_ENV === 'development' ? ['/review', '/dev'] : []), // Dev-only preview routes — auth-gated in production
     '/login', // Backwards compat
     '/bootstrap', // Onboarding (internal auth check)
     '/setup', // Setup wizard (internal auth check)
