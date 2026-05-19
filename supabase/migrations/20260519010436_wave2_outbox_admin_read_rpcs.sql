@@ -64,9 +64,10 @@ BEGIN
     COUNT(*)         FILTER (WHERE fo.processed_at IS NULL)::BIGINT,
 
     -- NULL when no pending rows (MIN of empty set is NULL; EXTRACT of NULL is NULL)
+    -- Explicit cast: EXTRACT returns numeric on PG <=14; declared return is DOUBLE PRECISION.
     EXTRACT(EPOCH FROM (
       NOW() - MIN(fo.created_at) FILTER (WHERE fo.processed_at IS NULL)
-    )),
+    ))::DOUBLE PRECISION,
 
     COUNT(*)         FILTER (WHERE fo.delivery_attempts >= 1
                                AND fo.processed_at IS NULL)::BIGINT,
