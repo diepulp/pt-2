@@ -26,10 +26,11 @@ export async function POST(req: Request): Promise<Response> {
   // Service-role client constructed only after auth passes.
   const supabase = createServiceClient();
 
-  // Claim batch via rpc_claim_outbox_batch (FOR UPDATE SKIP LOCKED — row locking required).
+  // Phase 2.3: claim ledger-only batch via rpc_claim_class_a_outbox_batch (FOR UPDATE SKIP LOCKED).
+  // Phase 2.4 will use rpc_claim_outbox_batch for operational events.
   // Plain Supabase query-builder SELECT is not acceptable (ADR-056 D3).
   const { data: batch, error: claimError } = await supabase.rpc(
-    'rpc_claim_outbox_batch',
+    'rpc_claim_class_a_outbox_batch',
     { p_batch_size: BATCH_SIZE },
   );
 
@@ -47,9 +48,9 @@ export async function POST(req: Request): Promise<Response> {
 
     const result = await runConsumer(supabase, row);
 
-    // 'processed' = rpc_commit_consumer_receipt committed a new receipt.
-    // 'duplicate' = prior rpc_commit_consumer_receipt committed atomically (safe durable
-    //   prior commit — not a partial prior attempt). Both are safe to mark processed_at.
+    // 'processed' = rpc_process_class_a_projection committed all three writes atomically.
+    // 'duplicate' = message_id already in processed_messages — prior commit is durable. Both success.
+    // 'skipped' = defensive backstop (non-ledger row; rpc_claim_class_a_outbox_batch should prevent this).
     if (result === 'processed' || result === 'duplicate') {
       await supabase.rpc('rpc_acknowledge_outbox_delivery', {
         p_event_id: row.event_id,

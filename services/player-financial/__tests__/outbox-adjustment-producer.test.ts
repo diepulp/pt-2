@@ -7,6 +7,7 @@
 // Integration section (RUN_INTEGRATION_TESTS=true): DB-level payload, security, relay tests.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import type { Database } from '@/types/database.types';
 
 const shouldRunIntegration = process.env.RUN_INTEGRATION_TESTS === 'true';
@@ -37,6 +38,39 @@ describe('outbox adjustment producer — unit (always run)', () => {
     const callCount = (httpSrc.match(/rpc_create_financial_adjustment/g) ?? [])
       .length;
     expect(callCount).toBeGreaterThanOrEqual(1);
+  });
+
+  // Gate A regression: gaming_day in fn_finance_outbox_emit call (9-param, not 8-param)
+  it('T18b source-proof: fn_finance_outbox_emit 8-param (no gaming_day) is absent from migrations', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const migrationsDir = path.resolve(
+      __dirname,
+      '../../../supabase/migrations',
+    );
+    const files = fs
+      .readdirSync(migrationsDir)
+      .filter((f: string) => f.endsWith('.sql'));
+
+    // The 8-param signature (before Gate A) had 8 args ending with p_payload.
+    // After Gate A amendment, the function is 9-param (adds p_gaming_day).
+    // Verify no migration re-creates the 8-param overload after it was dropped.
+    let foundStale8Param = false;
+    for (const file of files) {
+      const src = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
+      // The 8-param signature ends with `p_payload JSONB` with NO subsequent p_gaming_day param
+      if (
+        src.includes('fn_finance_outbox_emit') &&
+        src.match(
+          /CREATE.*FUNCTION.*fn_finance_outbox_emit[^)]*p_payload\s+JSONB\s*\)/,
+        ) &&
+        !src.includes('p_gaming_day')
+      ) {
+        foundStale8Param = true;
+        break;
+      }
+    }
+    expect(foundStale8Param).toBe(false);
   });
 
   // Source-level proof: FR-4 — no TypeScript finance_outbox INSERT exists in http.ts
@@ -80,11 +114,11 @@ describeIntegration(
     let supabase: SupabaseClient<Database>;
     let testCasinoId = '';
     let testTableId = '';
-    let testPlayerId = '';
-    let testVisitId = '';
-    let testRatingSlipId = '';
-    let testEligiblePftId = ''; // pit/in/cash with resolvable rating_slip_id
-    let testCagePftId = ''; // cage/marker/unrated (ADR-057 excluded)
+    const testPlayerId = '';
+    const testVisitId = '';
+    const testRatingSlipId = '';
+    const testEligiblePftId = ''; // pit/in/cash with resolvable rating_slip_id
+    const testCagePftId = ''; // cage/marker/unrated (ADR-057 excluded)
 
     beforeAll(async () => {
       const { createServiceClient } = await import('@/lib/supabase/service');

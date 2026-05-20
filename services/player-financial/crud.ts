@@ -15,6 +15,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { DomainError } from '@/lib/errors/domain-errors';
 import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import { financialValueSchema } from '@/lib/financial/schema';
+// SERVICE_ROLE_EXEMPTION: visit_class_a_projection and gaming_day_lifecycle have
+// service_role-only RLS (zero authenticated SELECT policies). These tables are
+// internal projection stores with no authenticated read path — service-role is
+// the only safe access route. Used exclusively in getVisitClassACompleteness()
+// called from getVisitSummary() for completeness derivation (PRD-087 DEC-087-004).
+import { createServiceClient } from '@/lib/supabase/service';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -24,11 +30,9 @@ import type {
   VisitFinancialSummaryDTO,
 } from './dtos';
 import {
-  toFinancialTransactionDTO,
   toFinancialTransactionDTOFromRpc,
   toFinancialTransactionDTOList,
   toFinancialTransactionDTOOrNull,
-  toVisitFinancialSummaryDTO,
   toVisitFinancialSummaryDTOOrNull,
 } from './mappers';
 import {
@@ -189,6 +193,58 @@ export async function createTransaction(
     // eslint-disable-next-line custom-rules/no-dto-type-assertions -- catch block error typing
     throw mapDatabaseError(error as { code?: string; message: string });
   }
+}
+
+// === Class A Completeness Query ===
+
+/**
+ * Resolves lifecycle-aware completeness for a visit's Class A financial projection.
+ *
+ * Requires a service-role client — visit_class_a_projection and gaming_day_lifecycle
+ * have service_role-only RLS (no authenticated policies per Gate B).
+ *
+ * Logic (per EXEC-087 WS3 completeness derivation):
+ *   1. No projection row → 'unknown'
+ *   2. Projection exists, gaming_day open → 'partial'
+ *   3. Projection exists, gaming_day closed, backlog > 0 → 'partial'
+ *   4. Projection exists, gaming_day closed, backlog = 0 → 'complete'
+ */
+export async function getVisitClassACompleteness(
+  supabase: SupabaseClient<Database>,
+  visitId: string,
+  casinoId: string,
+): Promise<'complete' | 'partial' | 'unknown'> {
+  const { data: projection } = await supabase
+    .from('visit_class_a_projection')
+    .select('gaming_day')
+    .eq('visit_id', visitId)
+    .eq('casino_id', casinoId)
+    .order('gaming_day', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!projection) return 'unknown';
+
+  const gamingDay = projection.gaming_day;
+
+  const { data: lifecycle } = await supabase
+    .from('gaming_day_lifecycle')
+    .select('casino_id')
+    .eq('casino_id', casinoId)
+    .eq('gaming_day', gamingDay)
+    .maybeSingle();
+
+  if (!lifecycle) return 'partial';
+
+  const { count } = await supabase
+    .from('finance_outbox')
+    .select('*', { count: 'exact', head: true })
+    .eq('casino_id', casinoId)
+    .eq('gaming_day', gamingDay)
+    .eq('fact_class', 'ledger')
+    .is('processed_at', null);
+
+  return (count ?? 0) === 0 ? 'complete' : 'partial';
 }
 
 // === Read Operations ===
@@ -390,12 +446,11 @@ export async function getVisitSummary(
       .single();
 
     if (error) {
-      // PGRST116 means no transactions for this visit yet
+      // PGRST116 means no transactions for this visit yet — no projection data either
       if (error.code === 'PGRST116') {
-        // Return zero summary instead of throwing
         return {
           visit_id: visitId,
-          casino_id: '', // Will be populated by RLS context
+          casino_id: '',
           total_in: financialValueSchema.parse({
             value: 0,
             type: 'actual',
@@ -422,7 +477,18 @@ export async function getVisitSummary(
       throw mapDatabaseError(error);
     }
 
-    const summary = toVisitFinancialSummaryDTOOrNull(data);
+    const casinoId = data?.casino_id ?? '';
+    // Resolve Class A completeness via service client (visit_class_a_projection has service_role-only RLS).
+    // Falls back to 'unknown' if projection data is absent or query fails.
+    const completeness = casinoId
+      ? await getVisitClassACompleteness(
+          createServiceClient(),
+          visitId,
+          casinoId,
+        ).catch(() => 'unknown' as const)
+      : ('unknown' as const);
+
+    const summary = toVisitFinancialSummaryDTOOrNull(data, completeness);
     if (!summary) {
       throw new DomainError(
         'VISIT_NOT_FOUND',

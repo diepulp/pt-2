@@ -107,14 +107,13 @@ export function toFinancialTransactionDTOFromRpc(
 
 /**
  * Maps a visit_financial_summary view row to VisitFinancialSummaryDTO.
+ * completeness is resolved by getVisitClassACompleteness in crud.ts;
+ * defaults to 'unknown' for callers without projection context (zero-summary path, list queries).
  */
 export function toVisitFinancialSummaryDTO(
   row: VisitFinancialSummaryRow,
+  completeness: 'complete' | 'partial' | 'unknown' = 'unknown',
 ): VisitFinancialSummaryDTO {
-  // View columns are nullable due to GROUP BY; provide safe defaults.
-  // completeness.status is always 'unknown' at this layer — visit lifecycle
-  // is not available from the view. BFF routes may override when constructing
-  // surface DTOs (PRD-080 §4B projection constraint).
   return {
     visit_id: row.visit_id ?? '',
     casino_id: row.casino_id ?? '',
@@ -122,19 +121,19 @@ export function toVisitFinancialSummaryDTO(
       value: row.total_in ?? 0,
       type: 'actual',
       source: 'PFT',
-      completeness: { status: 'unknown' },
+      completeness: { status: completeness },
     }),
     total_out: financialValueSchema.parse({
       value: row.total_out ?? 0,
       type: 'actual',
       source: 'PFT',
-      completeness: { status: 'unknown' },
+      completeness: { status: completeness },
     }),
     net_amount: financialValueSchema.parse({
       value: row.net_amount ?? 0,
       type: 'actual',
       source: 'PFT',
-      completeness: { status: 'unknown' },
+      completeness: { status: completeness },
     }),
     event_count: row.event_count ?? 0,
     first_transaction_at: row.first_transaction_at,
@@ -147,8 +146,9 @@ export function toVisitFinancialSummaryDTO(
  */
 export function toVisitFinancialSummaryDTOOrNull(
   row: VisitFinancialSummaryRow | null,
+  completeness: 'complete' | 'partial' | 'unknown' = 'unknown',
 ): VisitFinancialSummaryDTO | null {
-  return row ? toVisitFinancialSummaryDTO(row) : null;
+  return row ? toVisitFinancialSummaryDTO(row, completeness) : null;
 }
 
 /**
@@ -157,7 +157,7 @@ export function toVisitFinancialSummaryDTOOrNull(
 export function toVisitFinancialSummaryDTOList(
   rows: VisitFinancialSummaryRow[],
 ): VisitFinancialSummaryDTO[] {
-  return rows.map(toVisitFinancialSummaryDTO);
+  return rows.map((row) => toVisitFinancialSummaryDTO(row));
 }
 
 // === Visit Cash-In With Adjustments Mappers ===

@@ -332,6 +332,8 @@ type FinancialOutboxRow = Database['public']['Tables']['finance_outbox']['Row'];
 /**
  * Exposure: consumer-facing event envelope for downstream adjustment processors.
  * Excludes: delivery_attempts, last_attempted_at, last_error (internal retry/error state — ADR-054 Wave 2).
+ *
+ * gaming_day added in PRD-087 Gate A (requires `npm run db:types-local` after M1–M5 migrations).
  */
 export type FinancialOutboxEventDTO = Pick<
   FinancialOutboxRow,
@@ -341,6 +343,7 @@ export type FinancialOutboxEventDTO = Pick<
   | 'table_id'
   | 'player_id'
   | 'aggregate_id'
+  | 'gaming_day'
   | 'created_at'
   | 'processed_at'
 > & {

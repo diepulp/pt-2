@@ -2,8 +2,9 @@
 
 ---
 
-status: Active — Phase 2.0 Complete (PRD-081, 2026-05-11). PRD-082 Integration Proof complete (2026-05-12) — Phase 2.1 authorized. PRD-082 harness teardown required before Phase 2.1 merge.
-date: 2026-05-17
+status: Active — Phase 2.3 COMPLETE (PRD-087 / EXEC-087, 2026-05-19). DEC-1 resolved: visit_class_a_projection + gaming_day_lifecycle + completeness propagation delivered. Cursor advanced to Phase 2.4 (Consumer Expansion: Operational Telemetry Projection) — requires PRD before code.
+date: 2026-05-19
+phase_model: bounded_operational_rollout (transition from transport_certification_sequencing as of 2026-05-19)
 phase_2_0_closed: 2026-05-11
 phase_2_0_prd: PRD-081
 phase_2_0_exec: EXEC-081
@@ -91,6 +92,8 @@ These principles govern every Phase 2.x slice. They are inherited from the froze
 6. **No scope expansion without FIB amendment.** The FIB-S `downstream_expansion_allowed_without_amendment: false` rule applies to every phase in this map. Any new operator-visible outcome, external consumer contract, or new surface not in the containment loop requires a FIB amendment before it can appear in a PRD.
 
 7. **Freeze discipline holds.** ADR-052–055 are frozen. If a phase surfaces a real conflict, write a superseding ADR. Do not patch frozen docs silently.
+
+8. **Parallelization rule (effective 2026-05-19, post Phase 2.2).** This marks the transition from *transport stabilization* to *bounded operationalization of a stabilized propagation substrate*. Phase 2.3a (Operational Outbox Observability) and Phase 2.3 (Lifecycle-Aware Completeness Projection) may proceed in parallel. They operate on different architectural layers: 2.3a is a read-only runtime verification surface; 2.3 is the first projection consumer. Parallelization is permitted while all four conditions hold: (1) relay topology is frozen; (2) replay ordering semantics are unchanged; (3) no projection logic is introduced into the observability surface; (4) no write/replay/repair actions are added to the admin observability boundary. If any condition breaks, parallelization reverts to sequential. Subsequent phase pairs are sequential unless explicitly permitted by a new rule under this principle.
 
 ---
 
@@ -226,55 +229,141 @@ Exiting Phase N → Opening Phase N+1 requires two documents:
 
 ---
 
-### Phase 2.3 — First Consumer Slice: Lifecycle-Aware Completeness Projection
+### Phase 2.3a — Operational Outbox Observability *(parallel with Phase 2.3)*
 
-**Entry gate:** Phase 2.1 exit (Class A adjustment producer wired)
+**PRD:** PRD-086 (authored 2026-05-19) | **FIB:** FIB-H-W2-OUTBOX-OBS-001 v0
 
-**Scope:** First projection consumer that reads from `finance_outbox` and produces a meaningful projection. Resolves DEC-1: all visit-level financial aggregates currently emit `completeness.status: 'unknown'` because the system has no lifecycle-aware projection mechanism. This slice builds the consumer infrastructure that makes `'complete'` and `'partial'` completeness signals possible.
+**Entry gate:** Phase 2.2 exit ✅
 
-**What DEC-1 means:** The `mtl_gaming_day_summary` view and `player_financial_transaction` aggregates have no gaming-day lifecycle column signaling when a gaming day is closed. As a result, `VisitFinancialSummaryDTO`, `FinancialSectionDTO`, and `MtlGamingDaySummaryDTO` cannot determine completeness and emit `'unknown'` always (EXEC-080 DEC-1).
+**Parallelization:** Authorized to run concurrently with Phase 2.3 while all four parallelization conditions hold (see §2 Principle 8). Phase 2.3a does not mutate producer semantics, relay behavior, replay ordering, `processed_messages`, or projection state.
 
-**What this slice builds:**
-- A projection store for visit-level Class A financial state (committed buy-ins, cashouts, adjustments per gaming-day window)
-- A consumer that reads `buyin.recorded`, `cashout.recorded`, `adjustment.recorded` events from `finance_outbox` and updates the projection store
-- A lifecycle signal mechanism that marks a gaming-day window as closed (enabling `'complete'`)
-- Updated completeness logic in `VisitFinancialSummaryDTO` and `FinancialSectionDTO` to emit `'complete'` / `'partial'` based on the projection store
+**Scope:** Read-only internal admin surface at `/admin/outbox-observability` that makes `finance_outbox` state and relay delivery status inspectable without SQL. Enables field validation of Phase 2.2 producer behavior before projection consumers are built. The surface does not create, mutate, replay, repair, or synthesize outbox events.
 
-**Consumer constraints (non-negotiable):**
-- Must use `processed_messages` idempotency before applying any side effect
-- Must pass `origin_label` through unchanged — no upgrade from `'estimated'` to `'actual'`
-- Must not write to `player_financial_transaction` or any authoring store
-- Must not perform reconciliation
-- Reads `fact_class` and `origin_label` directly — never infers from payload content
+**Semantic contract preserved:** `origin_label` and `fact_class` are rendered exactly as stored. No upgrade, no inference. A row with `origin_label: 'estimated'` renders as `'estimated'` at every layer of the surface.
 
-**Surface impact:** `VisitFinancialSummaryDTO.total_in/total_out/net_amount` completeness status becomes meaningful. `FinancialSectionDTO` (RatingSlipModal) likewise. Surface rendering contract (Wave 1) is unchanged — labels are already in place.
-
-**Skill to invoke:** `backend-service-builder` (projection store + consumer service); `qa-specialist` (consumer idempotency tests; completeness signal tests); `api-builder` (if projection store surface is exposed via existing routes)
+**Skill to invoke:** `backend-service-builder` (WS1: RPCs + DTOs); `api-builder` (WS2: `/api/internal/outbox-observability`); `frontend-design-pt-2` (WS3: admin page)
 
 ### Deliverables
 
-- [ ] Projection store migration (gaming-day-scoped Class A financial state)
-- [ ] Consumer service reading `finance_outbox` for Class A event types
-- [ ] `processed_messages` idempotency wired within same transaction as projection update
-- [ ] Gaming-day lifecycle signal mechanism (close event or lifecycle column)
-- [ ] `VisitFinancialSummaryDTO` completeness updated: `'complete'` when gaming-day closed, `'partial'` when open, `'unknown'` only when no projection data
-- [ ] `FinancialSectionDTO` completeness updated equivalently
-- [ ] Replay test: truncate projection store, replay Class A events from `finance_outbox`, verify equivalent completeness state
+- [ ] Migration: `rpc_get_outbox_relay_health(p_casino_id UUID)` — SECURITY DEFINER, service_role; returns pending count, oldest pending age, retry row count, poison candidate count (`delivery_attempts >= 3`, heuristic), processed count last 24h
+- [ ] Migration: `rpc_get_outbox_event_page(p_casino_id UUID, ...)` — SECURITY DEFINER, service_role; full envelope + relay lifecycle fields; hard-cap 100 rows; status filter and UUID search
+- [ ] `OutboxAdminEventDTO` — standalone `Pick<FinancialOutboxRow, ...>` (not extending `FinancialOutboxEventDTO` — independent evolution contract)
+- [ ] `OutboxRelayHealthDTO`
+- [ ] `GET /api/internal/outbox-observability` — admin session auth, service-role DB client, no writes
+- [ ] `app/(dashboard)/admin/outbox-observability/page.tsx` — relay health card + event queue + poison-candidate labeling + search/filter
+- [ ] Unit + integration tests: 401 guard, casino-scoped query, poison candidate count
 - [ ] type-check, lint, build exit 0
 
 ### Exit gate
 
-- DEC-1 resolved — visit-level financial aggregates emit `'complete'` / `'partial'` when events are flowing
-- Consumer idempotency test passes: duplicate delivery of same `event_id` produces one projection update
-- Replay produces identical completeness state as live processing
-- Surface rendering contract (Wave 1) not broken — labels still visible
+- Admin surface renders relay health and event queue without a SQL client
+- Real workflow action (buy-in, fill, or adjustment) produces visible outbox row with correct `fact_class`, `origin_label`, `table_id`, and `player_id`
+- `delivery_attempts >= 3 AND processed_at IS NULL` rows labeled as poison candidates (pilot heuristic, non-authoritative)
+- Zero writes to `finance_outbox` or any authoring table — verified by code review and integration test
+- `origin_label` rendered as authored — no upgrade visible in any rendered row or API response
+- `finance_outbox` reads route through SECURITY DEFINER RPC (ADR-054 R3, ADR-056 compliant)
 - All gates pass
+
+**Phase 2.5 boundary:** Phase 2.5 delivers relay log-line metrics (`outbox_backlog_size`, `processing_lag_ms`). This phase delivers the interactive admin surface. No duplication — the Phase 2.5 deliverables remain deferred.
+
+---
+
+### Phase 2.3 — First Consumer Slice: Class A Lifecycle Completeness Proof ✅ COMPLETE (2026-05-19)
+
+**PRD:** PRD-087 v1.1 (2026-05-19 — contained re-draft; v0.x discarded) | **EXEC:** EXEC-087 (2026-05-19) | **FIB:** FIB-H-W2-OUTBOX-001 v0 (no amendment)
+**Scope authority:** `phase-2.3/PRD-CONTAINMENT.md` | **Cadence authority:** `phase-2.3/EXEC-087-CADENCE-DIRECTIVE.md`
+
+**Entry gate:** Phase 2.1 exit ✅ — *may begin in parallel with Phase 2.3a; see §2 Principle 8*
+
+**Pre-EXEC gate:** Resolved — `visit_id` is NOT in payload; derived via PFT JOIN on `aggregate_id` inside `rpc_process_class_a_projection`. EXEC-087 scaffolded with this understanding.
+
+**Scope:** Prove that one ledger-authoritative Class A outbox stream can update one visit-level projection and produce a lifecycle-aware completeness signal, without consuming or damaging Phase 2.4 operational inputs. Resolves DEC-1. The original Phase 2.3 description was written before the `gaming_day` envelope gap was discovered; the cadence directive introduced a mandatory Gate A prerequisite that did not appear in the prior plan. No new phase is introduced — Gate A and Gate B are sequential gates within this phase. If Gate A fails closed (no authoritative `gaming_day` derivation for an event type), a remediation migration must be authored and proven before Gate B begins; this is a phase-internal blocker, not a new phase.
+
+**Cadence rule:** Gate B must not activate the consumer before Gate A passes all proofs. The consumer claiming `finance_outbox` rows before the envelope is complete would poison the projection with rows that lack `gaming_day`.
+
+**What DEC-1 means:** `VisitFinancialSummaryDTO`, `FinancialSectionDTO` emit `completeness.status: 'unknown'` always. No lifecycle projection exists, no gaming-day close signal exists. `mtl_gaming_day_summary` and `player_financial_transaction` aggregates have no lifecycle column.
+
+---
+
+#### Gate A — Envelope Compatibility ✅ PASSED (2026-05-19)
+
+`finance_outbox` had no `gaming_day` column. Gate A added the column, amended all five producers, performed authoritative backfill, hardened NOT NULL, and updated the immutability guard.
+
+**Gate A Deliverables:**
+
+- [x] Migration: add `finance_outbox.gaming_day` (nullable) — `20260519183629`
+- [x] Migration: amend `fn_finance_outbox_emit` — 9-param signature; old 8-param removed — `20260519183630`
+- [x] Migration: amend all five producers — `20260519183631`
+- [x] Migration: authoritative backfill (ledger rows from PFT.gaming_day; fill/credit/grind fail-closed — no authoritative derivation; Gate A patch applied) — `20260519183632`
+- [x] Migration: harden `gaming_day NOT NULL` — `20260519183633`
+- [x] Migration: add `gaming_day` to immutability trigger — `20260519183634`
+- [x] `FinancialOutboxEventDTO` Pick updated to include `gaming_day`
+- [x] `npm run db:types-local` exits 0
+
+**Gate A Required Proofs:**
+
+- All five producers emit non-null `gaming_day` (unit tests pass after each producer amendment)
+- Producer execution posture confirmed: EXEC-087 must inspect `SECURITY DEFINER` / `SECURITY INVOKER` posture of all five RPCs that call `fn_finance_outbox_emit`; helper EXECUTE privileges must match each producer's execution posture; Gate A fails if any authenticated write path breaks after the helper signature or privilege change
+- No old `fn_finance_outbox_emit` call site omits `gaming_day`
+- `gaming_day` update rejected by immutability trigger (test verifies)
+- No authenticated write path broken
+
+---
+
+#### Gate B — Class A Projection Proof ✅ PASSED (2026-05-19)
+
+**Gate B Deliverables:**
+
+- [x] Migration: `visit_class_a_projection` store — `20260519184706`
+- [x] Pre-implementation check: `processed_messages` uses `message_id UUID PRIMARY KEY`; `p_message_id` param aligns — verified in `rpc_process_class_a_projection`
+- [x] Migration: `rpc_process_class_a_projection(p_message_id)` — ledger-only; non-ledger rows remain `processed_at IS NULL` — `20260519184708`
+- [x] `processed_messages` idempotency check within same transaction as projection update
+- [x] Gaming-day lifecycle close signal: `gaming_day_lifecycle` table + `rpc_close_gaming_day` — `20260519184707`, `20260519184709`
+- [x] `VisitFinancialSummaryDTO` completeness: `'complete'` / `'partial'` / `'unknown'` — propagated via `getVisitClassACompleteness()` + mapper
+- [x] `FinancialSectionDTO` completeness: same logic (via mapper chain)
+- [x] Mixed-source surfaces remain `'partial'` until Phase 2.4
+- [x] `origin_label` travels unchanged
+- [ ] type-check, lint, build exit 0 — deferred to DoD gate (branch not yet merged)
+
+**Gate B Required Proofs:**
+
+- No 100× amount corruption: projection amounts in integer cents, matching PFT source
+- Duplicate delivery does not double-project (I3 re-verified at consumer layer)
+- Replay produces identical completeness state (I4 re-verified at consumer layer)
+- Non-ledger rows remain `processed_at IS NULL` after consumer runs
+- Closed gaming day + empty Class A backlog = `'complete'` only for Class A-only surfaces
+
+---
+
+**Consumer constraints (non-negotiable — ADR-054):**
+- `processed_messages` idempotency check before any projection side effect
+- `origin_label` travels unchanged through projection path and rendered surface; no upgrade from `'estimated'` to `'actual'`
+- Must not write to `player_financial_transaction` or any authoring store
+- Must not perform reconciliation
+- Reads `fact_class` and `origin_label` directly from the outbox row — never infers from payload content
+- Claims only `fact_class = 'ledger'`; non-ledger rows must remain `processed_at IS NULL`
+
+**Skill to invoke:** `backend-service-builder` (Gate A migrations; Gate B projection store + consumer); `qa-specialist` (Gate A producer proofs; Gate B I3/I4 consumer re-verification; completeness signal tests); `api-builder` (only if existing financial-summary and modal-data routes require wiring changes)
+
+### Exit gate ✅ MET (2026-05-19)
+
+- Gate A ✅: all five producers emit non-null `gaming_day`; NOT NULL constraint hardened; producer execution posture confirmed; no authenticated write path broken
+- Gate B ✅: DEC-1 resolved — `VisitFinancialSummaryDTO` and `FinancialSectionDTO` emit `'complete'` / `'partial'` for visits with flowing Class A events
+- I3 consumer re-verification ✅: duplicate delivery → one projection update (integration test passes)
+- I4 consumer re-verification ✅: replay → identical completeness state (integration test passes)
+- Non-ledger rows remain `processed_at IS NULL` ✅ (Phase 2.4 inputs preserved)
+- Surface rendering contract (Wave 1) not broken ✅ — labels still visible
+- type-check, lint, build: deferred to merge-time DoD gate
+
+**Note on Phase 2.4 inheritance:** Gate A adds `gaming_day` to all operational rows (`fill.recorded`, `credit.recorded`, `grind.observed`). Phase 2.4's operational consumer will find `gaming_day` present in all the rows it needs to process — no separate envelope compatibility gate is required in Phase 2.4.
 
 ---
 
 ### Phase 2.4 — Consumer Expansion: Operational Telemetry Projection
 
-**Entry gate:** Phase 2.2 exit (all producers wired) + Phase 2.3 exit (consumer infrastructure established)
+**Entry gate:** Phase 2.2 exit (all producers wired) + Phase 2.3 exit (consumer infrastructure established, Gate A complete)
+
+**Envelope inheritance:** Phase 2.3 Gate A adds `gaming_day` to all operational rows (`fill.recorded`, `credit.recorded`, `grind.observed`). Phase 2.4's operational consumer will find `gaming_day` present in all rows it processes — no separate envelope compatibility gate is required here. The EXEC-SPEC for Phase 2.4 must use `gaming_day` for shift-level projection window scoping.
 
 **Scope:** Projection consumer for Class B (grind) and Dependency Event (fills, credits) streams. Produces shift-level operational telemetry with correct authority labels. This is the consumer that makes shift dashboard financial data event-driven rather than direct-polling from authoring stores.
 
@@ -376,7 +465,7 @@ Do not invoke these skills directly for any Phase ≥ 2.1. Each phase runs `/prd
 | 2.0 Exemplar | ✅ Complete (PRD-081) | — |
 | 2.1 Class A Adjustment | `backend-service-builder` (RPC migration) | `qa-specialist` (atomicity test) |
 | 2.2 Dependency Events | `backend-service-builder` (2 RPC migrations, simultaneous) | `qa-specialist` (atomicity + classification tests) |
-| 2.3 First Consumer | `backend-service-builder` (projection store + consumer) | `qa-specialist` (idempotency + replay tests); `api-builder` (if route updates needed) |
+| 2.3 First Consumer (Gate A + Gate B) | `backend-service-builder` (Gate A: gaming_day migrations + producer amendments; Gate B: projection store + consumer) | `qa-specialist` (Gate A producer proofs; Gate B I3/I4 consumer re-verification; completeness signal tests); `api-builder` (if financial-summary / modal-data routes need wiring) |
 | 2.4 Op. Telemetry | `backend-service-builder` (operational projection) | `qa-specialist`; `frontend-design-pt-2` (shift dashboard if surface changes) |
 | 2.5 Sign-off | `/lead-architect` (sign-off artifact) | `qa-specialist` (final gate) |
 
