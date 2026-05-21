@@ -4825,6 +4825,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      rpc_cleanup_outbox_processed: {
+        Args: { p_max_rows?: number }
+        Returns: number
+      }
       rpc_clear_pin_attempts: { Args: never; Returns: undefined }
       rpc_clear_slot_assignment: { Args: { p_slot_id: string }; Returns: Json }
       rpc_close_gaming_day: {

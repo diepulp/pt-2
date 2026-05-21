@@ -1,6 +1,8 @@
 directive_id: PROD-ANCHOR-STD-001
 type: producer_anchor_resolution_standard
-status: accepted_for_wave_2_5_signoff
+status: ratified
+ratified_by: WAVE-2-SIGN-OFF.md
+ratified_date: 2026-05-21
 issued_from: W2-OBS-ANCHOR-COVERAGE-001
 triggered_by: LAYER-1-FAILURE — two adjustment-producing surfaces bypassed anchor resolution
 

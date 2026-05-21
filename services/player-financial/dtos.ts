@@ -399,12 +399,19 @@ export type OutboxRelayHealthDTO =
  * DTO boundary result for the operational outbox consumer.
  * Internal OperationalConsumerResult uses errors: Error[]; this DTO serializes to string[].
  * Skipped (skipped_ledger, skipped_unknown) and not_found outcomes are represented as errors.
+ *
+ * `lagSamplesMs` (Phase 2.5, PRD-089 WS1_LOG): DB-clock derived per-row lag in
+ * milliseconds for rows that processed successfully this cycle. Excluded outcomes
+ * (duplicate / skipped / failed / claim-error / auth-fail) contribute zero samples
+ * by construction — they are not in the event_id set passed to the lag query.
+ * Internal contract for log emission; stripped from the HTTP response body.
  */
 // eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Consumer result DTO; not a table projection, errors serialized at boundary
 export type OperationalConsumerResultDTO = {
   processed: number;
   duplicate: number;
   errors: string[];
+  lagSamplesMs: number[];
 };
 
 /**
@@ -433,3 +440,96 @@ export type OperationalProjectionResponseDTO = {
   completeness: { status: 'complete' | 'partial' | 'unknown' };
   type: 'estimated';
 };
+
+// === Relay Cycle Observability DTOs (Wave 2 Phase 2.5 — PRD-089 WS1_LOG) ===
+//
+// Internal contracts emitted by the relay route as one structured log line per
+// cycle. These types describe log shape only — they are NOT exposed in the
+// HTTP response body (the route preserves its prior `{ classA, operational }`
+// JSON contract).
+//
+// Predicate parity (P1-BACKLOG-CLAIMABILITY-DEFINITION audit patch):
+// operational backlog SQL predicates include `event_type IN
+// ('grind.observed','fill.recorded','credit.recorded')` to match the
+// `rpc_claim_operational_outbox_batch` claim path verbatim. The EXEC-SPEC
+// canonical table did not enumerate this event_type whitelist; the RPC is the
+// source of truth and the log-line follows it (drift flagged at WS1 dispatch).
+
+/**
+ * Class A relay branch result — extended for Phase 2.5 with `lagSamplesMs`.
+ *
+ * `lagSamplesMs` (P1-LAG-SAMPLE-CLOCK-CONTRACT): DB-clock derived per-row lag
+ * in milliseconds for rows that processed successfully this cycle.
+ * Internal contract for log emission; stripped from the HTTP response body.
+ */
+export type ClassARelayBranchResult = {
+  processed: number;
+  failed: number;
+  lagSamplesMs: number[];
+};
+
+/**
+ * Outbox backlog breakdown emitted in the relay cycle log line.
+ *
+ * Predicates match the claim RPC source of truth verbatim:
+ *   ledger.total       = fact_class='ledger' AND processed_at IS NULL
+ *   operational.claimable
+ *                      = fact_class='operational'
+ *                        AND event_type IN ('grind.observed','fill.recorded','credit.recorded')
+ *                        AND processed_at IS NULL
+ *                        AND delivery_attempts < 5
+ *   operational.dead_letter
+ *                      = fact_class='operational'
+ *                        AND event_type IN ('grind.observed','fill.recorded','credit.recorded')
+ *                        AND processed_at IS NULL
+ *                        AND delivery_attempts >= 5
+ *   operational.total  = claimable + dead_letter (computed in TS)
+ */
+export type OutboxBacklogSize = {
+  ledger: { total: number };
+  operational: { claimable: number; dead_letter: number; total: number };
+};
+
+/**
+ * Lag-aggregate summary emitted in the relay cycle log line.
+ * Computed from the combined Class A + operational lag sample array.
+ * `null` when the combined sample array is empty (no rows processed this cycle).
+ */
+export type LagAggregates = {
+  min: number;
+  p50: number;
+  p95: number;
+  max: number;
+};
+
+/**
+ * Authenticated relay cycle log line (FR-1).
+ * Emitted when CRON_SECRET auth passed; covers both `ok` (no branch errors)
+ * and `error` (at least one branch produced an error) outcomes.
+ */
+export type OutboxRelayCycleLogCycle = {
+  cycle: 'outbox_relay_cycle';
+  outcome: 'ok' | 'error';
+  outbox_backlog_size: OutboxBacklogSize;
+  lag_ms: LagAggregates | null;
+  relay_duration_ms: number;
+  class_a_branch: { processed: number; failed: number };
+  operational_branch: { processed: number; duplicate: number; errors: number };
+};
+
+/**
+ * Unauthenticated relay cycle log line (FR-2).
+ * Emitted when CRON_SECRET auth failed; only minimal fields (no backlog/lag).
+ */
+export type OutboxRelayCycleLogAuthFail = {
+  cycle: 'outbox_relay_cycle';
+  outcome: 'auth_fail';
+  relay_duration_ms: number;
+};
+
+/**
+ * Structured log line shape — discriminated union of FR-1 and FR-2 variants.
+ */
+export type OutboxRelayCycleLog =
+  | OutboxRelayCycleLogCycle
+  | OutboxRelayCycleLogAuthFail;

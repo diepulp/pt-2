@@ -5,7 +5,7 @@
     "source_of_truth": "WAVE-2-PROGRESS-TRACKER.md",
     "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md",
     "parent_tracker_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json",
-    "last_updated": "2026-05-21 (PRD-088 / EXEC-088 complete — Phase 2.4 Operational Telemetry Projection delivered; PWB-003 closed; cursor advanced to Phase 2.5)",
+    "last_updated": "2026-05-21 (PRD-089 / EXEC-089 Phase 2.5 in progress — WS1_LOG + WS2_RETENTION implementation complete; WS3_SIGNOFF authored WAVE-2-SIGN-OFF.md; WS4_GOVERNANCE tracker reconciliation applied (this update); PROD-ANCHOR-STD-001 ratified)",
     "update_rule": "Update both this file and WAVE-2-PROGRESS-TRACKER.md together when phase state changes. This file is the machine-readable projection of the .md; it does not own truth. Update parent ROLLOUT-TRACKER.json cursor when Wave 2 active_phase changes.",
     "reading_order": "cursor → direction → phases → deferred_register → validation_matrix → open_decisions. Read roadmap_ref for phase deliverables and exit gates. Read parent_tracker_ref for Wave 1 history and Wave 2 entry criteria."
   },
@@ -46,12 +46,12 @@
   "cursor": {
     "wave": 2,
     "active_phase": "2.5",
-    "phase_status": "phase_2_4_complete_phase_2_5_not_started",
-    "phase_label": "Phase 2.4 COMPLETE — PRD-088 / EXEC-088 implemented 2026-05-21. Operational telemetry projection delivered: shift_operational_projection, rpc_claim_operational_outbox_batch, rpc_process_operational_projection, runOperationalConsumer, dual-branch relay (classA + operational), 3-way observability backlog breakdown, GET /api/v1/table-context/operational-projection, completeness 5-step logic (ADR-054 R4: type always estimated). GrindBuyinPanel mounted (PWB-003 closed). Phase 2.5 (Observability + Sign-Off) is next — requires PRD before code.",
+    "phase_status": "phase_2_5_in_progress",
+    "phase_label": "Phase 2.5 IN PROGRESS — PRD-089 / EXEC-089 active. WS1_LOG (relay cycle log + lag samples) + WS2_RETENTION (rpc_cleanup_outbox_processed + idx_finance_outbox_processed_retention + GET /api/internal/outbox-cleanup + daily Vercel cron 0 7 * * *) implementation complete with all Phase 1 gates PASS (type-check / schema-validation / lint / test-pass). WS3_SIGNOFF authored WAVE-2-SIGN-OFF.md (PROD-ANCHOR-STD-001 ratified). WS4_GOVERNANCE reconciles trackers (this update). Phase 2.5 exit pending devils-advocate review of sign-off + lint gate.",
     "blocker": null,
     "teardown_migration": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
-    "next_action": "Phase 2.5 PRD — Observability + Sign-Off",
-    "next_action_prd": "PRD-089 (not yet authored)",
+    "next_action": "Phase 2.5 closure: devils-advocate review of WAVE-2-SIGN-OFF.md (Phase 4 DoD gate); on clean pass, merge and advance cursor to post-Wave-2 backlog (PWB-001 / PWB-002 / W2-OBS-CASHOUT-PRODUCER-001 each gated on its own PRD per WAVE-2-ROLLOUT-MAP.md §10)",
+    "next_action_prd": "PRD-089 (authored, in progress)",
     "last_closed_phase": "2.4",
     "last_closed_date": "2026-05-21",
     "last_closed_prd": "PRD-088",
@@ -403,7 +403,7 @@
       "exec_spec": "EXEC-087",
       "exec_spec_path": "docs/21-exec-spec/EXEC-087-wave2-phase-2.3-lifecycle-aware-completeness-projection.md",
       "exit_date": "2026-05-19",
-      "commit": null,
+      "commit": "ba17a4d0",
       "entry_gate": "Phase 2.1 exit (Class A adjustment producer wired) — may begin in parallel with Phase 2.3a; see direction.principles[parallelization_rule]",
       "scope": "First projection consumer. Resolves DEC-1: all visit-level financial aggregates currently emit completeness.status: unknown because the system has no lifecycle-aware projection mechanism. This slice builds the consumer infrastructure that makes complete and partial completeness signals possible.",
       "dec_1_resolution": {
@@ -522,35 +522,74 @@
       "id": "2.5",
       "label": "Observability + Sign-Off",
       "wave": 2,
-      "status": "not_started",
-      "prd": null,
-      "exec_spec": null,
+      "status": "in_progress",
+      "prd": "PRD-089",
+      "prd_path": "docs/10-prd/PRD-089-wave2-phase-2.5-observability-and-signoff-v0.md",
+      "exec_spec": "EXEC-089",
+      "exec_spec_path": "docs/21-exec-spec/EXEC-089-wave2-phase-2.5-observability-and-signoff.md",
+      "checkpoint": ".claude/skills/build-pipeline/checkpoints/PRD-089.json",
       "exit_date": null,
       "commit": null,
-      "entry_gate": "Phase 2.4 exit",
-      "scope": "Minimal relay health observability, outbox retention policy, and Wave 2 sign-off artifact.",
+      "entry_gate": "Phase 2.4 exit ✅ (PRD-088 / EXEC-088, commit 931f5ed9, 2026-05-21)",
+      "scope": "Closing slice of Wave 2: (1) structured outbox_relay_cycle log line per relay invocation (FR-1 authenticated + FR-2 unauthenticated variants) with backlog split by fact_class and claimability plus per-cycle lag aggregates; (2) cron-driven 7-day retention path (rpc_cleanup_outbox_processed + supporting partial index + GET cleanup route + daily Vercel cron) for processed finance_outbox rows; (3) WAVE-2-SIGN-OFF.md ratifying PROD-ANCHOR-STD-001 and reconciling post-Wave-2 backlog against PRD-088 closure (PWB-003 CLOSED; PWB-001 / PWB-002 / W2-OBS-CASHOUT-PRODUCER-001 carried forward). No new producers, consumers, or UI surfaces.",
+      "audit_patches_applied": [
+        "P0-PHASE-24-EVIDENCE-GATE — Phase 2.4 closure evidence verified (PRD-088 / EXEC-088 files present, checkpoint complete, commit 931f5ed9, residual gap classification): all 5 items PASS before WS3 / WS4 dispatch",
+        "P1-TEST-GATE-ORDERING — test-pass moved into Phase 1 gates; WS3 / WS4 documentation workstreams require WS1_LOG + WS2_RETENTION implementation gates to pass first",
+        "P1-LAG-SAMPLE-CLOCK-CONTRACT — lag samples DB-clock derived from (processed_at - created_at) timestamps, not app-server Date.now(); duplicate/skipped/failed/claim-error/auth-fail outcomes excluded by construction; orchestrator-accepted TS-subtraction deviation preserves the DB-clock invariant (no app-server clock participates)",
+        "P1-BACKLOG-CLAIMABILITY-DEFINITION — backlog count predicates follow rpc_claim_class_a_outbox_batch and rpc_claim_operational_outbox_batch claim predicates verbatim including the operational event_type whitelist drift detected during implementation",
+        "P1-RETENTION-REPLAY-BOUNDARY-GATE — WAVE-2-SIGN-OFF.md §8.2 contains the three required assertions (boundary stated verbatim; authoring-store reseed escape hatch naming player_financial_transaction / pit_cash_observation / table_buyin_telemetry / table_fills / table_credits; FIB/ADR amendment requirement for unbounded replay)",
+        "P2-EXPLAIN-INDEX-BRITTLENESS — EXPLAIN-index test split into deterministic index-exists + predicate-alignment assertions plus advisory planner-evidence test behind RUN_PLANNER_EVIDENCE_TESTS env gate (10k+1k row seed not run on default CI)"
+      ],
       "deliverables": [
-        "outbox_backlog_size log line in relay worker (count of processed_at IS NULL rows per cycle)",
-        "processing_lag_ms log line (elapsed from finance_outbox.created_at to processed_at)",
-        "Retention policy for processed rows older than 7 days",
-        "Wave 2 sign-off artifact: docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-2-SIGN-OFF.md"
+        "outbox_relay_cycle structured log line — FR-1 authenticated variant with backlog split by fact_class and claimability + per-cycle processing-lag aggregates min/p50/p95/max; FR-2 unauthenticated variant for auth_fail invocations with backlog null and lag nulls — app/api/internal/outbox-relay/route.ts (GET + POST share runRelayCycle)",
+        "Branch lag-sample contract: lagSamplesMs: number[] on Class A and operational consumer branch results; DB-clock derived (Date.parse(processed_at) - Date.parse(created_at)) for processedEventIds only; duplicate/skipped/failed/claim-error/auth-fail outcomes excluded by construction (P1-LAG-SAMPLE-CLOCK-CONTRACT honored; orchestrator-accepted TS-subtraction deviation, DB-clock invariant preserved)",
+        "Backlog count predicate contract: ledger.total / operational.claimable / operational.dead_letter follow rpc_claim_class_a_outbox_batch and rpc_claim_operational_outbox_batch claim predicates verbatim including operational event_type whitelist (P1-BACKLOG-CLAIMABILITY-DEFINITION honored)",
+        "30 new tests for WS1_LOG: services/player-financial/__tests__/outbox-relay-log-emission.test.ts (17 — FR-1 / FR-2 log shapes, predicate parity, exclusion-by-construction, GET parity, HTTP shape stability) + services/player-financial/__tests__/lag-aggregates.test.ts (13 — percentile math + exclusion-rule invariants)",
+        "rpc_cleanup_outbox_processed(p_max_rows INTEGER DEFAULT 1000) RETURNS INTEGER — SECURITY DEFINER, SET search_path='', service_role EXECUTE; CTE-based DELETE with FOR UPDATE SKIP LOCKED; p_max_rows validation (NULL / <1 / >1000) — migration 20260521142441",
+        "idx_finance_outbox_processed_retention ON public.finance_outbox (processed_at, event_id) WHERE processed_at IS NOT NULL — supporting partial index for cleanup CTE (P2-EXPLAIN-INDEX-BRITTLENESS honored: deterministic index-exists + predicate-alignment assertions + advisory planner-evidence behind RUN_PLANNER_EVIDENCE_TESTS) — migration 20260521142441",
+        "GET /api/internal/outbox-cleanup with CRON_SECRET bearer auth + structured outbox_cleanup_cycle log line (ok / error / auth_fail variants) — app/api/internal/outbox-cleanup/route.ts (POST not exposed)",
+        "vercel.json daily cron entry 0 7 * * * for /api/internal/outbox-cleanup",
+        "21 new tests for WS2_RETENTION: app/api/internal/outbox-cleanup/__tests__/route.test.ts (11 unit — auth, success, error, POST-absence, log shape, max_rows/capped) + __tests__/integration/outbox-cleanup.int.test.ts (10 integration — three age bands, p_max_rows cap, invalid-cap variants, first-run cap, EXPLAIN split assertions) + 1 advisory planner-evidence test behind RUN_PLANNER_EVIDENCE_TESTS env gate",
+        "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-2-SIGN-OFF.md — 8 sections per PRD §6.3; GR-1 canonical phrase verbatim (3 occurrences); P1-RETENTION-REPLAY-BOUNDARY-GATE triple assertion satisfied (§8.2.1 / §8.2.2 / §8.2.3); Principle 9 four-level certification mapping per producer; PROD-ANCHOR-STD-001 ratification statement; three-category post-Wave-2 backlog reconciliation against PRD-088 closure (PWB-003 CLOSED with commit 931f5ed9 citation in §6.2; PWB-001 / PWB-002 / W2-OBS-CASHOUT-PRODUCER-001 in §6.1 unresolved table; §6.3 deferred infrastructure)",
+        "PROD-ANCHOR-STD-001 status promoted accepted_for_wave_2_5_signoff → ratified with ratified_by: WAVE-2-SIGN-OFF.md and ratified_date: 2026-05-21",
+        "WAVE-2-TRACKER.json + WAVE-2-PROGRESS-TRACKER.md + actions/ROLLOUT-TRACKER.json reconciled to current Wave 2 closure state (this update set)"
       ],
       "signoff_artifact_required_sections": [
-        "Summary of all phases completed",
-        "I1–I4 proof record per producer",
-        "DEC-1 resolution record",
-        "Known residual gaps (multi-consumer fan-out, CDC relay, external consumer contract)"
+        "1. Header (frontmatter + 1-paragraph summary)",
+        "2. Wave 2 phase summary (one paragraph per 2.0 / PRD-082 / 2.1 / 2.2 / 2.3a / 2.3 / 2.4 / 2.5)",
+        "3. I1–I4 proof record (per-producer I1, transport-baseline I2, consumer I3/I4 for Class A and operational, I5 inheritance)",
+        "4. DEC-1 resolution record",
+        "5. PROD-ANCHOR-STD-001 ratification",
+        "6. Post-Wave-2 backlog reconciliation in three explicitly-labelled categories: unresolved (PWB-001 / PWB-002 / W2-OBS-CASHOUT-PRODUCER-001) / closed-in-Phase-2.4 (PWB-003) / deferred infrastructure",
+        "7. Sign-off language (GR-1 verbatim) + per-producer Principle 9 four-level certification mapping",
+        "8. Hand-off to post-Wave-2 backlog with 7-day replay-window constraint named (triple assertion: boundary stated / authoring-store reseed / FIB-ADR amendment)"
       ],
       "exit_gate": [
-        "Backlog and lag metrics appear in relay logs",
-        "Retention policy active (no indefinite accumulation)",
-        "Sign-off document authored and approved",
-        "All gates pass"
+        "Relay cycle log line emitted per invocation matching auth-state schema variant (FR-1 / FR-2) — VERIFIED (17 new tests pass)",
+        "Branch lag-sample contract: lagSamplesMs derived only from successfully processed rows — VERIFIED (exclusion-by-construction test)",
+        "rpc_cleanup_outbox_processed deletes only rows with processed_at IS NOT NULL AND processed_at < now() - INTERVAL '7 days', capped at p_max_rows — VERIFIED (10 integration tests)",
+        "Partial index idx_finance_outbox_processed_retention present with correct predicate — VERIFIED (deterministic pg_indexes assertion)",
+        "Daily Vercel cron 0 7 * * * active in vercel.json for /api/internal/outbox-cleanup — VERIFIED",
+        "WAVE-2-SIGN-OFF.md authored with all 8 sections per PRD §6.3 + GR-1 verbatim + replay-boundary triple assertion + Principle 9 mapping — VERIFIED (WS3_SIGNOFF)",
+        "PROD-ANCHOR-STD-001 status: ratified — VERIFIED (this WS4_GOVERNANCE edit)",
+        "Three trackers (WAVE-2-TRACKER.json + WAVE-2-PROGRESS-TRACKER.md + actions/ROLLOUT-TRACKER.json) reconciled to current state — VERIFIED (this WS4_GOVERNANCE update)",
+        "Phase 2.5 closure pending: devils-advocate review of WAVE-2-SIGN-OFF.md with no unresolved P0 findings (Phase 4 DoD gate per PRD-089 §8); lint gate npm run lint -- --max-warnings=0 exit 0; merge gate npm run test:verify (with RUN_INTEGRATION_TESTS=true) exit 0"
       ],
       "skills": [
-        "/lead-architect (sign-off artifact)",
-        "qa-specialist (final gate)"
-      ]
+        "backend-service-builder (WS1_LOG + WS2_RETENTION — implementation)",
+        "lead-architect (WS3_SIGNOFF — sign-off artifact; WS4_GOVERNANCE — tracker reconciliation + standard ratification)",
+        "devils-advocate (Phase 4 DoD gate — review WAVE-2-SIGN-OFF.md before merge)"
+      ],
+      "dev_env_finding_flagged_for_followup": {
+        "discovered_during": "WS2_RETENTION integration test execution",
+        "severity": "non-blocking-for-prd-089",
+        "scope": "process / CI / test pipeline",
+        "finding": ".env (loaded by jest.setup.js with override:false) contains REMOTE Supabase URL/keys; .env.local contains LOCAL URL/keys. RUN_INTEGRATION_TESTS=true npx jest hits remote instance which lacks unmerged migrations and fails finance_outbox-touching integration tests. To run against local DB, tests must be invoked with explicit local env vars (NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 + LOCAL anon/service keys).",
+        "recommended_remediation": "Either (a) flip jest.setup.js to prefer .env.local over .env in test runs, (b) document explicit-override requirement in QA-006 / QA-001 integration test playbook, or (c) introduce .env.test holding LOCAL URL/keys with jest.setup.js loading it first.",
+        "blocking_for_phase_25_dispatch": false,
+        "blocking_for_merge": true,
+        "rationale": "WS3 / WS4 are documentation workstreams that do not run integration tests, so dispatch is not blocked. Pre-merge DoD (PRD-089 §8) must include either fix or explicit documentation."
+      }
     }
   ],
 

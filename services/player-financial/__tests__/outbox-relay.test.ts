@@ -1,33 +1,33 @@
 /** @jest-environment node */
 
 import { POST } from '@/app/api/internal/outbox-relay/route';
+import { createServiceClient as createServiceClientReal } from '@/lib/supabase/service';
+import { runConsumer as runConsumerReal } from '@/services/player-financial/outbox-consumer';
+import { runOperationalConsumer as runOperationalConsumerReal } from '@/services/player-financial/outbox-operational-consumer';
 
 import type { FinancialOutboxEventDTO } from '../dtos';
 
 jest.mock('@/lib/supabase/service', () => ({
   createServiceClient: jest.fn(),
 }));
-jest.mock('@/services/player-financial/outbox-consumer', () => ({
-  runConsumer: jest.fn(),
-}));
+// Mock only runConsumer; preserve the real PRD-089 WS1_LOG helpers
+// (collectLagSamplesMs, collectOutboxBacklog, aggregateLagSamples). Those
+// helpers are observability-soft (try/catch returning empty on failure) so
+// they tolerate the bare supabase mock used here.
+jest.mock('@/services/player-financial/outbox-consumer', () => {
+  const actual = jest.requireActual(
+    '@/services/player-financial/outbox-consumer',
+  );
+  return { ...actual, runConsumer: jest.fn() };
+});
 jest.mock('@/services/player-financial/outbox-operational-consumer', () => ({
   runOperationalConsumer: jest.fn(),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { createServiceClient } = require('@/lib/supabase/service') as {
-  createServiceClient: jest.Mock;
-};
-
-const { runConsumer } =
-  require('@/services/player-financial/outbox-consumer') as {
-    runConsumer: jest.Mock;
-  };
-
-const { runOperationalConsumer } =
-  require('@/services/player-financial/outbox-operational-consumer') as {
-    runOperationalConsumer: jest.Mock;
-  };
+const createServiceClient = createServiceClientReal as unknown as jest.Mock;
+const runConsumer = runConsumerReal as unknown as jest.Mock;
+const runOperationalConsumer =
+  runOperationalConsumerReal as unknown as jest.Mock;
 
 const FAKE_SECRET = 'test-cron-secret-xyz';
 
@@ -62,6 +62,29 @@ function makeRow(
   };
 }
 
+// Chainable mock for supabase-js `.from(...).select(...)...` chains used by
+// the Phase 2.5 lag-sample and backlog helpers. Resolves to empty data and
+// zero count by default; tests that exercise log-emission with non-zero
+// backlog use the dedicated outbox-relay-log-emission test file.
+function makeFromChain(): unknown {
+  const chain = {
+    select: (..._args: unknown[]) => chain,
+    eq: (..._args: unknown[]) => chain,
+    in: (..._args: unknown[]) => chain,
+    is: (..._args: unknown[]) => chain,
+    lt: (..._args: unknown[]) => chain,
+    gte: (..._args: unknown[]) => chain,
+    then: (
+      onFulfilled: (value: {
+        data: unknown[];
+        error: null;
+        count: number;
+      }) => unknown,
+    ) => onFulfilled({ data: [], error: null, count: 0 }),
+  };
+  return chain;
+}
+
 function makeSupabase(claimRows: FinancialOutboxEventDTO[] = []) {
   // First rpc call: rpc_claim_class_a_outbox_batch
   // Subsequent calls: rpc_acknowledge_outbox_delivery (one per processed row)
@@ -70,9 +93,11 @@ function makeSupabase(claimRows: FinancialOutboxEventDTO[] = []) {
     .mockResolvedValueOnce({ data: claimRows, error: null })
     .mockResolvedValue({ data: null, error: null });
 
+  const fromFn = jest.fn(() => makeFromChain());
+
   return {
-    supabase: { rpc: rpcFn },
-    mocks: { rpcFn },
+    supabase: { rpc: rpcFn, from: fromFn },
+    mocks: { rpcFn, fromFn },
   };
 }
 
@@ -94,11 +119,13 @@ describe('outbox relay', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Default: operational branch returns empty result
+    // Default: operational branch returns empty result.
+    // lagSamplesMs added in PRD-089 WS1_LOG (internal contract; not in HTTP body).
     runOperationalConsumer.mockResolvedValue({
       processed: 0,
       duplicate: 0,
       errors: [],
+      lagSamplesMs: [],
     });
   });
 
@@ -267,6 +294,7 @@ describe('outbox relay', () => {
       processed: 2,
       duplicate: 1,
       errors: [new Error('rpc failure')],
+      lagSamplesMs: [],
     });
 
     const res = await POST(makeRequest());

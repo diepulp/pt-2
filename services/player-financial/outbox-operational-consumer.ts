@@ -2,12 +2,24 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/types/database.types';
 
+import { collectLagSamplesMs } from './outbox-consumer';
+
 const OPERATIONAL_BATCH_SIZE = 25;
 
+/**
+ * Internal operational branch result.
+ *
+ * `lagSamplesMs` (Phase 2.5, PRD-089 WS1_LOG / P1-LAG-SAMPLE-CLOCK-CONTRACT):
+ * DB-clock derived per-row lag in milliseconds for rows that processed
+ * successfully this cycle. Duplicate / skipped / failed / claim-error
+ * outcomes contribute zero samples — by construction, those event_ids are
+ * not in the set passed to `collectLagSamplesMs`.
+ */
 export type OperationalConsumerResult = {
   processed: number;
   duplicate: number;
   errors: Error[];
+  lagSamplesMs: number[];
 };
 
 export async function runOperationalConsumer(
@@ -17,6 +29,7 @@ export async function runOperationalConsumer(
     processed: 0,
     duplicate: 0,
     errors: [],
+    lagSamplesMs: [],
   };
 
   const { data: batch, error: claimError } = await supabase.rpc(
@@ -30,6 +43,7 @@ export async function runOperationalConsumer(
   }
 
   const rows = batch ?? [];
+  const processedEventIds: string[] = [];
 
   for (const row of rows) {
     try {
@@ -45,6 +59,7 @@ export async function runOperationalConsumer(
 
       if (data === 'processed') {
         result.processed++;
+        processedEventIds.push(row.event_id);
       } else if (data === 'duplicate') {
         result.duplicate++;
       } else {
@@ -59,6 +74,8 @@ export async function runOperationalConsumer(
       );
     }
   }
+
+  result.lagSamplesMs = await collectLagSamplesMs(supabase, processedEventIds);
 
   return result;
 }

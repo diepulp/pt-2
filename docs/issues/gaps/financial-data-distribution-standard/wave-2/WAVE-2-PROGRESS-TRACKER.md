@@ -4,8 +4,8 @@
 **Machine-readable companion:** `WAVE-2-TRACKER.json` (same directory — keep in sync)  
 **Authority:** `WAVE-2-ROLLOUT-MAP.md` (phase plan) · `ROLLOUT-TRACKER.json` (parent machine state)  
 **First established:** 2026-05-17  
-**Last updated:** 2026-05-19 (PRD-086 / EXEC-086 complete — Phase 2.3a Operational Outbox Observability delivered; cursor advanced to Phase 2.3)
-**Current position:** Phase 2.3a COMPLETE (PRD-086 / EXEC-086, 2026-05-19). Admin outbox observability surface delivered. Phase 2.3 (Lifecycle-Aware Completeness Projection) PRD-087 in progress. See §0 for parallelization model.
+**Last updated:** 2026-05-21 (PRD-089 / EXEC-089 Phase 2.5 in progress — WS1_LOG + WS2_RETENTION + WS3_SIGNOFF complete; WS4_GOVERNANCE reconciles trackers (this update). PRD-087 Phase 2.3 closed `ba17a4d0`; PRD-088 Phase 2.4 closed `931f5ed9`; PROD-ANCHOR-STD-001 ratified via WAVE-2-SIGN-OFF.md.)
+**Current position:** Phase 2.5 IN PROGRESS (PRD-089 / EXEC-089). Phases 2.0 / PRD-082 / 2.1 / 2.2 / 2.3a / 2.3 / 2.4 all COMPLETE. WS3_SIGNOFF authored `WAVE-2-SIGN-OFF.md` and ratified PROD-ANCHOR-STD-001. Phase 2.5 closure pending devils-advocate Phase 4 review + lint gate. Post-Wave-2 backlog (PWB-001 / PWB-002 / W2-OBS-CASHOUT-PRODUCER-001) reconciled against PRD-088 closure (PWB-003 CLOSED).
 
 ---
 
@@ -41,9 +41,9 @@ Phase 2.3a is expected to become the preferred runtime-confidence and debugging 
 | 2.1 | Producer Expansion A: Financial Adjustment | ✅ CERTIFIED | PRD-083 / PRD-084 | PENDING_MERGE |
 | 2.2 | Producer Expansion B: Dependency Events | ✅ COMPLETE | PRD-085 / EXEC-085 | PENDING_MERGE |
 | **2.3a** | **Operational Outbox Observability** | **✅ COMPLETE** | **PRD-086 / EXEC-086** | **PENDING_MERGE** |
-| **2.3** | **First Consumer Slice: Completeness Projection** | **🔷 PRD AUTHORED** | **PRD-087** | **—** |
-| 2.4 | Consumer Expansion: Operational Telemetry | 🔲 NOT STARTED | PRD to author | — |
-| 2.5 | Observability + Sign-Off | 🔲 NOT STARTED | PRD to author | — |
+| **2.3** | **First Consumer Slice: Completeness Projection** | **✅ COMPLETE** | **PRD-087 / EXEC-087** | **`ba17a4d0`** |
+| **2.4** | **Consumer Expansion: Operational Telemetry** | **✅ COMPLETE** | **PRD-088 / EXEC-088** | **`931f5ed9`** |
+| **2.5** | **Observability + Sign-Off** | **🔷 IN PROGRESS** | **PRD-089 / EXEC-089** | **PENDING_MERGE** |
 
 **Wave 2 completion:** all producers wired + DEC-1 resolved + shift telemetry event-driven + observability surface live + sign-off artifact
 
@@ -340,105 +340,127 @@ Infrastructure fix applied: migration `20260518105926` adds `ON CONFLICT (aggreg
 
 ### Phase 2.3 — First Consumer Slice: Lifecycle-Aware Completeness Projection
 
-**Status:** 🔷 PRD AUTHORED — PRD-087 (2026-05-19)  
-**Entry gate:** Phase 2.1 exit (Class A adjustment producer wired) ✅  
-**Parallelization:** May proceed concurrently with Phase 2.3a while parallelization conditions hold (see §0)  
-**Pre-EXEC gate:** Verify `payload.visit_id` presence in migrations `20260511134903` (rpc_create_financial_txn) and `20260517234015` (rpc_create_financial_adjustment) before EXEC-087 scaffold
+**Status:** ✅ COMPLETE — PRD-087 v1.1 / EXEC-087 (commit `ba17a4d0`, 2026-05-19)
+**Entry gate:** Phase 2.1 exit (Class A adjustment producer wired) ✅
+**Parallelization:** Proceeded concurrently with Phase 2.3a; parallelization conditions held throughout (see §0)
+**Pre-EXEC gate:** Resolved — `visit_id` derived via PFT JOIN on `aggregate_id` inside `rpc_process_class_a_projection`; not in outbox payload
 
-**Scope:** First projection consumer that closes DEC-1. Currently all visit-level financial aggregates emit `completeness.status: 'unknown'` because no lifecycle-aware projection exists. This slice builds the consumer infrastructure and lifecycle signal that enables `'complete'` and `'partial'`.
+**Scope:** Resolved DEC-1. First projection consumer that closes the lifecycle-aware completeness signal: visit-level financial aggregates now emit `'complete'` / `'partial'` based on gaming-day lifecycle + Class A projection backlog. Implemented as Gate A (envelope) + Gate B (projection) per EXEC-087 cadence directive.
 
-**DEC-1 (outstanding decision):** `VisitFinancialSummaryDTO.total_in/total_out/net_amount` and `FinancialSectionDTO.totalCashIn/totalCashOut/netPosition` emit `completeness.status: 'unknown'` always. The underlying views have no gaming-day lifecycle column. Wave 2 Phase 2.3 must resolve this.
+**DEC-1 resolution:** `VisitFinancialSummaryDTO.total_in/total_out/net_amount` and `FinancialSectionDTO.totalCashIn/totalCashOut/netPosition` now emit `'complete'` / `'partial'` / `'unknown'` based on Class A projection state + gaming-day lifecycle. Affected routes: `GET /api/v1/visits/{visitId}/financial-summary` and `GET /api/v1/rating-slips/{id}/modal-data` (financial section).
 
-**What this phase builds:**
-- Projection store for visit-level Class A financial state (buy-ins, cashouts, adjustments per gaming-day window)
-- Consumer reading `buyin.recorded`, `cashout.recorded`, `adjustment.recorded` from `finance_outbox`
-- Gaming-day lifecycle signal (close event or lifecycle column enabling `'complete'`)
-- Updated completeness logic in `VisitFinancialSummaryDTO` and `FinancialSectionDTO`
+**Gate A migrations (envelope compatibility — `gaming_day` column added to `finance_outbox`):**
+- `20260519183629` — add `finance_outbox.gaming_day` (nullable)
+- `20260519183630` — `fn_finance_outbox_emit` 9-param signature (old 8-param removed)
+- `20260519183631` — amend all five producers to emit `gaming_day`
+- `20260519183632` — authoritative backfill (ledger rows from PFT.gaming_day; fill/credit/grind fail-closed)
+- `20260519183633` — harden `gaming_day NOT NULL`
+- `20260519183634` — extend immutability trigger to include `gaming_day`
 
-**Consumer constraints (non-negotiable):**
-- Must use `processed_messages` idempotency before applying any side effect
-- Must pass `origin_label` through unchanged — no upgrade from `'estimated'` to `'actual'`
-- Must not write to `player_financial_transaction` or any authoring store
-- Reads `fact_class` and `origin_label` directly — never infers from payload content
+**Gate B migrations (Class A projection + lifecycle close signal):**
+- `20260519184706` — `visit_class_a_projection` store
+- `20260519184708` — `rpc_process_class_a_projection(p_message_id)` ledger-only consumer; non-ledger rows remain `processed_at IS NULL`
+- `20260519184707` / `20260519184709` — `gaming_day_lifecycle` table + `rpc_close_gaming_day`
 
-**Deliverables (PRD-087):**
-- [ ] WS1: `gaming_day_lifecycle` table + `rpc_close_gaming_day` migration (SECURITY DEFINER, service_role)
-- [ ] WS1: `visit_class_a_projection` table + `rpc_process_class_a_projection` migration (SECURITY DEFINER, service_role)
-- [ ] WS1: `GamingDayLifecycleDTO`, `VisitClassAProjectionDTO`, `resolveCompleteness()` added to `services/player-financial/dtos.ts`
-- [ ] WS2: `services/player-financial/outbox-class-a-consumer.ts` — `runClassAProjectionConsumer()`
-- [ ] WS2: Relay route dispatch branch (`fact_class === 'ledger'` → `runClassAProjectionConsumer()`)
-- [ ] WS3: `app/api/v1/visits/[visitId]/financial-summary/route.ts` — projection + lifecycle fetch
-- [ ] WS3: `toVisitFinancialSummaryDTO()` updated to accept `CompletenessStatus` parameter
-- [ ] WS3: `app/api/v1/rating-slips/[id]/modal-data/route.ts` + `FinancialSectionDTO` mapper equivalently
-- [ ] WS4: I3 re-verify — `tests/failure/i3-idempotency-class-a-projection.test.ts`
-- [ ] WS4: I4 re-verify — `tests/failure/i4-replay-class-a-projection.test.ts`
-- [ ] WS4: Completeness signal tests (partial / complete / unknown)
-- [ ] WS5: Tracker update — DEC-1 resolved, Phase 2.3 complete
+**Application layer:**
+- `services/player-financial/crud.ts` — `getVisitClassACompleteness()` added; completeness propagated via `getVisitSummary` → mapper
+- `VisitFinancialSummaryDTO` and `FinancialSectionDTO` completeness updated through mapper chain
 
-**Exit gate:**
-- DEC-1 resolved — `completeness.status: 'partial'` when gaming day open + projection exists; `'complete'` after `rpc_close_gaming_day`; `'unknown'` when no projection data
-- Consumer idempotency test passes (I3 re-verify)
-- Replay test passes — equivalent totals after truncate + replay (I4 re-verify)
-- Wave 1 surface rendering contract not broken — `type`, `source`, `completeness` all present
-- All gates pass
+**Consumer constraints honored:**
+- `processed_messages` idempotency check before projection side effect
+- `origin_label` travels unchanged — no upgrade from `'estimated'` to `'actual'`
+- Consumer claims only `fact_class = 'ledger'`; non-ledger rows preserved for Phase 2.4
+
+**Exit gate ✅ MET (2026-05-19):**
+- Gate A: all five producers emit non-null `gaming_day`; NOT NULL hardened; immutability guard extended; no authenticated write path broken
+- Gate B: DEC-1 resolved; I3 consumer re-verification PASS (duplicate → one projection update); I4 replay re-verification PASS (truncate + replay → identical state); non-ledger rows remain `processed_at IS NULL`
+- Wave 1 surface rendering contract not broken
 
 ---
 
 ### Phase 2.4 — Consumer Expansion: Operational Telemetry Projection
 
-**Status:** 🔲 NOT STARTED  
-**Entry gate:** Phase 2.2 exit (all producers wired) + Phase 2.3 exit (consumer infrastructure established)
+**Status:** ✅ COMPLETE — PRD-088 / EXEC-088 (commit `931f5ed9`, 2026-05-21 — "feat(outbox): PRD-088 Phase 2.4 — operational telemetry projection complete")
+**Entry gate:** Phase 2.2 exit (all producers wired) ✅ + Phase 2.3 exit (consumer infrastructure + Gate A `gaming_day` envelope) ✅
 
-**Scope:** Projection consumer for Class B (grind) and Dependency Event (fills, credits) streams. Shift telemetry becomes event-driven rather than polling authoring stores.
+**Scope:** Projection consumer for Class B (grind) and Dependency Event (fills, credits) streams. Reads `grind.observed`, `fill.recorded`, `credit.recorded`. Produces shift-level operational telemetry with strict `type: 'estimated'` authority (ADR-054 R4). Closes PWB-003 (GrindBuyinPanel mounting).
 
-**Events consumed:**
-- `grind.observed` (`fact_class: 'operational'`, `origin_label: 'estimated'`)
-- `fill.recorded` (same labels)
-- `credit.recorded` (same labels)
+**Migrations:**
+- `20260521015409` — `shift_operational_projection` table (PK `(casino_id, gaming_day, table_id)`; `grind_volume_cents BIGINT`, `fill_total_cents BIGINT`, `credit_total_cents BIGINT`, `event_count BIGINT`, `updated_at TIMESTAMPTZ`)
+- `20260521022656` — `rpc_claim_operational_outbox_batch(p_batch_size INT)` — SECURITY DEFINER, service_role; claims `fact_class='operational' AND delivery_attempts < 5` with FOR UPDATE SKIP LOCKED
+- `20260521022703` — `rpc_process_operational_projection(p_message_id)` — SECURITY DEFINER, service_role; returns `'processed' | 'duplicate' | 'skipped_ledger' | 'skipped_unknown' | 'not_found'`; stamps `processed_at` atomically (DEC-EXEC-1)
+- `20260521022708` — backlog index `finance_outbox(casino_id, fact_class, delivery_attempts, processed_at)`
 
-**Authority rule:** All three event types carry `origin_label: 'estimated'`. Mixed-class surfaces aggregating these alongside Class A events must degrade to `'estimated'` (Actual > Observed > Estimated hierarchy). No surface may show a combined operational + ledger total without degradation labeling.
+**Application layer:**
+- `services/player-financial/outbox-operational-consumer.ts` — `runOperationalConsumer()` (batch_size=25, stop-before-deadline)
+- `app/api/internal/outbox-relay/route.ts` — operational branch added; dual-branch response `{classA, operational}`
+- `app/api/internal/outbox-observability/route.ts` — 3-way backlog breakdown `operationalBacklog: {claimable, deadLetter}` (DEC-EXEC-6)
+- `services/player-financial/crud.ts` — `getShiftOperationalCompleteness(supabase: SupabaseClient | null, ...)` with 5-step completeness logic (`unknown` / `complete-zero` / `partial-no-lifecycle` / `partial-with-backlog` / `complete`); always `type: 'estimated'` (ADR-054 R4)
+- `app/api/v1/table-context/operational-projection/route.ts` — GET; `casinoId` from `rlsContext` only (DEC-EXEC-4); 400 on invalid params
+- `services/player-financial/dtos.ts` — `OperationalProjectionResponseDTO`, `OperationalConsumerResultDTO` added
+- `services/player-financial/schemas.ts` — `operationalProjectionQuerySchema` (ADR-013 compliant; `uuidFormat` permissive regex)
+- `hooks/table-context/use-buyin-telemetry.ts` — interface changed from `shiftWindow` to `gamingDay: string` (DEC-EXEC-2)
+- **PWB-003 closure:** `GrindBuyinPanel` mounted in `components/pit-panels/tables-panel.tsx` via `panel-container.tsx`; `gamingDay` threaded `PanelContainer → TablesPanel → GrindBuyinPanel` (DEC-EXEC-2)
 
-**Deliverables:**
-- [ ] Operational projection store migration (shift-level Class B + Dependency Event state)
-- [ ] Consumer reading `grind.observed`, `fill.recorded`, `credit.recorded` from `finance_outbox`
-- [ ] `processed_messages` idempotency wired for operational consumer
-- [ ] Authority degradation enforced: mixed-class aggregates degrade to `'estimated'`
-- [ ] Completeness: `'partial'` during open shift, `'complete'` on gaming-day close
-- [ ] I4 replay test for operational projection
-- [ ] Shift telemetry surfaces updated to consume projection (not poll authoring store)
-- [ ] type-check, lint, build exit 0
-
-**Exit gate:**
-- Shift telemetry receives fresh Class B + Dependency Event data via outbox
-- Authority labels correct: `type: 'estimated'` on all operationally-derived values
-- Mixed-class surface shows degraded authority (not spurious `'actual'`)
-- Completeness signals meaningful during shift lifecycle
-- All gates pass
+**Exit gate ✅ MET (2026-05-21):**
+- Consumer certified: `rpc_claim_operational_outbox_batch` + `rpc_process_operational_projection` wired and tested
+- `GrindBuyinPanel` mounted in `TablesPanel` — `grind.observed` rows producible via real operator workflow (PWB-003 closed)
+- Fill/credit operator UI gap acknowledged — `fill.recorded` / `credit.recorded` require direct API call; operator UI deferred to PWB-002
+- ADR-054 R4 authority invariant: `type: 'estimated'` on all `OperationalProjectionResponseDTO` values; test suite passes
+- DEC-EXEC-4: `casinoId` from `rlsContext` only; attacker-supplied casinoId query param rejected
+- I3 consumer idempotency re-verified at operational consumer layer
+- I4 replay re-verified at operational consumer layer
+- 58 tests across 6 suites — 100% pass; type-check exit 0; lint exit 0
 
 ---
 
 ### Phase 2.5 — Observability + Sign-Off
 
-**Status:** 🔲 NOT STARTED  
-**Entry gate:** Phase 2.4 exit
+**Status:** 🔷 IN PROGRESS — PRD-089 / EXEC-089 (2026-05-21)
+**Entry gate:** Phase 2.4 exit ✅ (commit `931f5ed9`, 2026-05-21)
 
-**Scope:** Minimal relay health observability, outbox retention policy, and Wave 2 sign-off artifact.
+**Scope:** Closing slice of Wave 2 — three deliverables exactly: (1) structured `outbox_relay_cycle` per-cycle log emission (FR-1 authenticated + FR-2 unauthenticated variants); (2) 7-day retention path for processed `finance_outbox` rows via cron-driven SECURITY DEFINER RPC + partial index; (3) `WAVE-2-SIGN-OFF.md` ratifying PROD-ANCHOR-STD-001 and reconciling post-Wave-2 backlog against PRD-088 closure. No new producers, consumers, or UI surfaces.
 
-**Deliverables:**
-- [ ] `outbox_backlog_size` log line in relay worker (count of `processed_at IS NULL` rows per cycle)
-- [ ] `processing_lag_ms` log line (elapsed from `finance_outbox.created_at` to `processed_at`)
-- [ ] Retention policy for processed rows older than 7 days
-- [ ] Wave 2 sign-off artifact: `docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-2-SIGN-OFF.md`
-  - Summary of all phases completed
-  - I1–I4 proof record
-  - DEC-1 resolution record
-  - Known residual gaps (multi-consumer fan-out, CDC relay, external consumer contract)
+**WS1_LOG — Relay cycle log emission ✅ COMPLETE:**
+- `outbox_relay_cycle` structured log line per relay invocation, two schema variants (`auth_failed: false` and `auth_failed: true`)
+- Branch lag-sample contract: `lagSamplesMs: number[]` on Class A and operational consumer branch results; DB-clock derived (`Date.parse(processed_at) - Date.parse(created_at)` for `processedEventIds`); duplicate / skipped / failed / claim-error / auth-fail outcomes excluded by construction
+- Backlog count predicates match `rpc_claim_class_a_outbox_batch` and `rpc_claim_operational_outbox_batch` claim paths verbatim (including operational `event_type` whitelist drift detected and propagated)
+- GET export added to `/api/internal/outbox-relay` for Vercel cron; GET + POST share `runRelayCycle`
+- HTTP response body strips `lagSamplesMs` to preserve prior contract
+- 30 new tests: `outbox-relay-log-emission.test.ts` (17) + `lag-aggregates.test.ts` (13)
 
-**Exit gate:**
-- Backlog and lag metrics appear in relay logs
-- Retention policy active
-- Sign-off document authored and approved
-- All gates pass
+**WS2_RETENTION — Cleanup RPC + cron + integration tests ✅ COMPLETE:**
+- Migration `20260521142441_create_rpc_cleanup_outbox_processed.sql`:
+  - `rpc_cleanup_outbox_processed(p_max_rows INTEGER DEFAULT 1000) RETURNS INTEGER` — SECURITY DEFINER, `SET search_path = ''`, EXECUTE granted to service_role only
+  - CTE-based DELETE (`WITH doomed AS (... FOR UPDATE SKIP LOCKED), deleted AS (DELETE ... USING doomed ...)`)
+  - `p_max_rows` validation rejects NULL / < 1 / > 1000 before row locks
+  - Partial index `idx_finance_outbox_processed_retention ON public.finance_outbox (processed_at, event_id) WHERE processed_at IS NOT NULL`
+- `app/api/internal/outbox-cleanup/route.ts` — GET-only with `CRON_SECRET` bearer auth + structured `outbox_cleanup_cycle` log line (ok / error / auth_fail variants); POST not exported
+- `vercel.json` daily cron entry `0 7 * * *`
+- 21 new tests: route unit (11) + integration (10) + advisory planner-evidence behind `RUN_PLANNER_EVIDENCE_TESTS`
+
+**WS3_SIGNOFF — Sign-off artifact ✅ COMPLETE:**
+- `docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-2-SIGN-OFF.md` authored with 8 sections per PRD §6.3
+- GR-1 canonical phrase verbatim (3 occurrences)
+- P1-RETENTION-REPLAY-BOUNDARY-GATE triple assertion satisfied (§8.2.1 boundary stated / §8.2.2 authoring-store reseed naming all 5 stores / §8.2.3 FIB-ADR amendment requirement)
+- Principle 9 four-level (L1–L4) certification mapping per producer
+- Three-category post-Wave-2 backlog reconciliation: §6.1 unresolved (PWB-001 / PWB-002 / W2-OBS-CASHOUT-PRODUCER-001) / §6.2 closed-in-Phase-2.4 (PWB-003 with commit `931f5ed9`) / §6.3 deferred infrastructure (fan-out / CDC / external contract)
+
+**WS4_GOVERNANCE — Standard ratification + tracker re-sync ✅ COMPLETE (this update):**
+- `PRODUCER-ANCHOR-RESOLUTION-STANDARD.yaml` status promoted `accepted_for_wave_2_5_signoff` → `ratified` with `ratified_by: WAVE-2-SIGN-OFF.md` + `ratified_date: 2026-05-21`
+- `WAVE-2-TRACKER.json` cursor advanced; Phase 2.5 entry populated; Phase 2.3 commit `ba17a4d0` recorded; audit-patch applications logged
+- `WAVE-2-PROGRESS-TRACKER.md` reconciled (this file)
+- `actions/ROLLOUT-TRACKER.json` cursor advanced to Phase 2.5
+
+**Audit patches applied (6):** P0-PHASE-24-EVIDENCE-GATE / P1-TEST-GATE-ORDERING / P1-LAG-SAMPLE-CLOCK-CONTRACT / P1-BACKLOG-CLAIMABILITY-DEFINITION / P1-RETENTION-REPLAY-BOUNDARY-GATE / P2-EXPLAIN-INDEX-BRITTLENESS.
+
+**Exit gate (pending Phase 4 DoD):**
+- All four workstreams above complete ✅
+- Phase 1 gates PASS (type-check / schema-validation / lint / test-pass with `RUN_INTEGRATION_TESTS=true`) ✅
+- Phase 2 lint gate (npm run lint -- --max-warnings=0) — pending after WS4 edits
+- Devils-advocate review of `WAVE-2-SIGN-OFF.md` — no unresolved P0 findings (Phase 4 DoD gate per PRD-089 §8)
+- Merge gate `npm run test:verify` (with `RUN_INTEGRATION_TESTS=true`) — pending on PR
+- Pre-merge: address dev-env finding (`.env` vs `.env.local` precedence in `jest.setup.js`) — non-blocking for documentation workstreams; blocking for merge per PRD-089 §8
 
 ---
 
@@ -454,13 +476,14 @@ Infrastructure fix applied: migration `20260518105926` adds `ON CONFLICT (aggreg
 
 ---
 
-## 9. Dormant Workstreams (completed through Phase 2.1 / 2.2)
+## 9. Dormant Workstreams (completed through Phase 2.4)
 
-| ID | Producer | Category | Status |
+| ID | Producer / item | Category | Status |
 |----|----------|----------|--------|
-| WS_PRODUCER_ADJUSTMENT | `rpc_create_financial_adjustment` | Class A (Authority Fact) | ✅ COMPLETE (Phase 2.1) |
-| WS_PRODUCER_FILL | `rpc_request_table_fill` | Dependency Event | ✅ COMPLETE (Phase 2.2) |
-| WS_PRODUCER_CREDIT | `rpc_request_table_credit` | Dependency Event | ✅ COMPLETE (Phase 2.2) |
+| WS_PRODUCER_ADJUSTMENT | `rpc_create_financial_adjustment` | Class A (Authority Fact) | ✅ COMPLETE (Phase 2.1, RPC-certified; workflow gap → PWB-001) |
+| WS_PRODUCER_FILL | `rpc_request_table_fill` | Dependency Event | ✅ COMPLETE (Phase 2.2, RPC-certified; operator UI gap → PWB-002) |
+| WS_PRODUCER_CREDIT | `rpc_request_table_credit` | Dependency Event | ✅ COMPLETE (Phase 2.2, RPC-certified; operator UI gap → PWB-002) |
+| PWB-003 | `GrindBuyinPanel` mounting | Layer 5 (consumer reachability) | ✅ CLOSED (Phase 2.4, PRD-088 / EXEC-088, commit `931f5ed9`) — panel mounted in `TablesPanel` via `panel-container.tsx`; `gamingDay` threaded through prop chain per DEC-EXEC-2 |
 
 ---
 

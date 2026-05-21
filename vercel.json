@@ -38,6 +38,10 @@
     {
       "path": "/api/internal/outbox-relay",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/internal/outbox-cleanup",
+      "schedule": "0 7 * * *"
     }
   ]
 }

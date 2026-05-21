@@ -10,8 +10,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from '@/types/database.types';
 import type { OperationalProjectionResponseDTO } from '@/services/player-financial/dtos';
+import type { Database } from '@/types/database.types';
 
 import { getShiftOperationalCompleteness } from '../crud';
 
