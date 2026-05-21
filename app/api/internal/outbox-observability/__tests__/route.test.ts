@@ -1,24 +1,24 @@
 /** @jest-environment node */
 
 /**
- * Unit tests for GET /api/internal/outbox-observability (PRD-086 WS2).
+ * Unit tests for GET /api/internal/outbox-observability (PRD-086 WS2 + PRD-088 WS2).
  *
  * Auth model:
  *   401 — no session (getUser returns null user)
  *   403 — authenticated but staff.role !== 'admin'
  *   400 — invalid status or non-UUID search_id
- *   200 — admin session + valid params → { health, events }
+ *   200 — admin session + valid params → { health, events, operationalBacklog }
  *
  * Two-client pattern:
  *   createClient  → session verification + staff role lookup
- *   createServiceClient → RPC calls (constructed only after auth passes)
+ *   createServiceClient → RPC calls + finance_outbox count queries (after auth)
+ *
+ * Phase 2.4 (PRD-088): operationalBacklog: { claimable, deadLetter } added.
  */
 
 import { GET } from '../route';
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
-// jest.mock is hoisted before const declarations — configure return values
-// in beforeEach via jest.requireMock() to avoid TDZ errors.
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
@@ -53,6 +53,51 @@ function buildSessionClient(
     auth: { getUser },
     from: jest.fn().mockReturnValue(queryChain),
   };
+}
+
+/**
+ * Build a service client mock for the Phase 2.4 route.
+ *
+ * Promise.all order:
+ *   [0] rpc('rpc_get_outbox_relay_health')
+ *   [1] rpc('rpc_get_outbox_event_page')
+ *   [2] from('finance_outbox')...lt(5)   — claimable count
+ *   [3] from('finance_outbox')...gte(5)  — dead-letter count
+ */
+function buildServiceClient(opts: {
+  health?: unknown;
+  events?: unknown[];
+  claimable?: number;
+  deadLetter?: number;
+}) {
+  const mockRpc = jest
+    .fn()
+    .mockResolvedValueOnce({
+      data: opts.health ? [opts.health] : [],
+      error: null,
+    })
+    .mockResolvedValueOnce({ data: opts.events ?? [], error: null });
+
+  function makeCountChain(count: number) {
+    const chain: Record<string, jest.Mock> = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      is: jest.fn().mockReturnThis(),
+    };
+    chain['lt'] = jest.fn().mockResolvedValue({ count, error: null });
+    chain['gte'] = jest.fn().mockResolvedValue({ count, error: null });
+    chain['select'] = jest.fn().mockReturnValue(chain);
+    chain['eq'] = jest.fn().mockReturnValue(chain);
+    chain['is'] = jest.fn().mockReturnValue(chain);
+    return chain;
+  }
+
+  const fromFn = jest
+    .fn()
+    .mockReturnValueOnce(makeCountChain(opts.claimable ?? 0))
+    .mockReturnValueOnce(makeCountChain(opts.deadLetter ?? 0));
+
+  return { rpc: mockRpc, from: fromFn };
 }
 
 const MOCK_HEALTH = {
@@ -166,15 +211,13 @@ describe('GET /api/internal/outbox-observability — success', () => {
     );
   });
 
-  it('returns 200 with health and events for admin session', async () => {
+  it('returns 200 with health, events, and operationalBacklog for admin session', async () => {
     const { createServiceClient } = jest.requireMock<{
       createServiceClient: jest.Mock;
     }>('@/lib/supabase/service');
-    const mockRpc = jest
-      .fn()
-      .mockResolvedValueOnce({ data: [MOCK_HEALTH], error: null })
-      .mockResolvedValueOnce({ data: MOCK_EVENTS, error: null });
-    createServiceClient.mockReturnValue({ rpc: mockRpc });
+    createServiceClient.mockReturnValue(
+      buildServiceClient({ health: MOCK_HEALTH, events: MOCK_EVENTS }),
+    );
 
     const res = await GET(makeRequest());
 
@@ -182,37 +225,80 @@ describe('GET /api/internal/outbox-observability — success', () => {
     const body = await res.json();
     expect(body).toHaveProperty('health');
     expect(body).toHaveProperty('events');
+    expect(body).toHaveProperty('operationalBacklog');
     expect(body.health.pending_count).toBe(2);
     expect(body.events).toHaveLength(1);
     expect(body.events[0].event_type).toBe('buyin.recorded');
+  });
+
+  it('operationalBacklog.claimable and .deadLetter are returned correctly', async () => {
+    const { createServiceClient } = jest.requireMock<{
+      createServiceClient: jest.Mock;
+    }>('@/lib/supabase/service');
+    createServiceClient.mockReturnValue(
+      buildServiceClient({
+        health: MOCK_HEALTH,
+        events: [],
+        claimable: 4,
+        deadLetter: 2,
+      }),
+    );
+
+    const res = await GET(makeRequest());
+    const body = await res.json();
+
+    expect(body.operationalBacklog).toEqual({ claimable: 4, deadLetter: 2 });
+  });
+
+  it('claimable queries delivery_attempts < 5; deadLetter queries delivery_attempts >= 5', async () => {
+    const { createServiceClient } = jest.requireMock<{
+      createServiceClient: jest.Mock;
+    }>('@/lib/supabase/service');
+    const serviceClient = buildServiceClient({
+      health: MOCK_HEALTH,
+      events: [],
+    });
+    createServiceClient.mockReturnValue(serviceClient);
+
+    await GET(makeRequest());
+
+    // fromFn called twice for the two backlog queries
+    expect(serviceClient.from).toHaveBeenCalledTimes(2);
+    expect(serviceClient.from).toHaveBeenCalledWith('finance_outbox');
+
+    // First chain ends with .lt('delivery_attempts', 5) → claimable
+    const claimableChain = serviceClient.from.mock.results[0].value;
+    expect(claimableChain.lt).toHaveBeenCalledWith('delivery_attempts', 5);
+
+    // Second chain ends with .gte('delivery_attempts', 5) → deadLetter
+    const deadLetterChain = serviceClient.from.mock.results[1].value;
+    expect(deadLetterChain.gte).toHaveBeenCalledWith('delivery_attempts', 5);
   });
 
   it('derives casino_id from staff row — not from request query params', async () => {
     const { createServiceClient } = jest.requireMock<{
       createServiceClient: jest.Mock;
     }>('@/lib/supabase/service');
-    const mockRpc = jest
-      .fn()
-      .mockResolvedValueOnce({ data: [MOCK_HEALTH], error: null })
-      .mockResolvedValueOnce({ data: [], error: null });
-    createServiceClient.mockReturnValue({ rpc: mockRpc });
+    const serviceClient = buildServiceClient({
+      health: MOCK_HEALTH,
+      events: [],
+    });
+    createServiceClient.mockReturnValue(serviceClient);
 
     await GET(makeRequest({ casino_id: 'attacker-casino' }));
 
-    expect(mockRpc).toHaveBeenCalledTimes(2);
-    expect(mockRpc.mock.calls[0][1].p_casino_id).toBe('casino-abc');
-    expect(mockRpc.mock.calls[1][1].p_casino_id).toBe('casino-abc');
+    expect(serviceClient.rpc).toHaveBeenCalledTimes(2);
+    expect(serviceClient.rpc.mock.calls[0][1].p_casino_id).toBe('casino-abc');
+    expect(serviceClient.rpc.mock.calls[1][1].p_casino_id).toBe('casino-abc');
   });
 
   it('passes filter params correctly to rpc_get_outbox_event_page', async () => {
     const { createServiceClient } = jest.requireMock<{
       createServiceClient: jest.Mock;
     }>('@/lib/supabase/service');
-    const mockRpc = jest
-      .fn()
-      .mockResolvedValueOnce({ data: [MOCK_HEALTH], error: null })
-      .mockResolvedValueOnce({ data: [], error: null });
-    createServiceClient.mockReturnValue({ rpc: mockRpc });
+    createServiceClient.mockReturnValue(
+      buildServiceClient({ health: MOCK_HEALTH, events: [] }),
+    );
 
     await GET(
       makeRequest({
@@ -222,7 +308,11 @@ describe('GET /api/internal/outbox-observability — success', () => {
       }),
     );
 
-    const eventsArgs = mockRpc.mock.calls[1][1];
+    const eventsArgs = (
+      jest.requireMock<{ createServiceClient: jest.Mock }>(
+        '@/lib/supabase/service',
+      ).createServiceClient.mock.results[0].value.rpc as jest.Mock
+    ).mock.calls[1][1];
     expect(eventsArgs.p_event_type).toBe('buyin.recorded');
     expect(eventsArgs.p_status).toBe('pending');
     expect(eventsArgs.p_search_id).toBe('a0000000-0000-0000-0000-000000000001');

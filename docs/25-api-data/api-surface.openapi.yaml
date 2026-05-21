@@ -626,6 +626,69 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/DealerRotation'
+  /table-context/operational-projection:
+    get:
+      summary: Get operational projection totals for a table+day
+      description: >
+        Read-only projection route exception. Returns grind/fill/credit totals and
+        completeness status from shift_operational_projection (service-role-only table).
+        casinoId is derived from authenticated session context — not from query params.
+        type is always 'estimated' per ADR-054 R4 authority degradation rule.
+      tags: [TableContext]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: gamingDay
+          in: query
+          required: true
+          description: Gaming day date (YYYY-MM-DD)
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+            example: '2026-05-21'
+        - name: tableId
+          in: query
+          required: true
+          description: Gaming table UUID
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: Operational projection totals and completeness
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [totalCents, count, completeness, type]
+                        properties:
+                          totalCents:
+                            type: integer
+                            description: Sum of grind_volume_cents + fill_total_cents + credit_total_cents
+                          count:
+                            type: integer
+                            description: Total event count from shift_operational_projection
+                          completeness:
+                            type: object
+                            required: [status]
+                            properties:
+                              status:
+                                type: string
+                                enum: [complete, partial, unknown]
+                          type:
+                            type: string
+                            enum: [estimated]
+                            description: Always 'estimated' — ADR-054 R4 authority degradation
+        '400':
+          description: Invalid gamingDay or tableId
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
   /loyalty/mid-session-reward:
     post:
       summary: Issue mid-session reward

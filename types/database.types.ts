@@ -3006,6 +3006,54 @@ export type Database = {
           },
         ]
       }
+      shift_operational_projection: {
+        Row: {
+          casino_id: string
+          credit_total_cents: number
+          event_count: number
+          fill_total_cents: number
+          gaming_day: string
+          grind_volume_cents: number
+          table_id: string
+          updated_at: string
+        }
+        Insert: {
+          casino_id: string
+          credit_total_cents?: number
+          event_count?: number
+          fill_total_cents?: number
+          gaming_day: string
+          grind_volume_cents?: number
+          table_id: string
+          updated_at?: string
+        }
+        Update: {
+          casino_id?: string
+          credit_total_cents?: number
+          event_count?: number
+          fill_total_cents?: number
+          gaming_day?: string
+          grind_volume_cents?: number
+          table_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_operational_projection_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_operational_projection_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff: {
         Row: {
           casino_id: string
@@ -4725,6 +4773,32 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      rpc_claim_operational_outbox_batch: {
+        Args: { p_batch_size?: number }
+        Returns: {
+          aggregate_id: string
+          casino_id: string
+          created_at: string
+          delivery_attempts: number
+          event_id: string
+          event_type: string
+          fact_class: string
+          gaming_day: string
+          last_attempted_at: string | null
+          last_error: string | null
+          origin_label: string
+          payload: Json
+          player_id: string | null
+          processed_at: string | null
+          table_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "finance_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       rpc_claim_outbox_batch: {
         Args: { p_batch_size?: number }
         Returns: {
@@ -5967,6 +6041,10 @@ export type Database = {
         }
       }
       rpc_process_class_a_projection: {
+        Args: { p_message_id: string }
+        Returns: string
+      }
+      rpc_process_operational_projection: {
         Args: { p_message_id: string }
         Returns: string
       }

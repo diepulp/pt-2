@@ -392,3 +392,44 @@ export type OutboxAdminEventDTO = Pick<
  */
 export type OutboxRelayHealthDTO =
   Database['public']['Functions']['rpc_get_outbox_relay_health']['Returns'][number];
+
+// === Operational Consumer DTOs (Wave 2 Phase 2.4 — PRD-088) ===
+
+/**
+ * DTO boundary result for the operational outbox consumer.
+ * Internal OperationalConsumerResult uses errors: Error[]; this DTO serializes to string[].
+ * Skipped (skipped_ledger, skipped_unknown) and not_found outcomes are represented as errors.
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Consumer result DTO; not a table projection, errors serialized at boundary
+export type OperationalConsumerResultDTO = {
+  processed: number;
+  duplicate: number;
+  errors: string[];
+};
+
+/**
+ * Operational backlog breakdown for observability surfaces.
+ * Distinguishes claimable rows (delivery_attempts < 5) from dead-letter rows (>= 5).
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Observability aggregate; not a direct table projection
+export type OutboxOperationalBacklogDTO = {
+  claimable: number;
+  deadLetter: number;
+};
+
+// === Operational Projection Response DTO (Wave 2 Phase 2.4 — PRD-088) ===
+
+/**
+ * Response shape for GET /api/v1/table-context/operational-projection.
+ * Derived from shift_operational_projection via service-role read.
+ *
+ * type is always 'estimated' per ADR-054 R4 authority degradation rule —
+ * no layer may upgrade shift_operational_projection-derived values to 'actual'.
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- BFF projection response; aggregates service-role row with completeness status
+export type OperationalProjectionResponseDTO = {
+  totalCents: number;
+  count: number;
+  completeness: { status: 'complete' | 'partial' | 'unknown' };
+  type: 'estimated';
+};

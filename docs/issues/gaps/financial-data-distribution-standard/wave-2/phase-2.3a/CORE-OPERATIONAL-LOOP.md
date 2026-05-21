@@ -42,11 +42,11 @@ Before running Phase 1, understand that the 6 producers fall into three categori
 | Category | Producers | Trigger Surface | Status |
 | -------- | --------- | --------------- | ------ |
 | **A — Greenfield backend-only** | `fill.recorded`, `credit.recorded` | No UI exists. API route (`POST /api/v1/table-context/fills`, `/credits`) is wired for hardware integrations. Trigger via direct authenticated HTTP call. Proof scripts have zero coverage. | Backend correct; UI is future scope |
-| **B — Orphaned component** | `grind.observed` | `GrindBuyinPanel` + `useLogGrindBuyin` hook exist but the component is not mounted in any page. Trigger via direct browser `supabase.rpc('rpc_log_table_buyin_telemetry', { p_telemetry_kind: 'GRIND_BUYIN', ... })` in an authenticated session, or mount the panel temporarily. | Component ready; not in page tree |
-| **C — Application UI** | `buyin.recorded`, `cashout.recorded` | Standard operator workflow via the rating slip modal. | Full UI path available |
-| **D — Known Layer 1 gap** | `adjustment.recorded` | UI exists (rating-slip modal + MTL compliance dashboard) but `original_txn_id` is never passed to the RPC. ADR-057 gate silently skips outbox emission — the PFT is written, the surface shows no row, no error is raised. Step 2 will always produce a Layer 1 failure in current state. | Gap documented: W2-OBS-ANCHOR-COVERAGE-001 / PROD-ANCHOR-STD-001 |
+| **B — Mounted component** | `grind.observed` | `GrindBuyinPanel` is now mounted in `TablesPanel` via `PanelContainer` (Phase 2.4 / PRD-088, 2026-05-21). Trigger via the operator workflow: select a table in the pit panel; the panel renders; use the grind buy-in form. Direct RPC call still valid for testing. | ✅ MOUNTED — Phase 2.4 closed this gap |
+| **C — Application UI** | `buyin.recorded` | Standard operator workflow via the rating slip modal. | Full UI path available |
+| **D — Known Layer 1 gap** | `adjustment.recorded`, `cashout.recorded` | `adjustment.recorded`: UI exists but `original_txn_id` is never passed — ADR-057 gate silently skips emission. `cashout.recorded`: `rpc_create_financial_txn` hardcodes `'buyin.recorded'` with no direction branch; no producer path emits this event type. In both cases the PFT is written, the surface shows no row, no error is raised. Step 2 will always produce a Layer 1 failure. | `adjustment.recorded`: W2-OBS-ANCHOR-COVERAGE-001 / PROD-ANCHOR-STD-001. `cashout.recorded`: W2-OBS-CASHOUT-PRODUCER-001 |
 
-Category D means `adjustment.recorded` **cannot reach HEALTHY** under the current wiring. Do not mistake the clean observability surface for a passing result — silence is the failure mode. See Phase 5 for adjusted trust gate criteria.
+Category D means `adjustment.recorded` and `cashout.recorded` **cannot reach HEALTHY** under the current wiring. Do not mistake the clean observability surface for a passing result — silence is the failure mode for both. See Phase 5 for adjusted trust gate criteria.
 
 ---
 
@@ -59,7 +59,7 @@ Run the core validation loop for each of the 6 event types in this order. The se
 | 1     | `fill.recorded`       | Table fill (chips: cage → table)   | `operational`         | `estimated`             | `—` (null — table-level) | A — direct API   |
 | 2     | `credit.recorded`     | Table credit (chips: table → cage) | `operational`         | `estimated`             | `—` (null — table-level) | A — direct API   |
 | 3     | `buyin.recorded`      | Player buy-in                      | `ledger`              | `actual`                | required                 | C — UI           |
-| 4     | `cashout.recorded`    | Player cashout                     | `ledger`              | `actual`                | required                 | C — UI           |
+| 4     | `cashout.recorded`    | Player cashout                     | `ledger`              | `actual`                | required                 | D — known gap    |
 | 5     | `adjustment.recorded` | Chip adjustment                    | `ledger`              | `actual`                | required                 | D — known gap    |
 | 6     | `grind.observed`      | Grind/rated play observation       | `operational`         | `observed`              | `—` (null — table-level) | B — orphaned component |
 
@@ -69,8 +69,8 @@ Run the core validation loop for each of the 6 event types in this order. The se
 
 - **Category A** (`fill.recorded`, `credit.recorded`): Issue an authenticated `POST` to `/api/v1/table-context/fills` or `/credits` with a valid staff JWT. Include `table_id`, `amount_cents`, `delivered_by`, `received_by`, `slip_no`, and a unique `request_id`. An active table session must exist. This exercises the full server-mediated chain.
 - **Category B** (`grind.observed`): From an authenticated browser session, call `supabase.rpc('rpc_log_table_buyin_telemetry', { p_table_id, p_amount_cents, p_telemetry_kind: 'GRIND_BUYIN', p_source: 'pit_manual', p_idempotency_key })`. Alternatively, temporarily mount `GrindBuyinPanel` into any table-context page.
-- **Category C** (`buyin.recorded`, `cashout.recorded`): Trigger via the normal operator workflow in the application.
-- **Category D** (`adjustment.recorded`): Trigger via the rating-slip modal adjustment flow or MTL compliance dashboard. **Expected outcome: no outbox row is written.** Proceed directly to the Layer 1 failure diagnosis — this is a known, documented gap, not an environment issue.
+- **Category C** (`buyin.recorded`): Trigger via the normal operator workflow in the application.
+- **Category D** (`adjustment.recorded`, `cashout.recorded`): Trigger via the normal operator path. **Expected outcome: no outbox row is written.** Proceed directly to the Layer 1 failure diagnosis — these are confirmed, documented gaps, not environment issues. `adjustment.recorded` gap: W2-OBS-ANCHOR-COVERAGE-001. `cashout.recorded` gap: W2-OBS-CASHOUT-PRODUCER-001.
 
 **Step 2 — Open the surface, click Refresh.** Verify the event row appears. If no row: Layer 1 failure (producer RPC did not write to `finance_outbox`). Stop and diagnose.
 
@@ -143,7 +143,7 @@ Layer 4 — Relay:     delivery_attempts > 0?
   YES → consumer throwing. Expand row. Read last_error. Fix consumer.
   ≥ 3 → poison. Consumer consistently failing. Root cause: consumer exception / not deployed / infra.
 
-Layer 5 — Consumer:  Deferred (Phase 2.3/PRD-087 projection consumers not yet live).
+Layer 5 — Consumer:  ✅ LIVE as of Phase 2.3 (PRD-087, Class A: visit_class_a_projection) and Phase 2.4 (PRD-088, operational: shift_operational_projection + GET /api/v1/table-context/operational-projection).
 ```
 
 ---
@@ -176,21 +176,21 @@ This is the script that demonstrates causal coherence to stakeholders. Run this 
 | ------------------------------------------------------------- | ---------------------------------------------------------- | ----- |
 | Producers 1–2 certified HEALTHY via direct API call           | `fill.recorded` and `credit.recorded` rows present, relayed | Category A — no UI; API call is the canonical trigger |
 | Producer 3 certified HEALTHY via UI workflow                  | `buyin.recorded` row present, envelope correct, relayed    | |
-| Producer 4 certified HEALTHY via UI workflow                  | `cashout.recorded` row present, envelope correct, relayed  | |
+| Producer 4 diagnosed as Layer 1 gap (not HEALTHY)            | Step 2 confirms no row written; root cause: W2-OBS-CASHOUT-PRODUCER-001 | `rpc_create_financial_txn` hardcodes `buyin.recorded` — direction branch absent |
 | Producer 5 diagnosed as Layer 1 gap (not HEALTHY)            | Step 2 confirms no row written; root cause: W2-OBS-ANCHOR-COVERAGE-001 | PROD-ANCHOR-STD-001 governs remediation path |
-| Producer 6 certified HEALTHY via direct RPC or mounted panel  | `grind.observed` row present, envelope correct, relayed    | Category B — GrindBuyinPanel not mounted; use direct RPC |
+| Producer 6 certified HEALTHY via UI workflow or direct RPC    | `grind.observed` row present, envelope correct, relayed    | Category B resolved — `GrindBuyinPanel` mounted in Phase 2.4; standard operator workflow now available |
 | Zero envelope drift detected across certified producers       | No mismatched `fact_class` / `origin_label` rows found     | |
 | Relay processes all test events within one cycle (~30s)       | `processed_at` consistently set within 60s                 | |
 | No poison candidates generated by producer certification runs | `poison_candidate_count` = 0 throughout                    | |
 | UUIDv7 replay ordering verified                               | Two-fill test: correct lexicographic order, both processed | |
 | Pilot demo script run successfully end-to-end                 | Demo outcome: HEALTHY (`buyin.recorded` path)              | |
 
-**Adjusted trust gate rationale:** The original criterion of "6 × HEALTHY" is not achievable in the current state for `adjustment.recorded` (Category D gap) or via UI workflows for `fill.recorded`, `credit.recorded`, and `grind.observed` (Categories A and B). The gate above reflects what the system can certify honestly:
+**Adjusted trust gate rationale:** The original criterion of "6 × HEALTHY" is not achievable in the current state for `adjustment.recorded` and `cashout.recorded` (both Category D gaps) or via UI workflows for `fill.recorded`, `credit.recorded`, and `grind.observed` (Categories A and B). The gate above reflects what the system can certify honestly:
 
-- 5 producers reachable and certifiable (4 HEALTHY, 1 diagnosed gap)
-- 1 producer (`adjustment.recorded`) formally recorded as Layer 1 gap pending PROD-ANCHOR-STD-001 remediation
+- 4 producers reachable and certifiable (3 HEALTHY, 2 diagnosed gaps)
+- 2 producers (`adjustment.recorded`, `cashout.recorded`) formally recorded as Layer 1 gaps pending remediation
 
-The surface is operationally trusted for the certified producers when all rows in the table above pass. Phase 2.3 (PRD-087, Lifecycle-Aware Completeness Projection) may proceed with the understanding that `adjustment.recorded` coverage is partial until the anchor resolution standard is enforced. The Layer 5 (consumer) column of the layer isolation protocol will be activatable once PRD-087 projection consumers are deployed.
+The surface is operationally trusted for the certified producers when all rows in the table above pass. Phase 2.3 (PRD-087) and Phase 2.4 (PRD-088) projection consumers are now live — Layer 5 is activatable in the layer isolation protocol. `adjustment.recorded` and `cashout.recorded` coverage remains absent (Category D gaps); `total_out` in the Class A projection will remain 0 until `cashout.recorded` is wired (W2-OBS-CASHOUT-PRODUCER-001). Producer 6 (`grind.observed`) is no longer Category B orphaned — `GrindBuyinPanel` was mounted in Phase 2.4.
 
 ---
 

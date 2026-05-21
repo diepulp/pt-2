@@ -1,15 +1,21 @@
 import { NextResponse } from 'next/server';
 
 import { createServiceClient } from '@/lib/supabase/service';
-import type { FinancialOutboxEventDTO } from '@/services/player-financial/dtos';
+import type {
+  FinancialOutboxEventDTO,
+  OperationalConsumerResultDTO,
+} from '@/services/player-financial/dtos';
 import { runConsumer } from '@/services/player-financial/outbox-consumer';
+import { runOperationalConsumer } from '@/services/player-financial/outbox-operational-consumer';
 
 const BATCH_SIZE = 50;
 const DEADLINE_BUFFER_MS = 5_000;
 
+// Class A result shape (not exported as a named DTO — internal to relay)
+type ClassARelayResult = { processed: number; failed: number };
+
 export async function POST(req: Request): Promise<Response> {
   // Validate CRON_SECRET BEFORE any DB access.
-  // Missing configured secret → 401 for all requests; Bearer undefined does not pass.
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
     return new Response('Unauthorized', { status: 401 });
@@ -24,11 +30,10 @@ export async function POST(req: Request): Promise<Response> {
   const deadlineMs = startMs + 30_000 - DEADLINE_BUFFER_MS;
 
   // Service-role client constructed only after auth passes.
+  // Shared between Class A and operational branches.
   const supabase = createServiceClient();
 
-  // Phase 2.3: claim ledger-only batch via rpc_claim_class_a_outbox_batch (FOR UPDATE SKIP LOCKED).
-  // Phase 2.4 will use rpc_claim_outbox_batch for operational events.
-  // Plain Supabase query-builder SELECT is not acceptable (ADR-056 D3).
+  // ── Phase 2.3 Class A branch ────────────────────────────────────────────
   const { data: batch, error: claimError } = await supabase.rpc(
     'rpc_claim_class_a_outbox_batch',
     { p_batch_size: BATCH_SIZE },
@@ -39,40 +44,54 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const rows = (batch ?? []) as FinancialOutboxEventDTO[];
-  let processed = 0;
-  let failed = 0;
+  const classA: ClassARelayResult = { processed: 0, failed: 0 };
 
   for (const row of rows) {
-    // Stop-before-deadline guard (NF10 — 30s Vercel budget).
     if (Date.now() >= deadlineMs) break;
 
     const result = await runConsumer(supabase, row);
 
-    // 'processed' = rpc_process_class_a_projection committed all three writes atomically.
-    // 'duplicate' = message_id already in processed_messages — prior commit is durable. Both success.
-    // 'skipped' = defensive backstop (non-ledger row; rpc_claim_class_a_outbox_batch should prevent this).
     if (result === 'processed' || result === 'duplicate') {
       await supabase.rpc('rpc_acknowledge_outbox_delivery', {
         p_event_id: row.event_id,
         p_success: true,
       });
-      processed++;
+      classA.processed++;
     } else {
-      // Delivery failure: row stays processed_at IS NULL for retry.
-      // SQL does LEFT(p_error_detail, 2000) — VARCHAR(2000) constraint enforced in RPC.
       await supabase.rpc('rpc_acknowledge_outbox_delivery', {
         p_event_id: row.event_id,
         p_success: false,
         p_error_detail: String(result),
       });
-      failed++;
+      classA.failed++;
     }
   }
 
-  const { count: backlog } = await supabase
-    .from('finance_outbox')
-    .select('*', { count: 'exact', head: true })
-    .is('processed_at', null);
+  // ── Phase 2.4 Operational branch ────────────────────────────────────────
+  // Skip if deadline already breached after Class A loop.
+  let operational: OperationalConsumerResultDTO = {
+    processed: 0,
+    duplicate: 0,
+    errors: [],
+  };
 
-  return NextResponse.json({ processed, failed, backlog: backlog ?? 0 });
+  if (Date.now() < deadlineMs) {
+    try {
+      const opResult = await runOperationalConsumer(supabase);
+      operational = {
+        processed: opResult.processed,
+        duplicate: opResult.duplicate,
+        errors: opResult.errors.map((e) => e.message),
+      };
+    } catch (opError) {
+      // Operational branch failure does not affect Class A result.
+      operational = {
+        processed: 0,
+        duplicate: 0,
+        errors: [opError instanceof Error ? opError.message : String(opError)],
+      };
+    }
+  }
+
+  return NextResponse.json({ classA, operational });
 }

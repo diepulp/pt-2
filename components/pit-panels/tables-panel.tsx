@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { EnrollPlayerModal } from '@/components/enrollment/enroll-player-modal';
 import { TableLayoutTerminal } from '@/components/table';
 import { CloseSessionDialog } from '@/components/table/close-session-dialog';
+import { GrindBuyinPanel } from '@/components/table/grind-buyin-panel';
 import type { PitMapPit } from '@/components/table/pit-map-selector';
 import { ReconciliationBadge } from '@/components/table/reconciliation-badge';
 import { TableLimitsDialog } from '@/components/table/table-limits-dialog';
@@ -58,6 +59,8 @@ interface TablesPanelProps {
   onNewSlip: () => void;
   /** PRD-059: Callback to open activation drawer for OPEN sessions */
   onActivateRequest?: () => void;
+  /** Gaming day (YYYY-MM-DD) for operational projection — PRD-088 Phase 2.4 */
+  gamingDay?: string;
 }
 
 /**
@@ -79,6 +82,7 @@ export function TablesPanel({
   onSeatClick,
   onNewSlip,
   onActivateRequest,
+  gamingDay,
 }: TablesPanelProps) {
   // Get last activity time for header context
   const lastActivity = React.useMemo(() => {
@@ -255,6 +259,15 @@ export function TablesPanel({
             />
           </div>
         </div>
+
+        {/* Grind Buy-in Panel — operational projection telemetry (PRD-088 Phase 2.4) */}
+        {gamingDay && (
+          <GrindBuyinPanel
+            tableId={selectedTable.id}
+            casinoId={casinoId}
+            gamingDay={gamingDay}
+          />
+        )}
       </div>
 
       {/* Table Limits Dialog */}

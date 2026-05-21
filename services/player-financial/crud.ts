@@ -247,6 +247,111 @@ export async function getVisitClassACompleteness(
   return (count ?? 0) === 0 ? 'complete' : 'partial';
 }
 
+// === Operational Completeness Query (Phase 2.4) ===
+
+/**
+ * Resolves lifecycle-aware completeness for a shift's operational projection.
+ *
+ * Requires a service-role client — shift_operational_projection has service_role-only RLS
+ * (no authenticated policies — service_role is the only access route).
+ *
+ * Five-step completeness logic (per EXEC-088 WS3):
+ *   1. No projection row, no lifecycle row → 'unknown'
+ *   2. No projection row, lifecycle closed, table-scoped backlog = 0 → 'complete' with zero totals
+ *   3. Projection exists, no lifecycle row → 'partial'
+ *   4. Projection exists, lifecycle closed, table-scoped backlog > 0 → 'partial'
+ *   5. Projection exists, lifecycle closed, backlog = 0 → 'complete'
+ *
+ * Backlog check is TABLE-SCOPED: pending rows for other tables on the same gaming_day
+ * do not affect this table's completeness.
+ *
+ * type is always 'estimated' per ADR-054 R4 — no layer may upgrade this to 'actual'.
+ */
+// SERVICE_ROLE_EXEMPTION (same as getVisitClassACompleteness):
+// shift_operational_projection and gaming_day_lifecycle have service_role-only RLS.
+// createServiceClient() is created internally so callers in app/api/v1/ do not
+// need to import it (SEC-001 / PRD-HZ-001 hook enforcement).
+export async function getShiftOperationalCompleteness(
+  supabase: SupabaseClient<Database> | null,
+  casinoId: string,
+  gamingDay: string,
+  tableId: string,
+): Promise<{
+  status: 'complete' | 'partial' | 'unknown';
+  totalCents: number;
+  count: number;
+  type: 'estimated';
+}> {
+  const db = supabase ?? createServiceClient();
+  const { data: projection } = await db
+    .from('shift_operational_projection')
+    .select(
+      'grind_volume_cents, fill_total_cents, credit_total_cents, event_count',
+    )
+    .eq('casino_id', casinoId)
+    .eq('gaming_day', gamingDay)
+    .eq('table_id', tableId)
+    .maybeSingle();
+
+  const { data: lifecycle } = await db
+    .from('gaming_day_lifecycle')
+    .select('casino_id')
+    .eq('casino_id', casinoId)
+    .eq('gaming_day', gamingDay)
+    .maybeSingle();
+
+  // Step 1: no projection, no lifecycle
+  if (!projection && !lifecycle) {
+    return { status: 'unknown', totalCents: 0, count: 0, type: 'estimated' };
+  }
+
+  // Step 2 (and implicit partial for no-projection + lifecycle + backlog > 0)
+  if (!projection) {
+    const { count: backlogCount } = await db
+      .from('finance_outbox')
+      .select('*', { count: 'exact', head: true })
+      .eq('casino_id', casinoId)
+      .eq('gaming_day', gamingDay)
+      .eq('table_id', tableId)
+      .eq('fact_class', 'operational')
+      .in('event_type', ['grind.observed', 'fill.recorded', 'credit.recorded'])
+      .is('processed_at', null);
+
+    if ((backlogCount ?? 0) === 0) {
+      return { status: 'complete', totalCents: 0, count: 0, type: 'estimated' };
+    }
+    return { status: 'partial', totalCents: 0, count: 0, type: 'estimated' };
+  }
+
+  const totalCents =
+    (projection.grind_volume_cents ?? 0) +
+    (projection.fill_total_cents ?? 0) +
+    (projection.credit_total_cents ?? 0);
+  const count = projection.event_count ?? 0;
+
+  // Step 3: projection exists, no lifecycle (gaming day still open)
+  if (!lifecycle) {
+    return { status: 'partial', totalCents, count, type: 'estimated' };
+  }
+
+  // Steps 4 + 5: projection + lifecycle — check table-scoped backlog
+  const { count: backlogCount } = await db
+    .from('finance_outbox')
+    .select('*', { count: 'exact', head: true })
+    .eq('casino_id', casinoId)
+    .eq('gaming_day', gamingDay)
+    .eq('table_id', tableId)
+    .eq('fact_class', 'operational')
+    .in('event_type', ['grind.observed', 'fill.recorded', 'credit.recorded'])
+    .is('processed_at', null);
+
+  if ((backlogCount ?? 0) > 0) {
+    return { status: 'partial', totalCents, count, type: 'estimated' };
+  }
+
+  return { status: 'complete', totalCents, count, type: 'estimated' };
+}
+
 // === Read Operations ===
 
 /**

@@ -204,6 +204,15 @@ export type VisitFinancialSummaryRouteParams = z.infer<
   typeof visitFinancialSummaryRouteParamsSchema
 >;
 
+// === Operational Projection Query Schema (PRD-088 / EXEC-088 DEC-EXEC-4) ===
+
+export const operationalProjectionQuerySchema = z.object({
+  gamingDay: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid gaming day format (YYYY-MM-DD)'),
+  tableId: uuidFormat('table ID'),
+});
+
 // === Re-exports for route handler convenience ===
 
 export { z };

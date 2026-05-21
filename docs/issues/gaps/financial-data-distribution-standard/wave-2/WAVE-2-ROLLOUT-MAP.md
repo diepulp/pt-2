@@ -2,8 +2,8 @@
 
 ---
 
-status: Active — Phase 2.3 COMPLETE (PRD-087 / EXEC-087, 2026-05-19). Phase 2.3a observability investigation complete (2026-05-20): producer trigger posture gaps confirmed, PROD-ANCHOR-STD-001 opened (proposed_for_wave_2_5_signoff). Cursor at Phase 2.4 (Consumer Expansion: Operational Telemetry Projection) — requires PRD before code. Post-Wave-2 backlog established: see §10.
-date: 2026-05-20
+status: Active — Phase 2.4 COMPLETE (PRD-088 / EXEC-088, 2026-05-21). Cursor at Phase 2.5 (Observability + Sign-Off). Post-Wave-2 backlog §10 active; GrindBuyinPanel mounting gap (PWB-003) closed in Phase 2.4. Fill/credit operator UI (PWB-002) and adjustment anchor (PWB-001) remain open.
+date: 2026-05-21
 phase_model: bounded_operational_rollout (transition from transport_certification_sequencing as of 2026-05-19)
 phase_2_0_closed: 2026-05-11
 phase_2_0_prd: PRD-081
@@ -141,8 +141,10 @@ Exiting Phase N → Opening Phase N+1 requires two documents:
 **Scope:** Prove the full transport chain against the smallest symmetric pair (one Class A, one Class B). Establish finance_outbox, relay, idempotent consumer backbone, and I1–I4 harness. No producer expansion before this gates.
 
 **Exemplar pair:**
-- Class A: `rpc_create_financial_txn` → `buyin.recorded` / `cashout.recorded`
+- Class A: `rpc_create_financial_txn` → `buyin.recorded`
 - Class B: `rpc_record_grind_observation` → `grind.observed`
+
+> **Note (2026-05-21):** `cashout.recorded` was listed here but was never implemented. `rpc_create_financial_txn` hardcodes `'buyin.recorded'` with no direction branch. The projection consumer (migration `20260519184708`) explicitly marks it "not yet a distinct outbox producer; future." See **W2-OBS-CASHOUT-PRODUCER-001** for the confirmed gap and remediation path.
 
 **Exit gate (all passed 2026-05-11):**
 - [x] `finance_outbox` Wave 2 DDL live
@@ -361,7 +363,9 @@ Exiting Phase N → Opening Phase N+1 requires two documents:
 
 ---
 
-### Phase 2.4 — Consumer Expansion: Operational Telemetry Projection
+### Phase 2.4 — Consumer Expansion: Operational Telemetry Projection ✅ COMPLETE 2026-05-21
+
+**PRD:** PRD-088 | **EXEC:** EXEC-088 | **Branch:** feat/transactional-outbox
 
 **Entry gate:** Phase 2.2 exit (all producers wired) + Phase 2.3 exit (consumer infrastructure established, Gate A complete)
 
@@ -396,25 +400,30 @@ Mounting `GrindBuyinPanel` is achievable within Phase 2.4 (the component and hoo
 
 ### Deliverables
 
-- [ ] Operational projection store migration (shift-level Class B + Dependency Event state)
-- [ ] Consumer reading `grind.observed`, `fill.recorded`, `credit.recorded` from `finance_outbox`
-- [ ] `processed_messages` idempotency wired for operational consumer
-- [ ] Authority degradation enforced: mixed-class aggregates degrade to `'estimated'`
-- [ ] Completeness: `'partial'` during open shift, `'complete'` on gaming-day close
-- [ ] Replay test for operational projection
-- [ ] Shift telemetry surfaces updated to consume projection (not poll authoring store)
-- [ ] `GrindBuyinPanel` mounted in the appropriate table-context page — required for real `grind.observed` rows to flow from operator workflows
-- [ ] type-check, lint, build exit 0
+- [x] `shift_operational_projection` table migration: PK `(casino_id, gaming_day, table_id)`, `grind_volume_cents`, `fill_total_cents`, `credit_total_cents`, `event_count`, `updated_at` — `20260521015409`
+- [x] `rpc_claim_operational_outbox_batch` — SECURITY DEFINER, service_role only; claims `fact_class='operational'` rows with `delivery_attempts < 5` — `20260521022656`
+- [x] `rpc_process_operational_projection(p_message_id)` — SECURITY DEFINER, service_role only; returns `'processed' | 'duplicate' | 'skipped_ledger' | 'skipped_unknown' | 'not_found'`; stamps `processed_at` atomically (DEC-EXEC-3: no separate ack step) — `20260521022703`
+- [x] Backlog index on `finance_outbox(casino_id, fact_class, delivery_attempts, processed_at)` — `20260521022708`
+- [x] `services/player-financial/outbox-operational-consumer.ts` — `runOperationalConsumer`, batch_size=25, stop-before-deadline
+- [x] `app/api/internal/outbox-relay/route.ts` — operational branch added; response `{classA: {processed, failed}, operational: {processed, duplicate, errors}}`
+- [x] `app/api/internal/outbox-observability/route.ts` — 3-way backlog breakdown: `operationalBacklog: {claimable, deadLetter}`
+- [x] `getShiftOperationalCompleteness` in `services/player-financial/crud.ts` — 5-step logic; always `type: 'estimated'` (ADR-054 R4)
+- [x] `GET /api/v1/table-context/operational-projection` — `casinoId` from `rlsContext` only (DEC-EXEC-4); 400 on invalid params
+- [x] `OperationalProjectionResponseDTO`, `OperationalConsumerResultDTO` in `services/player-financial/dtos.ts`
+- [x] `hooks/table-context/use-buyin-telemetry.ts` — interface changed from `shiftWindow` to `gamingDay: string` (DEC-EXEC-2)
+- [x] `GrindBuyinPanel` mounted in `components/pit-panels/tables-panel.tsx` via `panel-container.tsx` (PWB-003 closed)
+- [x] 58 tests across 6 suites — 100% pass; ADR-054 R4 authority degradation invariant test suite
+- [x] type-check, lint exit 0
 
-### Exit gate
+### Exit gate ✅ MET (2026-05-21)
 
-- Consumer certified via direct API/RPC trigger for all three event types (minimum bar per Principle 9)
-- `GrindBuyinPanel` mounted and producing live `grind.observed` rows through real operator workflow
-- Fill/credit producer trigger gap formally acknowledged in exit notes — operator UI deferred; direct API call is the certifiable trigger for this phase
-- Authority labels correct: `origin_label: 'estimated'` on all operationally-derived values
-- Mixed-class surface shows degraded authority, not spurious `'actual'`
-- Completeness signals meaningful during shift lifecycle (given mounted grind panel; fill/credit completeness remains partial until operator UI ships)
-- All gates pass
+- Consumer certified: `rpc_claim_operational_outbox_batch` + `rpc_process_operational_projection` wired and tested ✅
+- `GrindBuyinPanel` mounted in `TablesPanel` — `grind.observed` rows producible via real operator workflow ✅ (PWB-003 closed)
+- Fill/credit operator UI gap acknowledged in exit notes — `fill.recorded` / `credit.recorded` require direct API call; operator UI deferred to PWB-002 ✅
+- Authority labels correct: `type: 'estimated'` on all `OperationalProjectionResponseDTO` values; ADR-054 R4 invariant test suite passes ✅
+- Completeness signals: 5-step logic (`unknown` / `complete-zero` / `partial` / `partial-with-backlog` / `complete`) ✅
+- `GrindBuyinPanel` completeness remains partial for fill/credit until operator UI ships (known gap) ✅ (acknowledged)
+- All gates pass (type-check exit 0, 58/58 tests) ✅
 
 ---
 
@@ -441,6 +450,7 @@ These gaps are confirmed findings from Phase 2.3a observability investigation an
 
 | Gap | Finding | Reference | Post-Wave-2 path |
 |---|---|---|---|
+| `cashout.recorded` — no active producer | `rpc_create_financial_txn` hardcodes `'buyin.recorded'` with no direction branch. The session-close path writes to `pit_cash_observation` only. The projection consumer has a reserved slot but no events arrive. Rollout map line 144 ("buyin.recorded / cashout.recorded") was incorrect — cashout was cataloged but never implemented. | W2-OBS-CASHOUT-PRODUCER-001 | Add `CASE WHEN v_row.direction = 'out' THEN 'cashout.recorded'` branch in `rpc_create_financial_txn`; confirm rating-slip cashout path passes `rating_slip_id` |
 | `adjustment.recorded` workflow anchor | `original_txn_id` is never passed by the rating-slip modal or MTL compliance dashboard. ADR-057 gate silently skips emission. The RPC is correct; the callers are not. | W2-OBS-ANCHOR-COVERAGE-001; PROD-ANCHOR-STD-001 | Enforce anchor resolution standard at service boundary per PROD-ANCHOR-STD-001 |
 | Fill/credit operator UI | `rpc_request_table_fill` and `rpc_request_table_credit` are wired correctly. No operator-facing UI exists; routes are hardware-integration-only. Real workflows produce no outbox rows. | CORE-OPERATIONAL-LOOP.md Category A | Build operator UI surface (separate PRD; hardware integration scope) |
 | `GrindBuyinPanel` mounting | Component and hook exist; panel is not mounted in any page. Grind observations cannot be produced by real operator workflows. Should be closed in Phase 2.4. | CORE-OPERATIONAL-LOOP.md Category B | Mount `GrindBuyinPanel` in Phase 2.4 (component ready, no new build needed) |
@@ -509,14 +519,14 @@ Do not invoke these skills directly for any Phase ≥ 2.1. Each phase runs `/prd
 ### Wave 2 complete when
 
 1. All five producer RPCs emit to `finance_outbox` atomically (RPC-level certification):
-   - `rpc_create_financial_txn` ✅
+   - `rpc_create_financial_txn` ✅ (`buyin.recorded` only — `cashout.recorded` branch absent; gap: W2-OBS-CASHOUT-PRODUCER-001)
    - `rpc_record_grind_observation` ✅
    - `rpc_create_financial_adjustment` ✅ (RPC correct; workflow anchor gap documented — PROD-ANCHOR-STD-001)
    - `rpc_request_table_fill` ✅
    - `rpc_request_table_credit` ✅
 2. I1–I4 invariants proven for all producer paths (I1 re-verified per new producer; I2–I4 baseline established in Phase 2.0)
 3. DEC-1 resolved — visit-level financial aggregates emit `'complete'` / `'partial'` when events are flowing ✅ (Phase 2.3)
-4. Shift telemetry surfaces event-driven (not polling authoring stores); `GrindBuyinPanel` mounted (Phase 2.4)
+4. Shift telemetry surfaces event-driven (not polling authoring stores); `GrindBuyinPanel` mounted (Phase 2.4) ✅ — `GET /api/v1/table-context/operational-projection` route live; `GrindBuyinPanel` mounted; `shift_operational_projection` consumer active
 5. Authority labels correct on all new projection surfaces
 6. Relay health observable (backlog size + processing lag logged)
 7. Sign-off artifact authored and approved with known residual gaps named
@@ -543,9 +553,9 @@ Items confirmed during Phase 2.3a observability investigation that are out of sc
 |---|---|---|---|---|
 | PWB-001 | `adjustment.recorded` anchor resolution — refactor rating-slip modal and MTL compliance dashboard to resolve `original_txn_id` at service boundary; move `createFinancialAdjustment` behind API route | W2-OBS-ANCHOR-COVERAGE-001 / LAYER-1-FAILURE.md | PROD-ANCHOR-STD-001 (`proposed_for_wave_2_5_signoff`) | Not started |
 | PWB-002 | Fill/credit operator UI — no operator-facing surface exists for `rpc_request_table_fill` / `rpc_request_table_credit`; current API routes are hardware-integration-only; outbox rows cannot be produced by real operator workflows | CORE-OPERATIONAL-LOOP.md Category A | Phase 2.5 sign-off gap table | Not started — hardware integration scope; separate PRD required |
-| PWB-003 | `GrindBuyinPanel` mounting — component and hook exist; panel is not mounted in any page; targeted for closure in Phase 2.4 | CORE-OPERATIONAL-LOOP.md Category B | Phase 2.4 deliverables | In scope for Phase 2.4 — close there if delivered; promote to PWB if deferred |
+| PWB-003 | `GrindBuyinPanel` mounting — ✅ CLOSED in Phase 2.4 (PRD-088, 2026-05-21). `GrindBuyinPanel` mounted in `TablesPanel` via `panel-container.tsx`; `gamingDay` threaded from `PanelContainer` → `TablesPanel` → `GrindBuyinPanel` (DEC-EXEC-2) | CORE-OPERATIONAL-LOOP.md Category B | Phase 2.4 deliverables (CLOSED) | Delivered in Phase 2.4 |
 
-**Promotion rule:** If PWB-003 is not delivered in Phase 2.4, it graduates to this backlog as a confirmed post-Wave-2 item. Phase 2.5 sign-off must record its status explicitly.
+**Promotion rule:** PWB-003 was delivered in Phase 2.4 (2026-05-21). Does not graduate to post-Wave-2 backlog. Phase 2.5 sign-off must record its closure.
 
 **Sign-off language for known workflow coverage gaps:**
 

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import type {
   OutboxAdminEventDTO,
+  OutboxOperationalBacklogDTO,
   OutboxRelayHealthDTO,
 } from '@/services/player-financial/dtos';
 
@@ -65,17 +66,33 @@ export async function GET(request: Request): Promise<Response> {
   // Constructed only after authorization succeeds.
   const serviceClient = createServiceClient();
 
-  const [healthResult, eventsResult] = await Promise.all([
-    serviceClient.rpc('rpc_get_outbox_relay_health', {
-      p_casino_id: casinoId,
-    }),
-    serviceClient.rpc('rpc_get_outbox_event_page', {
-      p_casino_id: casinoId,
-      p_event_type: eventType ?? null,
-      p_status: statusParam,
-      p_search_id: searchIdParam ?? null,
-    }),
-  ]);
+  const [healthResult, eventsResult, opClaimableResult, opDeadLetterResult] =
+    await Promise.all([
+      serviceClient.rpc('rpc_get_outbox_relay_health', {
+        p_casino_id: casinoId,
+      }),
+      serviceClient.rpc('rpc_get_outbox_event_page', {
+        p_casino_id: casinoId,
+        p_event_type: eventType ?? undefined,
+        p_status: statusParam,
+        p_search_id: searchIdParam ?? undefined,
+      }),
+      // Phase 2.4: operational backlog breakdown (claimable vs dead-letter)
+      serviceClient
+        .from('finance_outbox')
+        .select('*', { count: 'exact', head: true })
+        .eq('casino_id', casinoId)
+        .eq('fact_class', 'operational')
+        .is('processed_at', null)
+        .lt('delivery_attempts', 5),
+      serviceClient
+        .from('finance_outbox')
+        .select('*', { count: 'exact', head: true })
+        .eq('casino_id', casinoId)
+        .eq('fact_class', 'operational')
+        .is('processed_at', null)
+        .gte('delivery_attempts', 5),
+    ]);
 
   if (healthResult.error) {
     return NextResponse.json(
@@ -100,6 +117,10 @@ export async function GET(request: Request): Promise<Response> {
   const health = (healthResult.data?.[0] ??
     null) as OutboxRelayHealthDTO | null;
   const events = (eventsResult.data ?? []) as OutboxAdminEventDTO[];
+  const operationalBacklog: OutboxOperationalBacklogDTO = {
+    claimable: opClaimableResult.count ?? 0,
+    deadLetter: opDeadLetterResult.count ?? 0,
+  };
 
-  return NextResponse.json({ health, events });
+  return NextResponse.json({ health, events, operationalBacklog });
 }

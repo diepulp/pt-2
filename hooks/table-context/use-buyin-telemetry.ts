@@ -4,7 +4,8 @@
  * Hooks for grind buy-in telemetry operations.
  * Used by GrindBuyinPanel for manual anonymous buy-in logging.
  *
- * @see services/table-context/chip-custody.ts - Service layer
+ * @see services/player-financial/crud.ts - getShiftOperationalCompleteness
+ * @see app/api/v1/table-context/operational-projection/route.ts - projection route
  * @see GAP-TABLE-ROLLOVER-UI WS5
  */
 
@@ -12,55 +13,48 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { normalizeClientError } from '@/lib/errors/normalize-client-error';
 import { createBrowserComponentClient } from '@/lib/supabase/client';
+import type { OperationalProjectionResponseDTO } from '@/services/player-financial/dtos';
 import { tableContextKeys } from '@/services/table-context/keys';
 
 // === Query Hooks ===
 
 /**
- * Fetches grind buy-in total for a shift window.
+ * Fetches grind buy-in total for a gaming day from the operational projection route.
+ *
+ * Uses GET /api/v1/table-context/operational-projection (service-role backed).
+ * table_buyin_telemetry direct query replaced by projection route per Phase 2.4 (PRD-088 DEC-EXEC-2).
  *
  * @param tableId - Gaming table UUID
- * @param casinoId - Casino UUID
- * @param shiftWindow - Start and end timestamps for the shift
+ * @param casinoId - Casino UUID (passed through for cache keying; casinoId is authoritative from rlsContext in route)
+ * @param gamingDay - Gaming day date string (YYYY-MM-DD)
  */
 export function useGrindBuyinTotal(
   tableId: string,
   casinoId: string,
-  shiftWindow: { startTs: string; endTs: string },
+  gamingDay: string,
 ) {
   return useQuery({
-    queryKey: [
-      ...tableContextKeys.root,
-      'grind-total',
-      tableId,
-      shiftWindow.startTs,
-      shiftWindow.endTs,
-    ],
+    queryKey: [...tableContextKeys.root, 'grind-total', tableId, gamingDay],
     queryFn: async () => {
-      const supabase = createBrowserComponentClient();
+      const params = new URLSearchParams({ gamingDay, tableId });
+      const res = await fetch(
+        `/api/v1/table-context/operational-projection?${params.toString()}`,
+      );
 
-      const { data, error } = await supabase
-        .from('table_buyin_telemetry')
-        .select('amount_cents')
-        .eq('table_id', tableId)
-        .eq('casino_id', casinoId)
-        .eq('kind', 'GRIND_BUYIN')
-        .gte('created_at', shiftWindow.startTs)
-        .lte('created_at', shiftWindow.endTs);
-
-      if (error) {
-        throw normalizeClientError(error);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw normalizeClientError(
+          new Error(body?.error ?? `projection fetch failed (${res.status})`),
+        );
       }
 
-      const total = (data ?? []).reduce(
-        (sum, row) => sum + (row.amount_cents ?? 0),
-        0,
-      );
-      return { totalCents: total, count: data?.length ?? 0 };
+      const envelope = (await res.json()) as {
+        data: OperationalProjectionResponseDTO;
+      };
+      return envelope.data;
     },
-    enabled:
-      !!tableId && !!casinoId && !!shiftWindow.startTs && !!shiftWindow.endTs,
-    staleTime: 10_000, // 10 seconds - grind counts update frequently
+    enabled: !!tableId && !!casinoId && !!gamingDay,
+    staleTime: 10_000, // 10 seconds — grind counts update frequently
   });
 }
 
@@ -98,48 +92,6 @@ export function useLogGrindBuyin(tableId: string, _casinoId: string) {
           p_amount_cents: input.amountCents,
           p_telemetry_kind: 'GRIND_BUYIN',
           p_source: 'pit_manual',
-          p_idempotency_key: idempotencyKey,
-        },
-      );
-
-      if (error) {
-        throw normalizeClientError(error);
-      }
-
-      return data;
-    },
-    onSuccess: () => {
-      // Invalidate grind total queries
-      queryClient.invalidateQueries({
-        queryKey: [...tableContextKeys.root, 'grind-total', tableId],
-        exact: false,
-      });
-    },
-  });
-}
-
-/**
- * Reverses the last grind buy-in (undo functionality).
- * Logs a negative amount to offset the previous entry.
- */
-export function useUndoGrindBuyin(tableId: string, _casinoId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationKey: ['undo-grind-buyin', tableId],
-    mutationFn: async (amountCents: number) => {
-      const supabase = createBrowserComponentClient();
-
-      const idempotencyKey = `grind-undo:${tableId}:${Date.now()}:${crypto.randomUUID()}`;
-
-      // Log a negative amount to reverse the previous entry
-      const { data, error } = await supabase.rpc(
-        'rpc_log_table_buyin_telemetry',
-        {
-          p_table_id: tableId,
-          p_amount_cents: -amountCents, // Negative to undo
-          p_telemetry_kind: 'GRIND_BUYIN',
-          p_source: 'pit_manual_undo',
           p_idempotency_key: idempotencyKey,
         },
       );
