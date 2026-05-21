@@ -1,0 +1,178 @@
+verdict: propagate_finding
+finding_id: W2-OBS-ANCHOR-COVERAGE-001
+title: Two adjustment-producing surfaces drop the producer anchor required for adjustment.recorded emission
+standard_opened: PROD-ANCHOR-STD-001 (wave-2/PRODUCER-ANCHOR-RESOLUTION-STANDARD.yaml)
+
+data_model:
+  visit:
+    role: gaming session container
+    pft_anchor: visit_id is NOT NULL on player_financial_transaction (every PFT belongs to a visit)
+    mtl_anchor: visit_id is NULLABLE on mtl_entry (propagated from PFT, no NOT NULL constraint)
+    resolution_ambiguity: >
+      visit_id alone is ambiguous for eligible-PFT lookup — a visit may have multiple
+      rating slips and multiple buy-in PFTs. Do NOT use visit_id as the sole resolution key.
+  rating_slip:
+    role: one table-session within a visit
+    pft_anchor: rating_slip_id is nullable on PFT — set only for rated buy-ins/adjustments
+    mtl_anchor: rating_slip_id is nullable on mtl_entry — propagated 1:1 from source PFT
+  mtl_entry_to_pft_link:
+    mechanism: forward bridge trigger fn_derive_mtl_from_finance (20260116111329 + 20260217215827)
+    cardinality: 1:1 — one mtl_entry per eligible PFT
+    idempotency_key: "'fin:' || PFT.id" — direct link to source PFT row
+    dto_exposure: idempotency_key is NOT in MtlEntryDTO — source PFT ID unreachable without lookup
+  bff_financial_query_scope: >
+    prd018_modal_bff_rpc.sql:257 — visit-scoped aggregate (WHERE pft.visit_id = v_slip.visit_id).
+    Returns totalCashIn/totalChipsOut/netPosition only. No PFT IDs.
+    Cannot be repurposed for slip-scoped eligible-PFT resolution.
+  eligible_pft_resolution_query: >
+    SELECT id FROM player_financial_transaction
+    WHERE rating_slip_id = :slipId   -- slip-scoped, NOT via visit_id
+      AND source = 'pit'
+      AND direction = 'in'
+      AND txn_kind != 'adjustment'
+    ORDER BY created_at DESC LIMIT 1
+
+affected_surfaces:
+  - surface: rating_slip_modal
+    file: components/modals/rating-slip/rating-slip-modal.tsx
+    submit_line: 405-417
+    anchor_available_in_context: false
+    slip_id_available: true (modal identity — always present)
+    visit_id_available: true (modalData.slip.visitId)
+    anchor_resolution_path: >
+      slipId → eligible_pft_resolution_query (slip-scoped).
+      visit_id is NOT sufficient alone (ambiguous across multiple slips in one visit).
+      The existing BFF financial aggregate is visit-level and cannot provide this.
+  - surface: mtl_compliance_dashboard
+    file: components/mtl/compliance-dashboard.tsx
+    submit_line: 211-217
+    anchor_available_in_context: false
+    slip_id_available: conditional (adjustmentTarget.rating_slip_id, nullable — propagated from source PFT)
+    visit_id_available: true (adjustmentTarget.visit_id, nullable in mtl schema but populated for bridge-derived entries)
+    source_pft_id_available: false (idempotency_key 'fin:'+PFT.id is on the DB row but not in MtlEntryDTO)
+    anchor_resolution_path: >
+      Rated entries (rating_slip_id IS NOT NULL): same eligible_pft_resolution_query via rating_slip_id.
+      Unrated entries (rating_slip_id IS NULL): no outbox emission expected (ADR-057 eligibility fails).
+      visit_id alone is ambiguous — must not be used as the resolution key.
+
+evidence:
+  working_contrast:
+    event_type: buyin.recorded
+    reason: rating_slip_id is the modal/context identity and is passed through the API/service/RPC chain
+  failing_contrast:
+    event_type: adjustment.recorded
+    surfaces_affected: both rating_slip_modal and mtl_compliance_dashboard
+    reason: original_txn_id is a specific PFT identity absent from both submit payloads
+
+root_cause:
+  category: wiring_discipline_gap
+  verdict: >
+    The topology is fine. The wiring discipline was too trusting.
+    Surfaces may request an adjustment; only a service or BFF boundary may
+    resolve the ledger fact being corrected. That rule was absent.
+  details:
+    - adjustment RPC requires p_original_txn_id for ADR-057 linked-adjustment emission
+    - rating-slip modal creates adjustment without original_txn_id (aggregates only in modalData.financial)
+    - MTL compliance dashboard creates adjustment without original_txn_id (MtlEntryDTO.id is not a PFT ID)
+    - both surfaces use direct browser RPC — bypassing the service boundary that could enforce anchor resolution
+    - the AdjustmentModal component is correctly agnostic; the gap is in the callers and the absent enforcement point
+
+  mtl_sub_case_split:
+    rated_entries:
+      condition: adjustmentTarget.rating_slip_id IS NOT NULL
+      expected: adjustment.recorded should emit (original PFT satisfies all ADR-057 criteria)
+      actual: never emits (original_txn_id not resolved or passed)
+      status: BUG
+    unrated_entries:
+      condition: adjustmentTarget.rating_slip_id IS NULL
+      expected: no outbox emission (ADR-057 eligibility requires rating_slip_id IS NOT NULL)
+      actual: no outbox emission
+      status: CORRECT (by design)
+
+impact:
+  transport: functional
+  relay: functional
+  observability: functional
+  producer_coverage: incomplete
+  lifecycle_projection: input_coverage_partial_for_adjustments
+  surfaces_affected_count: 2
+
+required_downstream_actions:
+  producer_certification:
+    add_check: >
+      Each producer workflow must prove that the event anchor required by the RPC
+      is available at the callsite or resolved by the service boundary.
+  phase_2_5_observability_signoff:
+    add_table:
+      columns:
+        - event_type
+        - producer_rpc
+        - workflow_surface
+        - anchor_required
+        - anchor_source
+        - observed_in_outbox
+        - certification_status
+      rows:
+        - event_type: adjustment.recorded
+          producer_rpc: rpc_create_financial_adjustment
+          workflow_surface: rating_slip_modal
+          anchor_required: original_txn_id (PFT ID for rated buy-in on this slip)
+          anchor_source: not resolved — requires latestEligiblePftId from BFF or query-at-submit
+          observed_in_outbox: false
+          certification_status: FAILING
+        - event_type: adjustment.recorded
+          producer_rpc: rpc_create_financial_adjustment
+          workflow_surface: mtl_compliance_dashboard
+          anchor_required: original_txn_id (PFT ID for rated MTL entry)
+          anchor_source: not resolved — requires source_pft_id in MtlEntryDTO or query via rating_slip_id
+          observed_in_outbox: false
+          certification_status: FAILING (rated sub-case); N/A (unrated sub-case, correct by design)
+
+  adjustment_hardening:
+    rating_slip_fix_options:
+      - option: A
+        description: >
+          Extend BFF RPC (rpc_get_rating_slip_modal_data) with a new sub-query
+          filtered by rating_slip_id = p_slip_id to return latestEligiblePftId.
+          This is a NEW slip-scoped query inside the BFF — NOT an extension of the
+          existing visit-level financial aggregate (which cannot provide PFT IDs).
+        cost: SQL change in BFF + schema field; result cached at modal load time
+        preferred: true
+      - option: B
+        description: >
+          Issue targeted player_financial_transaction query in handleSubmitAdjustment
+          at submit time using rating_slip_id = slipId filter.
+        cost: one network round-trip at submit; no BFF change
+        preferred: false
+    mtl_fix_options:
+      - option: C
+        description: >
+          At handleAdjustmentSubmit, gate on adjustmentTarget.rating_slip_id.
+          If non-null, run eligible_pft_resolution_query (WHERE rating_slip_id = :slipId)
+          and pass result as original_txn_id.
+          If null (unrated entry), call without anchor — correctly produces no outbox row.
+          Do NOT use visit_id as resolution key — ambiguous across multiple slips.
+        cost: one conditional query at submit; no DTO or bridge change
+        preferred: false
+      - option: D
+        description: >
+          Expose source_pft_id in MtlEntryDTO populated from idempotency_key
+          ('fin:' || PFT.id is already on the mtl_entry row — substring(idempotency_key from 5)).
+          Zero extra queries, direct 1:1 link, eliminates slip-null ambiguity for unrated sub-case.
+        cost: DTO query change + schema field addition; no bridge trigger change needed
+        preferred: true
+    rule: >
+      Both adjustment workflows must pass original_txn_id for rated entries or fail visibly.
+      Unrated entries (rating_slip_id IS NULL on MTL entry) are correctly excluded by ADR-057.
+      visit_id must NEVER be used as the sole key for eligible-PFT resolution — it is ambiguous.
+
+do_not:
+  - claim Wave 2 producer coverage complete based only on buyin.recorded visibility
+  - treat clean observability screen as successful adjustment workflow
+  - patch only one surface (rating-slip) without addressing MTL compliance dashboard
+  - patch direct UI calls without recording the producer-anchor invariant
+  - let future producers bypass service-layer anchor resolution without explicit waiver
+  - assume MtlEntryDTO.id is a player_financial_transaction ID — it is the mtl_entry row ID
+  - use visit_id as the sole resolution key for the eligible PFT — a visit contains multiple
+    slips and buy-ins; visit-scoped lookup is ambiguous and must not be used for anchor resolution
+  - assume mtl_entry.visit_id is NOT NULL — the schema allows null (unlike PFT.visit_id)

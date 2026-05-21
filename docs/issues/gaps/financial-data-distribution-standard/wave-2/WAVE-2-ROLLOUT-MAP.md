@@ -2,8 +2,8 @@
 
 ---
 
-status: Active — Phase 2.3 COMPLETE (PRD-087 / EXEC-087, 2026-05-19). DEC-1 resolved: visit_class_a_projection + gaming_day_lifecycle + completeness propagation delivered. Cursor advanced to Phase 2.4 (Consumer Expansion: Operational Telemetry Projection) — requires PRD before code.
-date: 2026-05-19
+status: Active — Phase 2.3 COMPLETE (PRD-087 / EXEC-087, 2026-05-19). Phase 2.3a observability investigation complete (2026-05-20): producer trigger posture gaps confirmed, PROD-ANCHOR-STD-001 opened (proposed_for_wave_2_5_signoff). Cursor at Phase 2.4 (Consumer Expansion: Operational Telemetry Projection) — requires PRD before code. Post-Wave-2 backlog established: see §10.
+date: 2026-05-20
 phase_model: bounded_operational_rollout (transition from transport_certification_sequencing as of 2026-05-19)
 phase_2_0_closed: 2026-05-11
 phase_2_0_prd: PRD-081
@@ -94,6 +94,8 @@ These principles govern every Phase 2.x slice. They are inherited from the froze
 7. **Freeze discipline holds.** ADR-052–055 are frozen. If a phase surfaces a real conflict, write a superseding ADR. Do not patch frozen docs silently.
 
 8. **Parallelization rule (effective 2026-05-19, post Phase 2.2).** This marks the transition from *transport stabilization* to *bounded operationalization of a stabilized propagation substrate*. Phase 2.3a (Operational Outbox Observability) and Phase 2.3 (Lifecycle-Aware Completeness Projection) may proceed in parallel. They operate on different architectural layers: 2.3a is a read-only runtime verification surface; 2.3 is the first projection consumer. Parallelization is permitted while all four conditions hold: (1) relay topology is frozen; (2) replay ordering semantics are unchanged; (3) no projection logic is introduced into the observability surface; (4) no write/replay/repair actions are added to the admin observability boundary. If any condition breaks, parallelization reverts to sequential. Subsequent phase pairs are sequential unless explicitly permitted by a new rule under this principle.
+
+9. **Producer coverage is workflow-specific.** Transport health does not imply producer coverage. Each event type must be certified through the real workflow surface expected to emit it. Observability evidence must distinguish between: (a) transport functionality — relay picks up and delivers rows; (b) producer RPC capability — the RPC can write to `finance_outbox` when called with a valid anchor; (c) workflow-level anchor resolution — the real operator workflow actually provides the required anchor at the callsite. An event type whose RPC emits conditionally is not certified by relay health or database-level proof alone. Certification requires end-to-end observation through the real workflow surface, from operator action to `finance_outbox` row to `processed_at`. Each PRD for phases that introduce or expand producers must include an anchor resolution table naming the anchor, its source in the workflow context, and the callsite that passes it.
 
 ---
 
@@ -376,7 +378,21 @@ Exiting Phase N → Opening Phase N+1 requires two documents:
 
 **Surface impact:** Shift telemetry operational estimates (Estimated Drop, Grind Buyin volume) become event-driven. Surfaces gain meaningful `'partial'` completeness during a shift and `'complete'` upon gaming-day close.
 
-**Skill to invoke:** `backend-service-builder` (operational projection store + consumer); `qa-specialist` (authority degradation tests; mixed-class aggregate tests); `frontend-design-pt-2` (if shift dashboard surface changes are required)
+**Producer trigger posture — known gaps entering Phase 2.4:**
+
+Per Principle 9, RPC-level wiring (Phase 2.2 exit) is not equivalent to workflow-level certification. The three producers consumed here have the following real-workflow trigger status:
+
+| Producer | RPC wired | UI trigger | Status entering 2.4 |
+|---|---|---|---|
+| `grind.observed` | ✅ Phase 2.0 | `GrindBuyinPanel` + `useLogGrindBuyin` exist but component **not mounted** in any page | Orphaned — rows cannot be produced by real operator workflows until mounted |
+| `fill.recorded` | ✅ Phase 2.2 | No UI — `POST /api/v1/table-context/fills` is hardware-integration-only | Greenfield — rows require direct API call; operator UI is future scope |
+| `credit.recorded` | ✅ Phase 2.2 | No UI — `POST /api/v1/table-context/credits` is hardware-integration-only | Greenfield — rows require direct API call; operator UI is future scope |
+
+Consequence: the consumer can be built and proven via direct API/RPC calls. However, real operator workflows will not produce `grind.observed`, `fill.recorded`, or `credit.recorded` rows in production until the UI gaps are addressed. The shift dashboard projection will show `'partial'` completeness permanently in real workflows unless at minimum `GrindBuyinPanel` is mounted.
+
+Mounting `GrindBuyinPanel` is achievable within Phase 2.4 (the component and hook are built). The fill/credit operator UI is explicitly out of scope for Phase 2.4 and must be tracked as a known residual gap for Phase 2.5 sign-off. The Phase 2.4 EXEC-SPEC must name these gaps explicitly rather than treating Phase 2.2 RPC wiring as equivalent to workflow coverage.
+
+**Skill to invoke:** `backend-service-builder` (operational projection store + consumer); `qa-specialist` (authority degradation tests; mixed-class aggregate tests); `frontend-design-pt-2` (shift dashboard surface changes + `GrindBuyinPanel` mounting)
 
 ### Deliverables
 
@@ -387,14 +403,17 @@ Exiting Phase N → Opening Phase N+1 requires two documents:
 - [ ] Completeness: `'partial'` during open shift, `'complete'` on gaming-day close
 - [ ] Replay test for operational projection
 - [ ] Shift telemetry surfaces updated to consume projection (not poll authoring store)
+- [ ] `GrindBuyinPanel` mounted in the appropriate table-context page — required for real `grind.observed` rows to flow from operator workflows
 - [ ] type-check, lint, build exit 0
 
 ### Exit gate
 
-- Shift telemetry surfaces receive fresh Class B + Dependency Event data via outbox
-- Authority labels correct: `type: 'estimated'` on all operationally-derived values
+- Consumer certified via direct API/RPC trigger for all three event types (minimum bar per Principle 9)
+- `GrindBuyinPanel` mounted and producing live `grind.observed` rows through real operator workflow
+- Fill/credit producer trigger gap formally acknowledged in exit notes — operator UI deferred; direct API call is the certifiable trigger for this phase
+- Authority labels correct: `origin_label: 'estimated'` on all operationally-derived values
 - Mixed-class surface shows degraded authority, not spurious `'actual'`
-- Completeness signals meaningful during shift lifecycle
+- Completeness signals meaningful during shift lifecycle (given mounted grind panel; fill/credit completeness remains partial until operator UI ships)
 - All gates pass
 
 ---
@@ -403,7 +422,7 @@ Exiting Phase N → Opening Phase N+1 requires two documents:
 
 **Entry gate:** Phase 2.4 exit
 
-**Scope:** Minimal relay health observability, outbox retention policy, and Wave 2 sign-off artifact. This is not a full observability dashboard — that is deferred per FIB-H §G.
+**Scope:** Minimal relay health observability, outbox retention policy, producer coverage matrix, and Wave 2 sign-off artifact. This is not a full observability dashboard — that is deferred per FIB-H §G.
 
 ### Deliverables
 
@@ -414,13 +433,27 @@ Exiting Phase N → Opening Phase N+1 requires two documents:
   - Summary of all phases completed
   - I1–I4 proof record
   - DEC-1 resolution record
-  - Known residual gaps (multi-consumer fan-out, CDC relay, external consumer contract)
+  - Known residual gaps (see below — must be named explicitly, not elided)
+
+### Known residual gaps (required in sign-off artifact)
+
+These gaps are confirmed findings from Phase 2.3a observability investigation and must be named in the sign-off document. They do not block Wave 2 transport/projection infrastructure sign-off, but they block any claim of full workflow-level producer coverage.
+
+| Gap | Finding | Reference | Post-Wave-2 path |
+|---|---|---|---|
+| `adjustment.recorded` workflow anchor | `original_txn_id` is never passed by the rating-slip modal or MTL compliance dashboard. ADR-057 gate silently skips emission. The RPC is correct; the callers are not. | W2-OBS-ANCHOR-COVERAGE-001; PROD-ANCHOR-STD-001 | Enforce anchor resolution standard at service boundary per PROD-ANCHOR-STD-001 |
+| Fill/credit operator UI | `rpc_request_table_fill` and `rpc_request_table_credit` are wired correctly. No operator-facing UI exists; routes are hardware-integration-only. Real workflows produce no outbox rows. | CORE-OPERATIONAL-LOOP.md Category A | Build operator UI surface (separate PRD; hardware integration scope) |
+| `GrindBuyinPanel` mounting | Component and hook exist; panel is not mounted in any page. Grind observations cannot be produced by real operator workflows. Should be closed in Phase 2.4. | CORE-OPERATIONAL-LOOP.md Category B | Mount `GrindBuyinPanel` in Phase 2.4 (component ready, no new build needed) |
+| Multi-consumer fan-out | Single internal consumer path assumed throughout Wave 2. Fan-out requires schema evolution and FIB amendment. | FIB-H-W2-OUTBOX-001 §G | Requires separate ADR + FIB amendment |
+| CDC / WAL relay | Not in scope for Wave 2. Post-pilot scale upgrade. | §6 Non-Goals | Requires separate ADR |
+| External consumer contract | No public event bus, no reconciliation interface. Q3 deferred. | §6 Non-Goals | Requires separate ADR + stakeholder discovery |
 
 ### Exit gate
 
 - Backlog and lag metrics appear in relay logs
 - Retention policy active (no indefinite accumulation)
-- Sign-off document authored and approved
+- Sign-off document authored and approved with all known residual gaps named
+- Sign-off explicitly distinguishes: transport complete, RPC producer coverage, workflow-level producer coverage, and known unresolved workflow gaps
 - All gates pass
 
 ---
@@ -475,18 +508,20 @@ Do not invoke these skills directly for any Phase ≥ 2.1. Each phase runs `/prd
 
 ### Wave 2 complete when
 
-1. All five producer paths emit to `finance_outbox` atomically:
+1. All five producer RPCs emit to `finance_outbox` atomically (RPC-level certification):
    - `rpc_create_financial_txn` ✅
    - `rpc_record_grind_observation` ✅
-   - `rpc_create_financial_adjustment`
-   - `rpc_request_table_fill`
-   - `rpc_request_table_credit`
+   - `rpc_create_financial_adjustment` ✅ (RPC correct; workflow anchor gap documented — PROD-ANCHOR-STD-001)
+   - `rpc_request_table_fill` ✅
+   - `rpc_request_table_credit` ✅
 2. I1–I4 invariants proven for all producer paths (I1 re-verified per new producer; I2–I4 baseline established in Phase 2.0)
-3. DEC-1 resolved — visit-level financial aggregates emit `'complete'` / `'partial'` when events are flowing
-4. Shift telemetry surfaces event-driven (not polling authoring stores)
+3. DEC-1 resolved — visit-level financial aggregates emit `'complete'` / `'partial'` when events are flowing ✅ (Phase 2.3)
+4. Shift telemetry surfaces event-driven (not polling authoring stores); `GrindBuyinPanel` mounted (Phase 2.4)
 5. Authority labels correct on all new projection surfaces
 6. Relay health observable (backlog size + processing lag logged)
-7. Sign-off artifact authored and approved
+7. Sign-off artifact authored and approved with known residual gaps named
+
+**Note on workflow-level coverage (Principle 9):** Wave 2 transport completion is defined at RPC-level certification plus consumer/projection proof. Workflow-level producer coverage is tracked separately under Principle 9. Confirmed workflow gaps (`adjustment.recorded` anchor, fill/credit operator UI) do not block transport completion, but they do block any claim of full operational producer coverage. The Wave 2 sign-off must label the final state as "transport complete with known workflow coverage gaps" unless those gaps are closed before sign-off. Closing them requires post-Wave-2 work governed by PROD-ANCHOR-STD-001 and future UI PRDs.
 
 ### Ready to start post-Wave-2 work when
 
@@ -500,7 +535,33 @@ Do not invoke these skills directly for any Phase ≥ 2.1. Each phase runs `/prd
 
 ---
 
-## 9. Relationship to ROLLOUT-ROADMAP.md
+## 10. Post-Wave-2 Backlog
+
+Items confirmed during Phase 2.3a observability investigation that are out of scope for Wave 2 but must be tracked for post-Wave-2 scheduling. Each item requires its own PRD before code. None block Wave 2 exit (see §8 note on Principle 9).
+
+| ID | Item | Source | Governing artifact | PRD status |
+|---|---|---|---|---|
+| PWB-001 | `adjustment.recorded` anchor resolution — refactor rating-slip modal and MTL compliance dashboard to resolve `original_txn_id` at service boundary; move `createFinancialAdjustment` behind API route | W2-OBS-ANCHOR-COVERAGE-001 / LAYER-1-FAILURE.md | PROD-ANCHOR-STD-001 (`proposed_for_wave_2_5_signoff`) | Not started |
+| PWB-002 | Fill/credit operator UI — no operator-facing surface exists for `rpc_request_table_fill` / `rpc_request_table_credit`; current API routes are hardware-integration-only; outbox rows cannot be produced by real operator workflows | CORE-OPERATIONAL-LOOP.md Category A | Phase 2.5 sign-off gap table | Not started — hardware integration scope; separate PRD required |
+| PWB-003 | `GrindBuyinPanel` mounting — component and hook exist; panel is not mounted in any page; targeted for closure in Phase 2.4 | CORE-OPERATIONAL-LOOP.md Category B | Phase 2.4 deliverables | In scope for Phase 2.4 — close there if delivered; promote to PWB if deferred |
+
+**Promotion rule:** If PWB-003 is not delivered in Phase 2.4, it graduates to this backlog as a confirmed post-Wave-2 item. Phase 2.5 sign-off must record its status explicitly.
+
+**Sign-off language for known workflow coverage gaps:**
+
+- `adjustment.recorded` — RPC-capable but not workflow-certified until rating-slip and rated MTL adjustment surfaces resolve `original_txn_id` per PROD-ANCHOR-STD-001.
+- `fill.recorded` / `credit.recorded` — RPC/API-certified but not operator-workflow-certified until an operator-facing trigger surface exists.
+
+Canonical sign-off phrase: **"Wave 2 transport and projection infrastructure complete; workflow-level producer coverage gaps documented and queued."** The sign-off must not use "Wave 2 complete" without this qualifier.
+
+**PROD-ANCHOR-STD-001 lifecycle:**
+- Phase 2.5: ratified as accepted governance standard in WAVE-2-SIGN-OFF.md
+- Post-Wave-2 (PWB-001 PRD): standard enforced against both affected surfaces
+- Until PWB-001 ships: `adjustment.recorded` remains a confirmed workflow-level gap; the outbox observability surface will show no rows for this event type from real operator workflows
+
+---
+
+## 11. Relationship to ROLLOUT-ROADMAP.md
 
 This document is the detailed execution plan for Wave 2 described in outline at `ROLLOUT-ROADMAP.md §4`. The parent roadmap's §4 note ("Wave 2 will need its own roadmap") is fulfilled by this document.
 

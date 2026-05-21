@@ -1,0 +1,227 @@
+directive_id: PROD-ANCHOR-STD-001
+type: producer_anchor_resolution_standard
+status: accepted_for_wave_2_5_signoff
+issued_from: W2-OBS-ANCHOR-COVERAGE-001
+triggered_by: LAYER-1-FAILURE — two adjustment-producing surfaces bypassed anchor resolution
+
+# ============================================================================
+# Scope
+# ============================================================================
+scope:
+  applies_to:
+    - adjustment-producing workflows (UI surfaces, hooks, service calls)
+    - DTO / BFF / API boundaries that carry or resolve producer anchors
+    - outbox producer certification for linked financial corrections
+  does_not_apply_to:
+    - redefining visit semantics
+    - redefining rating_slip semantics
+    - redefining MTL as a ledger authority
+    - changing player_financial_transaction primary ownership
+    - changing ADR-057 eligibility criteria
+
+# ============================================================================
+# The Rule
+# ============================================================================
+rule: >
+  Any workflow that creates a linked financial correction must resolve the
+  original authoring fact at the correct semantic scope before calling the
+  producer RPC. UI surfaces may request an adjustment; only a service or BFF
+  boundary may resolve the ledger fact being corrected.
+
+# ============================================================================
+# Anchor Hierarchy
+# ============================================================================
+anchor_hierarchy:
+  visit_id:
+    role: broad session context — the gaming session container
+    allowed_for:
+      - visit-level financial aggregation
+      - scoping player activity to a session
+    forbidden_for:
+      - selecting original_txn_id by itself
+    reason: >
+      A visit spans the whole gaming session and may contain multiple rating slips,
+      multiple buy-ins per slip, and their adjustments. visit_id alone is ambiguous —
+      it does not identify which original transaction is being corrected.
+
+  rating_slip_id:
+    role: slip/table-session correction scope
+    allowed_for:
+      - eligible PFT lookup for rated slip adjustments
+    resolution_query: >
+      SELECT id FROM player_financial_transaction
+      WHERE casino_id = :casinoId
+        AND rating_slip_id = :slipId
+        AND source = 'pit'
+        AND direction = 'in'
+        AND tender_type IN ('cash', 'chips')
+        AND txn_kind != 'adjustment'
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+    notes: >
+      Nullable on both PFT and mtl_entry. Only present for rated pit transactions.
+      When non-null, uniquely scopes the eligible original transaction to this
+      table-session. This is the correct resolution scope for rated-slip adjustments.
+      Query includes full ADR-057 eligibility criteria (casino scoping, tender_type
+      gate) to match the actual emission gate and prevent cross-casino or
+      non-eligible transaction selection. ORDER BY created_at DESC, id DESC is
+      deterministic. It is only semantically chronological if PFT.id uses an
+      order-preserving strategy such as UUIDv7. If PFT.id is UUIDv4, id DESC
+      is a stable tie-breaker only, not a time-order guarantee.
+
+  pft_id:
+    role: ledger fact identity — the specific player_financial_transaction row
+    required_for: original_txn_id in rpc_create_financial_adjustment
+    resolution_paths:
+      - via_rating_slip_id: resolution_query above (slip-scoped lookup)
+      - via_mtl_idempotency_key: >
+          source_pft_id is derived server-side from mtl_entry.idempotency_key when
+          the key matches '^fin:<uuid>$'. The DTO should expose source_pft_id, not
+          raw idempotency_key, unless a separate audit surface explicitly requires
+          the raw key.
+      - via_bff: BFF/API resolves at load time and surfaces as latestEligiblePftId
+
+  mtl_entry_id:
+    role: compliance row identity — the mtl_entry table primary key
+    forbidden_for: original_txn_id
+    reason: >
+      mtl_entry.id identifies the compliance projection, not the ledger fact.
+      The MTL entry is derived FROM a PFT; it is not the PFT itself.
+
+  mtl_entry_idempotency_key:
+    role: bridge provenance link
+    pattern: "'fin:' || PFT.id"
+    allowed_for: deriving source_pft_id when the pattern is confirmed as fin:<uuid>
+    notes: >
+      Currently not exposed in MtlEntryDTO. Adding source_pft_id to the DTO
+      (derived via substring(idempotency_key from 5)) would make the 1:1 PFT
+      link directly available without any additional query.
+    ui_contract: >
+      source_pft_id may be derived only when idempotency_key matches the
+      finance-bridge pattern 'fin:<uuid>'. Invalid, null, non-fin, or malformed
+      keys resolve to source_pft_id: null. UI callers must never parse
+      idempotency_key directly and must never pass mtl_entry.id as
+      original_txn_id.
+
+# ============================================================================
+# Ambiguity Rule
+# ============================================================================
+ambiguity_rule:
+  rule: >
+    If more than one eligible original PFT exists for the same rating_slip_id,
+    the resolver may select the latest only if the workflow explicitly defines
+    "adjust latest eligible buy-in" as pilot behavior. The selection strategy
+    must be named, not implicit.
+  recommended_resolver_output:
+    - original_txn_id
+    - eligible_pft_count
+    - resolution_strategy: latest_eligible_for_slip
+  rationale: >
+    ORDER BY created_at DESC, id DESC LIMIT 1 is a valid pilot default but
+    hides a domain assumption. If a slip has multiple eligible buy-in PFTs
+    (e.g., a split buy-in recorded in two entries), "latest" may not be the
+    one the operator intends to correct. Surfacing eligible_pft_count allows
+    the BFF or service layer to detect ambiguity and escalate rather than
+    silently resolve.
+  future_upgrade: >
+    If operators need to choose which buy-in is corrected, the UI must expose
+    transaction-level selection. The resolution query becomes a list query;
+    the UI carries the selected pft_id. The service boundary validates the
+    selection against ADR-057 eligibility before passing to the RPC.
+
+# ============================================================================
+# MTL Source PFT Parsing Guard
+# ============================================================================
+mtl_source_pft_guard:
+  rule: >
+    source_pft_id may be derived from mtl_entry.idempotency_key only when the
+    value matches the pattern '^fin:[0-9a-fA-F-]{36}$' and, for rated adjustment
+    workflows, rating_slip_id is non-null on the MTL entry.
+  invalid_behaviors:
+    - do not derive source_pft_id from non-fin idempotency keys
+    - do not pass mtl_entry.id as original_txn_id
+    - do not emit adjustment.recorded for unrated entries unless ADR-057 changes
+    - do not parse the idempotency_key without the regex guard — manual entries
+      or future bridge variants may use a different prefix
+  implementation_note: >
+    When exposing source_pft_id in MtlEntryDTO, the DTO query should apply the
+    regex guard server-side and return NULL rather than a partial parse if the
+    pattern does not match. The TypeScript type should be source_pft_id: string | null
+    and callers must treat null as "unresolvable from MTL context."
+
+# ============================================================================
+# Recommended Architecture Adjustment
+# ============================================================================
+recommended_architecture_adjustment:
+  change: move adjustment creation behind server/API/service mediation
+  current_state: >
+    Both affected surfaces (rating-slip modal, MTL compliance dashboard) call
+    rpc_create_financial_adjustment directly from the browser via
+    services/player-financial/http.ts:createFinancialAdjustment.
+    The contrast with buyin.recorded is sharp: that producer goes through
+    POST /api/v1/financial-transactions → service.create → crud.ts → RPC.
+    The adjustment path bypasses this entirely.
+  desired_state: >
+    Adjustment creation goes through a server-side API route or BFF boundary
+    that validates and resolves original_txn_id before the RPC call reaches
+    the database. The service boundary becomes the enforcement point for the
+    anchor resolution rule — UI surfaces carry only the request intent
+    (deltaAmount, reasonCode, note, slipId or mtlEntryId), not the resolved
+    ledger fact identity.
+  rationale: >
+    The service boundary can resolve or validate original_txn_id before the
+    RPC call, instead of trusting UI surfaces to carry producer anchors
+    correctly. The current direct-browser-RPC pattern allowed anchor
+    resolution to be skipped silently — the RPC accepted a null
+    original_txn_id without error and correctly (by ADR-057) emitted nothing.
+    Moving mediation to the server makes the skip visible and preventable.
+  not_a_reopen: true
+  clarification: >
+    This is a localized wiring change, not an architectural reopening.
+    The topology (visit / slip / PFT / MTL) is correct as-is. The correction
+    is adding the discipline that was missing: no adjustment RPC call leaves
+    the server boundary without a resolved original_txn_id for eligible corrections.
+
+# ============================================================================
+# Verdict
+# ============================================================================
+verdict: >
+  The topology is fine. The wiring discipline was too trusting.
+  Visit, rating_slip, PFT, and MTL each mean exactly what they mean.
+  The system lacked one rule: surfaces may request an adjustment, but only a
+  service or BFF boundary may resolve the ledger fact being corrected.
+
+# ============================================================================
+# Required Actions
+# ============================================================================
+required_actions:
+  certification_gate:
+    description: >
+      Producer certification (phase 2.5 signoff) must verify that each
+      adjustment-producing workflow demonstrates anchor resolution at the
+      correct scope before the call reaches the RPC.
+    check: >
+      For each row in the phase_2_5_observability_signoff table where
+      event_type = 'adjustment.recorded': confirm anchor_source is not
+      visit_id alone and not mtl_entry.id.
+
+  surfaces_to_remediate:
+    - surface: rating_slip_modal
+      file: components/modals/rating-slip/rating-slip-modal.tsx
+      anchor_available: rating_slip_id (always present — modal identity)
+      preferred_fix: Option A — BFF resolves latestEligiblePftId at load time
+      fallback_fix: Option B — resolve via rating_slip_id at submit time
+    - surface: mtl_compliance_dashboard
+      file: components/mtl/compliance-dashboard.tsx
+      anchor_available: rating_slip_id (conditional — from MtlEntryDTO, nullable)
+      preferred_fix: Option D — expose source_pft_id in MtlEntryDTO via idempotency_key
+      fallback_fix: Option C — resolve via rating_slip_id at submit time (rated sub-case only)
+
+  transport_remediation:
+    description: >
+      Move adjustment creation behind a server/API route.
+      Existing pattern reference: POST /api/v1/financial-transactions
+      (the buyin.recorded producer path).
+    priority: recommended for implementation; not blocking transport-health
+      certification, but blocking full adjustment.recorded workflow coverage
+      signoff.
