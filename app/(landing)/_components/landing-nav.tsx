@@ -45,13 +45,6 @@ export function LandingNav() {
           >
             Sign in
           </Link>
-          <Button
-            asChild
-            size="sm"
-            className="rounded-full bg-accent/90 text-white hover:bg-accent hover:shadow-[0_0_20px_hsl(189_94%_43%/0.3)] transition-all duration-300 text-[13px] px-5 h-8"
-          >
-            <Link href="/contact">Request an operational walkthrough</Link>
-          </Button>
         </div>
       </div>
     </nav>

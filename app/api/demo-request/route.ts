@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
-import { sendDemoRequestConfirmation } from '@/lib/email/send-demo-request-confirmation';
-import { sendDemoRequestNotification } from '@/lib/email/send-demo-request-notification';
+import { sendWalkthroughRequestConfirmation } from '@/lib/email/send-walkthrough-request-confirmation';
+import { sendWalkthroughRequestNotification } from '@/lib/email/send-walkthrough-request-notification';
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -42,8 +42,14 @@ export async function POST(request: Request) {
   }
 
   await Promise.all([
-    sendDemoRequestNotification({ name, email, phone, company, message }),
-    sendDemoRequestConfirmation({ name, email }),
+    sendWalkthroughRequestNotification({
+      name,
+      email,
+      phone,
+      company,
+      message,
+    }),
+    sendWalkthroughRequestConfirmation({ name, email }),
   ]);
 
   return NextResponse.json({ ok: true });

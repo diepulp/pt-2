@@ -1,4 +1,6 @@
-export function buildDemoRequestConfirmationHtml({
+const CALENDAR_LINK = 'https://calendar.app.google/8ofiPtRVFdSkgjPy9';
+
+export function buildWalkthroughRequestConfirmationHtml({
   name,
 }: {
   name: string;
@@ -12,7 +14,7 @@ export function buildDemoRequestConfirmationHtml({
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Your d3lt demo access</title>
+  <title>Your d3lt walkthrough request</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Michroma&display=swap');
     body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
@@ -69,12 +71,12 @@ export function buildDemoRequestConfirmationHtml({
                       <tr>
                         <td width="3" style="background-color:#06b6d4;border-radius:2px;" rowspan="2">&nbsp;</td>
                         <td style="padding-left:14px;padding-bottom:2px;">
-                          <p style="margin:0;font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#06b6d4;font-family:'Michroma',monospace,'Courier New',Courier;">Demo access</p>
+                          <p style="margin:0;font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#06b6d4;font-family:'Michroma',monospace,'Courier New',Courier;">Operational walkthrough</p>
                         </td>
                       </tr>
                       <tr>
                         <td style="padding-left:14px;">
-                          <h1 style="margin:6px 0 0;font-size:24px;font-weight:700;color:#f7f8f8;letter-spacing:-0.02em;line-height:1.25;">We received<br>your request.</h1>
+                          <h1 style="margin:6px 0 0;font-size:24px;font-weight:700;color:#f7f8f8;letter-spacing:-0.02em;line-height:1.25;">Request received.</h1>
                         </td>
                       </tr>
                     </table>
@@ -83,11 +85,8 @@ export function buildDemoRequestConfirmationHtml({
                     <p style="margin:0 0 14px;font-size:15px;color:#f7f8f8;line-height:1.6;">Hi ${safeHtml(name)},</p>
 
                     <!-- Body -->
-                    <p style="margin:0 0 12px;font-size:14px;color:#8b9ab0;line-height:1.75;">
-                      Thanks for your interest in d3lt. We&rsquo;ve received your demo request and have started preparing access to the application.
-                    </p>
                     <p style="margin:0;font-size:14px;color:#8b9ab0;line-height:1.75;">
-                      You should receive a secure magic link shortly. Follow that link to sign in and explore the demo environment. The link is issued specifically for your request, so no password is required.
+                      Your walkthrough request has been received. Use the scheduling link below to choose a time. Once scheduled, you&rsquo;ll receive a calendar invite and any access instructions needed before the session.
                     </p>
 
                     <!-- Divider -->
@@ -97,47 +96,20 @@ export function buildDemoRequestConfirmationHtml({
                       </tr>
                     </table>
 
-                    <!-- What happens next label -->
-                    <p style="margin:0 0 20px;font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#06b6d4;font-family:'Michroma',monospace,'Courier New',Courier;">What happens next</p>
+                    <!-- Calendar CTA -->
+                    <p style="margin:0 0 20px;font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#06b6d4;font-family:'Michroma',monospace,'Courier New',Courier;">Schedule your session</p>
 
-                    <!-- Step 1 -->
-                    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px;">
+                    <table cellpadding="0" cellspacing="0" border="0">
                       <tr>
-                        <td width="36" style="vertical-align:top;padding-top:1px;">
-                          <span style="font-family:'Michroma',monospace,'Courier New',Courier;font-size:22px;font-weight:400;color:#163a4a;line-height:1;display:block;">01</span>
-                        </td>
-                        <td style="vertical-align:top;padding-left:4px;">
-                          <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#f7f8f8;line-height:1.4;">Your request is reviewed</p>
-                          <p style="margin:0;font-size:13px;color:#8b9ab0;line-height:1.65;">We confirm your demo access request and prepare the appropriate demo environment.</p>
+                        <td style="border-radius:8px;background-color:#06b6d4;">
+                          <a href="${CALENDAR_LINK}" target="_blank" style="display:inline-block;padding:14px 28px;font-size:13px;font-weight:600;color:#000212;text-decoration:none;letter-spacing:0.02em;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">Choose a time &rarr;</a>
                         </td>
                       </tr>
                     </table>
 
-                    <!-- Step 2 -->
-                    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px;">
-                      <tr>
-                        <td width="36" style="vertical-align:top;padding-top:1px;">
-                          <span style="font-family:'Michroma',monospace,'Courier New',Courier;font-size:22px;font-weight:400;color:#163a4a;line-height:1;display:block;">02</span>
-                        </td>
-                        <td style="vertical-align:top;padding-left:4px;">
-                          <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#f7f8f8;line-height:1.4;">You receive your magic link</p>
-                          <p style="margin:0;font-size:13px;color:#8b9ab0;line-height:1.65;">A secure sign-in link will arrive by email shortly. Follow it to access the application.</p>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <!-- Step 3 -->
-                    <table cellpadding="0" cellspacing="0" border="0" width="100%">
-                      <tr>
-                        <td width="36" style="vertical-align:top;padding-top:1px;">
-                          <span style="font-family:'Michroma',monospace,'Courier New',Courier;font-size:22px;font-weight:400;color:#163a4a;line-height:1;display:block;">03</span>
-                        </td>
-                        <td style="vertical-align:top;padding-left:4px;">
-                          <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#f7f8f8;line-height:1.4;">You explore the demo</p>
-                          <p style="margin:0;font-size:13px;color:#8b9ab0;line-height:1.65;">You can review the application flow and core operational surfaces at your own pace. If you&rsquo;d like a guided walkthrough afterward, we&rsquo;ll coordinate a session tailored to your property&rsquo;s scale and workflow.</p>
-                        </td>
-                      </tr>
-                    </table>
+                    <p style="margin:16px 0 0;font-size:12px;color:#4a5568;line-height:1.6;">
+                      Or copy this link: <a href="${CALENDAR_LINK}" style="color:#06b6d4;text-decoration:none;">${CALENDAR_LINK}</a>
+                    </p>
 
                     <!-- Divider -->
                     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 24px;">
@@ -159,7 +131,7 @@ export function buildDemoRequestConfirmationHtml({
           <tr>
             <td style="padding-top:24px;text-align:center;">
               <p style="margin:0;font-size:11px;color:#2e3248;line-height:1.6;">
-                You&rsquo;re receiving this because you requested demo access at d3lt.app.<br>
+                You&rsquo;re receiving this because you requested an operational walkthrough at d3lt.app.<br>
                 This is a transactional email &mdash; no action required.
               </p>
             </td>

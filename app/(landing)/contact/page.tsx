@@ -268,12 +268,33 @@ export default function ContactPage() {
                       Request received.
                     </h2>
                     <p className="mt-2 max-w-xs text-sm text-[#95A2B3]/70 leading-relaxed">
-                      We&apos;ll reach out within one business day to schedule
-                      your walkthrough.
+                      Choose a time below and we&apos;ll send a calendar invite
+                      with everything you need before the session.
                     </p>
+                    <a
+                      href="https://calendar.app.google/8ofiPtRVFdSkgjPy9"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-7 inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-[#000212] shadow-[0_1px_40px_hsl(189_94%_43%/0.25)] transition-all duration-300 hover:bg-accent/90 hover:shadow-[0_1px_50px_hsl(189_94%_43%/0.35)]"
+                    >
+                      Schedule your walkthrough
+                      <svg
+                        className="size-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
+                        />
+                      </svg>
+                    </a>
                     <Link
                       href="/"
-                      className="mt-8 text-[13px] font-medium text-accent/70 transition-colors hover:text-accent"
+                      className="mt-5 text-[13px] font-medium text-[#95A2B3]/40 transition-colors hover:text-[#95A2B3]"
                     >
                       Back to overview
                     </Link>

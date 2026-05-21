@@ -275,7 +275,7 @@ export default function LandingPage() {
                 size="lg"
                 className="rounded-full border border-white/[0.08] bg-white/[0.04] text-[#95A2B3] hover:bg-white/[0.08] hover:text-[#F7F8F8] backdrop-blur-sm px-8 h-12 text-sm font-medium tracking-wide transition-all duration-300 w-full sm:w-auto"
               >
-                <Link href="/request-access">Request Production Pilot</Link>
+                <Link href="/contact">Request Operational Walkthrough</Link>
               </Button>
             </div>
           </Reveal>
