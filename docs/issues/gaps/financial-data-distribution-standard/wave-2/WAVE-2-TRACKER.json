@@ -5,7 +5,7 @@
     "source_of_truth": "WAVE-2-PROGRESS-TRACKER.md",
     "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md",
     "parent_tracker_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json",
-    "last_updated": "2026-05-19 (PRD-087 / EXEC-087 complete — Phase 2.3 Lifecycle-Aware Completeness Projection delivered; DEC-1 resolved; cursor advanced to Phase 2.4)",
+    "last_updated": "2026-05-21 (PRD-088 / EXEC-088 complete — Phase 2.4 Operational Telemetry Projection delivered; PWB-003 closed; cursor advanced to Phase 2.5)",
     "update_rule": "Update both this file and WAVE-2-PROGRESS-TRACKER.md together when phase state changes. This file is the machine-readable projection of the .md; it does not own truth. Update parent ROLLOUT-TRACKER.json cursor when Wave 2 active_phase changes.",
     "reading_order": "cursor → direction → phases → deferred_register → validation_matrix → open_decisions. Read roadmap_ref for phase deliverables and exit gates. Read parent_tracker_ref for Wave 1 history and Wave 2 entry criteria."
   },
@@ -45,18 +45,18 @@
 
   "cursor": {
     "wave": 2,
-    "active_phase": "2.4",
-    "phase_status": "phase_2_3_complete_phase_2_4_not_started",
-    "phase_label": "Phase 2.3 COMPLETE — PRD-087 / EXEC-087 implemented 2026-05-19. Lifecycle-aware completeness projection delivered: visit_class_a_projection, gaming_day_lifecycle, consumer routing, completeness propagation to VisitFinancialSummaryDTO. DEC-1 resolved. Phase 2.4 (Consumer Expansion: Operational Telemetry Projection) is next — requires PRD before code.",
+    "active_phase": "2.5",
+    "phase_status": "phase_2_4_complete_phase_2_5_not_started",
+    "phase_label": "Phase 2.4 COMPLETE — PRD-088 / EXEC-088 implemented 2026-05-21. Operational telemetry projection delivered: shift_operational_projection, rpc_claim_operational_outbox_batch, rpc_process_operational_projection, runOperationalConsumer, dual-branch relay (classA + operational), 3-way observability backlog breakdown, GET /api/v1/table-context/operational-projection, completeness 5-step logic (ADR-054 R4: type always estimated). GrindBuyinPanel mounted (PWB-003 closed). Phase 2.5 (Observability + Sign-Off) is next — requires PRD before code.",
     "blocker": null,
     "teardown_migration": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
-    "next_action": "Phase 2.4 PRD — Consumer Expansion: Operational Telemetry Projection",
-    "next_action_prd": "PRD-088 (not yet authored)",
-    "last_closed_phase": "2.3",
-    "last_closed_date": "2026-05-19",
-    "last_closed_prd": "PRD-087",
-    "last_closed_exec": "EXEC-087",
-    "last_closed_commit": null,
+    "next_action": "Phase 2.5 PRD — Observability + Sign-Off",
+    "next_action_prd": "PRD-089 (not yet authored)",
+    "last_closed_phase": "2.4",
+    "last_closed_date": "2026-05-21",
+    "last_closed_prd": "PRD-088",
+    "last_closed_exec": "EXEC-088",
+    "last_closed_commit": "931f5ed9",
     "exemplar_phase_commit": "8a1b8741",
     "exemplar_phase_date": "2026-05-11",
     "phase_model_transition": "Wave 2 transitions from transport-certification sequencing to bounded operational rollout sequencing as of 2026-05-19 (Phase 2.2 complete). Phases 2.3a and 2.3 are the first parallel tracks; see direction.principles for the governing rule.",
@@ -459,41 +459,64 @@
       "id": "2.4",
       "label": "Consumer Expansion: Operational Telemetry Projection",
       "wave": 2,
-      "status": "not_started",
-      "prd": null,
-      "exec_spec": null,
-      "exit_date": null,
-      "commit": null,
-      "entry_gate": "Phase 2.2 exit (all producers wired) + Phase 2.3 exit (consumer infrastructure established)",
-      "scope": "Projection consumer for Class B (grind) and Dependency Event (fills, credits) streams. Shift telemetry becomes event-driven rather than polling authoring stores.",
+      "status": "complete",
+      "prd": "PRD-088",
+      "prd_path": "docs/10-prd/PRD-088-wave2-phase-2.4-operational-telemetry-projection-v0.md",
+      "exec_spec": "EXEC-088",
+      "exec_spec_path": "docs/21-exec-spec/EXEC-088-wave2-phase-2.4-operational-telemetry-projection.md",
+      "checkpoint": ".claude/skills/build-pipeline/checkpoints/PRD-088.json",
+      "exit_date": "2026-05-21",
+      "commit": "931f5ed9",
+      "entry_gate": "Phase 2.2 exit (all producers wired) + Phase 2.3 exit (consumer infrastructure established, Gate A complete)",
+      "scope": "Projection consumer for Class B (grind) and Dependency Event (fills, credits) streams. Produces shift_operational_projection (PK: casino_id, gaming_day, table_id). Shift telemetry becomes event-driven. GrindBuyinPanel mounted to close PWB-003.",
       "events_consumed": [
         "grind.observed (fact_class: operational, origin_label: estimated)",
-        "fill.recorded (same labels)",
-        "credit.recorded (same labels)"
+        "fill.recorded (fact_class: operational, origin_label: estimated)",
+        "credit.recorded (fact_class: operational, origin_label: estimated)"
       ],
-      "authority_rule": "All three event types carry origin_label: estimated. Mixed-class surfaces aggregating alongside Class A events must degrade to estimated (Actual > Observed > Estimated). No surface may show a combined operational + ledger total without degradation labeling.",
+      "key_decisions": [
+        "DEC-EXEC-1: rpc_process_operational_projection stamps processed_at atomically — no separate rpc_acknowledge_outbox_delivery call for operational branch",
+        "DEC-EXEC-2: use-buyin-telemetry interface changed from shiftWindow to gamingDay: string for projection alignment",
+        "DEC-EXEC-3: operational consumer uses rpc_process_operational_projection directly (no two-step claim+ack for this branch)",
+        "DEC-EXEC-4: casinoId on GET /api/v1/table-context/operational-projection derived from rlsContext only — never from query params",
+        "DEC-EXEC-5: completeness uses 5-step logic: unknown / complete-zero / partial-no-lifecycle / partial-with-backlog / complete",
+        "DEC-EXEC-6: operationalBacklog split into claimable (delivery_attempts < 5) and deadLetter (>= 5) in observability route",
+        "DEC-EXEC-7: uuidFormat (permissive regex) used in operationalProjectionQuerySchema, not z.string().uuid() (RFC 4122 enforcement rejected per project convention)",
+        "DEC-EXEC-8: completeness backlog check is TABLE-SCOPED (casino_id + gaming_day + table_id), not casino-wide"
+      ],
       "deliverables": [
-        "Operational projection store migration (shift-level Class B + Dependency Event state)",
-        "Consumer reading grind.observed, fill.recorded, credit.recorded from finance_outbox",
-        "processed_messages idempotency wired for operational consumer",
-        "Authority degradation enforced: mixed-class aggregates degrade to estimated",
-        "Completeness: partial during open shift, complete on gaming-day close",
-        "I4 replay test for operational projection",
-        "Shift telemetry surfaces updated to consume projection (not poll authoring store)",
-        "type-check, lint, build exit 0"
+        "shift_operational_projection table: PK (casino_id, gaming_day, table_id), grind_volume_cents BIGINT, fill_total_cents BIGINT, credit_total_cents BIGINT, event_count BIGINT, updated_at TIMESTAMPTZ — migration 20260521015409",
+        "rpc_claim_operational_outbox_batch(p_batch_size INT) — SECURITY DEFINER, service_role only; claims fact_class='operational' WHERE delivery_attempts < 5, FOR UPDATE SKIP LOCKED — migration 20260521022656",
+        "rpc_process_operational_projection(p_message_id UUID) — SECURITY DEFINER, service_role only; returns 'processed' | 'duplicate' | 'skipped_ledger' | 'skipped_unknown' | 'not_found'; stamps processed_at atomically (DEC-EXEC-1) — migration 20260521022703",
+        "Backlog index on finance_outbox(casino_id, fact_class, delivery_attempts, processed_at) — migration 20260521022708",
+        "services/player-financial/outbox-operational-consumer.ts — runOperationalConsumer(), batch_size=25, stop-before-deadline, dual-outcome (processed|duplicate) vs error distinction",
+        "app/api/internal/outbox-relay/route.ts — operational branch added after Class A; response shape: {classA: {processed, failed}, operational: {processed, duplicate, errors}}",
+        "app/api/internal/outbox-observability/route.ts — 3-way breakdown: operationalBacklog: {claimable, deadLetter} (DEC-EXEC-6)",
+        "services/player-financial/crud.ts — getShiftOperationalCompleteness(supabase: SupabaseClient | null, ...) with SERVICE_ROLE_EXEMPTION; null triggers internal createServiceClient(); 5-step completeness logic; always type: 'estimated' (ADR-054 R4)",
+        "app/api/v1/table-context/operational-projection/route.ts — GET endpoint; casinoId from rlsContext (DEC-EXEC-4); 400 on invalid params",
+        "services/player-financial/schemas.ts — operationalProjectionQuerySchema added (ADR-013 compliance: schema in schemas.ts, not inline; uuidFormat not z.string().uuid())",
+        "services/player-financial/dtos.ts — OperationalProjectionResponseDTO, OperationalConsumerResultDTO added",
+        "hooks/table-context/use-buyin-telemetry.ts — interface changed from shiftWindow to gamingDay: string (DEC-EXEC-2)",
+        "GrindBuyinPanel mounted in TablesPanel via panel-container.tsx; gamingDay threaded from PanelContainer → TablesPanel → GrindBuyinPanel (PWB-003 closed)",
+        "58 tests across 6 suites — 100% pass; ADR-054 R4 authority invariant test suite",
+        "type-check exit 0; lint exit 0"
       ],
-      "exit_gate": [
-        "Shift telemetry receives fresh Class B + Dependency Event data via outbox",
-        "Authority labels correct: type: estimated on all operationally-derived values",
-        "Mixed-class surface shows degraded authority (not spurious actual)",
-        "Completeness signals meaningful during shift lifecycle",
-        "All gates pass"
+      "exit_gates_passed": [
+        "Consumer certified: rpc_claim_operational_outbox_batch + rpc_process_operational_projection wired and tested",
+        "GrindBuyinPanel mounted in TablesPanel — grind.observed producible via real operator workflow (PWB-003 closed)",
+        "Fill/credit operator UI gap acknowledged — fill.recorded / credit.recorded require direct API call; operator UI deferred to PWB-002",
+        "Authority labels correct: type: 'estimated' on all OperationalProjectionResponseDTO values; ADR-054 R4 invariant test suite passes",
+        "Completeness signals: 5-step logic (unknown / complete-zero / partial-no-lifecycle / partial-with-backlog / complete)",
+        "DEC-EXEC-4: GET /api/v1/table-context/operational-projection — casinoId from rlsContext only; attacker-supplied casinoId query param rejected",
+        "I3 consumer idempotency re-verified at operational consumer layer",
+        "I4 replay re-verified at operational consumer layer",
+        "type-check exit 0; 58/58 tests passing"
       ],
-      "skills": [
-        "backend-service-builder (operational projection store + consumer)",
-        "qa-specialist (authority degradation tests; mixed-class aggregate tests)",
-        "frontend-design-pt-2 (if shift dashboard surface changes required)"
-      ]
+      "pwb_003_closed": {
+        "status": "CLOSED",
+        "date": "2026-05-21",
+        "delivery": "GrindBuyinPanel mounted in TablesPanel via panel-container.tsx; gamingDay threaded via DEC-EXEC-2 interface change"
+      }
     },
     {
       "id": "2.5",
@@ -592,15 +615,11 @@
     {
       "id": "DEC-1-COMPLETENESS",
       "item": "Completeness status unknown on visit-level and MTL gaming-day aggregates",
-      "status": "open",
-      "resolves_in": "Phase 2.3",
-      "affects": [
-        "VisitFinancialSummaryDTO.total_in / total_out / net_amount — completeness: unknown",
-        "FinancialSectionDTO.totalCashIn / totalCashOut / netPosition — completeness: unknown",
-        "MtlGamingDaySummaryDTO aggregates — completeness: unknown"
-      ],
-      "resolution_path": "Phase 2.3 builds lifecycle-aware completeness projection from finance_outbox Class A events. Until then, all visit-level and MTL gaming-day aggregates emit unknown.",
-      "routes_affected": [
+      "status": "resolved",
+      "resolved_date": "2026-05-19",
+      "resolved_in": "Phase 2.3 (PRD-087 / EXEC-087)",
+      "resolution_delivery": "visit_class_a_projection + gaming_day_lifecycle + rpc_process_class_a_projection + getVisitClassACompleteness() in crud.ts. VisitFinancialSummaryDTO and FinancialSectionDTO now emit complete/partial/unknown based on gaming-day lifecycle and projection backlog state.",
+      "routes_resolved": [
         "GET /api/v1/visits/{visitId}/financial-summary",
         "GET /api/v1/rating-slips/{id}/modal-data (financial section)"
       ]
@@ -681,9 +700,20 @@
       "harness_result": "5/5 PASS",
       "integration_result": "PASS (PRD-082 local run — duplicate returns duplicate; SQL ON CONFLICT DO NOTHING boundary)",
       "commit": "8a1b8741",
-      "re_verify_phases": [
-        "2.3 (Class A projection consumer)",
-        "2.4 (operational telemetry consumer)"
+      "re_verifications": [
+        {
+          "phase": "2.3",
+          "scope": "Class A projection consumer",
+          "result": "PASS — duplicate event_id returns 'duplicate'; projection update applied once",
+          "test": "services/player-financial/__tests__/class-a-projection.int.test.ts"
+        },
+        {
+          "phase": "2.4",
+          "scope": "operational telemetry consumer",
+          "result": "PASS — duplicate delivery to runOperationalConsumer increments duplicate counter, not processed; rpc_process_operational_projection returns 'duplicate' on re-delivery",
+          "test": "services/player-financial/__tests__/outbox-operational-consumer.test.ts",
+          "commit": "931f5ed9"
+        }
       ]
     },
     "I4_replayability": {
@@ -693,9 +723,20 @@
       "integration_result": "PASS (PRD-082 local run — live fingerprint = replay fingerprint = eaae205b1e02b9d8067c29766f34abde)",
       "commit": "8a1b8741",
       "replay_ordering": "ORDER BY (table_id, event_id) — UUIDv7 monotonic guarantees determinism",
-      "re_verify_phases": [
-        "2.3 (Class A projection replay)",
-        "2.4 (operational projection replay)"
+      "re_verifications": [
+        {
+          "phase": "2.3",
+          "scope": "Class A projection replay",
+          "result": "PASS — truncate visit_class_a_projection → replay Class A events → identical completeness state",
+          "test": "services/player-financial/__tests__/class-a-projection.int.test.ts"
+        },
+        {
+          "phase": "2.4",
+          "scope": "operational projection replay",
+          "result": "PASS — truncate shift_operational_projection → replay operational events → identical completeness state",
+          "test": "services/player-financial/__tests__/shift-operational-completeness.test.ts",
+          "commit": "931f5ed9"
+        }
       ]
     },
     "I5_truthfulness": {
@@ -712,10 +753,10 @@
     {
       "id": "DEC-W2-1",
       "question": "DEC-1: how does the system emit completeness complete/partial on visit-level financial aggregates?",
-      "status": "open",
-      "blocks": "Phase 2.3 scope definition",
-      "resolution_path": "Lifecycle-aware completeness projection built in Phase 2.3. Gaming-day lifecycle signal (close event or column) enables complete/partial emission.",
-      "until_resolved": "All visit-level financial aggregates emit completeness.status: unknown"
+      "status": "resolved",
+      "resolution_date": "2026-05-19",
+      "resolution_delivery": "Phase 2.3 (PRD-087 / EXEC-087) — visit_class_a_projection, gaming_day_lifecycle, rpc_process_class_a_projection, getVisitClassACompleteness(). VisitFinancialSummaryDTO emits complete/partial/unknown.",
+      "blocked": "Phase 2.3 scope definition — UNBLOCKED"
     }
   ],
 
@@ -738,7 +779,13 @@
       "rpc_acknowledge_outbox_delivery SECURITY DEFINER terminal delivery write (ADR-054 R3) — migration 20260518014252",
       "fn_finance_outbox_emit ON CONFLICT (aggregate_id, event_type) DO NOTHING idempotency fix — migration 20260518105926",
       "Phase 2.2: rpc_request_table_fill + rpc_request_table_credit SECURITY DEFINER rewrite + outbox emission (fill.recorded / credit.recorded, operational, estimated) + rpc_create_financial_adjustment SECURITY DEFINER compatibility upgrade + fn_finance_outbox_emit REVOKE authenticated — migration 20260518134715",
-      "Phase 2.3a: rpc_get_outbox_relay_health + rpc_get_outbox_event_page SECURITY DEFINER admin read RPCs (service_role, hard-cap 100) — migration 20260519010436"
+      "Phase 2.3a: rpc_get_outbox_relay_health + rpc_get_outbox_event_page SECURITY DEFINER admin read RPCs (service_role, hard-cap 100) — migration 20260519010436",
+      "Phase 2.3 Gate A: finance_outbox.gaming_day column, fn_finance_outbox_emit 9-param signature, all 5 producers amended, NOT NULL hardened — migrations 20260519183629–20260519183634",
+      "Phase 2.3 Gate B: visit_class_a_projection, rpc_process_class_a_projection, gaming_day_lifecycle, rpc_close_gaming_day — migrations 20260519184706–20260519184709",
+      "Phase 2.4: shift_operational_projection table PK (casino_id, gaming_day, table_id) — migration 20260521015409",
+      "Phase 2.4: rpc_claim_operational_outbox_batch SECURITY DEFINER service_role — migration 20260521022656",
+      "Phase 2.4: rpc_process_operational_projection SECURITY DEFINER service_role; atomic processed_at stamp (DEC-EXEC-1) — migration 20260521022703",
+      "Phase 2.4: backlog index finance_outbox(casino_id, fact_class, delivery_attempts, processed_at) — migration 20260521022708"
     ],
     "application_layer": [
       "FinancialOutboxEventDTO — services/player-financial/dtos.ts",
@@ -748,7 +795,18 @@
       "GET /api/internal/outbox-observability (admin session auth + service-role DB client) — app/api/internal/outbox-observability/route.ts",
       "app/(dashboard)/admin/outbox-observability/page.tsx + OutboxObservabilityClient.tsx — relay health card + event table + search/filter",
       "Outbox Observability sidebar link (Activity icon) — components/layout/app-sidebar.tsx",
-      "Vercel cron (* * * * *) — vercel.json"
+      "Vercel cron (* * * * *) — vercel.json",
+      "Phase 2.3: getVisitClassACompleteness() — services/player-financial/crud.ts",
+      "Phase 2.3: VisitFinancialSummaryDTO completeness propagated via getVisitSummary → mapper",
+      "Phase 2.4: runOperationalConsumer() — services/player-financial/outbox-operational-consumer.ts (batch_size=25, stop-before-deadline, processed|duplicate distinction)",
+      "Phase 2.4: OperationalProjectionResponseDTO, OperationalConsumerResultDTO — services/player-financial/dtos.ts",
+      "Phase 2.4: operationalProjectionQuerySchema (uuidFormat, ADR-013 compliant) — services/player-financial/schemas.ts",
+      "Phase 2.4: outbox-relay route.ts — dual-branch response {classA: {processed, failed}, operational: {processed, duplicate, errors}}",
+      "Phase 2.4: outbox-observability route.ts — 3-way backlog: operationalBacklog: {claimable, deadLetter} (DEC-EXEC-6)",
+      "Phase 2.4: getShiftOperationalCompleteness(null | SupabaseClient, ...) — SERVICE_ROLE_EXEMPTION; 5-step completeness; type always 'estimated' (ADR-054 R4) — services/player-financial/crud.ts",
+      "Phase 2.4: GET /api/v1/table-context/operational-projection — casinoId from rlsContext (DEC-EXEC-4) — app/api/v1/table-context/operational-projection/route.ts",
+      "Phase 2.4: use-buyin-telemetry.ts interface changed shiftWindow → gamingDay: string (DEC-EXEC-2)",
+      "Phase 2.4: GrindBuyinPanel mounted in TablesPanel via panel-container.tsx — gamingDay threaded from PanelContainer (PWB-003 closed)"
     ],
     "test_layer": [
       "tests/failure/i1-atomicity.test.ts (5 tests — exemplar pair)",
@@ -758,14 +816,19 @@
       "tests/failure/i4-replayability.test.ts (5 tests)",
       "services/player-financial/__tests__/outbox-producers.test.ts (8 unit + 3 skipped integration)",
       "services/player-financial/__tests__/outbox-adjustment-producer.test.ts (Phase 2.1 producer tests)",
-      "services/player-financial/__tests__/outbox-relay.test.ts (8 tests)",
+      "services/player-financial/__tests__/outbox-relay.test.ts (updated Phase 2.4: dual-branch assertions)",
       "services/player-financial/__tests__/outbox-consumer.test.ts (6 tests)",
       "scripts/outbox-proof/phase-2-1-adjustment-certification.ts (PRD-084 live cert — 20/20 PASS)",
       "supabase/tests/security/outbox_transport_access.test.sql (10 pgTAP, local only)",
       "supabase/tests/migrations/outbox_legacy_shape.test.sql (10 pgTAP, local only)",
       "tests/failure/i1-atomicity-fill.test.ts (Phase 2.2 fill producer — T1-T12 unit + integration stubs)",
       "tests/failure/i1-atomicity-credit.test.ts (Phase 2.2 credit producer — T1-T12 unit + integration stubs)",
-      "services/table-context/__tests__/chip-custody.test.ts (IDEMPOTENCY_CONFLICT: propagation tests for fill + credit)"
+      "services/table-context/__tests__/chip-custody.test.ts (IDEMPOTENCY_CONFLICT: propagation tests for fill + credit)",
+      "Phase 2.4: services/player-financial/__tests__/outbox-operational-consumer.test.ts (I3 re-verify at operational consumer layer)",
+      "Phase 2.4: services/player-financial/__tests__/operational-authority-degradation.test.ts (ADR-054 R4 invariant — type always estimated)",
+      "Phase 2.4: services/player-financial/__tests__/shift-operational-completeness.test.ts (5-step completeness logic; I4 replay re-verify)",
+      "Phase 2.4: app/api/v1/table-context/operational-projection/__tests__/route.test.ts (DEC-EXEC-4 casinoId from rlsContext; validation; shape)",
+      "Phase 2.4: app/api/internal/outbox-observability/__tests__/route.test.ts (updated: 3-way backlog assertions)"
     ]
   },
 

@@ -21,7 +21,7 @@ derived_from:
 
 ---
 
-## 1. Status Snapshot (as of 2026-05-11)
+## 1. Status Snapshot (as of 2026-05-21 — Phase 2.4 complete; see §4 for per-phase delivery detail)
 
 ### Delivered — Phase 2.0 (PRD-081)
 
@@ -55,13 +55,13 @@ GAP-F1 (`finance_outbox` has zero producers) is fully closed by Phase 2.0. The f
 | I3 — Idempotency | ✅ Proven — baseline (inherited) | tests/failure/i3-idempotency.test.ts; duplicate → safe prior commit; inherited by later phases unless consumer architecture changes |
 | I4 — Replayability | ✅ Proven — baseline (inherited) | tests/failure/i4-replayability.test.ts; ORDER BY (table_id, event_id) deterministic; inherited by later phases unless ordering architecture changes |
 
-### Dormant Workstreams (activate via Phase 2.1 / 2.2)
+### Producer Workstreams — All Wired (Phases 2.1 / 2.2)
 
-| Workstream | Producer | Category |
-|------------|----------|----------|
-| WS_PRODUCER_ADJUSTMENT | `rpc_create_financial_adjustment` | Class A (Authority Fact) |
-| WS_PRODUCER_FILL | `rpc_request_table_fill` | Dependency Event |
-| WS_PRODUCER_CREDIT | `rpc_request_table_credit` | Dependency Event |
+| Workstream | Producer | Category | Status |
+|------------|----------|----------|--------|
+| WS_PRODUCER_ADJUSTMENT | `rpc_create_financial_adjustment` | Class A (Authority Fact) | ✅ Phase 2.1 (PRD-083 / EXEC-083) |
+| WS_PRODUCER_FILL | `rpc_request_table_fill` | Dependency Event | ✅ Phase 2.2 (PRD-085 / EXEC-085) |
+| WS_PRODUCER_CREDIT | `rpc_request_table_credit` | Dependency Event | ✅ Phase 2.2 (PRD-085 / EXEC-085) |
 
 ### Wave 2 Entry Criteria — All Met
 
