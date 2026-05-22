@@ -15,6 +15,7 @@ import type { Database } from '@/types/database.types';
 import * as crud from './crud';
 import type {
   AssignOrMoveResultDTO,
+  BootstrapResult,
   ClearResultDTO,
   FloorLayoutActivationDTO,
   FloorLayoutDTO,
@@ -95,6 +96,14 @@ export interface FloorLayoutServiceInterface {
    * `idempotent: true`.
    */
   clearSlotAssignment(slotId: string): Promise<ClearResultDTO>;
+
+  /**
+   * PRD-068: Materialize the onboarding pit layout for the caller's casino.
+   * Idempotent — re-invocation returns `outcome: 'already_bootstrapped'`
+   * without mutating state. No params; caller identity is derived from JWT
+   * via set_rls_context_from_staff (ADR-024 INV-8).
+   */
+  bootstrapCasinoPitLayout(): Promise<BootstrapResult>;
 }
 
 // === Service Factory ===
@@ -125,12 +134,15 @@ export function createFloorLayoutService(
       crud.assignOrMoveTableToSlot(supabase, tableId, slotId),
 
     clearSlotAssignment: (slotId) => crud.clearSlotAssignment(supabase, slotId),
+
+    bootstrapCasinoPitLayout: () => crud.bootstrapCasinoPitLayout(supabase),
   };
 }
 
 // Re-export CRUD functions for direct use in server actions
 export {
   assignOrMoveTableToSlot,
+  bootstrapCasinoPitLayout,
   clearSlotAssignment,
   getActiveLayout,
   getLayoutById,

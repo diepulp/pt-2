@@ -13,6 +13,8 @@ import type { Database } from '@/types/database.types';
 import type {
   AssignedTableRef,
   AssignOrMoveResultDTO,
+  BootstrapOutcome,
+  BootstrapResult,
   ClearResultDTO,
   FloorLayoutDTO,
   FloorLayoutVersionDTO,
@@ -278,4 +280,33 @@ export function toClearResultDTO(value: unknown): ClearResultDTO {
     result.idempotent = asBoolean(obj.idempotent, 'idempotent');
   }
   return result;
+}
+
+function asNumber(value: unknown, field: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`RPC response missing number field: ${field}`);
+  }
+  return value;
+}
+
+function asBootstrapOutcome(value: unknown): BootstrapOutcome {
+  if (value === 'success' || value === 'already_bootstrapped') return value;
+  throw new Error(`RPC response has invalid outcome: ${String(value)}`);
+}
+
+/** Map rpc_bootstrap_casino_pit_layout jsonb result → BootstrapResult. */
+export function toBootstrapResult(value: unknown): BootstrapResult {
+  if (!value || typeof value !== 'object') {
+    throw new Error('RPC response is not an object');
+  }
+  const obj = value as Record<string, unknown>;
+  return {
+    ok: asBoolean(obj.ok, 'ok'),
+    outcome: asBootstrapOutcome(obj.outcome),
+    casino_id: asString(obj.casino_id, 'casino_id'),
+    layout_version_id: asString(obj.layout_version_id, 'layout_version_id'),
+    pits_created: asNumber(obj.pits_created, 'pits_created'),
+    slots_created: asNumber(obj.slots_created, 'slots_created'),
+    tables_without_pit: asNumber(obj.tables_without_pit, 'tables_without_pit'),
+  };
 }

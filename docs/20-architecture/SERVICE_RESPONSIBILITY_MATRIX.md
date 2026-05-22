@@ -1,9 +1,9 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.24.0
+nsversion: 4.25.0
 status: CANONICAL
-effective: 2026-02-23
+effective: 2026-05-22
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
 source_of_truth:
   - database schema (supabase/migrations/)
@@ -28,8 +28,8 @@ source_of_truth:
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.24.0 (PilotContainmentService — Pilot access governance, allowlist-gated magic-link auth)
-> **Date**: 2026-05-12
+> **Version**: 4.25.0 (FloorLayoutService — PRD-068 Pit Bootstrap onboarding materialization)
+> **Date**: 2026-05-22
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -55,6 +55,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.25.0 (2026-05-22)** – **FloorLayoutService PRD-068 Pit Bootstrap (Onboarding Materialization)**: Added `FloorLayoutService.bootstrapCasinoPitLayout()` method and `rpc_bootstrap_casino_pit_layout` SECURITY DEFINER RPC (ADR-024 INV-8, zero-param, context from JWT via `set_rls_context_from_staff`). Idempotent onboarding materialization: creates default floor_layout, active floor_layout_version, floor_layout_activation (fixed `activation_request_id='prd068_pit_bootstrap_v1'`), one floor_pit per distinct `gaming_table.pit` value, and one floor_table_slot per pit-bearing gaming_table. Two partial unique indexes added: `ux_floor_layout_activation_active_per_casino` on `floor_layout_activation(casino_id) WHERE deactivated_at IS NULL` (RULE-7 concurrent-bootstrap fence) and `ux_floor_pit_layout_version_label_lower` on `floor_pit(layout_version_id, lower(label))` (RULE-2 defense). Invoked from `app/(onboarding)/setup/_actions.ts completeSetupAction` after `rpc_complete_casino_setup` succeeds. **Onboarding remains a trigger host — no `services/onboarding/` directory exists and none should be created.** See `docs/10-prd/PRD-068-pit-bootstrap-onboarding-materialization-v0.md`, `docs/21-exec-spec/EXEC-068-pit-bootstrap-onboarding-materialization.md`, and migration `supabase/migrations/20260422183640_prd068_bootstrap_casino_pit_layout_rpc.sql`.
 - **4.24.0 (2026-05-12)** – **PilotContainmentService (PRD-083 Pilot Authentication Containment Gate)**: Registered `PilotContainmentService` as new `Pilot Access Governance` bounded context. New tables: `pilot_access_requests` (public INSERT, service_role SELECT/UPDATE), `approved_email_allowlist` (service_role only — never read by authenticated client). Both tables enforce canonical email via CHECK constraint and finite status values. Server actions: `sendMagicLinkAction`, `requestPilotAccessAction`, `approvePilotAccessAction`, `rejectPilotAccessAction`, `revokePilotAccessAction`. Service: `services/pilot/` with `createPilotContainmentService` factory. Admin authority via `PILOT_ADMIN_EMAILS` env var (server-only). Containment primitive — must not absorb IAM, billing, CRM, or RBAC (FIB-S RULE-9). See `docs/10-prd/PRD-083-pilot-auth-containment-v0.md` and `docs/21-exec-spec/EXEC-083-pilot-auth-containment.md`.
 - **4.23.0 (2026-04-06)** – **EmailService (PRD-062 Pilot SMTP & Email Wiring)**: Registered `EmailService` as pilot-scoped utility service (Operational context). New table: `email_send_attempt` (append-only send log). RLS: Pattern C hybrid SELECT + INSERT only (no UPDATE/DELETE). No RPCs — writes via authenticated Supabase client after `set_rls_context_from_staff()` in server actions. 3 server actions: `sendShiftReportAction`, `retryShiftReportAction`, `dismissFailedAttemptAction`. Infrastructure adapter: `lib/email/` with provider-agnostic interface, Resend implementation. Service: `services/email/` with `createEmailService` factory. See `docs/10-prd/PRD-062-pilot-smtp-email-wiring-v0.md` and `docs/21-exec-spec/EXEC-062-pilot-smtp-email-wiring.md`.
 - **4.22.0 (2026-03-25)** – **ShiftIntelligenceService Alert Maturity (PRD-056)**: Added `shift_alert`, `alert_acknowledgment` to Owns. 2 new RPCs: `rpc_persist_anomaly_alerts` (SECURITY DEFINER), `rpc_acknowledge_alert` (SECURITY DEFINER). 1 new RPC: `rpc_get_alert_quality` (SECURITY INVOKER). 3 new API routes: `POST /api/v1/shift-intelligence/persist-alerts`, `POST /api/v1/shift-intelligence/acknowledge-alert`, `GET /api/v1/shift-intelligence/alerts`. ALTER `table_metric_baseline` add `last_error`. Pattern C RLS + DELETE denial on new tables. RPC-only mutation posture.
@@ -647,7 +648,7 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 
 - **Events**: `floor_layout.activated` emitted with layout + version metadata
 - **Consumer**: TableContext listens and reconciles table activation state
-- **RPCs**: `rpc_create_floor_layout`, `rpc_activate_floor_layout` — SECURITY DEFINER with Template 5 context validation (ADR-018)
+- **RPCs**: `rpc_create_floor_layout`, `rpc_activate_floor_layout` — SECURITY DEFINER with Template 5 context validation (ADR-018); `rpc_bootstrap_casino_pit_layout` (PRD-068) — SECURITY DEFINER, admin-gated, ADR-024 INV-8 (zero-param, context from JWT via `set_rls_context_from_staff`); see **Onboarding Bootstrap (PRD-068)** below.
 
 ### RLS Policy Architecture (SEC-006)
 
@@ -662,6 +663,25 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 **Full Schema**: `supabase/migrations/` (search: `create table floor_layout`)
 **RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#floorlayoutservice`
 **RLS Migration**: `supabase/migrations/20251212080915_sec006_rls_hardening.sql`
+
+### Onboarding Bootstrap (PRD-068)
+
+**Published method**: `FloorLayoutService.bootstrapCasinoPitLayout()` — zero-param, idempotent materialization of the onboarding pit layout. Returns `BootstrapResult` with `outcome: 'success' | 'already_bootstrapped'`. Invoked from `app/(onboarding)/setup/_actions.ts completeSetupAction` after `rpc_complete_casino_setup` succeeds.
+
+**RPC**: `rpc_bootstrap_casino_pit_layout` — SECURITY DEFINER, admin-role gated. Context derived from JWT via `set_rls_context_from_staff()` (ADR-024 INV-8); no casino/actor params accepted. Uses fixed `activation_request_id = 'prd068_pit_bootstrap_v1'` as a secondary idempotency guard behind the partial unique index on `floor_layout_activation(casino_id) WHERE deactivated_at IS NULL`.
+
+**Schema invariants added (migration `20260422183640`)**:
+
+| Index                                             | Target                                                                    | Enforces                                          |
+| ------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------- |
+| `ux_floor_layout_activation_active_per_casino`    | `floor_layout_activation(casino_id) WHERE deactivated_at IS NULL`         | Exactly one active activation per casino (RULE-7) |
+| `ux_floor_pit_layout_version_label_lower`         | `floor_pit(layout_version_id, lower(label))`                              | Deterministic pit-label normalization (RULE-2)    |
+
+**OnboardingService containment**: **OnboardingService is a trigger host, not a bounded context.** The onboarding setup server action composes `bootstrapCasinoPitLayout` (this service) and `rpc_complete_casino_setup` (CasinoService) as post-setup side effects. There is **no `services/onboarding/` directory** — PRD-068 §2.3 and FIB-S `zachman.where.bounded_contexts` both label it as a trigger host. Introducing an SRM service entry for onboarding wiring would create a phantom bounded context and violate PRD §2.3 ("no new bounded context").
+
+**Observability**: The RPC emits `RAISE LOG 'PRD-068 bootstrap (<outcome>): casino=... version=... pits=... slots=... unassigned=...'` on both success and `already_bootstrapped` paths. The server action also emits a structured `[PRD-068:bootstrap]` console event for Vercel log aggregation. Bootstrap counts appear in logs only — `CompleteSetupResult` is byte-identical pre/post this hook (DEC-004).
+
+**References**: `docs/10-prd/PRD-068-pit-bootstrap-onboarding-materialization-v0.md`, `docs/21-exec-spec/EXEC-068-pit-bootstrap-onboarding-materialization.md`.
 
 ---
 

@@ -15,6 +15,7 @@ import type { Database } from '@/types/database.types';
 
 import type {
   AssignOrMoveResultDTO,
+  BootstrapResult,
   ClearResultDTO,
   FloorLayoutDTO,
   FloorLayoutListFilters,
@@ -25,6 +26,7 @@ import type {
 } from './dtos';
 import {
   toAssignOrMoveResultDTO,
+  toBootstrapResult,
   toClearResultDTO,
   toFloorLayoutDTO,
   toFloorLayoutDTOList,
@@ -404,4 +406,63 @@ export async function clearSlotAssignment(
   }
 
   return toClearResultDTO(data);
+}
+
+// === Bootstrap Operations (PRD-068) ===
+
+/**
+ * Map rpc_bootstrap_casino_pit_layout RAISE EXCEPTION messages to typed
+ * DomainErrors. The RPC raises 'UNAUTHORIZED' and 'FORBIDDEN_ADMIN_REQUIRED'
+ * with the same 'CODE: message' prefix convention used by the pit-assignment
+ * RPCs.
+ */
+function mapBootstrapRpcError(error: {
+  code?: string;
+  message: string;
+}): DomainError {
+  const prefix = error.message.split(':')[0]?.trim() ?? '';
+
+  switch (prefix) {
+    case 'UNAUTHORIZED':
+      return new DomainError('UNAUTHORIZED', error.message, {
+        details: safeErrorDetails(error),
+      });
+    case 'FORBIDDEN_ADMIN_REQUIRED':
+      return new DomainError('FORBIDDEN_ADMIN_REQUIRED', error.message, {
+        httpStatus: 403,
+        details: safeErrorDetails(error),
+      });
+    default:
+      return new DomainError('INTERNAL_ERROR', error.message, {
+        details: safeErrorDetails(error),
+      });
+  }
+}
+
+/**
+ * PRD-068: Materialize the onboarding pit layout for the caller's casino.
+ *
+ * Idempotent — re-invocation returns `outcome: 'already_bootstrapped'`
+ * without mutating state. The fixed activation_request_id
+ * `'prd068_pit_bootstrap_v1'` is the secondary idempotency guard behind the
+ * partial unique index on floor_layout_activation(casino_id) WHERE
+ * deactivated_at IS NULL.
+ *
+ * No params: SECURITY DEFINER derives actor + casino from JWT via
+ * set_rls_context_from_staff() (ADR-024 INV-8).
+ */
+export async function bootstrapCasinoPitLayout(
+  supabase: SupabaseClient<Database>,
+): Promise<BootstrapResult> {
+  const { data, error } = await supabase.rpc('rpc_bootstrap_casino_pit_layout');
+
+  if (error) throw mapBootstrapRpcError(error);
+  if (!data) {
+    throw new DomainError(
+      'INTERNAL_ERROR',
+      'rpc_bootstrap_casino_pit_layout returned no data',
+    );
+  }
+
+  return toBootstrapResult(data);
 }

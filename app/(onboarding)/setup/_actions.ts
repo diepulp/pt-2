@@ -13,6 +13,7 @@
 import { z } from 'zod';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { ServiceResult } from '@/lib/http/service-response';
 import { withServerAction } from '@/lib/server-actions/middleware/compositor';
 import { createClient } from '@/lib/supabase/server';
@@ -32,6 +33,7 @@ import {
   setupCasinoSettingsSchema,
   seedGameSettingsSchema,
 } from '@/services/casino/schemas';
+import { createFloorLayoutService } from '@/services/floor-layout';
 import {
   createGamingTableSchema,
   updateTableParSchema,
@@ -180,6 +182,39 @@ export async function completeSetupAction(input: {
         setup_completed_at: String(row.setup_completed_at),
         setup_completed_by: String(row.setup_completed_by),
       };
+
+      // PRD-068: Materialize the onboarding pit layout as a post-setup side
+      // effect. Bootstrap outcome is observable via structured log only —
+      // CompleteSetupResult is byte-identical pre/post this hook (Finding 4 /
+      // DEC-004). On failure, return stable error code BOOTSTRAP_FAILED.
+      try {
+        const bootstrap = await createFloorLayoutService(
+          ctx.supabase,
+        ).bootstrapCasinoPitLayout();
+
+        console.warn('[PRD-068:bootstrap]', {
+          outcome: bootstrap.outcome,
+          casino_id: bootstrap.casino_id,
+          layout_version_id: bootstrap.layout_version_id,
+          pits_created: bootstrap.pits_created,
+          slots_created: bootstrap.slots_created,
+          tables_without_pit: bootstrap.tables_without_pit,
+          correlation_id: ctx.correlationId,
+        });
+      } catch (err) {
+        console.error('[PRD-068:bootstrap] BOOTSTRAP_FAILED', {
+          error: safeErrorDetails(err),
+          correlation_id: ctx.correlationId,
+        });
+        return {
+          ok: false,
+          code: 'BOOTSTRAP_FAILED',
+          error: err instanceof Error ? err.message : 'Bootstrap failed',
+          requestId: ctx.correlationId,
+          durationMs: Date.now() - ctx.startedAt,
+          timestamp: new Date().toISOString(),
+        };
+      }
 
       return {
         ok: true,

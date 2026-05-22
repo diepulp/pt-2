@@ -183,3 +183,30 @@ export type FloorLayoutVersionFilters = {
   status?: FloorLayoutVersionStatus;
   include_slots?: boolean;
 };
+
+// === Bootstrap DTOs (PRD-068) ===
+
+/**
+ * Outcome of rpc_bootstrap_casino_pit_layout.
+ * - `success`: bootstrap executed; rows were created (pits_created may be 0
+ *   if the casino has no pit-bearing gaming_table rows — see README Recovery).
+ * - `already_bootstrapped`: an active floor_layout_activation already exists
+ *   for this casino. Idempotent no-op; returned counts reflect current state.
+ */
+export type BootstrapOutcome = 'success' | 'already_bootstrapped';
+
+/**
+ * Result envelope returned by rpc_bootstrap_casino_pit_layout.
+ * RPC signature is `Args: never; Returns: Json` (SECURITY DEFINER derives
+ * actor + casino from JWT via set_rls_context_from_staff, ADR-024 INV-8).
+ */
+
+export type BootstrapResult = {
+  ok: boolean;
+  outcome: BootstrapOutcome;
+  casino_id: string;
+  layout_version_id: string;
+  pits_created: number;
+  slots_created: number;
+  tables_without_pit: number;
+};

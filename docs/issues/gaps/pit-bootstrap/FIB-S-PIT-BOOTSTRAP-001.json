@@ -1,0 +1,636 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-PIT-BOOTSTRAP-001 v0",
+    "source_artifact": "docs/issues/gaps/pit-bootstrap/FIB-PIT-BOOTSTRAP-001.md",
+    "status": "proposed",
+    "feature_id": "FIB-S-PIT-BOOTSTRAP-001",
+    "feature_name": "Pit Bootstrap (Onboarding) — Pilot Slice",
+    "priority": "P0",
+    "decision_horizon": "PRD-067 pilot unblock — antecedent to admin pit configuration usability",
+    "owner": "Vladimir Ivanov",
+    "opened_on": "2026-04-22",
+    "related_features": [
+      {
+        "id": "FIB-S-PIT-CONFIG-001",
+        "path": "docs/issues/gaps/pit-configuration/FIB-S-PIT-CONFIG-001-admin-operations-pit-configuration.json",
+        "relationship": "downstream_consumer",
+        "note": "PRD-067 (admin pit configuration) is the downstream consumer. Its admin panel reads the canonical mapping this slice materializes. PRD-067 R1 ('Pilot pit/slot bootstrap coverage must be verified before build') is exactly the gap this FIB closes."
+      },
+      {
+        "id": "PRD-067",
+        "path": "docs/10-prd/PRD-067-admin-operations-pit-configuration-v0.md",
+        "relationship": "downstream_consumer"
+      }
+    ]
+  },
+  "intent": {
+    "operator_problem": "After a casino completes the onboarding setup wizard, the admin pit configuration panel (PRD-067, at /admin/settings/operations) renders empty. The wizard collects pit names as free text into gaming_table.pit per table but never materializes any floor_pit or floor_table_slot records, and no floor_layout_activation is created for the casino. The admin panel reads only from the canonical floor layout mapping, so the pits operators typed during onboarding appear to be lost and tables cannot be assigned.",
+    "pilot_fit": "PRD-067 shipped as an admin-only assignment correction path that assumes a canonical pit/slot mapping already exists. Without this bootstrap slice, the first admin to open the panel on a new pilot casino sees an empty state and cannot proceed. This slice is the smallest antecedent that makes PRD-067 usable immediately after onboarding, with no canonicalization, no legacy retirement, and no new designer surface.",
+    "success_outcomes": [
+      "A fresh casino that completes onboarding has an active floor layout mapping without admin intervention.",
+      "Each distinct non-empty pit name collected during onboarding exists as exactly one floor_pit in the active layout version.",
+      "Each onboarded gaming table that had a pit name exists as a floor_table_slot whose preferred_table_id is the table and whose pit_id is the matching pit.",
+      "Onboarded tables with no pit name do not materialize a slot and remain visible as unassigned tables in the admin panel.",
+      "PRD-067's admin pit configuration panel renders the bootstrapped pits, slots, and tables on first open, with no additional setup step.",
+      "An admin can immediately use PRD-067's existing assign / move / clear commands against the bootstrapped mapping.",
+      "No existing functionality is removed, renamed, or migrated to achieve this outcome.",
+      "gaming_table.pit values are preserved unchanged on existing tables — bootstrap reads them, it does not rewrite or delete them."
+    ],
+    "explicit_exclusions": [
+      "No canonicalization of gaming_table.pit across the codebase.",
+      "No migration of existing readers (legacy dashboards, filters) off gaming_table.pit.",
+      "No removal, deprecation, or schema change to the gaming_table.pit column.",
+      "No CI rules, lint rules, governance gates, inventory systems, or topology enforcement introduced by this slice.",
+      "No new services, bounded contexts, or architectural layers.",
+      "No layout designer, floor-map editor, multi-version layout UI, or version lifecycle UI.",
+      "No backfill for casinos that already completed onboarding before this slice ships, unless explicitly scoped in a follow-up.",
+      "No admin UI changes in this slice — PRD-067's panel is the consumer, not a target for modification.",
+      "No bidirectional sync between gaming_table.pit and the canonical mapping; writes during onboarding flow one direction only (free-text pit → canonical structures).",
+      "No approval workflow, notification, or audit subsystem introduction (reuse of existing structured logging only if trivial)."
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Canonicalize gaming_table.pit system-wide as part of this slice",
+        "why_considered": "The admin panel problem is a symptom of dual-model drift; fixing it once globally is conceptually cleaner.",
+        "why_rejected_now": "Out of scope per FIB-H §G/§H. Canonicalization touches legacy readers, dashboards, and filters — the pilot needs PRD-067 usable now, not a topology rewrite."
+      },
+      {
+        "idea": "Retire gaming_table.pit entirely during bootstrap",
+        "why_considered": "Would eliminate the two-source drift.",
+        "why_rejected_now": "Legacy readers may still depend on gaming_table.pit (PRD-067 OQ-1 remains unresolved). Removing the column without auditing consumers risks silently breaking existing filters."
+      },
+      {
+        "idea": "Add a separate 'bootstrap layout' button in the admin panel",
+        "why_considered": "Gives operators an explicit trigger and avoids coupling bootstrap to onboarding completion.",
+        "why_rejected_now": "Every admin on every new casino would have to click it. Operator expectation per FIB-H §D is that pits persist automatically. Also expands PRD-067 surface, which is frozen."
+      },
+      {
+        "idea": "Bidirectional sync between gaming_table.pit and the canonical mapping",
+        "why_considered": "Keeps the legacy column current as admins reassign tables in PRD-067.",
+        "why_rejected_now": "Out of scope per FIB-H §H. PRD-067 RULE-5 states gaming_table.pit mirroring is secondary. Adding sync here would smuggle canonicalization into a bootstrap slice."
+      },
+      {
+        "idea": "Create floor_pit records but skip floor_table_slot",
+        "why_considered": "Simpler — just the pits, not the slot mapping.",
+        "why_rejected_now": "PRD-067 assigns tables to slots, not pits directly (decision_notes in FIB-S-PIT-CONFIG-001). Without slots, the admin panel still cannot assign tables. Success outcome OUT-5 fails."
+      },
+      {
+        "idea": "Treat each gaming_table.pit string as its own pit even if duplicates exist",
+        "why_considered": "Simpler write path — one pit row per table.",
+        "why_rejected_now": "Operators expect one pit 'Main' to exist once, not once per table. Causes visible duplication in PRD-067's panel and contradicts FIB-H Success Test (single 'Main' with tables listed under it)."
+      },
+      {
+        "idea": "Backfill existing already-onboarded pilot casinos as part of this slice",
+        "why_considered": "Consistency — every casino gets a canonical mapping whether pre- or post-ship.",
+        "why_rejected_now": "Pilot may already contain partially-mapped casinos where a backfill could overwrite admin corrections. Backfill is a separate antecedent with its own safety requirements."
+      },
+      {
+        "idea": "Let admins pick pit definitions at onboarding time, separate from per-table pit text",
+        "why_considered": "Cleaner data model — explicit pit creation step.",
+        "why_rejected_now": "Changes the onboarding wizard UX. The FIB-H scope is to materialize what already gets collected today, not redesign the wizard."
+      }
+    ]
+  },
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "gaming_table",
+          "kind": "record",
+          "description": "Existing casino-scoped gaming table created by the onboarding wizard. Source for the free-text pit name this slice promotes into canonical structures.",
+          "stateful": true,
+          "system_of_record": "public.gaming_table",
+          "fields_hint": ["id", "casino_id", "label", "type", "pit"]
+        },
+        {
+          "name": "floor_layout",
+          "kind": "record",
+          "description": "Parent layout container for a casino. One default layout is created during bootstrap if none exists.",
+          "stateful": true,
+          "system_of_record": "public.floor_layout",
+          "fields_hint": ["id", "casino_id", "name"]
+        },
+        {
+          "name": "floor_layout_version",
+          "kind": "record",
+          "description": "Versioned snapshot of the layout. Bootstrap creates exactly one version per casino on first onboarding completion.",
+          "stateful": true,
+          "system_of_record": "public.floor_layout_version",
+          "fields_hint": [
+            "id",
+            "layout_id",
+            "version_no",
+            "status",
+            "created_by"
+          ]
+        },
+        {
+          "name": "floor_pit",
+          "kind": "record",
+          "description": "Canonical pit record within a layout version. Bootstrap creates one per distinct non-empty pit name collected during onboarding.",
+          "stateful": true,
+          "system_of_record": "public.floor_pit",
+          "fields_hint": ["id", "layout_version_id", "label", "sequence"]
+        },
+        {
+          "name": "floor_table_slot",
+          "kind": "record",
+          "description": "Canonical slot binding a gaming_table to a pit within a layout version. Bootstrap creates one slot per onboarded table that had a non-empty pit name, with preferred_table_id set to the table id and pit_id set to the matching floor_pit.",
+          "stateful": true,
+          "system_of_record": "public.floor_table_slot",
+          "fields_hint": [
+            "id",
+            "layout_version_id",
+            "pit_id",
+            "slot_label",
+            "game_type",
+            "preferred_table_id"
+          ]
+        },
+        {
+          "name": "floor_layout_activation",
+          "kind": "record",
+          "description": "Ties a layout version to a casino as the currently active mapping. Bootstrap creates this record so PRD-067's admin panel can resolve 'the active mapping' for the casino.",
+          "stateful": true,
+          "system_of_record": "public.floor_layout_activation",
+          "fields_hint": [
+            "id",
+            "casino_id",
+            "layout_version_id",
+            "activated_at",
+            "deactivated_at",
+            "activated_by",
+            "activation_request_id"
+          ]
+        },
+        {
+          "name": "onboarding_pit_bootstrap_result",
+          "kind": "view",
+          "description": "Derived summary of what the bootstrap produced for the casino (counts of pits created, slots created, tables left unassigned). Not a persisted table — used for wizard confirmation / logging only.",
+          "stateful": false,
+          "system_of_record": "derived at end-of-onboarding",
+          "fields_hint": [
+            "casino_id",
+            "pits_created",
+            "slots_created",
+            "tables_without_pit",
+            "layout_version_id"
+          ]
+        }
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "derive_distinct_pits_from_onboarding",
+          "verb": "read",
+          "description": "Read the set of distinct non-empty gaming_table.pit values for the casino at the moment onboarding completes.",
+          "served_outcomes": ["OUT-2", "OUT-4"],
+          "loop_steps": ["STEP-1"]
+        },
+        {
+          "id": "CAP-2",
+          "name": "materialize_active_layout_scaffold",
+          "verb": "create",
+          "description": "Create (idempotently, per casino) a floor_layout, a floor_layout_version, and a floor_layout_activation so the casino has an active mapping target.",
+          "served_outcomes": ["OUT-1", "OUT-5"],
+          "loop_steps": ["STEP-2"]
+        },
+        {
+          "id": "CAP-3",
+          "name": "materialize_pits_from_onboarding",
+          "verb": "create",
+          "description": "Create one floor_pit per distinct non-empty pit name from CAP-1 inside the active layout version.",
+          "served_outcomes": ["OUT-2", "OUT-5"],
+          "loop_steps": ["STEP-3"]
+        },
+        {
+          "id": "CAP-4",
+          "name": "materialize_slot_assignments_from_onboarding",
+          "verb": "create",
+          "description": "Create one floor_table_slot per onboarded gaming_table with a non-empty pit, with preferred_table_id set to the table and pit_id set to the matching floor_pit from CAP-3.",
+          "served_outcomes": ["OUT-3", "OUT-5", "OUT-6"],
+          "loop_steps": ["STEP-4"]
+        },
+        {
+          "id": "CAP-5",
+          "name": "preserve_unassigned_tables",
+          "verb": "skip",
+          "description": "For onboarded gaming_table rows with a null or empty pit value, do not create a slot. The table remains in the casino and appears in PRD-067's unassigned list.",
+          "served_outcomes": ["OUT-4", "OUT-7"],
+          "loop_steps": ["STEP-5"]
+        },
+        {
+          "id": "CAP-6",
+          "name": "preserve_free_text_pit_column",
+          "verb": "read_only",
+          "description": "Bootstrap reads gaming_table.pit but does not modify, null, or delete it. Legacy readers remain unaffected.",
+          "served_outcomes": ["OUT-7", "OUT-8"],
+          "loop_steps": ["STEP-1", "STEP-3", "STEP-4"]
+        },
+        {
+          "id": "CAP-7",
+          "name": "hand_off_to_admin_panel",
+          "verb": "read",
+          "description": "After bootstrap commits, PRD-067's existing read path (FloorLayoutService.getPitAssignmentState via the active floor_layout_activation) resolves the newly created mapping without any code change in PRD-067.",
+          "served_outcomes": ["OUT-5", "OUT-6", "OUT-7"],
+          "loop_steps": ["STEP-6"]
+        }
+      ]
+    },
+    "where": {
+      "primary_surface": "onboarding setup wizard — completion step (no new UI surface)",
+      "surfaces": [
+        {
+          "name": "Onboarding setup wizard (existing)",
+          "kind": "flow",
+          "path": "app/(onboarding)/setup/setup-wizard.tsx",
+          "note": "Host flow. Bootstrap executes as part of the existing wizard completion path; no new wizard step is introduced."
+        },
+        {
+          "name": "Onboarding server actions (existing)",
+          "kind": "api",
+          "path": "app/(onboarding)/setup/_actions.ts",
+          "note": "Host module for the bootstrap write path. Exact entry point (new server action, RPC, or in-line call) is an EXEC-SPEC decision."
+        },
+        {
+          "name": "FloorLayoutService write path",
+          "kind": "service",
+          "path": "services/floor-layout/",
+          "note": "Bounded context that owns floor_layout, floor_layout_version, floor_pit, floor_table_slot, floor_layout_activation. All canonical writes go through this service per SRM. May require a new service method; must not duplicate mutation responsibility elsewhere."
+        },
+        {
+          "name": "PRD-067 admin pit configuration panel (downstream consumer)",
+          "kind": "ui",
+          "path": "components/admin/pit-configuration-panel.tsx",
+          "note": "Read-only consumer of the bootstrapped mapping. Not modified by this slice."
+        }
+      ],
+      "touchpoints": {
+        "inbound": [
+          {
+            "name": "admin_completes_onboarding_setup",
+            "type": "user_action",
+            "note": "Existing wizard completion; the moment bootstrap fires."
+          }
+        ],
+        "outbound": [
+          {
+            "name": "canonical_pit_slot_mapping_materialized",
+            "type": "persisted_record_set",
+            "note": "floor_layout + floor_layout_version + floor_pit + floor_table_slot + floor_layout_activation rows created transactionally."
+          },
+          {
+            "name": "structured_bootstrap_log_event",
+            "type": "log",
+            "note": "Single structured log line on success/failure using existing logging infrastructure only — no new audit subsystem."
+          }
+        ]
+      },
+      "bounded_contexts": [
+        "OnboardingService (host / trigger)",
+        "FloorLayoutService (mutation owner for canonical records)",
+        "TableContextService (read-only: source for gaming_table rows and their pit strings)"
+      ]
+    },
+    "who": {
+      "primary_actor": "casino_admin",
+      "actors": [
+        {
+          "role": "admin",
+          "permissions": [
+            "complete_onboarding_setup",
+            "indirectly_trigger_pit_bootstrap_via_onboarding_completion"
+          ],
+          "restrictions": [
+            "cannot select which pits to materialize — bootstrap derives from onboarding input",
+            "cannot skip bootstrap if onboarding contains pit data",
+            "bootstrap is not invoked outside the onboarding completion moment in this slice"
+          ]
+        },
+        {
+          "role": "system",
+          "permissions": [
+            "create floor_layout, floor_layout_version, floor_pit, floor_table_slot, floor_layout_activation",
+            "read gaming_table rows for the casino under onboarding"
+          ],
+          "restrictions": [
+            "writes must execute as a single transaction per casino",
+            "writes must be idempotent against re-invocation within the same casino + wizard session",
+            "no cross-casino writes"
+          ]
+        },
+        {
+          "role": "pit_boss",
+          "permissions": [],
+          "restrictions": ["not an actor in this slice"]
+        }
+      ],
+      "ownership": {
+        "business_owner": "Vladimir Ivanov",
+        "domain_owner": "Onboarding setup wizard + FloorLayoutService bootstrap seam"
+      }
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "name": "onboarding_setup_completion_for_new_casino",
+          "source": "user",
+          "preconditions": [
+            "Actor is authenticated and casino-scoped as admin.",
+            "Onboarding wizard has reached its completion step.",
+            "Gaming tables for the casino have been created during the wizard (gaming_table rows exist).",
+            "No active floor_layout_activation exists yet for this casino (bootstrap is idempotent and should not duplicate on re-run)."
+          ]
+        }
+      ],
+      "lifecycle_events": [
+        "bootstrap_invoked",
+        "distinct_pit_names_derived",
+        "layout_and_version_created",
+        "layout_activation_created",
+        "pits_inserted",
+        "slots_inserted_for_pit_bearing_tables",
+        "tables_without_pit_skipped",
+        "bootstrap_committed",
+        "admin_panel_resolves_bootstrapped_mapping"
+      ],
+      "timing_constraints": [
+        "Bootstrap must run as part of the onboarding completion transaction (or immediately after, inside the same logical operator action) — the admin must not see an empty PRD-067 panel on first navigation.",
+        "Bootstrap must be idempotent: re-running on the same casino must not create duplicate floor_layout, floor_pit, or floor_table_slot rows.",
+        "Bootstrap failure must not leave partial canonical records (floor_layout without activation, pits without slots, etc.) — all canonical writes for one casino commit atomically or not at all.",
+        "Bootstrap must not mutate gaming_table rows (including gaming_table.pit)."
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "statement": "Onboarding pit input is materialized into the canonical floor layout mapping so PRD-067's admin panel renders populated state on first open.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-2",
+          "statement": "Distinct non-empty gaming_table.pit values collapse to exactly one floor_pit per distinct value per casino (case/whitespace normalization rule decided at EXEC-SPEC, but pilot default is trimmed, case-insensitive distinct match).",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-3",
+          "statement": "Each gaming_table that had a non-empty pit value at bootstrap time maps to exactly one floor_table_slot with preferred_table_id = table.id and pit_id = matching floor_pit.id.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-4",
+          "statement": "gaming_table rows with null or empty pit at bootstrap time must NOT have a slot created — they remain in the casino as unassigned tables, visible to PRD-067's admin panel.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-5",
+          "statement": "Bootstrap preserves gaming_table.pit verbatim. It is read-only input; bootstrap does not update, null, or delete the column on any row.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-6",
+          "statement": "All canonical writes for one casino commit atomically. Partial state (e.g., pits without activation) is never visible to any reader.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-7",
+          "statement": "Bootstrap is idempotent per casino. Re-invocation (including retries, double-submits, or replay) must not create duplicate floor_layout, floor_layout_version, floor_pit, or floor_table_slot rows.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-8",
+          "statement": "Bootstrap is casino-scoped. It never reads or writes rows for any casino other than the one whose onboarding is completing.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-9",
+          "statement": "Canonical writes are executed through FloorLayoutService (or a SECURITY DEFINER RPC governed by ADR-018), never by an ad-hoc onboarding handler. Context derivation follows ADR-024 INV-8.",
+          "severity": "hard"
+        }
+      ],
+      "invariants": [
+        "Bootstrap is casino-scoped.",
+        "Only existing gaming_table rows for the onboarding casino are consulted.",
+        "floor_pit is created only from non-empty, distinct pit names.",
+        "floor_table_slot.preferred_table_id points to a gaming_table row in the same casino.",
+        "Exactly one active floor_layout_activation exists per casino after bootstrap success.",
+        "gaming_table.pit column values are unchanged after bootstrap."
+      ],
+      "decision_notes": [
+        "Pit-name equivalence rule (trimmed, case-insensitive vs strict-equal) is an EXEC-SPEC decision; pilot default is trimmed + case-insensitive.",
+        "slot_label and sequence are implementation details — EXEC-SPEC picks deterministic defaults (e.g., slot_label = gaming_table.label, sequence = insertion order).",
+        "game_type on floor_table_slot may require derivation from gaming_table.type; EXEC-SPEC resolves the mapping and fails closed if no mapping exists.",
+        "Re-running bootstrap on an already-bootstrapped casino is out of scope for this slice beyond being safe (idempotent no-op). Targeted re-bootstrap after the fact is a separate slice.",
+        "Backfill for casinos that completed onboarding before this slice ships is explicitly deferred (see 11.2 Deferred).",
+        "This slice does not resolve PRD-067 OQ-1 (gaming_table.pit mirroring for legacy filters); mirroring remains a downstream concern."
+      ]
+    }
+  },
+  "containment": {
+    "loop": [
+      {
+        "id": "STEP-1",
+        "actor": "system",
+        "action": "on onboarding completion, read all gaming_table rows for the current casino and derive the distinct non-empty pit name set",
+        "system_response": "produces an in-memory set of distinct pit names and the table→pit-name assignments"
+      },
+      {
+        "id": "STEP-2",
+        "actor": "system",
+        "action": "ensure a floor_layout + floor_layout_version + floor_layout_activation exist for the casino (create if absent)",
+        "system_response": "active layout scaffold exists; idempotent if already present"
+      },
+      {
+        "id": "STEP-3",
+        "actor": "system",
+        "action": "for each distinct pit name, create a floor_pit in the active layout version",
+        "system_response": "one floor_pit per distinct name exists inside the active layout version"
+      },
+      {
+        "id": "STEP-4",
+        "actor": "system",
+        "action": "for each gaming_table with a non-empty pit value, create a floor_table_slot with preferred_table_id=table.id and pit_id set to the matching floor_pit",
+        "system_response": "one slot per pit-bearing table exists and is bound to its pit"
+      },
+      {
+        "id": "STEP-5",
+        "actor": "system",
+        "action": "for each gaming_table with null or empty pit, skip slot creation",
+        "system_response": "table remains in the casino but not in the slot map; PRD-067 will render it as unassigned"
+      },
+      {
+        "id": "STEP-6",
+        "actor": "admin",
+        "action": "navigates to /admin/settings/operations after onboarding",
+        "system_response": "PRD-067's panel resolves active mapping through the bootstrapped records and renders populated state with assignable tables"
+      }
+    ],
+    "frozen": true,
+    "expansion_requires_amendment": true
+  },
+  "dependencies": {
+    "required_existing": [
+      "Onboarding setup wizard exists and completes successfully, creating gaming_table rows with optional pit text.",
+      "gaming_table.pit column exists and is writable during onboarding.",
+      "floor_layout, floor_layout_version, floor_pit, floor_table_slot, floor_layout_activation tables exist with current schema.",
+      "FloorLayoutService is the SRM-authorized owner of canonical floor layout writes.",
+      "ADR-024 authoritative context derivation is live (set_rls_context_from_staff).",
+      "ADR-030 write-path session-var enforcement is live for floor_layout_* tables.",
+      "PRD-067 admin pit configuration panel is shipped and reads active mapping via FloorLayoutService.getPitAssignmentState."
+    ],
+    "missing_dependencies": [
+      "Decision on pit-name equivalence (trimmed + case-insensitive vs strict) — EXEC-SPEC stage.",
+      "Mapping from gaming_table.type → floor_table_slot.game_type enum — EXEC-SPEC stage.",
+      "Exact transport for the bootstrap call (new server action within _actions.ts, new FloorLayoutService method, or SECURITY DEFINER RPC) — EXEC-SPEC stage."
+    ],
+    "assumptions": [
+      "Onboarding wizard completion is a well-defined moment where bootstrap can hook in transactionally.",
+      "The casino under onboarding has no prior active floor_layout_activation (first-time bootstrap).",
+      "gaming_table.pit text is operator-authored and may contain whitespace or casing variants that should collapse to the same pit.",
+      "PRD-067 requires no code change to consume the bootstrapped mapping; its existing read path already resolves through floor_layout_activation."
+    ]
+  },
+  "traceability": {
+    "outcomes": [
+      {
+        "id": "OUT-1",
+        "statement": "A fresh casino that completes onboarding has an active floor layout mapping without admin intervention."
+      },
+      {
+        "id": "OUT-2",
+        "statement": "Each distinct non-empty pit name from onboarding exists as exactly one floor_pit in the active layout version."
+      },
+      {
+        "id": "OUT-3",
+        "statement": "Each onboarded gaming_table with a non-empty pit has a floor_table_slot binding it to the matching floor_pit."
+      },
+      {
+        "id": "OUT-4",
+        "statement": "Onboarded tables with no pit name remain visible as unassigned in the admin panel — no slot is created for them."
+      },
+      {
+        "id": "OUT-5",
+        "statement": "PRD-067's admin pit configuration panel renders the bootstrapped pits, slots, and tables on first open."
+      },
+      {
+        "id": "OUT-6",
+        "statement": "An admin can immediately use PRD-067's assign / move / clear commands against the bootstrapped mapping."
+      },
+      {
+        "id": "OUT-7",
+        "statement": "No existing functionality (including legacy gaming_table.pit consumers) is removed, renamed, or migrated."
+      },
+      {
+        "id": "OUT-8",
+        "statement": "gaming_table.pit column values are unchanged after bootstrap (read-only input)."
+      }
+    ],
+    "capability_to_outcome": [
+      { "capability": "CAP-1", "outcomes": ["OUT-2", "OUT-4"] },
+      { "capability": "CAP-2", "outcomes": ["OUT-1", "OUT-5"] },
+      { "capability": "CAP-3", "outcomes": ["OUT-2", "OUT-5"] },
+      { "capability": "CAP-4", "outcomes": ["OUT-3", "OUT-5", "OUT-6"] },
+      { "capability": "CAP-5", "outcomes": ["OUT-4", "OUT-7"] },
+      { "capability": "CAP-6", "outcomes": ["OUT-7", "OUT-8"] },
+      { "capability": "CAP-7", "outcomes": ["OUT-5", "OUT-6", "OUT-7"] }
+    ],
+    "rule_to_loop_step": [
+      {
+        "rule_id": "RULE-1",
+        "loop_steps": ["STEP-2", "STEP-3", "STEP-4", "STEP-6"]
+      },
+      { "rule_id": "RULE-2", "loop_steps": ["STEP-1", "STEP-3"] },
+      { "rule_id": "RULE-3", "loop_steps": ["STEP-4"] },
+      { "rule_id": "RULE-4", "loop_steps": ["STEP-5"] },
+      {
+        "rule_id": "RULE-5",
+        "loop_steps": ["STEP-1", "STEP-3", "STEP-4", "STEP-5"]
+      },
+      { "rule_id": "RULE-6", "loop_steps": ["STEP-2", "STEP-3", "STEP-4"] },
+      { "rule_id": "RULE-7", "loop_steps": ["STEP-2", "STEP-3", "STEP-4"] },
+      {
+        "rule_id": "RULE-8",
+        "loop_steps": ["STEP-1", "STEP-2", "STEP-3", "STEP-4", "STEP-5"]
+      },
+      { "rule_id": "RULE-9", "loop_steps": ["STEP-2", "STEP-3", "STEP-4"] }
+    ],
+    "loop_step_to_capability": [
+      { "loop_step": "STEP-1", "capabilities": ["CAP-1", "CAP-6"] },
+      { "loop_step": "STEP-2", "capabilities": ["CAP-2"] },
+      { "loop_step": "STEP-3", "capabilities": ["CAP-3", "CAP-6"] },
+      { "loop_step": "STEP-4", "capabilities": ["CAP-4", "CAP-6"] },
+      { "loop_step": "STEP-5", "capabilities": ["CAP-5"] },
+      { "loop_step": "STEP-6", "capabilities": ["CAP-7"] }
+    ]
+  },
+  "coherence": {
+    "non_goals": [
+      "canonicalization of gaming_table.pit across the codebase",
+      "legacy reader migration off gaming_table.pit",
+      "removal or deprecation of gaming_table.pit column",
+      "bidirectional sync between gaming_table.pit and canonical mapping",
+      "floor layout designer / visual editor",
+      "multi-layout or layout versioning UI",
+      "backfill for pre-existing onboarded casinos",
+      "new admin UI in this slice",
+      "CI or governance rules tied to pit materialization",
+      "new bounded context or new service",
+      "approval / notification / audit subsystem introduction"
+    ],
+    "feature_loop": [
+      "STEP-1",
+      "STEP-2",
+      "STEP-3",
+      "STEP-4",
+      "STEP-5",
+      "STEP-6"
+    ],
+    "feature_loop_frozen": true,
+    "deferred_items": [
+      "Canonicalization of gaming_table.pit (legacy retirement)",
+      "Layout designer surface (PRD-068 territory)",
+      "Multi-version layout lifecycle management",
+      "Backfill for casinos onboarded before this slice shipped",
+      "Bidirectional sync (admin panel edits → gaming_table.pit)",
+      "Admin-triggered re-bootstrap or reset-to-onboarding-state",
+      "gaming_table.pit mirroring decision for legacy dashboard filters (PRD-067 OQ-1)"
+    ],
+    "scope_authority": {
+      "artifact": "FEATURE_INTAKE_BRIEF",
+      "path": "docs/issues/gaps/pit-bootstrap/FIB-PIT-BOOTSTRAP-001.md",
+      "version": "v0",
+      "frozen": true
+    },
+    "violations": []
+  },
+  "governance": {
+    "scope_authority": {
+      "artifact": "FEATURE_INTAKE_BRIEF",
+      "version": "v0",
+      "frozen": true
+    },
+    "open_questions_allowed_at_scaffold": [
+      "Whether pit-name equivalence uses trimmed + case-insensitive matching or strict equality (pilot default: trimmed + case-insensitive).",
+      "Which gaming_table.type values map to which floor_table_slot.game_type enum values, and how to handle tables whose type has no mapping (pilot default: fail closed — bootstrap aborts for the casino and surfaces an actionable error).",
+      "Whether bootstrap is invoked from a new FloorLayoutService method or a new SECURITY DEFINER RPC (pilot default: FloorLayoutService method, with RPC only if a single-transaction guarantee requires server-side composition).",
+      "Whether the wizard completion UI surfaces a confirmation of how many pits/slots were materialized (pilot default: structured log only, no UI change)."
+    ],
+    "downstream_expansion_allowed_without_amendment": false,
+    "amendment_required_for": [
+      "Rewriting or deleting gaming_table.pit during bootstrap.",
+      "Adding a UI surface for manual pit selection during onboarding.",
+      "Creating any admin UI to re-run or reset bootstrap.",
+      "Introducing bidirectional sync between gaming_table.pit and canonical mapping.",
+      "Creating layout versioning or designer UX as part of this slice.",
+      "Backfilling casinos onboarded before this slice ships.",
+      "Any CI rule, lint rule, or governance gate added as part of this slice.",
+      "Cross-casino bootstrap or multi-tenant fan-out.",
+      "Any change to PRD-067's panel behavior driven by this slice."
+    ]
+  }
+}
