@@ -69,6 +69,35 @@ export const layoutIdParamSchema = z.object({
   layoutId: uuidSchema('layout ID'),
 });
 
+// === Pit Assignment Schemas (PRD-067) ===
+
+/** Request body for POST /api/v1/floor-layouts/slots/[slotId]/assign */
+export const assignOrMoveRequestSchema = z.object({
+  table_id: uuidSchema('table ID'),
+});
+
+/** Response shape for rpc_assign_or_move_table_to_slot */
+export const assignOrMoveResponseSchema = z.object({
+  table_id: uuidSchema('table ID'),
+  slot_id: uuidSchema('slot ID'),
+  pit_id: uuidSchema('pit ID'),
+  pit_label: z.string(),
+  previous_slot_id: uuidSchema('previous slot ID').nullable(),
+});
+
+/** Response shape for rpc_clear_slot_assignment */
+export const clearSlotResponseSchema = z.object({
+  cleared: z.boolean(),
+  slot_id: uuidSchema('slot ID'),
+  previous_table_id: uuidSchema('previous table ID').nullable(),
+  idempotent: z.boolean().optional(),
+});
+
+/** Route param for /slots/[slotId]/... */
+export const slotIdParamSchema = z.object({
+  slotId: uuidSchema('slot ID'),
+});
+
 // === Type Exports ===
 
 export type CreateFloorLayoutInput = z.infer<typeof createFloorLayoutSchema>;
@@ -78,4 +107,7 @@ export type FloorLayoutVersionQuery = z.infer<
 >;
 export type ActivateFloorLayoutInput = z.infer<
   typeof activateFloorLayoutSchema
+>;
+export type AssignOrMoveRequestInput = z.infer<
+  typeof assignOrMoveRequestSchema
 >;

@@ -15,6 +15,7 @@ import * as React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getErrorMessage } from '@/lib/errors/error-utils';
 import { cn } from '@/lib/utils';
 
 import { NotesEmpty, TagsEmpty } from '../empty-states';
@@ -126,7 +127,7 @@ export function CollaborationPanel({
         <PanelContent className="flex-1 flex items-center justify-center">
           <div className="text-center text-sm text-muted-foreground">
             <p>Unable to load collaboration data</p>
-            <p className="text-xs mt-1">{error.message}</p>
+            <p className="text-xs mt-1">{getErrorMessage(error)}</p>
           </div>
         </PanelContent>
       </Panel>

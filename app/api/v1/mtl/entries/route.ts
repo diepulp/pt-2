@@ -36,7 +36,7 @@ import {
  * GET /api/v1/mtl/entries
  *
  * List MTL entries with optional filters.
- * Query params: casino_id, patron_uuid?, gaming_day?, min_amount?, txn_type?, source?, entry_badge?, cursor?, limit?
+ * Query params: patron_uuid?, gaming_day?, min_amount?, txn_type?, source?, entry_badge?, cursor?, limit?
  */
 export async function GET(request: NextRequest) {
   const ctx = createRequestContext(request);
@@ -53,9 +53,8 @@ export async function GET(request: NextRequest) {
 
         const service = createMtlService(mwCtx.supabase);
 
-        // Use casino_id from RLS context if not provided in query
         const filters = {
-          casino_id: query.casino_id || mwCtx.rlsContext!.casinoId,
+          casino_id: mwCtx.rlsContext!.casinoId,
           patron_uuid: query.patron_uuid,
           gaming_day: query.gaming_day,
           min_amount: query.min_amount,

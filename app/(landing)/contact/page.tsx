@@ -6,8 +6,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+import { LandingNav } from '../_components/landing-nav';
+
 /* ─────────────────────────────────────────────────────────
- * PT-2 CONTACT PAGE — Exemplar Visual DNA
+ * d3lt CONTACT PAGE — Exemplar Visual DNA
  *
  * Conversion surface: walkthrough request form.
  * Same #000212 ground, gradient text, glassmorphic card,
@@ -127,6 +129,7 @@ function Field({
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   return (
     <div className="bg-[#000212] text-[#F7F8F8] min-h-screen antialiased selection:bg-accent/30">
@@ -148,35 +151,7 @@ export default function ContactPage() {
       </div>
 
       {/* ── Navigation ── */}
-      <nav className="sticky top-0 z-50 bg-[#000212]/80 backdrop-blur-xl border-b border-white/[0.06]">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-accent/90 transition-all duration-300 group-hover:bg-accent group-hover:shadow-[0_0_16px_hsl(189_94%_43%/0.3)]">
-              <span className="text-[11px] font-bold tracking-tight text-white">
-                PT
-              </span>
-            </div>
-            <span className="text-sm font-medium tracking-tight text-[#F7F8F8]">
-              Player Tracker
-            </span>
-          </Link>
-
-          <div className="flex items-center gap-5">
-            <Link
-              href="/"
-              className="text-[13px] text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8]"
-            >
-              Overview
-            </Link>
-            <Link
-              href="/auth/login"
-              className="text-[13px] text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8]"
-            >
-              Sign in
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <LandingNav />
 
       {/* ── Hero + Form ── */}
       <section className="relative">
@@ -217,9 +192,8 @@ export default function ContactPage() {
 
               <Reveal delay={80}>
                 <p className="mt-5 text-[15px] text-[#95A2B3] leading-relaxed">
-                  We&apos;ll walk through how Player Tracker fits your property
-                  — your tables, your workflows, your operation. No sales pitch.
-                  Just an operational walkthrough.
+                  We&apos;ll walk through how d3lt fits your property — your
+                  tables, your workflows, your operation.
                 </p>
               </Reveal>
 
@@ -235,11 +209,6 @@ export default function ContactPage() {
                       label: 'Import assessment',
                       detail:
                         "Bring a sample export from your current system. We'll show you the migration path.",
-                    },
-                    {
-                      label: 'Property-specific pricing',
-                      detail:
-                        'One product, one price per property. No tiers, no per-seat fees.',
                     },
                   ].map((item, i) => (
                     <div key={item.label} className="flex gap-3.5">
@@ -299,12 +268,33 @@ export default function ContactPage() {
                       Request received.
                     </h2>
                     <p className="mt-2 max-w-xs text-sm text-[#95A2B3]/70 leading-relaxed">
-                      We&apos;ll reach out within one business day to schedule
-                      your walkthrough.
+                      Choose a time below and we&apos;ll send a calendar invite
+                      with everything you need before the session.
                     </p>
+                    <a
+                      href="https://calendar.app.google/8ofiPtRVFdSkgjPy9"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-7 inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-[#000212] shadow-[0_1px_40px_hsl(189_94%_43%/0.25)] transition-all duration-300 hover:bg-accent/90 hover:shadow-[0_1px_50px_hsl(189_94%_43%/0.35)]"
+                    >
+                      Schedule your walkthrough
+                      <svg
+                        className="size-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
+                        />
+                      </svg>
+                    </a>
                     <Link
                       href="/"
-                      className="mt-8 text-[13px] font-medium text-accent/70 transition-colors hover:text-accent"
+                      className="mt-5 text-[13px] font-medium text-[#95A2B3]/40 transition-colors hover:text-[#95A2B3]"
                     >
                       Back to overview
                     </Link>
@@ -313,9 +303,26 @@ export default function ContactPage() {
                   /* ── Form ── */
                   <form
                     className="relative space-y-5"
-                    onSubmit={(e) => {
+                    onSubmit={async (e) => {
                       e.preventDefault();
-                      setSubmitted(true);
+                      const fd = new FormData(e.currentTarget);
+                      setSubmitting(true);
+                      try {
+                        await fetch('/api/demo-request', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            name: fd.get('name'),
+                            email: fd.get('email'),
+                            phone: fd.get('phone'),
+                            company: fd.get('property') || undefined,
+                            message: fd.get('message') || undefined,
+                          }),
+                        });
+                      } finally {
+                        setSubmitting(false);
+                        setSubmitted(true);
+                      }
                     }}
                   >
                     <div className="grid gap-5 sm:grid-cols-2">
@@ -327,6 +334,13 @@ export default function ContactPage() {
                         placeholder="you@property.com"
                       />
                     </div>
+
+                    <Field
+                      label="Work phone"
+                      name="phone"
+                      type="tel"
+                      placeholder="+1 (555) 000-0000"
+                    />
 
                     <Field
                       label="Property name"
@@ -345,10 +359,11 @@ export default function ContactPage() {
 
                     <Button
                       type="submit"
+                      disabled={submitting}
                       size="lg"
-                      className="w-full rounded-xl bg-accent text-white hover:bg-accent/90 h-11 text-sm font-semibold tracking-wide shadow-[0_1px_40px_hsl(189_94%_43%/0.20)] hover:shadow-[0_1px_50px_hsl(189_94%_43%/0.30)] transition-all duration-300"
+                      className="w-full rounded-xl bg-accent text-white hover:bg-accent/90 h-11 text-sm font-semibold tracking-wide shadow-[0_1px_40px_hsl(189_94%_43%/0.20)] hover:shadow-[0_1px_50px_hsl(189_94%_43%/0.30)] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      Request a walkthrough
+                      {submitting ? 'Sending…' : 'Request a walkthrough'}
                     </Button>
 
                     <p className="text-center text-[11px] text-[#95A2B3]/40 leading-relaxed">
@@ -365,19 +380,17 @@ export default function ContactPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-white/[0.06] py-10">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-6 items-center justify-center rounded-md bg-accent/80">
-              <span className="text-[9px] font-bold tracking-tight text-white">
-                PT
-              </span>
-            </div>
-            <span className="text-[12px] font-medium text-[#95A2B3]/60">
-              Player Tracker
+          <div className="flex flex-col items-start">
+            <span
+              className="text-lg tracking-wide text-[hsl(189_94%_43%)]/80"
+              style={{ fontFamily: 'var(--font-michroma)' }}
+            >
+              d3lt
             </span>
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-[hsl(189_94%_43%)]/25 to-transparent" />
           </div>
           <p className="text-[11px] text-[#95A2B3]/40">
-            &copy; {new Date().getFullYear()} Player Tracker. All rights
-            reserved.
+            &copy; {new Date().getFullYear()} d3lt. All rights reserved.
           </p>
         </div>
       </footer>

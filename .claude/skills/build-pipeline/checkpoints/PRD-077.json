@@ -1,0 +1,72 @@
+{
+  "id": "PRD-077",
+  "exec_spec": "docs/21-exec-spec/PRD-077/EXEC-077-financial-telemetry-wave1-phase1.3-ui-split-display.md",
+  "prd": "docs/10-prd/PRD-077-financial-telemetry-wave1-phase1.3-ui-split-display-v0.md",
+  "status": "complete",
+  "created_at": "2026-05-04",
+  "updated_at": "2026-05-04T_ws8-complete",
+  "gov010_check": "waived:Presentation-only dedicated rollout slice; FIB-H/FIB-S serve as scaffold + mechanism authority; frozen ADRs ADR-052-ADR-055",
+  "complexity_prescreen": "full",
+  "fib_s_loaded": true,
+  "fib_s_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-3/FIB-S-FINANCIAL-TELEMETRY-PHASE-1-3-UI-SPLIT-DISPLAY.json",
+  "fib_h_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-3/FIB-H-FINANCIAL-TELEMETRY-PHASE-1-3-UI-SPLIT-DISPLAY.md",
+  "write_path_classification": "none",
+  "current_phase": 1,
+  "inventory_deviations": [
+    {
+      "surface": "app/review/pit-map/components/table-card.tsx",
+      "status": "NOT_FOUND",
+      "action": "no-op; recorded"
+    },
+    {
+      "surface": "components/rating-slip-modal/__tests__/rating-slip-modal.test.tsx",
+      "status": "PATH_CORRECTED",
+      "corrected_to": "components/modals/rating-slip/__tests__/rating-slip-modal.test.tsx"
+    }
+  ],
+  "fib_s_amendments": [
+    "CAP-1A added (props contract freeze) — amended WS1 traces_to and gate criteria",
+    "CAP-8 enhanced with semantic spot-check matrix (RULE-10) and per-authority sentinel (RULE-11)"
+  ],
+  "patch_delta": {
+    "applied_at": "2026-05-03",
+    "patches": [
+      "Patch 1 — Derived authority degradation: D5 hierarchy (Actual>Observed>Estimated) must be computed and displayed visibly when derivedFrom present; Derived without visible degraded label = non-conformant. Applied to props contract block, WS1 impl, WS1 AC.",
+      "Patch 2 — Source visibility lock: value.source MUST render as visible non-truncated text; tooltip-only/icon-only/truncated = non-conformant. Applied to props contract block, WS1 impl, WS1 AC.",
+      "Patch 3 — Pattern A vs Pattern B rule: Pattern A default when multiple authority classes co-present; Pattern B requires explicit derivedFrom. Applied to props contract block, WS1 impl, WS1 AC.",
+      "Patch 4 — Caller migration hardening (WS5): buy-in-threshold-indicator callers must be enumerated via grep and listed in implementation notes; zero tolerance for partial migration. Applied to WS5 AC.",
+      "Patch 5 — Sentinel table strengthened (WS8): authority-class sentinel table now requires recording UI value + service/API reference value + comparison result per row; label-only validation = non-conformant.",
+      "Patch 6 — Walkthrough formalized (WS8): replaced free-form bullet checklist with per-surface table (13 rows × 4 Y/N columns); all cells must be Y before WS8 complete.",
+      "Patch 7 — Source truncation guard: responsive/compact layouts must not hide or truncate authority/source labels; CSS overflow-hidden/ellipsis on authority badge or source label = non-conformant. Applied to props contract block, WS1 impl, WS1 AC."
+    ]
+  },
+  "pending_workstreams": [],
+  "completed_workstreams": ["WS1_COMPONENTS", "WS2_SHIFT_V3", "WS3_PIT_TABLE_FLOOR", "WS4_PLAYER", "WS5_TRANSACTIONS", "WS6_COMPLIANCE", "WS7_DEF006", "WS8_GATES"],
+  "dormant_workstreams": [],
+  "ws4_direction": {
+    "status": "ACTIVE_STRING_LEVEL_BOUNDARY",
+    "resolved_at": "2026-05-04",
+    "governance_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-3/WS4-direction-alignment-player-surfaces.md",
+    "approach": "Phase 1.3-compliant string-level authority labeling. No fake envelopes, no DTO changes, no prop type changes.",
+    "confirmed_authority_map": {
+      "netWinLoss": "actual",
+      "theoEstimate": "estimated",
+      "cashVelocity.sessionTotal": "actual",
+      "cashVelocity.ratePerHour": "estimated"
+    },
+    "implementation_notes": [
+      "filter-tile-stack.tsx line 87: prefix 'Actual: ${formatDollars(netWinLoss)}'",
+      "filter-tile-stack.tsx line 101: prefix 'Actual: ${formatDollars(sessionTotal)}'",
+      "summary-band.tsx line 137: 'Theo (Estimated): ${formatDollars(theoEstimate)}'",
+      "summary-band.tsx line 152: 'Estimated: ${formatRate(ratePerHour)}'",
+      "summary-band.tsx line 153: 'Actual: ${formatDollars(sessionTotal)}'",
+      "summary-band.tsx line 136 netWinLoss primaryValue: CONTROLLED BOUNDARY — bare string permitted at hero position; title+category provide implicit authority context",
+      "start-from-previous.tsx: NO-ACTION — already FinancialValue envelopes from Phase 1.2B-B"
+    ]
+  },
+  "artifacts": {
+    "exec_spec_validation": "PASSED",
+    "write_path_classification": "none",
+    "temporal_integrity": "clean"
+  }
+}

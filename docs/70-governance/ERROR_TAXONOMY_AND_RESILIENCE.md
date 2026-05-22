@@ -181,6 +181,42 @@ If a new transport path is added (WebSocket, SSE, server action), it must includ
 
 ---
 
+### INV-MTL-BRIDGE-ATOMICITY: Operator-Visible Atomicity for MTL Compliance Writes
+
+**Status**: MANDATORY | **Effective**: 2026-04-16 | **Enforced by**: `POST /api/v1/financial-transactions` route contract + rating-slip modal commit-barrier UX + integration tests covering the `rpc_create_financial_txn` → `fn_derive_mtl_from_finance` → `mtl_entry` bridge
+
+#### Rule
+
+> **A qualifying pit buy-in succeeds if and only if a `player_financial_transaction` row AND its derived `mtl_entry` row both commit in the same Postgres transaction.**
+
+A 201 response from `POST /api/v1/financial-transactions` is treated as asserting that both rows landed. Any non-2xx response is treated as asserting that neither landed.
+
+**Corollary (operator-visible atomicity):** client code **MUST NOT** present success-like UI (toast, notification, telemetry marked "success") before the 2xx response, and the UI **MUST NOT** transition into a dismissible state during the in-flight save interval.
+
+#### Governs
+
+- `hooks/rating-slip-modal/use-save-with-buyin.ts` (rating-slip modal save flow)
+- `components/pit-panels/pit-panels-client.tsx` (pit-panels close-session flow)
+- Any future surface that writes financial transactions or derives MTL entries
+
+#### Incident / Motivation
+
+On 2026-04-15, a pit boss entered a $3,000 buy-in, clicked Save, saw a threshold-acknowledgement toast, and dismissed the modal inside the ~1s POST window. The browser aborted the in-flight POST; no `player_financial_transaction` row and no derived `mtl_entry` row committed; `/compliance` correctly rendered nothing. The operator had been led to believe a compliance-relevant write had landed when it had not. Playwright headless reproduction at `e2e/repro-mtl-glitch.spec.ts` confirmed this is a race between POST latency and operator dismissal speed, not a transient anomaly.
+
+Server-side atomicity was already correct (the bridge trigger `fn_derive_mtl_from_finance` rolls back both rows under guard failure per ADR-024 G1–G3). The flaw was operator-side atomicity not matching server-side atomicity.
+
+See `docs/issues/mtl-rating-slip-glitch/` for incident artifacts, `docs/10-prd/PRD-064-mtl-buyin-glitch-containment-v0.md` for the containment slice, and `docs/80-adrs/ADR-049-operator-action-atomicity-boundary.md` for the parallel architectural ADR.
+
+#### Related ADRs and PRDs
+
+- **PRD-064** (`docs/10-prd/PRD-064-mtl-buyin-glitch-containment-v0.md`) — containment slice that codifies and test-backs this invariant.
+- **ADR-049** (`docs/80-adrs/ADR-049-operator-action-atomicity-boundary.md`) — parallel architectural ADR; direction affirmed (single server-side command contract), packaging deferred. Preserves this invariant as a durable contract the follow-up PRD's command response must assert.
+- **ADR-024** (`docs/80-adrs/ADR-024_DECISIONS.md`) — authoritative context derivation; bridge guard paths (G1 MISSING_CONTEXT, G2 tenant mismatch, G3 actor mismatch) each roll back both rows atomically.
+- **ADR-030** (`docs/80-adrs/ADR-030-auth-system-hardening.md`) — write-path session-var enforcement; all writes in the bridge transaction share one `SET LOCAL` scope.
+- **ADR-040** (`docs/80-adrs/ADR-040-identity-provenance-rule.md`) — identity provenance (Category A derived from JWT, not from parameter); preserved under this invariant.
+
+---
+
 **Usage in Service Layer:**
 
 ```typescript
@@ -781,6 +817,7 @@ Errors that escape the `ServiceResult<T>` pipeline and occur during React render
 | 2025-11-09 | Initial framework: domain errors, retry, rate limiting, circuit breaker | Architecture review |
 | 2026-02-02 | Added render-layer error boundaries (ADR-032) | White-screen incidents |
 | 2026-04-06 | **INV-ERR-DETAILS**: serialization safety invariant, `safeErrorDetails()` canonical utility, 4-layer defense-in-depth, ESLint rule `error-safety/no-unsafe-error-details`, Rule 2 (serializable vs safe-to-expose distinction), required test invariant, `mapDatabaseError()` example updated to show sanitized passthrough | Cyclic object value crash during entitlement issuance (`docs/issues/cyclic-error/`) |
+| 2026-04-16 | **INV-MTL-BRIDGE-ATOMICITY**: operator-visible atomicity invariant for the `player_financial_transaction` + `mtl_entry` bridge; codifies the `POST /api/v1/financial-transactions` HTTP contract; operator-visible corollary bans success-like UI before 2xx and bans dismissible UI during the in-flight save interval; governs rating-slip modal save flow, pit-panels close-session flow, and any future surface writing financial transactions | MTL buy-in glitch (`docs/issues/mtl-rating-slip-glitch/`, PRD-064, ADR-049) |
 
 ---
 

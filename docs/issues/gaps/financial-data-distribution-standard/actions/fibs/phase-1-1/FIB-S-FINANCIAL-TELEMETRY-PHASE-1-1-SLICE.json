@@ -1,0 +1,503 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-H-FiNANCIAL-TELEMETRY-PHASE-1-1-SLICE v1",
+    "status": "draft",
+    "feature_id": "FIB-S-FIN-PHASE-1-1-SLICE",
+    "feature_name": "Financial Telemetry Phase 1.1 — Visit Surface Envelope (Label-Only Continuation)",
+    "priority": "P1",
+    "decision_horizon": "phase-1-1-close",
+    "owner": "Vladimir Ivanov",
+    "opened_on": "2026-04-24",
+    "parent_prd": "PRD-070",
+    "parent_exec_spec": "EXEC-070",
+    "supersedes_scope_in_parent": ["WS5", "WS5_ROUTE", "WS5_UI", "WS6"],
+    "supersedes_artifact": "FIB-S-FIN-CENTS-001 (intake/FIB-S-FIN-CENTS-001-visit-anchored-cents-envelope.json)",
+    "supersession_reason": "FIB-S-FIN-CENTS-001 encoded Phase 1.2 canonicalization work (removal of /100 conversions, cents normalization, formatCents migration) inside a Phase 1.1 labeling slice. The PRD-070 pipeline-interruption postmortem diagnosed this as the root cause of the execution halt. This FIB-S is a clean re-scope that strictly enforces the Phase 1.1 / Phase 1.2 boundary.",
+    "postmortem_reference": "docs/issues/gaps/financial-data-distribution-standard/failures/prd-070-pipeline-interruption-postmortem.md"
+  },
+
+  "phase_boundary": {
+    "one_line_invariant": "If a change makes the system more correct, it does not belong in Phase 1.1. If a change makes the system more interpretable, it does.",
+    "phase_1_1_mandate": "Semantic labeling only. Wrap existing values. Add type, source, completeness. Do not alter values, units, or derivation.",
+    "phase_1_2_mandate": "Data normalization. Remove /100 conversions. Canonicalize to integer cents. Clean up mapper boundaries. Clarify DTO ownership.",
+    "phase_1_1_prohibited": [
+      "Removal of /100 dollar-conversion logic from any mapper or CRUD function",
+      "Changing FinancialValue.value from the existing unit (dollars after /100) to a different unit (cents)",
+      "Migrating UI render calls from formatDollars to formatCents",
+      "Mapper rewrites motivated by correctness rather than labeling",
+      "DTO ownership movement across bounded contexts",
+      "Value recomputation or re-aggregation of any kind",
+      "Broad route or UI expansion beyond the minimum type-compatibility surface",
+      "Broad route-boundary test matrix (4+ cases per route) before contract stabilizes"
+    ]
+  },
+
+  "intent": {
+    "operator_problem": "PRD-070 correctly defined the Phase 1.1 goal — every currency value at a service boundary should carry explicit type, source, and completeness — but then collapsed two distinct temporal phases into one execution slice. WS5 and WS6 were defined as 'remove dollar pre-conversion and land cents-envelope contract', which is Phase 1.2 canonicalization work dressed as Phase 1.1 labeling. The pipeline correctly halted. This FIB-S re-scopes the slice as pure labeling: wrap the existing value (whatever its current unit) in FinancialValue and add interpretability metadata. The /100 removal is a separate, subsequent problem for Phase 1.2.",
+    "pilot_fit": "Visit-anchored surfaces (Recent Sessions, Live View) currently emit bare number values with no metadata. Operators cannot tell whether a value is actual vs estimated, where it came from, or whether it is complete. Wrapping the existing number in FinancialValue with authority, source, and completeness makes the system honest without making it structurally different. This is the minimum label-only step needed to close the Phase 1.1 gap on these two surfaces.",
+    "success_outcomes": [
+      "RecentSessionDTO.total_buy_in, total_cash_out, net typed as FinancialValue (not bare number). Value field carries the existing dollar amount that /100 currently produces — unchanged.",
+      "VisitLiveViewDTO.session_total_buy_in, session_total_cash_out, session_net typed as FinancialValue. Value field carries the existing dollar amount — unchanged.",
+      "Every FinancialValue envelope emitted at these boundaries includes type='actual', an explicit source string, and an explicit completeness.status. No omissions.",
+      "The existing /100 conversion logic in services/visit/crud.ts and services/rating-slip/mappers.ts is PRESERVED. Wrapping happens after conversion, not instead of it.",
+      "UI consumers in scope access field.value for rendering and continue using the same render function (formatDollars or equivalent). No render semantics change.",
+      "Route handlers remain pass-through. No math added or removed at the transport layer.",
+      "Minimum route-boundary test files are born (one success case + envelope-shape assertion per route). Not a full 4-case suite — contract is still stabilizing.",
+      "npm run type-check exits 0. No bare number typings remain for the six in-scope fields."
+    ],
+    "explicit_exclusions": [
+      "Removal of /100 conversion in services/visit/crud.ts centsToDollars closure — Phase 1.2 scope",
+      "Removal of /100 conversion in services/rating-slip/mappers.ts toVisitLiveViewDTO — Phase 1.2 scope",
+      "Migrating UI render calls from formatDollars(field) to formatCents(field.value) — Phase 1.2 scope (value is still dollars in Phase 1.1)",
+      "Canonicalizing FinancialValue.value to integer cents — Phase 1.2 scope (current value is a dollar float after /100; Phase 1.2 will align with z.number().int() in financialValueSchema)",
+      "Adding outbound Zod validation using financialValueSchema at the DTO boundary — financialValueSchema declares z.number().int() which would reject dollar floats; static TypeScript types are sufficient for Phase 1.1",
+      "services/visit/mappers.ts new mapper function — not required; envelope wrapping can be applied inline inside the existing centsToDollars helper in crud.ts",
+      "SessionData interface structural refactor in start-from-previous.tsx — type update is the minimum required consequence of the DTO change; removal of SessionData as a named goal is structural cleanup, not labeling",
+      "<FinancialValue> React component — Phase 1.3 scope",
+      "Shift-intelligence authority routing (WS7B) — separate bounded context, separate FIB",
+      "Phase 1.1 verification matrix and rollback package (WS9) — stays under EXEC-070 closing gate",
+      "SQL migrations — RPCs already emit bare cents; no DDL required",
+      "pit_cash_observation.amount dollar-to-cents column migration — Wave 2 scope",
+      "Broad API / OpenAPI envelope migration beyond the two in-scope routes",
+      "Broad UI migration to <FinancialValue>, <AttributionRatio>, <CompletenessBadge>"
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Keep the FIB-S-FIN-CENTS-001 scope (remove /100, emit canonical cents)",
+        "why_considered": "Originally seemed like the right thing to do — clean up the conversion at the same time as adding the envelope",
+        "why_rejected_now": "Collapses Phase 1.1 (labeling) and Phase 1.2 (canonicalization) into one slice. The postmortem names this as the root cause of the pipeline halt. Each phase must solve one class of problem."
+      },
+      {
+        "idea": "Migrate UI render calls to formatCents in this slice",
+        "why_considered": "If you add FinancialValue.value containing dollars, a future Phase 1.2 will have to change the render calls again when value becomes cents",
+        "why_rejected_now": "Two-step migration is acceptable. Phase 1.1 render update is field.value access only; Phase 1.2 render update is formatDollars → formatCents when cents canonicalization lands. Each change is small and bounded. Combining them now adds correctness work to a labeling slice."
+      },
+      {
+        "idea": "Add 4-case route-boundary test suite per route (per EXEC-072 DEC-5)",
+        "why_considered": "More coverage is better; EXEC-070 WS9 verification matrix references these files",
+        "why_rejected_now": "Broad test enforcement before the contract stabilizes is premature per postmortem §3.6. The contract is still in dollar units in Phase 1.1 and will change in Phase 1.2. Minimum smoke test (success + envelope shape) is sufficient for Phase 1.1. Full suite belongs in Phase 1.2 after units are canonical."
+      },
+      {
+        "idea": "Create a new services/visit/mappers.ts with a toRecentSessionDTO function",
+        "why_considered": "Clean separation of concerns; mapper pattern per SLAD",
+        "why_rejected_now": "New mapper file is a structural refactor, not labeling. The existing centsToDollars helper in crud.ts is the correct minimal injection point. Return the FinancialValue envelope from that helper instead of the bare number. No new file required."
+      },
+      {
+        "idea": "Bundle WS7B (shift-intelligence) into this slice",
+        "why_considered": "Remaining Phase 1.1 work",
+        "why_rejected_now": "Different bounded context, different pattern. Bundling defeats the manageable-slice goal and repeats the PRD-070 scope collapse."
+      }
+    ]
+  },
+
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "RecentSessionDTO",
+          "kind": "dto",
+          "description": "Visit continuation response item; aggregates per-session financial totals for the last N visits of a player. Fields currently emit dollar floats after /100 conversion in centsToDollars helper.",
+          "stateful": false,
+          "system_of_record": "services/visit/dtos.ts",
+          "fields_in_scope": ["total_buy_in", "total_cash_out", "net"],
+          "current_unit_in_field": "dollars (float, after centsToDollars /100 in services/visit/crud.ts lines 521-523)",
+          "unit_after_phase_1_1": "dollars (float, unchanged — /100 is preserved; value is wrapped in FinancialValue envelope)",
+          "unit_after_phase_1_2": "cents (integer — Phase 1.2 removes /100 and aligns with z.number().int())",
+          "fields_out_of_scope": [
+            "visit_id",
+            "visit_group_id",
+            "started_at",
+            "ended_at",
+            "last_table_id",
+            "last_table_name",
+            "last_seat_number",
+            "total_duration_seconds",
+            "points_earned",
+            "segment_count"
+          ]
+        },
+        {
+          "name": "VisitLiveViewDTO",
+          "kind": "dto",
+          "description": "Aggregated live view of an active visit's session totals. Fields currently emit dollar floats after /100 conversion in toVisitLiveViewDTO. Cross-ownership: declared in services/visit/dtos.ts, mapped in services/rating-slip/mappers.ts.",
+          "stateful": false,
+          "system_of_record": "services/visit/dtos.ts",
+          "mapping_owner": "services/rating-slip/mappers.ts",
+          "fields_in_scope": [
+            "session_total_buy_in",
+            "session_total_cash_out",
+            "session_net"
+          ],
+          "current_unit_in_field": "dollars (float, after /100 in services/rating-slip/mappers.ts lines 340-342)",
+          "unit_after_phase_1_1": "dollars (float, unchanged — /100 is preserved; value is wrapped in FinancialValue envelope)",
+          "unit_after_phase_1_2": "cents (integer — Phase 1.2 removes /100 and aligns with z.number().int())",
+          "fields_out_of_scope": [
+            "visit_id",
+            "player_id",
+            "player_first_name",
+            "player_last_name",
+            "visit_status",
+            "started_at",
+            "current_segment_*",
+            "session_total_duration_seconds",
+            "session_points_earned",
+            "session_segment_count",
+            "segments"
+          ]
+        },
+        {
+          "name": "FinancialValue",
+          "kind": "primitive",
+          "description": "Canonical envelope emitted at service boundaries for currency values. NOTE: financialValueSchema declares value: z.number().int() — this validator is NOT applied at the outbound DTO boundary in Phase 1.1 because the dollar float would fail it. Static TypeScript types are sufficient. Phase 1.2 will remove /100 and make the integer constraint applicable.",
+          "stateful": false,
+          "system_of_record": "types/financial.ts",
+          "phase_1_1_usage_note": "value field carries existing dollar float; envelope adds type/source/completeness. z.number().int() not enforced at runtime in Phase 1.1.",
+          "fields_hint": [
+            "value (existing number, unit preserved from current code — dollars in Phase 1.1)",
+            "type (FinancialAuthority: 'actual' for visit-anchored actuals)",
+            "source (provenance string, e.g. 'visit_financial_summary.total_in')",
+            "completeness.status (CompletenessStatus: 'complete' | 'unknown' — never omit)"
+          ]
+        },
+        {
+          "name": "visit_financial_summary",
+          "kind": "source",
+          "description": "View/aggregate table feeding both RPCs with bare-cent totals. RPCs return cents; /100 conversion happens in application layer. Source string in envelope traces to this table regardless of phase.",
+          "stateful": true,
+          "system_of_record": "database (PT-2 Supabase)",
+          "fields_hint": ["total_in", "total_out", "net_amount"]
+        }
+      ],
+      "relationships": [
+        "RecentSessionDTO is emitted by services/visit/crud.ts getPlayerRecentSessions. centsToDollars closure applies /100 before DTO assembly. FinancialValue wrapping occurs inside centsToDollars return — /100 stays.",
+        "VisitLiveViewDTO is emitted by services/rating-slip/mappers.ts toVisitLiveViewDTO. /100 applied inline at lines 340-342. FinancialValue wrapping replaces bare assignment — /100 stays inside the wrapper call.",
+        "Both DTOs are declared in services/visit/dtos.ts — shared file. Sequential execution or atomic commit required between the two WS.",
+        "visit_financial_summary is the provenance source for all six in-scope fields. Source string in envelope: 'visit_financial_summary.{column}'.",
+        "Cross-ownership is preserved: VisitLiveViewDTO stays in services/visit/dtos.ts; mapping logic stays in services/rating-slip/mappers.ts. This is a known pre-existing posture, not a bug to fix in Phase 1.1."
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "Mapper wraps existing (post-/100) value in FinancialValue envelope",
+          "owner": "backend-service-builder",
+          "description": "The wrapping point is AFTER the existing /100 conversion, not instead of it. For recent-sessions: inside the centsToDollars closure in services/visit/crud.ts, return FinancialValue objects instead of bare numbers. For live-view: inside toVisitLiveViewDTO in services/rating-slip/mappers.ts, replace bare division assignments with wrapped FinancialValue construction. Envelope shape: { value: <existing_dollar_result>, type: 'actual', source: 'visit_financial_summary.<column>', completeness: { status: <per_RULE-2> } }."
+        },
+        {
+          "id": "CAP-2",
+          "name": "DTO type fields updated from number to FinancialValue",
+          "owner": "backend-service-builder",
+          "description": "services/visit/dtos.ts: change the six in-scope fields from number to FinancialValue. Import FinancialValue from types/financial.ts. No other DTO fields change. This is the minimal type-system change that makes the labeling enforceable at compile time."
+        },
+        {
+          "id": "CAP-3",
+          "name": "Route handlers remain pass-through",
+          "owner": "api-builder (verification only)",
+          "description": "app/api/v1/players/[playerId]/recent-sessions/route.ts and app/api/v1/visits/[visitId]/live-view/route.ts do not perform dollar/cents math. Grep confirms no /100, no dollarsToCents, no formatDollars in route files. No code changes expected — only verification grep."
+        },
+        {
+          "id": "CAP-4",
+          "name": "UI consumers access .value for rendering (minimum type-compatibility update)",
+          "owner": "frontend-design-pt-2",
+          "description": "components/player-sessions/start-from-previous.tsx and start-from-previous-modal.tsx: update prop type from SessionData (local interface with number fields) or number to RecentSessionDTO (FinancialValue fields). Update rendering from field to field.value — value is still dollars, so formatDollars(field.value) is the correct call. No switch to formatCents. No <FinancialValue> component. Update net comparison from session.net >= 0 to session.net.value >= 0."
+        },
+        {
+          "id": "CAP-5",
+          "name": "Route-boundary test files born (minimum scope)",
+          "owner": "api-builder / qa-specialist",
+          "description": "New test directories and stub files created: app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts and app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts. Minimum scope: one success case asserting FinancialValue envelope shape (type present, source non-empty, completeness.status present, value is number). NOT a 4-case suite — contract is stabilizing; full coverage deferred to Phase 1.2."
+        }
+      ]
+    },
+    "where": {
+      "surfaces": [
+        {
+          "kind": "service",
+          "name": "visit service (recent sessions)",
+          "path": "services/visit/",
+          "files_in_scope": [
+            {
+              "path": "services/visit/dtos.ts",
+              "change": "Field type change: total_buy_in, total_cash_out, net from number to FinancialValue in RecentSessionDTO"
+            },
+            {
+              "path": "services/visit/crud.ts",
+              "change": "centsToDollars closure: return FinancialValue instead of bare number. /100 logic is KEPT. Wrapping is the only change.",
+              "important_note": "Do NOT delete the centsToDollars closure. Do NOT remove the /100 division. Return { value: s.total_buy_in / 100, type: 'actual', source: 'visit_financial_summary.total_in', completeness: { status: 'complete' } } instead of the bare number.",
+              "existing_tests_to_update": "services/visit/__tests__/visit-continuation.test.ts — assertions on dollar values (e.g., toBe(-0.5)) must become FinancialValue shape assertions (toMatchObject({ value: -0.5, type: 'actual', ... }))"
+            }
+          ],
+          "no_new_files_required": "services/visit/mappers.ts new mapper is excluded from scope. Wrapping inline in crud.ts centsToDollars is the minimum injection point."
+        },
+        {
+          "kind": "service",
+          "name": "rating-slip service (visit live view role)",
+          "path": "services/rating-slip/",
+          "files_in_scope": [
+            {
+              "path": "services/rating-slip/mappers.ts",
+              "change": "toVisitLiveViewDTO: replace bare /100 assignments on lines 340-342 with FinancialValue construction. /100 logic is KEPT inside the value field.",
+              "important_note": "Do NOT remove the /100 division. Return { value: data.session_total_buy_in / 100, type: 'actual', source: 'visit_financial_summary.total_in', completeness: { status: <per_RULE-2> } }.",
+              "dollarsToCents_retention": "dollarsToCents import at line 14 is used at line 525 for PitCashObservationDTO.amount — unrelated to this scope. Retain it."
+            }
+          ]
+        },
+        {
+          "kind": "api",
+          "name": "recent-sessions route",
+          "path": "app/api/v1/players/[playerId]/recent-sessions/route.ts",
+          "change": "Verification only — no code change expected. Grep confirms no /100 or dollar math.",
+          "test_coverage_required": "app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts (NEW FILE — directory does not exist)"
+        },
+        {
+          "kind": "api",
+          "name": "visit live-view route",
+          "path": "app/api/v1/visits/[visitId]/live-view/route.ts",
+          "change": "Verification only — no code change expected. Grep confirms no /100 or dollar math.",
+          "test_coverage_required": "app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts (NEW FILE — directory does not exist)"
+        },
+        {
+          "kind": "ui",
+          "name": "start-from-previous panel",
+          "path": "components/player-sessions/start-from-previous.tsx",
+          "changes": [
+            "Import RecentSessionDTO from @/services/visit/dtos (replaces stale local SessionData interface — forced consequence of type change, not a separate structural goal)",
+            "Update rendering: formatDollars(session.total_buy_in) → formatDollars(session.total_buy_in.value) — value is still dollars",
+            "Update net comparison: session.net >= 0 → session.net.value >= 0",
+            "DO NOT switch to formatCents — value is dollars in Phase 1.1"
+          ]
+        },
+        {
+          "kind": "ui",
+          "name": "start-from-previous modal",
+          "path": "components/player-sessions/start-from-previous-modal.tsx",
+          "changes": [
+            "Update type import to use RecentSessionDTO from @/services/visit/dtos",
+            "Update field access to .value where needed"
+          ]
+        }
+      ],
+      "excluded_surfaces": [
+        {
+          "path": "services/visit/mappers.ts",
+          "reason": "New mapper function is a structural refactor, not labeling. Wrapping inline in crud.ts centsToDollars is sufficient and minimal."
+        },
+        {
+          "path": "app/review/",
+          "reason": "Deleted from the repo on 2026-04-24. Out of scope."
+        },
+        {
+          "path": "components/financial/",
+          "reason": "<FinancialValue> component does not exist yet. Phase 1.3 scope."
+        }
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "severity": "hard",
+          "statement": "Every in-scope currency field in RecentSessionDTO and VisitLiveViewDTO emits a FinancialValue envelope. Bare number is rejected at the service boundary."
+        },
+        {
+          "id": "RULE-2",
+          "severity": "hard",
+          "statement": "completeness.status is always explicit (complete|partial|unknown). Mappers that cannot determine completeness set 'unknown' — never omit. null/undefined input → status='unknown', value=0. Non-null input → status='complete' (including zero)."
+        },
+        {
+          "id": "RULE-3",
+          "severity": "hard",
+          "statement": "type and source are mapper-owned. Consumers (routes, UI) MUST NOT infer or override these fields."
+        },
+        {
+          "id": "RULE-4",
+          "severity": "hard",
+          "statement": "The existing /100 dollar conversion logic is PRESERVED in Phase 1.1. FinancialValue.value carries the result of the existing conversion (dollar float). Removing /100 is Phase 1.2 work and is explicitly prohibited from this slice.",
+          "postmortem_reference": "§7.3 Forbidden in PRD-072: Unit changes, /100 removal"
+        },
+        {
+          "id": "RULE-5",
+          "severity": "hard",
+          "statement": "UI consumers render via the existing render function applied to field.value (e.g. formatDollars(field.value)). Do NOT switch to formatCents in Phase 1.1 — value is a dollar float, not integer cents. formatCents migration is Phase 1.2.",
+          "postmortem_reference": "§7.2 Allowed: Preserve existing unit representation"
+        },
+        {
+          "id": "RULE-6",
+          "severity": "hard",
+          "statement": "The workstream touching RecentSessionDTO and the workstream touching VisitLiveViewDTO do not execute in parallel because services/visit/dtos.ts is shared. Sequential execution or atomic commit required.",
+          "inherited_from": "EXEC-070 WS5/WS6 sequencing constraint"
+        },
+        {
+          "id": "RULE-7",
+          "severity": "hard",
+          "statement": "No outbound Zod validation using financialValueSchema is added at the DTO boundary in Phase 1.1. financialValueSchema declares value: z.number().int() which would reject the dollar float that Phase 1.1 emits. Static TypeScript types are the enforcement mechanism. Phase 1.2 will canonicalize to integer cents and at that point financialValueSchema runtime validation becomes applicable.",
+          "postmortem_reference": "§7.3 Forbidden: Mapper rewrites for correctness"
+        },
+        {
+          "id": "RULE-8",
+          "severity": "hard",
+          "statement": "Wire-format Zod (recentSessionsRpcResponseSchema) tracks the RPC output shape, which is bare z.number() matching JSONB emission. It is unchanged in Phase 1.1."
+        },
+        {
+          "id": "RULE-9",
+          "severity": "soft",
+          "statement": "Route-boundary test scope is minimum-viable for Phase 1.1: one success case + envelope-shape assertions per route. Full 4-case suite (unauthorized, invalid params, 404) is deferred to Phase 1.2 when the contract is canonical and stable."
+        }
+      ]
+    },
+    "when": {
+      "triggers": [
+        "RPC returns bare cents JSONB → existing /100 conversion runs → result wrapped in FinancialValue → DTO emitted",
+        "Route handler receives DTO from service → passes through unchanged → wire",
+        "UI mounts, calls route, receives envelope-shaped DTO → accesses .value → renders via formatDollars(.value)"
+      ]
+    }
+  },
+
+  "containment": {
+    "loop": [
+      {
+        "step": 1,
+        "actor": "RPC",
+        "action": "rpc_get_player_recent_sessions / rpc_get_visit_live_view returns bare cents in JSONB (unchanged — no SQL migration)"
+      },
+      {
+        "step": 2,
+        "actor": "wire Zod validator",
+        "action": "recentSessionsRpcResponseSchema validates bare z.number() matching the RPC (unchanged)"
+      },
+      {
+        "step": 3,
+        "actor": "existing /100 conversion",
+        "action": "centsToDollars in crud.ts or inline /100 in mappers.ts runs as before — PRESERVED. Result is dollar float."
+      },
+      {
+        "step": 4,
+        "actor": "mapper wrapping (NEW)",
+        "action": "Instead of returning bare dollar float, return FinancialValue: { value: <dollar_float>, type: 'actual', source: 'visit_financial_summary.<column>', completeness: { status: <per RULE-2> } }. This is the ONLY new behavior in Phase 1.1."
+      },
+      {
+        "step": 5,
+        "actor": "route handler",
+        "action": "Passes DTO through unchanged. No dollar/cents math added."
+      },
+      {
+        "step": 6,
+        "actor": "route-boundary test (born)",
+        "action": "Minimum: asserts type present, source non-empty, completeness.status present, value is number. One success case per route."
+      },
+      {
+        "step": 7,
+        "actor": "UI consumer",
+        "action": "Accesses dto.field.value (dollar float). Renders via formatDollars(dto.field.value). Semantically identical output to Phase 1.0 — only the type shape changed."
+      }
+    ],
+    "what_does_not_change": [
+      "The numeric value emitted to the UI or wire — dollar amount is identical to current behavior",
+      "The /100 conversion logic — it remains where it is, doing what it does",
+      "The wire-format Zod validators — they still validate bare RPC shapes",
+      "The RPC functions — no SQL changes",
+      "The render output — formatDollars of the dollar float produces the same string as before"
+    ]
+  },
+
+  "governance": {
+    "open_questions_allowed_at_scaffold": [
+      {
+        "id": "Q-1",
+        "question": "Exact source string convention? 'visit_financial_summary.total_in' vs alternative formats?",
+        "owner": "lead-architect",
+        "recommendation": "Use dotted table.column path ('visit_financial_summary.total_in', 'visit_financial_summary.total_out', 'visit_financial_summary.net_amount') for traceability. Consistent with FIB-FIN-CENTS-001 DEC-3 which resolved this correctly."
+      },
+      {
+        "id": "Q-2",
+        "question": "completeness.status when the RPC value is null vs zero vs missing?",
+        "owner": "lead-architect + backend-service-builder",
+        "recommendation": "null / missing → status='unknown', value=0. Zero → status='complete', value=0. Consistent with FIB-FIN-CENTS-001 DEC-2 which resolved this correctly. Document inline in the wrapping point."
+      },
+      {
+        "id": "Q-3",
+        "question": "Should the EXEC-SPEC note explicitly that FinancialValue.value carries dollar floats in Phase 1.1 and that financialValueSchema z.number().int() is not applicable until Phase 1.2?",
+        "owner": "lead-architect",
+        "recommendation": "Yes. This note must appear as a named decision in the EXEC-SPEC to prevent future executors from adding outbound Zod validation that would break at runtime. The Zod integer constraint is aspirational for Phase 1.1 and load-bearing for Phase 1.2."
+      },
+      {
+        "id": "Q-4",
+        "question": "Single EXEC-SPEC or separate per visit-service vs rating-slip? Atomic commit or sequential?",
+        "owner": "lead-architect",
+        "recommendation": "Single EXEC-SPEC with two sequential workstreams (visit-service first, then rating-slip). Atomic commit preferred to avoid intermediate state where one DTO is wrapped and the other is not in the shared dtos.ts file. Consistent with FIB-FIN-CENTS-001 DEC-4."
+      },
+      {
+        "id": "Q-5",
+        "question": "UI render function: formatDollars(field.value) or something else?",
+        "owner": "frontend-design-pt-2",
+        "recommendation": "formatDollars(field.value) — the value is still a dollar float. Do NOT use formatCents. Do NOT add a new render helper. Phase 1.2 will migrate to formatCents when cents canonicalization lands."
+      }
+    ],
+    "hard_rules_must_appear_in_exec_spec": [
+      "RULE-1",
+      "RULE-2",
+      "RULE-3",
+      "RULE-4",
+      "RULE-5",
+      "RULE-6",
+      "RULE-7"
+    ],
+    "expansion_trigger_rule": "Amend this brief if any downstream artifact proposes: (a) removing the /100 conversion from crud.ts or mappers.ts; (b) changing FinancialValue.value from the existing dollar unit to cents; (c) switching UI render calls from formatDollars to formatCents in this slice; (d) adding outbound Zod validation using financialValueSchema at the DTO boundary; (e) adding a new services/visit/mappers.ts file or toRecentSessionDTO function as a required deliverable; (f) expanding route-boundary test scope to 4+ cases per route before Phase 1.2 canonical contract; (g) parallel execution of the two shared-dtos.ts workstreams; (h) any SQL migration at the RPC layer; (i) bundling WS7B or WS9 into this slice."
+  },
+
+  "phase_1_2_handoff": {
+    "what_this_slice_intentionally_defers": [
+      {
+        "item": "Removal of /100 conversion in services/visit/crud.ts centsToDollars",
+        "why_deferred": "Phase 1.2 canonicalization — normalizing value units is a structural concern, not a labeling concern",
+        "impact_when_deferred_lands": "FinancialValue.value will change from dollar float to integer cents; financialValueSchema z.number().int() becomes applicable; UI formatDollars → formatCents migration required"
+      },
+      {
+        "item": "Removal of /100 conversion in services/rating-slip/mappers.ts toVisitLiveViewDTO",
+        "why_deferred": "Same as above — Phase 1.2 canonicalization",
+        "impact_when_deferred_lands": "Same as above for the live-view surface"
+      },
+      {
+        "item": "Migration of UI render calls from formatDollars(field.value) to formatCents(field.value)",
+        "why_deferred": "Render unit must match value unit. Can only switch to formatCents when value is canonical cents (Phase 1.2).",
+        "impact_when_deferred_lands": "Two-line change per render site; bounded and explicit"
+      },
+      {
+        "item": "Full route-boundary test matrix (4 cases per route)",
+        "why_deferred": "Contract stabilization. Testing against a dollar-unit Phase 1.1 contract adds maintenance burden when Phase 1.2 changes the value to cents.",
+        "impact_when_deferred_lands": "Expand test files (already born in Phase 1.1) to full 4-case suite"
+      }
+    ]
+  },
+
+  "traceability": {
+    "companion_fib_h": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/FIB-H-FiNANCIAL-TELEMETRY-PHASE-1-1-SLICE.md",
+    "postmortem": "docs/issues/gaps/financial-data-distribution-standard/failures/prd-070-pipeline-interruption-postmortem.md",
+    "superseded_fib_s": "docs/issues/gaps/financial-data-distribution-standard/intake/FIB-S-FIN-CENTS-001-visit-anchored-cents-envelope.json",
+    "parent_prd": "docs/10-prd/PRD-070-financial-telemetry-wave1-phase1.1-service-dto-envelope-v0.md",
+    "parent_exec_spec": "docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md",
+    "classification_rules": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-CLASSIFICATION-RULES.md",
+    "surface_inventory": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-SURFACE-INVENTORY.md",
+    "shared_primitives": [
+      "types/financial.ts (FinancialValue, FinancialAuthority, CompletenessStatus)",
+      "lib/financial/schema.ts (financialValueSchema — NOTE: z.number().int() not enforced at runtime in Phase 1.1; Phase 1.2 will make it applicable)",
+      "lib/format.ts (formatDollars — canonical render path for Phase 1.1 UI consumers; formatCents is Phase 1.2)"
+    ],
+    "companion_fib_not_yet_drafted": [
+      {
+        "scope": "Shift-intelligence authority routing (WS7B equivalent)",
+        "recommended_fib_id": "FIB-FIN-SHIFT-001",
+        "why_separate": "Different bounded context, different pattern (mapper helper + alert path parity, not shape wrapping)"
+      },
+      {
+        "scope": "Financial Data Canonicalization — Phase 1.2",
+        "recommended_fib_id": "FIB-FIN-CANON-001",
+        "why_separate": "Phase 1.2 is a separate class of problem: normalization, /100 removal, integer cents, DTO ownership. See postmortem §7.4."
+      }
+    ]
+  }
+}

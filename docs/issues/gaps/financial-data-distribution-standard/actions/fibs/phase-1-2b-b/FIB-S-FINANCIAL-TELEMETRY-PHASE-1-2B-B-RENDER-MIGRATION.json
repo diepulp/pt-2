@@ -1,0 +1,569 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-B-RENDER-MIGRATION",
+    "status": "draft",
+    "feature_id": "FIB-S-FIN-PHASE-1-2B-B-RENDER-MIGRATION",
+    "feature_name": "Financial Telemetry Phase 1.2B-B — Render Migration",
+    "priority": "P1",
+    "decision_horizon": "phase-1-2b-b-close",
+    "owner": "Financial Telemetry (Cross-context)",
+    "opened_on": "2026-05-03",
+    "predecessor_fib": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2b/FIB-S-FINANCIAL-TELEMETRY-PHASE-1-2B-CANONICALIZATION.json",
+    "predecessor_phase": "Phase 1.2B-A — Service Canonicalization (EXEC-074, closed 2026-04-30, commit e83a2c12)",
+    "successor_slice": "Phase 1.2B-C — Contract Expansion (full OpenAPI annotation + route test matrices + DEC-6 shift-intelligence/alerts path birth). Deprecation observability is Phase 1.4, not 1.2B-C."
+  },
+
+  "scope_guardrail": {
+    "governance_reference": "docs/70-governance/FIB_GENERATION_SCOPE_GUARDRAIL.md",
+    "primary_change_class": "presentation",
+    "coverage_mode": {
+      "mode": "representative",
+      "surfaces": [
+        "components/player-sessions/start-from-previous.tsx:202",
+        "components/player-sessions/start-from-previous.tsx:208",
+        "components/player-sessions/start-from-previous.tsx:226"
+      ],
+      "surface_granularity": "concrete-instances-only"
+    },
+    "layer_budget": {
+      "primary_layer": "ui",
+      "secondary_layers": [],
+      "secondary_layer_constraints": "none — no secondary layer receives logic changes",
+      "dto_classification": "no DTO changes in this slice"
+    },
+    "one_line_boundary": "This FIB changes how integer-cents financial values render in start-from-previous.tsx; it does not expand the API contract, add route tests, or wire observability.",
+    "atomicity_test": {
+      "ships_without_deferred_work": true,
+      "deferred_work_can_follow_without_rewrite": true,
+      "ships_as_correct_internal_contract": true
+    },
+    "diff_size_sanity": {
+      "expected_logic_files": 1,
+      "directory_boundaries": ["components/player-sessions/"],
+      "bounded_contexts": ["player-sessions-ui"],
+      "hidden_multi_class_scope_review_required": false
+    },
+    "adjacent_consequence_ledger": [
+      {
+        "temptation": "Full 28-route OpenAPI expansion",
+        "why_adjacent": "Contract documentation is a direct consequence of a canonicalized service layer",
+        "disposition": "Phase 1.2B-C — Transport/Enforcement FIB",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "4-case route-boundary test matrices for recent-sessions and live-view",
+        "why_adjacent": "Test coverage improves naturally after the unit is stable",
+        "disposition": "Phase 1.2B-C — Enforcement FIB",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "DEC-6: GET /api/v1/shift-intelligence/alerts OpenAPI path and route test birth",
+        "why_adjacent": "ShiftAlertDTO was promoted in 1.2B-A; surface gap exists",
+        "disposition": "Phase 1.2B-C — Enforcement FIB",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "Structured log events for deprecated-field usage at route handlers",
+        "why_adjacent": "Observability belongs after the stable contract is documented",
+        "disposition": "Phase 1.4 or Phase 1.2B-C",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "start-from-previous.test.tsx / start-from-previous-modal.test.tsx component test birth",
+        "why_adjacent": "Component is being touched",
+        "disposition": "Phase 1.3 — DEF-006 / PRD-071 Appendix D",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "components/financial/FinancialValue.tsx component birth",
+        "why_adjacent": "Integer-cents contract is stable — display component could wrap it",
+        "disposition": "Phase 1.3 — component design, theming, accessibility are a distinct phase",
+        "removed_from_must": true
+      }
+    ],
+    "stop_conditions": [
+      "any file other than start-from-previous.tsx requires logic changes",
+      "a new test file for start-from-previous.tsx is required",
+      "OpenAPI path entries are required",
+      "route-boundary tests are required",
+      "runtime log events are required"
+    ],
+    "prohibited": [
+      "formatDollars migration at player-list-panel.tsx:234 (bare number — not a FinancialValue.value field)",
+      "OpenAPI path entry creation or modification",
+      "route-boundary test creation or modification",
+      "structured log events or observability wiring",
+      "component test birth (DEF-006)",
+      "components/financial/FinancialValue.tsx or any Phase 1.3 component",
+      "lib/format.ts formatter consolidation",
+      "forbidden-label removal from DOM",
+      "service-layer or route-handler logic changes",
+      "hold_percent FinancialValue wrapping — DEF-NEVER"
+    ]
+  },
+
+  "intent": {
+    "operator_problem": "After Phase 1.2B-A retired BRIDGE-001, FinancialValue.value became integer cents at the service boundary. The start-from-previous panel still calls formatDollars on those values. A pit boss reviewing a prior buy-in of $75 (stored as 7500 cents) now sees $7,500 — off by a factor of 100. This is a display error on the surface a pit boss consults when deciding whether and at what limit to open a new session for a returning player.",
+    "pilot_fit": "DEF-004 deferred the render migration until integer-cents was confirmed stable at the service boundary. Phase 1.2B-A confirmed that. The bug cannot wait for Phase 1.3 because that phase introduces display components and formatter consolidation, and the pit boss is looking at incorrect dollar amounts right now.",
+    "success_outcomes": [
+      "OUT-1: formatDollars is absent from start-from-previous.tsx for all three FinancialValue.value field reads; formatCents is the formatter at lines 202, 208, and 226",
+      "OUT-2: Q-4 consumer audit confirms no other runtime UI formatDollars call site passes a FinancialValue.value integer-cents field",
+      "OUT-3: npm run type-check, npm run lint, and npm run build exit 0",
+      "OUT-4: DEF-004 closed in ROLLOUT-TRACKER.json with the implementation commit SHA or commit_sha_pending marker plus tracker-only SHA closure before Phase 1.2B-C starts",
+      "OUT-5: Phase 1.2B-C can begin against a correct render baseline without rewriting this slice"
+    ],
+    "explicit_exclusions": [
+      "Full 28-route OpenAPI expansion — Phase 1.2B-C",
+      "4-case route-boundary test matrices for recent-sessions and live-view — Phase 1.2B-C",
+      "DEC-6 shift-intelligence/alerts OpenAPI path and route test birth — Phase 1.2B-C",
+      "Structured log events for deprecated-field usage — Phase 1.4 or Phase 1.2B-C",
+      "start-from-previous.test.tsx / start-from-previous-modal.test.tsx component test birth — Phase 1.3 (DEF-006)",
+      "components/financial/FinancialValue.tsx, AttributionRatio.tsx, CompletenessBadge.tsx — Phase 1.3",
+      "Forbidden-label removal from DOM (Handle, Total Drop, etc.) — Phase 1.3",
+      "lib/format.ts and 18+ local formatter variants — consolidation pass Phase 1.3",
+      "components/shift-dashboard-v3 migration to FinancialValue — Phase 1.3",
+      "ESLint no-unlabeled-financial-value / no-forbidden-financial-label — Phase 1.4",
+      "I5 truth-telling harness subset — Phase 1.4",
+      "finance_outbox DDL and producers (GAP-F1) — Wave 2",
+      "player-list-panel.tsx:234 formatDollars migration — player.total_net_today is a bare number, not a FinancialValue.value field",
+      "hold_percent FinancialValue wrapping — DEF-NEVER"
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Bundle OpenAPI expansion into this slice",
+        "why_considered": "Contract documentation is a consequence of stable integer-cents unit",
+        "why_rejected_now": "OpenAPI expansion is Transport/Enforcement — a different change class from Presentation. GOV-FIB-001 §4: secondary classes allowed only in Deferred Work, not MUST."
+      },
+      {
+        "idea": "Bundle 4-case route test matrices into this slice",
+        "why_considered": "Test coverage improves after unit is stable",
+        "why_rejected_now": "Enforcement class. The render migration ships and is verified without expanding test matrices. Adding them creates a multi-layer dependency chain around a 3-line UI fix."
+      },
+      {
+        "idea": "Defer the render fix to Phase 1.3 with component birth",
+        "why_considered": "Minimizes total number of slices",
+        "why_rejected_now": "DEF-004 was deferred only until integer-cents was confirmed stable. A factor-of-100 display error cannot remain through the entire Phase 1.3 UI design cycle."
+      },
+      {
+        "idea": "Migrate formatDollars at player-list-panel.tsx:234 in the same pass",
+        "why_considered": "File is in the same directory; seems adjacent",
+        "why_rejected_now": "player.total_net_today is a bare number field — not a FinancialValue.value integer-cents field. Migrating it would change its display semantics, not fix a cents/dollars mismatch."
+      }
+    ]
+  },
+
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "RecentSessionDTO",
+          "kind": "dto",
+          "description": "Visit continuation response item whose financial fields carry integer-cents FinancialValue.value after Phase 1.2B-A BRIDGE-001 retirement.",
+          "stateful": false,
+          "system_of_record": "services/visit/dtos.ts",
+          "fields_in_scope": ["total_buy_in", "total_cash_out", "net"],
+          "unit_after_1_2b_a": "integer cents",
+          "consumed_by_in_scope": [
+            "components/player-sessions/start-from-previous.tsx"
+          ]
+        },
+        {
+          "name": "start-from-previous render",
+          "kind": "view",
+          "description": "The three financial field renders in start-from-previous.tsx that call formatDollars on FinancialValue.value integer-cents fields. Each must become formatCents.",
+          "stateful": false,
+          "system_of_record": "components/player-sessions/start-from-previous.tsx",
+          "fields_hint": [
+            "session.total_buy_in.value — line 202",
+            "session.total_cash_out.value — line 208",
+            "session.net.value — line 226"
+          ]
+        },
+        {
+          "name": "ROLLOUT-TRACKER DEF-004",
+          "kind": "artifact",
+          "description": "Deferred register entry for the formatDollars to formatCents UI render migration. Closed in this slice with the implementation commit SHA or commit_sha_pending marker plus tracker-only SHA closure before Phase 1.2B-C starts.",
+          "stateful": true,
+          "system_of_record": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json",
+          "fields_hint": [
+            "DEF-004 status: closed",
+            "DEF-004 closed_in: this slice",
+            "DEF-004 commit_sha: <implementation commit> or commit_sha_pending: true until tracker-only SHA closure"
+          ]
+        }
+      ],
+      "relationships": [
+        "RecentSessionDTO.total_buy_in.value is integer cents after Phase 1.2B-A; start-from-previous.tsx must call formatCents, not formatDollars, to render it correctly.",
+        "start-from-previous-modal.tsx and rating-slip-modal.tsx are confirmed clean — they do not read FinancialValue.value fields via formatDollars.",
+        "player-list-panel.tsx:234 uses formatDollars on player.total_net_today which is a bare number — it is out of scope for this migration."
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "q4-consumer-audit",
+          "verb": "read",
+          "owner": "frontend-design-pt-2",
+          "description": "Run `rg -n \"formatDollars\\\\([^\\\\)]*\\\\.value\\\\)\" app components hooks services lib -S` for runtime UI/service code. Confirm start-from-previous.tsx lines 202/208/226 are the only affected sites before the swap and that the command returns no results after the swap. Confirm start-from-previous-modal.tsx, rating-slip-modal.tsx, and player-list-panel.tsx are clean.",
+          "served_outcomes": ["OUT-2"],
+          "loop_steps": ["STEP-1"]
+        },
+        {
+          "id": "CAP-2",
+          "name": "format-cents-migration",
+          "verb": "update",
+          "owner": "frontend-design-pt-2",
+          "description": "Replace formatDollars with formatCents at lines 202, 208, and 226 of start-from-previous.tsx. Update the import accordingly.",
+          "served_outcomes": ["OUT-1", "OUT-3"],
+          "loop_steps": ["STEP-2", "STEP-3", "STEP-4", "STEP-5"]
+        },
+        {
+          "id": "CAP-3",
+          "name": "tracker-closure",
+          "verb": "update",
+          "owner": "lead-architect",
+          "description": "Close DEF-004 in ROLLOUT-TRACKER.json with the implementation commit SHA or commit_sha_pending marker plus tracker-only SHA closure before Phase 1.2B-C starts.",
+          "served_outcomes": ["OUT-4", "OUT-5"],
+          "loop_steps": ["STEP-6"]
+        }
+      ]
+    },
+    "where": {
+      "primary_surface": "components/player-sessions/start-from-previous.tsx",
+      "surfaces": [
+        {
+          "name": "start-from-previous render panel",
+          "kind": "ui",
+          "path": "components/player-sessions/start-from-previous.tsx",
+          "lines_in_scope": [202, 208, 226]
+        },
+        {
+          "name": "rollout tracker",
+          "kind": "artifact",
+          "path": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json"
+        }
+      ],
+      "touchpoints": {
+        "inbound": [
+          {
+            "name": "RecentSessionDTO.total_buy_in.value (integer cents)",
+            "type": "api_response"
+          },
+          {
+            "name": "RecentSessionDTO.total_cash_out.value (integer cents)",
+            "type": "api_response"
+          },
+          {
+            "name": "RecentSessionDTO.net.value (integer cents)",
+            "type": "api_response"
+          }
+        ],
+        "outbound": [
+          {
+            "name": "formatCents(session.total_buy_in.value) — rendered dollar string",
+            "type": "user_action"
+          },
+          {
+            "name": "formatCents(session.total_cash_out.value) — rendered dollar string",
+            "type": "user_action"
+          },
+          {
+            "name": "formatCents(session.net.value) — rendered dollar string",
+            "type": "user_action"
+          }
+        ]
+      },
+      "bounded_contexts": ["player-sessions-ui"]
+    },
+    "who": {
+      "primary_actor": "pit boss",
+      "actors": [
+        {
+          "role": "pit boss / floor supervisor",
+          "permissions": ["view prior session financial summary"],
+          "restrictions": []
+        },
+        {
+          "role": "frontend-design-pt-2",
+          "permissions": [
+            "replace formatDollars with formatCents at the three named call sites in start-from-previous.tsx",
+            "update import in start-from-previous.tsx",
+            "run Q-4 consumer audit grep"
+          ],
+          "restrictions": [
+            "may not touch any file other than start-from-previous.tsx for logic changes",
+            "may not create new test files",
+            "may not add OpenAPI paths or route tests",
+            "may not wire observability",
+            "may not migrate formatDollars at player-list-panel.tsx:234"
+          ]
+        },
+        {
+          "role": "lead-architect",
+          "permissions": [
+            "gate any scope amendment",
+            "close DEF-004 in ROLLOUT-TRACKER.json with commit SHA or commit_sha_pending marker plus tracker-only SHA closure before Phase 1.2B-C starts"
+          ],
+          "restrictions": [
+            "scope changes require FIB amendment before EXEC-SPEC update"
+          ]
+        }
+      ],
+      "ownership": {
+        "business_owner": "Financial Telemetry (Cross-context)",
+        "domain_owner": "Lead Architect (Phase 1.2B-B spec steward)"
+      }
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "name": "phase-1-2b-a-exit-gate-passed",
+          "source": "system",
+          "preconditions": [
+            "EXEC-074 closed on 2026-04-30 (commit e83a2c12)",
+            "FinancialValue.value is integer cents at the service boundary for RecentSessionDTO",
+            "financialValueSchema.int() enforcement active",
+            "BRIDGE-001 retired in ROLLOUT-TRACKER.json"
+          ]
+        },
+        {
+          "name": "pit-boss-opens-prior-session-panel",
+          "source": "user",
+          "preconditions": [
+            "player has at least one prior session",
+            "start-from-previous.tsx renders RecentSessionDTO financial fields"
+          ]
+        }
+      ],
+      "lifecycle_events": [
+        "start-from-previous.tsx formatDollars(FinancialValue.value) incorrect render -> formatCents(FinancialValue.value) correct render",
+        "DEF-004 open -> closed"
+      ],
+      "timing_constraints": [
+        "Phase 1.2B-B may not begin before Phase 1.2B-A exit gate passes",
+        "Phase 1.2B-C may not begin before Phase 1.2B-B exit gate passes",
+        "Phase 1.3 component work may not begin before Phase 1.2B-B exit gate passes"
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "statement": "Only start-from-previous.tsx receives logic changes in this slice.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-2",
+          "statement": "formatDollars must not be used for FinancialValue.value integer-cents fields.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-3",
+          "statement": "No new test files are birthed in this slice. Component test birth for start-from-previous belongs to Phase 1.3 (DEF-006).",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-4",
+          "statement": "player-list-panel.tsx:234 formatDollars(player.total_net_today) is out of scope. player.total_net_today is a bare number, not a FinancialValue.value field.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-5",
+          "statement": "No route handler, service, OpenAPI, or test file receives logic changes.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-6",
+          "statement": "hold_percent must never be wrapped in FinancialValue at any layer in any phase.",
+          "severity": "hard"
+        }
+      ],
+      "invariants": [
+        "formatCents is the formatter for all FinancialValue.value integer-cents reads in start-from-previous.tsx after this slice.",
+        "No runtime UI formatDollars call reads a FinancialValue.value field after Q-4 audit clean.",
+        "start-from-previous-modal.tsx, rating-slip-modal.tsx, and player-list-panel.tsx are not modified.",
+        "No new test files are created.",
+        "No OpenAPI paths, route tests, or observability are introduced."
+      ],
+      "decision_notes": [
+        "DEF-004 was deferred from Phase 1.2B-A deliberately: the render migration is only safe after FinancialValue.value is confirmed integer cents at the service boundary. Phase 1.2B-A provided that confirmation.",
+        "GOV-FIB-001 §4: secondary change classes (Transport, Enforcement, Observability) are allowed only in Deferred Work, not MUST. All cross-class items are deferred to Phase 1.2B-C.",
+        "The Phase 1.2B-A FIB-H §G explicitly listed this render migration as the primary Phase 1.2B-B obligation.",
+        "The Q-4 consumer audit was described as an active delivery obligation in the parent FIB-H §G. It is a grep-only discovery step — not a logic change — and is complete when `rg -n \"formatDollars\\\\([^\\\\)]*\\\\.value\\\\)\" app components hooks services lib -S` returns no results after the swap."
+      ]
+    }
+  },
+
+  "containment": {
+    "loop": [
+      {
+        "id": "STEP-1",
+        "actor": "frontend-design-pt-2",
+        "action": "Run `rg -n \"formatDollars\\\\([^\\\\)]*\\\\.value\\\\)\" app components hooks services lib -S`. Confirm start-from-previous.tsx lines 202/208/226 are the only affected sites before the swap and that the command returns no results after the swap. Confirm start-from-previous-modal.tsx, rating-slip-modal.tsx, and player-list-panel.tsx are clean.",
+        "system_response": "Q-4 audit returns clean after the three named call sites are migrated."
+      },
+      {
+        "id": "STEP-2",
+        "actor": "frontend-design-pt-2",
+        "action": "Update import in start-from-previous.tsx from formatDollars to formatCents.",
+        "system_response": "TypeScript compiler still resolves the import; same function signature."
+      },
+      {
+        "id": "STEP-3",
+        "actor": "frontend-design-pt-2",
+        "action": "Replace formatDollars(session.total_buy_in.value) with formatCents(session.total_buy_in.value) at line 202.",
+        "system_response": "Component renders integer-cents buy-in correctly."
+      },
+      {
+        "id": "STEP-4",
+        "actor": "frontend-design-pt-2",
+        "action": "Replace formatDollars(session.total_cash_out.value) with formatCents(session.total_cash_out.value) at line 208.",
+        "system_response": "Component renders integer-cents cash out correctly."
+      },
+      {
+        "id": "STEP-5",
+        "actor": "frontend-design-pt-2",
+        "action": "Replace formatDollars(session.net.value) with formatCents(session.net.value) at line 226.",
+        "system_response": "Component renders integer-cents net correctly. npm run type-check, lint, and build exit 0."
+      },
+      {
+        "id": "STEP-6",
+        "actor": "lead-architect",
+        "action": "Close DEF-004 in ROLLOUT-TRACKER.json with the implementation commit SHA, or with commit_sha_pending: true followed by tracker-only SHA closure before Phase 1.2B-C starts.",
+        "system_response": "Governance state records Phase 1.2B-B closure and enables Phase 1.2B-C planning."
+      }
+    ],
+    "frozen": true,
+    "expansion_requires_amendment": true,
+    "stop_on_boundary_breach": true
+  },
+
+  "dependencies": {
+    "required_existing": [
+      "Phase 1.2B-A exit gate passed on 2026-04-30 (EXEC-074, commit e83a2c12) — FinancialValue.value is integer cents for RecentSessionDTO financial fields",
+      "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-B-RENDER-MIGRATION.md — scope authority v1",
+      "formatCents exists in lib/format.ts and accepts number — same signature as formatDollars",
+      "start-from-previous-modal.tsx confirmed clean (no FinancialValue financial field reads)",
+      "rating-slip-modal.tsx confirmed clean (no RecentSessionDTO / VisitLiveViewDTO field reads)",
+      "player-list-panel.tsx:234 confirmed out of scope (bare number, not FinancialValue.value)"
+    ],
+    "missing_dependencies": [
+      "EXEC-SPEC for Phase 1.2B-B not yet scaffolded at FIB-S generation time",
+      "Implementation commit SHA unknown until execution; if tracker closure lands in the implementation commit, ROLLOUT-TRACKER.json must use commit_sha_pending: true and receive a tracker-only SHA closure before Phase 1.2B-C starts"
+    ],
+    "assumptions": [
+      "formatCents(n: number): string produces the correct whole-dollar representation for integer-cents inputs under the existing formatter contract without additional configuration.",
+      "No route handler or service logic needs to change to support the render correction.",
+      "The Q-4 audit will return clean — the context-gathering session already confirmed start-from-previous-modal.tsx and rating-slip-modal.tsx have no FinancialValue.value reads."
+    ]
+  },
+
+  "traceability": {
+    "outcomes": [
+      {
+        "id": "OUT-1",
+        "statement": "formatDollars is absent from start-from-previous.tsx for all three FinancialValue.value field reads; formatCents is the formatter at lines 202, 208, and 226."
+      },
+      {
+        "id": "OUT-2",
+        "statement": "Q-4 consumer audit confirms no other runtime UI formatDollars call site passes a FinancialValue.value integer-cents field."
+      },
+      {
+        "id": "OUT-3",
+        "statement": "npm run type-check, npm run lint, and npm run build exit 0."
+      },
+      {
+        "id": "OUT-4",
+        "statement": "DEF-004 closed in ROLLOUT-TRACKER.json with the implementation commit SHA or commit_sha_pending marker plus tracker-only SHA closure before Phase 1.2B-C starts."
+      },
+      {
+        "id": "OUT-5",
+        "statement": "Phase 1.2B-C can begin against a correct render baseline without rewriting this slice."
+      }
+    ],
+    "capability_to_outcome": [
+      {
+        "capability": "CAP-1",
+        "outcomes": ["OUT-2"]
+      },
+      {
+        "capability": "CAP-2",
+        "outcomes": ["OUT-1", "OUT-3"]
+      },
+      {
+        "capability": "CAP-3",
+        "outcomes": ["OUT-4", "OUT-5"]
+      }
+    ],
+    "rule_to_loop_step": [
+      {
+        "rule_id": "RULE-1",
+        "loop_steps": ["STEP-2", "STEP-3", "STEP-4", "STEP-5"]
+      },
+      {
+        "rule_id": "RULE-2",
+        "loop_steps": ["STEP-3", "STEP-4", "STEP-5"]
+      },
+      {
+        "rule_id": "RULE-3",
+        "loop_steps": ["STEP-1", "STEP-2", "STEP-3", "STEP-4", "STEP-5"]
+      },
+      {
+        "rule_id": "RULE-4",
+        "loop_steps": ["STEP-1"]
+      },
+      {
+        "rule_id": "RULE-5",
+        "loop_steps": ["STEP-1", "STEP-2", "STEP-3", "STEP-4", "STEP-5"]
+      },
+      {
+        "rule_id": "RULE-6",
+        "loop_steps": ["STEP-3", "STEP-4", "STEP-5"]
+      }
+    ],
+    "loop_step_to_capability": [
+      {
+        "loop_step": "STEP-1",
+        "capabilities": ["CAP-1"]
+      },
+      {
+        "loop_step": "STEP-2",
+        "capabilities": ["CAP-2"]
+      },
+      {
+        "loop_step": "STEP-3",
+        "capabilities": ["CAP-2"]
+      },
+      {
+        "loop_step": "STEP-4",
+        "capabilities": ["CAP-2"]
+      },
+      {
+        "loop_step": "STEP-5",
+        "capabilities": ["CAP-2"]
+      },
+      {
+        "loop_step": "STEP-6",
+        "capabilities": ["CAP-3"]
+      }
+    ]
+  },
+
+  "governance": {
+    "scope_authority": {
+      "artifact": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-B-RENDER-MIGRATION",
+      "version": "v1 (2026-05-03)",
+      "frozen": true
+    },
+    "open_questions_allowed_at_scaffold": [],
+    "downstream_expansion_allowed_without_amendment": false,
+    "companion_fib_h": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2b-b/FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-B-RENDER-MIGRATION.md",
+    "predecessor_fib_s": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2b/FIB-S-FINANCIAL-TELEMETRY-PHASE-1-2B-CANONICALIZATION.json",
+    "rollout_tracker": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json",
+    "deferred_register_item": "DEF-004",
+    "successor_fib_required": "Phase 1.2B-C — Contract Expansion (full 28-route OpenAPI + 4-case route test matrices + DEC-6 + deprecation observability)"
+  }
+}

@@ -13,6 +13,9 @@ import noReturnTypeInference from './.eslint-rules/no-return-type-inference.js';
 import noServiceResultReturn from './.eslint-rules/no-service-result-return.js';
 import noTemporalBypass from './.eslint-rules/no-temporal-bypass.js';
 import noUnsafeErrorDetails from './.eslint-rules/no-unsafe-error-details.js';
+import noRawProviderMessage from './.eslint-rules/no-raw-provider-message.js';
+import noForbiddenFinancialLabel from './.eslint-rules/no-forbidden-financial-label.js';
+import noUnlabeledFinancialValue from './.eslint-rules/no-unlabeled-financial-value.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -234,7 +237,10 @@ const eslintConfig = [
   },
   // ==========================================================================
   // TEMP-003 / PRD-027: Temporal governance enforcement
-  // Prevents JS temporal bypass patterns in query paths (services/, app/, hooks/)
+  // Prevents JS temporal bypass patterns in query paths (services/, app/,
+  // hooks/) AND components/. The components/ scope was added after the MTL
+  // compliance-dashboard drift (commit f2327702) surfaced the same bypass
+  // pattern in display-layer code.
   // ==========================================================================
   {
     files: [
@@ -244,6 +250,8 @@ const eslintConfig = [
       'app/**/*.tsx',
       'hooks/**/*.ts',
       'hooks/**/*.tsx',
+      'components/**/*.ts',
+      'components/**/*.tsx',
     ],
     ignores: [
       '**/*.test.ts',
@@ -291,6 +299,82 @@ const eslintConfig = [
     },
     rules: {
       'error-safety/no-unsafe-error-details': 'error',
+    },
+  },
+  // ==========================================================================
+  // PRD-081 WS4: Client-Side Error Handling Standardization
+  // Prevents raw Supabase/provider error fields (message/hint/details) from
+  // crossing user-visible or client-thrown boundaries in client components,
+  // hooks, and app routes.  Use normalizeClientError() or getErrorMessage().
+  // ==========================================================================
+  {
+    files: [
+      'hooks/**/*.ts',
+      'hooks/**/*.tsx',
+      'app/**/*.ts',
+      'app/**/*.tsx',
+      'components/**/*.ts',
+      'components/**/*.tsx',
+    ],
+    ignores: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.spec.ts',
+      '**/*.spec.tsx',
+      '**/__tests__/**',
+      '**/__mocks__/**',
+      'lib/errors/normalize-client-error.ts',
+      'lib/errors/error-utils.ts',
+    ],
+    plugins: {
+      'client-error-safety': {
+        rules: {
+          'no-raw-provider-message': noRawProviderMessage,
+        },
+      },
+    },
+    rules: {
+      'client-error-safety/no-raw-provider-message': 'error',
+    },
+  },
+  // Financial enforcement — UI surfaces (PRD-078 Phase 1.4)
+  // WS2 sole owner: no-forbidden-financial-label (§4.1–4.5) + no-unlabeled-financial-value render sub-rule
+  {
+    files: ['components/**/*.{ts,tsx}', 'app/**/*.{ts,tsx}'],
+    ignores: [
+      'components/**/*.test.{ts,tsx}',
+      'components/**/*.spec.{ts,tsx}',
+      'app/**/*.test.{ts,tsx}',
+      'app/**/*.spec.{ts,tsx}',
+    ],
+    plugins: {
+      'financial-enforcement': {
+        rules: {
+          'no-forbidden-financial-label': noForbiddenFinancialLabel,
+          'no-unlabeled-financial-value': noUnlabeledFinancialValue,
+        },
+      },
+    },
+    rules: {
+      'financial-enforcement/no-forbidden-financial-label': 'error',
+      'financial-enforcement/no-unlabeled-financial-value': ['error', { mode: 'render' }],
+    },
+  },
+  // Financial enforcement — DTO files (PRD-078 Phase 1.4)
+  // WS2 sole owner: chip-identifier sub-rule (§4.5) + unlabeled-number DTO sub-rule
+  {
+    files: ['services/**/dtos.ts'],
+    plugins: {
+      'financial-enforcement': {
+        rules: {
+          'no-forbidden-financial-label': noForbiddenFinancialLabel,
+          'no-unlabeled-financial-value': noUnlabeledFinancialValue,
+        },
+      },
+    },
+    rules: {
+      'financial-enforcement/no-forbidden-financial-label': ['error', { dtoChipIdentifiersOnly: true }],
+      'financial-enforcement/no-unlabeled-financial-value': ['error', { mode: 'dto' }],
     },
   },
   // Production paths security - Block service client (SEC-001)

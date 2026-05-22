@@ -125,7 +125,12 @@ describe('Visit Continuation Service - Unit Tests', () => {
       expect(result.sessions).toHaveLength(1);
       expect(result.sessions[0].visit_id).toBe('v1');
       expect(result.sessions[0].total_duration_seconds).toBe(7200);
-      expect(result.sessions[0].net).toBe(-0.5);
+      expect(result.sessions[0].net).toMatchObject({
+        value: -0.5,
+        type: 'actual',
+        source: 'visit_financial_summary.net_amount',
+        completeness: { status: 'complete' },
+      });
       expect(result.sessions[0].segment_count).toBe(2);
     });
 

@@ -866,6 +866,11 @@ if [ -n "$STAGED_TS_FILES" ]; then
     if echo "$file" | grep -q "lib/supabase/service\.ts$"; then continue; fi
     if echo "$file" | grep -q "lib/server-actions/middleware/auth\.ts$"; then continue; fi
 
+    # Skip files with documented exemption — add '# SERVICE_ROLE_EXEMPTION: <reason>' to the file
+    # Use this ONLY when the table design intentionally has no RLS SELECT policy for any role
+    # and service-role reads are the only safe path (e.g., allowlist tables in closed-pilot).
+    if grep -q "SERVICE_ROLE_EXEMPTION:" "$file" 2>/dev/null; then continue; fi
+
     # Check for service client import
     if grep -qE "from ['\"]@/lib/supabase/service['\"]|from ['\"].*lib/supabase/service['\"]" "$file" 2>/dev/null; then
       SERVICE_CLIENT_VIOLATIONS="$SERVICE_CLIENT_VIOLATIONS

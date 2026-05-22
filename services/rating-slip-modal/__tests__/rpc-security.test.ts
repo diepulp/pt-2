@@ -71,7 +71,7 @@ const mockSecurityTestResponse = {
   loyalty: null,
   financial: {
     totalCashIn: 0,
-    totalChipsOut: 0,
+    totalCashOut: 0,
     netPosition: 0,
   },
   tables: [],

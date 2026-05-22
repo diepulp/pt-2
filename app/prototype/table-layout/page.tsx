@@ -223,7 +223,7 @@ export default function TableLayoutPrototypePage() {
         </Card>
 
         <p className="mt-6 text-sm text-neutral-500 dark:text-neutral-400">
-          This is a visual prototype derived from PT-1&apos;s casino table
+          This is a visual prototype derived from d3lt&apos;s casino table
           terminal. Click on seats to test interaction.
         </p>
       </div>

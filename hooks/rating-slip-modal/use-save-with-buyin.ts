@@ -97,12 +97,14 @@ export function useSaveWithBuyIn() {
       chipsTaken,
       playerDailyTotal,
     }: SaveWithBuyInInput) => {
-      // Step 1: Check compliance thresholds if daily total is provided
+      // Step 1: Compute compliance threshold projection (pure client calculation).
+      // PRD-064 WS1: Do NOT notify here — threshold toast is success-class UX and
+      // must fire only after the mutation resolves 2xx. Notification moved to
+      // onSuccess callback below. An early notify would produce a success-like
+      // toast for a transaction that may never commit.
       let thresholdResult = null;
       if (playerDailyTotal !== undefined && newBuyIn > 0) {
         thresholdResult = checkCumulativeThreshold(playerDailyTotal, newBuyIn);
-        // Show toast notification for threshold status
-        notifyThreshold(thresholdResult);
       }
 
       // SEQUENTIAL: Update average_bet first, then record buy-in if successful
@@ -221,7 +223,14 @@ export function useSaveWithBuyIn() {
         );
       }
     },
-    onSuccess: (_result, { slipId, visitId, tableId, playerId, casinoId }) => {
+    onSuccess: (result, { slipId, visitId, tableId, playerId, casinoId }) => {
+      // PRD-064 WS1: Fire threshold notification ONLY after mutation resolves 2xx.
+      // Previously this fired at step 1 of mutationFn (pre-network), which produced
+      // success-like UI for transactions that may never commit.
+      if (result.thresholdResult) {
+        notifyThreshold(result.thresholdResult);
+      }
+
       // Invalidate modal data
       queryClient.invalidateQueries({
         queryKey: ratingSlipModalKeys.data(slipId),

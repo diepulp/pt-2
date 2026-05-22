@@ -115,10 +115,11 @@ export const balanceQuerySchema = z.object({
 
 export type BalanceQuery = z.infer<typeof balanceQuerySchema>;
 
-/** Query schema for GET /api/v1/loyalty/balances (snake_case query params) */
+/** Query schema for GET /api/v1/loyalty/balances (snake_case query params)
+ * casino_id is NOT accepted from clients — derived from RLS context (DEC-1/DEC-3)
+ */
 export const loyaltyBalanceQuerySchema = z.object({
   player_id: z.string().uuid(),
-  casino_id: z.string().uuid(),
 });
 
 export type LoyaltyBalanceQuery = z.infer<typeof loyaltyBalanceQuerySchema>;

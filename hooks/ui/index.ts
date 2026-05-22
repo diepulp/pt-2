@@ -2,6 +2,7 @@
 
 export { useShiftDashboardUI } from './use-shift-dashboard-ui';
 export { useModal } from './use-modal';
+export { useOpenSlip } from './use-open-slip';
 export { usePitDashboardUI } from './use-pit-dashboard-ui';
 export { usePlayerDashboard } from './use-player-dashboard';
 export {

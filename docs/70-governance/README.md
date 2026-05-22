@@ -39,6 +39,7 @@ last_review: 2025-10-25
 
 - **SERVICE_TEMPLATE.md** (patterns/)
 - **OVER_ENGINEERING_GUARDRAIL.md** (patterns/)
+- **FIB_GENERATION_SCOPE_GUARDRAIL.md** (intake scope control/)
 - **HOOKS_STANDARD.md** (patterns/)
 - **DTO_CANONICAL_STANDARD.md** (patterns/)
 - **FRONT_END_CANONICAL_STANDARD.md** (patterns/)

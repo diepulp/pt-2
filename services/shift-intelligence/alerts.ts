@@ -21,7 +21,23 @@ import {
   mapAcknowledgeResult,
   mapAlertQualityResult,
   mapPersistResult,
+  mapShiftAlertRow,
 } from './mappers';
+
+// ── Local join type for getAlerts query ─────────────────────────────────────
+// The select fetches a subset of alert_acknowledgment fields, but the full Row
+// type is claimed here so the spread satisfies mapShiftAlertRow's input type.
+// mapAcknowledgmentRow only reads the fetched fields at runtime.
+
+type AlertAckQueryRow =
+  Database['public']['Tables']['alert_acknowledgment']['Row'] & {
+    staff: { first_name: string | null; last_name: string | null } | null;
+  };
+
+type AlertQueryRow = Database['public']['Tables']['shift_alert']['Row'] & {
+  alert_acknowledgment: AlertAckQueryRow[] | null;
+  gaming_table: { label: string } | null;
+};
 
 // ── Persist Alerts ──────────────────────────────────────────────────────────
 
@@ -120,40 +136,21 @@ export async function getAlerts(
   }
 
   return (data ?? []).map((row) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join shape requires dynamic access
-    const r = row as any;
-    const ack = r.alert_acknowledgment?.[0] ?? null;
-    const table = r.gaming_table;
-
-    return {
-      id: r.id,
-      tableId: r.table_id,
-      tableLabel: table?.label ?? '',
-      metricType: r.metric_type,
-      gamingDay: r.gaming_day,
-      status: r.status,
-      severity: r.severity,
-      observedValue: r.observed_value,
-      baselineMedian: r.baseline_median,
-      baselineMad: r.baseline_mad,
-      deviationScore: r.deviation_score,
-      direction: r.direction,
-      message: r.message,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
-      acknowledgment: ack
-        ? {
-            acknowledgedBy: ack.acknowledged_by,
-            acknowledgedByName: ack.staff
-              ? `${ack.staff.first_name ?? ''} ${ack.staff.last_name ?? ''}`.trim() ||
-                null
-              : null,
-            notes: ack.notes,
-            isFalsePositive: ack.is_false_positive,
-            createdAt: ack.created_at,
-          }
+    // eslint-disable-next-line custom-rules/no-dto-type-assertions -- Supabase join shape; AlertQueryRow declared locally
+    const r = row as unknown as AlertQueryRow;
+    const tableLabel = r.gaming_table?.label ?? '';
+    const normalizedAcks = (r.alert_acknowledgment ?? []).map((ack) => ({
+      ...ack,
+      staff_name: ack.staff
+        ? `${ack.staff.first_name ?? ''} ${ack.staff.last_name ?? ''}`.trim() ||
+          null
         : null,
-    };
+    }));
+    const dto = mapShiftAlertRow({
+      ...r,
+      alert_acknowledgment: normalizedAcks,
+    });
+    return { ...dto, tableLabel };
   });
 }
 

@@ -1,0 +1,424 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-H-FIN-CENTS-001 v2",
+    "status": "accepted-with-amendment",
+    "feature_id": "FIB-S-FIN-CENTS-001",
+    "feature_name": "Visit-Anchored Cents Envelope Migration (Phase 1.1b)",
+    "priority": "P1",
+    "decision_horizon": "phase-1-1-close",
+    "owner": "Vladimir Ivanov",
+    "opened_on": "2026-04-24",
+    "parent_prd": "PRD-070",
+    "parent_exec_spec": "EXEC-070",
+    "supersedes_scope_in_parent": ["WS5", "WS5_ROUTE", "WS5_UI", "WS6"]
+  },
+  "intent": {
+    "operator_problem": "PRD-070 bundled tier-1 rename work (WS4, done) with tier-2 shape conversion work (WS5/WS6) under one EXEC-SPEC. A mid-execution reality check revealed four classes of blast-radius gaps, a missing render-pattern decision (formatCents vs deferred <FinancialValue>), a sequencing hazard on services/visit/dtos.ts not surfaced at the PRD layer, and a demo-only surface (/review) incorrectly pulled into implementation scope. Fixing in-place triggers per-workstream escalation; a scoped child PRD is the correct remedy.",
+    "pilot_fit": "Final architectural step to make the Financial Data Distribution Standard true at the visit-anchored service boundary. Every currency value leaving services/visit/ and services/rating-slip/ (in its visit-live-view role) will carry explicit authority, source, and completeness. Coherent single slice because both DTO shapes converge on services/visit/dtos.ts, both use the same Pattern A data flow, and both have the same test-file-birth requirement.",
+    "success_outcomes": [
+      "RecentSessionDTO total_buy_in/total_cash_out/net typed as FinancialValue (not number).",
+      "VisitLiveViewDTO session_total_buy_in/session_total_cash_out/session_net typed as FinancialValue.",
+      "Zero '/100' dollar conversions in services/visit/crud.ts and services/rating-slip/mappers.ts visit-live-view path.",
+      "Zod wire vs DTO partition made explicit (wire Zod stays bare z.number(), outbound Zod decided by lead-architect).",
+      "Every envelope emission carries authority, source, completeness.status — no omissions.",
+      "UI consumers render via formatCents(envelope.value) from lib/format.ts — no <FinancialValue>, no inline /100.",
+      "New test files app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts and app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts exist and assert envelope shape at wire.",
+      "WS5 ships before WS6 (services/visit/dtos.ts serialization invariant honored) OR both land in one atomic commit.",
+      "Grep gate: zero remaining bare-number currency typings in the declared blast radius."
+    ],
+    "explicit_exclusions": [
+      "Former app/review/ demo/design-review surface was deleted from the repo on 2026-04-24; any future mock/demo surface remains out of scope for this slice",
+      "<FinancialValue> React component — Phase 1.3 scope",
+      "<AttributionRatio> / <CompletenessBadge> components — Phase 1.3 scope",
+      "Shift-intelligence authority routing (WS7B) — different bounded context, different pattern, separate FIB",
+      "Phase 1.1 verification matrix + rollback package + Phase 1.2 handoff (WS9) — stays under PRD-070 closing gate",
+      "SQL migrations — RPCs already emit bare cents, no DDL or function rewrite needed",
+      "pit_cash_observation.amount dollar→cents column migration — Wave 2 scope",
+      "Broad API / OpenAPI envelope migration across remaining routes — Phase 1.2 scope",
+      "Broad UI visual migration — Phase 1.3 scope",
+      "Shift-intelligence deferred public fields (AnomalyAlertDTO.observedValue etc.) — Phase 1.2 per GATE-070.6",
+      "rating-slip-modal totalChipsOut rename — already landed as WS4",
+      "Any future demo-surface tests remain out of scope for this slice"
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Amend PRD-070 in-flight with corrected blast radius",
+        "why_considered": "Keeps one spec to track",
+        "why_rejected_now": "Triggers per-workstream escalation per §2.3 / NFR-7; mid-execution amendment pollutes completion metrics"
+      },
+      {
+        "idea": "Bundle WS7B into this slice",
+        "why_considered": "All three remain from Phase 1.1",
+        "why_rejected_now": "Different bounded context, different pattern (mapper helper vs shape conversion); defeats 'manageable slice' goal"
+      },
+      {
+        "idea": "Bundle WS9 into this slice",
+        "why_considered": "Phase 1.1 needs to close",
+        "why_rejected_now": "WS9 also depends on WS7B; belongs to whichever workstream closes last"
+      },
+      {
+        "idea": "Build <FinancialValue> component now",
+        "why_considered": "Avoids Phase 1.3 refactor",
+        "why_rejected_now": "Contradicts PRD-070 §87; formatCents(envelope.value) is one-line and not tech debt"
+      },
+      {
+        "idea": "Ship route passthrough without adding route-boundary test files",
+        "why_considered": "Reduces new-file churn",
+        "why_rejected_now": "EXEC-070 WS9 verification matrix requires both files; deferring creates a WS9 gap"
+      },
+      {
+        "idea": "Migrate the former /review page alongside UI consumers",
+        "why_considered": "Matches EXEC-070 §442 original scope",
+        "why_rejected_now": "The demo surface was removed from the repo on 2026-04-24; any future mock/demo refresh remains separate from the data-contract migration"
+      },
+      {
+        "idea": "Keep bare numbers at route layer, emit envelope only in UI",
+        "why_considered": "Smaller-looking diff",
+        "why_rejected_now": "Contradicts FR-1 — envelope MUST be present at every service boundary including routes"
+      }
+    ]
+  },
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "RecentSessionDTO",
+          "kind": "dto",
+          "description": "Visit continuation response item; aggregates per-session totals for the last N visits of a player",
+          "stateful": false,
+          "system_of_record": "services/visit/dtos.ts",
+          "fields_in_scope": ["total_buy_in", "total_cash_out", "net"],
+          "fields_out_of_scope": [
+            "visit_id",
+            "visit_group_id",
+            "started_at",
+            "ended_at",
+            "last_table_id",
+            "last_table_name",
+            "last_seat_number",
+            "total_duration_seconds",
+            "points_earned",
+            "segment_count"
+          ]
+        },
+        {
+          "name": "VisitLiveViewDTO",
+          "kind": "dto",
+          "description": "Aggregated live view of an active visit's session totals across all rating slips",
+          "stateful": false,
+          "system_of_record": "services/visit/dtos.ts",
+          "fields_in_scope": [
+            "session_total_buy_in",
+            "session_total_cash_out",
+            "session_net"
+          ],
+          "fields_out_of_scope": [
+            "visit_id",
+            "player_id",
+            "player_first_name",
+            "player_last_name",
+            "visit_status",
+            "started_at",
+            "current_segment_*",
+            "session_total_duration_seconds",
+            "session_points_earned",
+            "session_segment_count",
+            "segments"
+          ]
+        },
+        {
+          "name": "FinancialValue",
+          "kind": "primitive",
+          "description": "Canonical envelope emitted at service boundaries for currency values",
+          "stateful": false,
+          "system_of_record": "types/financial.ts",
+          "fields_hint": [
+            "value (integer cents)",
+            "type (authority)",
+            "source (provenance string)",
+            "completeness.status",
+            "completeness.coverage?"
+          ]
+        },
+        {
+          "name": "visit_financial_summary",
+          "kind": "source",
+          "description": "View/aggregate table feeding both RPCs with bare-cent totals",
+          "stateful": true,
+          "system_of_record": "database (PT-2 Supabase)",
+          "fields_hint": ["total_in", "total_out", "net_amount"]
+        }
+      ],
+      "relationships": [
+        "RecentSessionDTO is emitted by services/visit/crud.ts getPlayerRecentSessions via rpc_get_player_recent_sessions",
+        "VisitLiveViewDTO is emitted by services/rating-slip/crud.ts getVisitLiveView via rpc_get_visit_live_view and the mapper in services/rating-slip/mappers.ts",
+        "Both DTOs are declared in services/visit/dtos.ts — shared file, serialization hazard between WS5 and WS6",
+        "visit_financial_summary is the source of truth feeding both RPC paths; every in-scope envelope declares source as a path starting with 'visit_financial_summary.'"
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "Mapper wraps bare cents into FinancialValue envelope",
+          "owner": "backend-service-builder",
+          "description": "New mapper in services/visit/mappers.ts (recent-sessions path) and existing toVisitLiveViewDTO in services/rating-slip/mappers.ts wrap each currency field into FinancialValue with authority='actual', explicit source, and completeness.status set by the WAVE-1-CLASSIFICATION-RULES §5.1 decision tree (never omitted)"
+        },
+        {
+          "id": "CAP-2",
+          "name": "CRUD removes dollar pre-conversion",
+          "owner": "backend-service-builder",
+          "description": "services/visit/crud.ts L516-522 /100 conversion block deleted; services/rating-slip/mappers.ts L340-342 /100 conversion deleted; DTO carries cents natively via envelope"
+        },
+        {
+          "id": "CAP-3",
+          "name": "Route handler passes envelope DTO through unchanged",
+          "owner": "api-builder",
+          "description": "app/api/v1/players/[playerId]/recent-sessions/route.ts and app/api/v1/visits/[visitId]/live-view/route.ts do not perform dollar/cents math; they propagate the envelope-shaped DTO"
+        },
+        {
+          "id": "CAP-4",
+          "name": "UI consumer unwraps envelope and renders via formatCents",
+          "owner": "frontend-design-pt-2",
+          "description": "components/player-sessions/start-from-previous.tsx and components/player-sessions/start-from-previous-modal.tsx read dto.<currency>.value and render via formatCents from lib/format.ts; no <FinancialValue> component (deferred to 1.3), no inline /100 math"
+        },
+        {
+          "id": "CAP-5",
+          "name": "Route-boundary tests born",
+          "owner": "api-builder / qa-specialist",
+          "description": "New test directories and files created for recent-sessions and live-view routes; tests assert envelope shape at the wire: type present, source non-empty, completeness.status present, value is integer"
+        },
+        {
+          "id": "CAP-6",
+          "name": "Wire/DTO Zod partition explicit",
+          "owner": "lead-architect (decision) / backend-service-builder (implementation)",
+          "description": "Decision recorded in EXEC-SPEC: wire-format Zod validator continues to validate bare z.number() matching RPC JSONB; outbound DTO Zod using financialValueSchema is either added or explicitly declined with rationale"
+        }
+      ]
+    },
+    "where": {
+      "surfaces": [
+        {
+          "kind": "service",
+          "name": "visit service (recent sessions)",
+          "path": "services/visit/",
+          "owns": [
+            "RecentSessionDTO shape in dtos.ts",
+            "recentSessionsRpcResponseSchema (wire) in schemas.ts",
+            "getPlayerRecentSessions in crud.ts",
+            "new mapper wrapping into envelope"
+          ]
+        },
+        {
+          "kind": "service",
+          "name": "rating-slip service (visit live view role)",
+          "path": "services/rating-slip/",
+          "owns": [
+            "VisitLiveViewDTO shape in services/visit/dtos.ts (cross-ownership note)",
+            "toVisitLiveViewDTO in mappers.ts",
+            "getVisitLiveView in crud.ts",
+            "service interface in index.ts"
+          ]
+        },
+        {
+          "kind": "api",
+          "name": "recent-sessions route",
+          "path": "app/api/v1/players/[playerId]/recent-sessions/route.ts",
+          "test_coverage_required": "app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts (NEW FILE — directory does not exist)"
+        },
+        {
+          "kind": "api",
+          "name": "visit live-view route",
+          "path": "app/api/v1/visits/[visitId]/live-view/route.ts",
+          "test_coverage_required": "app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts (NEW FILE — directory does not exist)"
+        },
+        {
+          "kind": "ui",
+          "name": "start-from-previous panel",
+          "path": "components/player-sessions/start-from-previous.tsx",
+          "render_pattern": "formatCents(session.total_buy_in.value)"
+        },
+        {
+          "kind": "ui",
+          "name": "start-from-previous modal",
+          "path": "components/player-sessions/start-from-previous-modal.tsx",
+          "render_pattern": "formatCents(session.total_buy_in.value)"
+        }
+      ],
+      "excluded_surfaces": [
+        {
+          "path": "app/review/",
+          "reason": "Deleted from the repo on 2026-04-24. If a demo/design-review surface is reintroduced later, it remains outside this slice."
+        },
+        {
+          "path": "components/financial/",
+          "reason": "Does not exist yet; <FinancialValue> component is Phase 1.3 scope."
+        }
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "severity": "hard",
+          "statement": "Every currency field in RecentSessionDTO and VisitLiveViewDTO emits a FinancialValue envelope; bare number is rejected at the service boundary."
+        },
+        {
+          "id": "RULE-2",
+          "severity": "hard",
+          "statement": "completeness.status is always explicit (complete|partial|unknown). Mappers that cannot determine completeness set 'unknown' — never omit."
+        },
+        {
+          "id": "RULE-3",
+          "severity": "hard",
+          "statement": "authority and source are mapper-owned. Consumers (routes, UI) MUST NOT infer or override these fields."
+        },
+        {
+          "id": "RULE-4",
+          "severity": "hard",
+          "statement": "FinancialValue.value is canonical cents (integer). No dollar representation at the service boundary."
+        },
+        {
+          "id": "RULE-5",
+          "severity": "hard",
+          "statement": "Zero '/100' dollar conversion remains in services/visit/crud.ts or services/rating-slip/mappers.ts visit-live-view path after migration."
+        },
+        {
+          "id": "RULE-6",
+          "severity": "hard",
+          "statement": "WS5 and WS6 do not execute in parallel because services/visit/dtos.ts is shared. Either WS5 closes before WS6 starts, or both land in one atomic commit."
+        },
+        {
+          "id": "RULE-7",
+          "severity": "hard",
+          "statement": "UI consumers in scope render via formatCents(envelope.value) from lib/format.ts. No <FinancialValue> component usage in Phase 1.1. No inline /100 math."
+        },
+        {
+          "id": "RULE-8",
+          "severity": "soft",
+          "statement": "Wire-format Zod (recentSessionsRpcResponseSchema) tracks the RPC output, not the DTO. It continues to validate bare z.number() matching JSONB emission."
+        },
+        {
+          "id": "RULE-9",
+          "severity": "soft",
+          "statement": "Demo-only surfaces are excluded from implementation. The former app/review/ tree has already been deleted from the repo; any future mock/demo surface remains independent follow-on work."
+        }
+      ]
+    },
+    "when": {
+      "triggers": [
+        "RPC invocation returns bare cents JSONB → mapper wraps → DTO emitted",
+        "Route handler consumes DTO from service → passes through without math → wire",
+        "UI mounts, calls route, receives envelope-shaped DTO → renders via formatCents(.value)",
+        "CI test run → route-boundary suite exercises envelope shape assertions"
+      ]
+    }
+  },
+  "containment": {
+    "loop": [
+      {
+        "step": 1,
+        "actor": "RPC",
+        "action": "rpc_get_player_recent_sessions / rpc_get_visit_live_view returns bare cents in JSONB (unchanged)"
+      },
+      {
+        "step": 2,
+        "actor": "wire Zod validator",
+        "action": "recentSessionsRpcResponseSchema validates bare z.number() matching the RPC (unchanged)"
+      },
+      {
+        "step": 3,
+        "actor": "mapper",
+        "action": "Wraps each currency field into FinancialValue with authority='actual', explicit source, completeness.status per §5.1 decision tree"
+      },
+      {
+        "step": 4,
+        "actor": "CRUD",
+        "action": "Exports envelope-shaped DTO; /100 conversion blocks deleted"
+      },
+      {
+        "step": 5,
+        "actor": "route handler",
+        "action": "Passes DTO through unchanged; no dollar/cents math at transport layer"
+      },
+      {
+        "step": 6,
+        "actor": "route-boundary test",
+        "action": "Asserts envelope shape at wire (new file, born in this slice)"
+      },
+      {
+        "step": 7,
+        "actor": "UI consumer",
+        "action": "Reads dto.<field>.value and renders via formatCents; no <FinancialValue>, no inline /100"
+      }
+    ]
+  },
+  "governance": {
+    "open_questions_allowed_at_scaffold": [
+      {
+        "id": "Q-1",
+        "question": "Does an outbound DTO Zod schema built on financialValueSchema get added at the DTO boundary, or is wire-Zod the only validator (with types enforcing DTO shape)?",
+        "owner": "lead-architect",
+        "recommendation": "Decline the outbound validator unless a consumer needs runtime shape enforcement — static types are sufficient and runtime Zod at the DTO boundary adds cost without signal since the mapper is the authority."
+      },
+      {
+        "id": "Q-2",
+        "question": "How does the mapper resolve completeness.status when visit_financial_summary.total_in is null vs zero vs missing row?",
+        "owner": "lead-architect + backend-service-builder",
+        "recommendation": "null / missing → status='unknown' with value=0; zero → status='complete' with value=0. Document convention in mapper JSDoc."
+      },
+      {
+        "id": "Q-3",
+        "question": "What exact source string convention? 'visit_financial_summary.total_in' vs 'visit.financial.total_in' vs casino-scoped format?",
+        "owner": "lead-architect",
+        "recommendation": "Use table.column dotted path ('visit_financial_summary.total_in') for traceability back to the source of record."
+      },
+      {
+        "id": "Q-4",
+        "question": "Single EXEC-SPEC or atomic commit for WS5 + WS6 given the shared services/visit/dtos.ts file?",
+        "owner": "lead-architect",
+        "recommendation": "Single EXEC-SPEC with two sequential workstreams; atomic commit preferred to avoid intermediate broken-build states."
+      },
+      {
+        "id": "Q-5",
+        "question": "Scope of the two new route-boundary test files — smoke-test only (one success path + one envelope assertion) or broader coverage?",
+        "owner": "lead-architect + api-builder + qa-specialist",
+        "recommendation": "Smoke-test parity with existing modal-data route test scope: one success case asserting envelope shape, one 404, one unauthorized. Expand in Phase 1.2 when the broader API envelope rollout lands."
+      }
+    ],
+    "hard_rules_must_appear_in_exec_spec": [
+      "RULE-1",
+      "RULE-2",
+      "RULE-3",
+      "RULE-4",
+      "RULE-5",
+      "RULE-6",
+      "RULE-7"
+    ],
+    "expansion_trigger_rule": "Amend this brief if any downstream artifact proposes: (a) introducing a new demo/design-review surface into this blast radius, including any future /review revival; (b) using <FinancialValue> component in 1.1; (c) inline /100 math at any layer; (d) skipping either route-boundary test file birth; (e) widening scope beyond visit + rating-slip-visit-live-view; (f) parallel WS5+WS6 execution; (g) SQL migration at the visit RPC layer; (h) outbound Zod without lead-architect sign-off on the wire-vs-DTO partition."
+  },
+  "traceability": {
+    "parent_prd": "docs/10-prd/PRD-070-financial-telemetry-wave1-phase1.1-service-dto-envelope-v0.md",
+    "parent_exec_spec": "docs/21-exec-spec/PRD-070/EXEC-070-financial-telemetry-wave1-phase1.1-service-dto-envelope.md",
+    "parent_checkpoint": ".claude/skills/build-pipeline/checkpoints/PRD-070.json",
+    "blast_radius_reality_check_source": ".claude/skills/build-pipeline/checkpoints/PRD-070.json § blast_radius_reality_check_2026-04-24",
+    "classification_rules": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-CLASSIFICATION-RULES.md",
+    "surface_inventory": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-SURFACE-INVENTORY.md",
+    "phase_1_0_signoff": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-PHASE-1.0-SIGNOFF.md",
+    "shared_primitives": [
+      "lib/financial/schema.ts (financialValueSchema, completenessSchema, financialAuthoritySchema)",
+      "lib/financial/rounding.ts (dollarsToCents — not used in this slice, RPCs already return cents)",
+      "types/financial.ts (FinancialValue, FinancialAuthority, CompletenessStatus)",
+      "lib/format.ts (formatCents — canonical interim UI render path in Phase 1.1)"
+    ],
+    "companion_fib_not_yet_drafted": [
+      {
+        "scope": "Shift-intelligence authority routing (WS7B equivalent)",
+        "recommended_fib_id": "FIB-FIN-SHIFT-001",
+        "why_separate": "Different bounded context, different pattern (mapper helper + alert path parity, not shape conversion)"
+      }
+    ]
+  }
+}

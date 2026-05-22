@@ -62,7 +62,7 @@ interface TablesPanelProps {
 
 /**
  * Tables Panel - Table layout visualization with seat management
- * Displays real-time table data with PT-2 dark industrial design
+ * Displays real-time table data with d3lt dark industrial design
  */
 export function TablesPanel({
   tableName,

@@ -475,10 +475,13 @@ function buildComplianceSummary(
     patronSummaries,
     totals: {
       patronCount: patronSummaries.length,
-      totalInCents: mtlSummaries.reduce((sum, s) => sum + s.total_in, 0),
-      totalOutCents: mtlSummaries.reduce((sum, s) => sum + s.total_out, 0),
+      totalInCents: mtlSummaries.reduce((sum, s) => sum + s.total_in.value, 0),
+      totalOutCents: mtlSummaries.reduce(
+        (sum, s) => sum + s.total_out.value,
+        0,
+      ),
       totalVolumeCents: mtlSummaries.reduce(
-        (sum, s) => sum + s.total_volume,
+        (sum, s) => sum + s.total_volume.value,
         0,
       ),
       ctrNearCount,

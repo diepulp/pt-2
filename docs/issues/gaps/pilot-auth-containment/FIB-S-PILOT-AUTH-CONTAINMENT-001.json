@@ -1,0 +1,874 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-H-PILOT-AUTH-CONTAINMENT-001 v0",
+    "source_artifact": "docs/issues/gaps/pilot-auth-containment/FIB-H-PILOT-AUTH-CONTAINMENT-001.md",
+    "status": "draft",
+    "feature_id": "FIB-S-PILOT-AUTH-CONTAINMENT-001",
+    "feature_name": "Pilot Authentication Containment Gate",
+    "priority": "P0",
+    "decision_horizon": "pilot",
+    "owner": "Vladimir Ivanov",
+    "opened_on": "2026-05-11"
+  },
+  "intent": {
+    "operator_problem": "The production deployment allows any public visitor to call supabase.auth.signUp(), create an auth user, and enter the onboarding pipeline — creating companies, casinos, and operational environments without approval. This is unacceptable during pilot: tenants are uncontrolled, telemetry is polluted, and the trust boundary between authentication and pilot authorization has collapsed.",
+    "pilot_fit": "The pilot phase requires controlled access, not growth mechanics. This feature is a minimal defensive gate: it replaces open self-service signup with an admin-approved, allowlist-gated magic-link flow. It is small, does not introduce billing or IAM, and directly reduces operational and reputational risk before broader pilot outreach.",
+    "success_outcomes": [
+      "An unapproved public visitor cannot create an account, receive an OTP, or enter any onboarding route.",
+      "An approved email can submit their address, receive a magic link, and proceed through the existing /start route progression.",
+      "The allowlist is checked before OTP issuance and again at session time.",
+      "Onboarding server actions (register, bootstrap) require a real authenticated session, not a page-level guard only.",
+      "A public request-access form exists so prospective operators can apply without reaching any auth surface.",
+      "The login UX uses magic-link only; password login is retired from pilot-facing surfaces.",
+      "The /auth/sign-up route no longer calls supabase.auth.signUp().",
+      "The /start gateway remains the canonical post-auth route resolver."
+    ],
+    "explicit_exclusions": [
+      "Stripe billing or subscription integration",
+      "Pricing model implementation",
+      "Seat licensing or trial plan management",
+      "Invitation-token platform or resend flows",
+      "Team invites or delegated invite management",
+      "Enterprise IAM, SSO, SAML, or OIDC providers",
+      "RBAC redesign or role expansion",
+      "Full admin user-management console or CRM lead pipeline",
+      "Automated approvals or approval-queue scheduling",
+      "Public self-service tenant provisioning",
+      "Global middleware.ts refactor",
+      "Custom magic-link infrastructure or bespoke email delivery platform",
+      "Custom auth token system",
+      "Multi-channel alert routing for access requests",
+      "Invitation expiry workflows beyond the expires_at column",
+      "Audit log expansion beyond the existing audit_log_entries table"
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Keep signup hidden but available",
+        "why_considered": "Unlinking the signup route would reduce discoverability.",
+        "why_rejected_now": "A reachable route that is not linked is not containment. The route must be replaced, not hidden."
+      },
+      {
+        "idea": "Password login plus allowlist",
+        "why_considered": "Could reuse existing LoginForm with an allowlist check inserted before authentication.",
+        "why_rejected_now": "Password auth introduces forgot-password, update-password, and credential lifecycle surfaces that are unnecessary and create additional exposure for a controlled pilot."
+      },
+      {
+        "idea": "Global middleware.ts for route protection",
+        "why_considered": "A single middleware intercept seems clean and DRY.",
+        "why_rejected_now": "Supabase session refresh at the edge introduces redirect-loop risk and cookie race conditions. The existing /start gateway pattern is sufficient and already in place."
+      },
+      {
+        "idea": "Full invitation platform with resend, expiry UI, and status dashboard",
+        "why_considered": "Allowlist naturally suggests invite management UX.",
+        "why_rejected_now": "The pilot primitive is binary: email approved? yes/no. A resend/expiry/dashboard platform is out of scope until expansion triggers are met."
+      },
+      {
+        "idea": "CRM-style access request pipeline",
+        "why_considered": "pilot_access_requests could be treated as a sales lead table.",
+        "why_rejected_now": "The table exists for controlled access, not lead management. Enrich with CRM fields only if the expansion trigger rule is met."
+      },
+      {
+        "idea": "Supabase Auth email allowlist at provider level",
+        "why_considered": "Supabase supports domain allowlisting in project settings.",
+        "why_rejected_now": "Provider-level allowlist is coarser than needed and bypasses the pilot_access_requests workflow. Application-level check is required for allowlist-before-OTP enforcement."
+      }
+    ]
+  },
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "pilot_access_request",
+          "kind": "record",
+          "description": "A pending access request submitted by a prospective pilot operator before any authentication attempt. Not an auth user.",
+          "stateful": true,
+          "system_of_record": "pilot_access_requests table",
+          "state_machine": ["pending", "approved", "rejected"],
+          "fields_hint": [
+            "id uuid",
+            "email text not null",
+            "company_name text",
+            "casino_name text",
+            "role text",
+            "estimated_table_count int",
+            "message text",
+            "status text default 'pending'",
+            "reviewed_by uuid null",
+            "reviewed_at timestamptz null",
+            "created_at timestamptz default now()"
+          ],
+          "rls_posture": "insert: public (anon); select/update: service_role only for pilot"
+        },
+        {
+          "name": "approved_email_allowlist",
+          "kind": "record",
+          "description": "A row confirming that a specific email has been manually approved for pilot access. Checked before OTP issuance and again at session time via /start.",
+          "stateful": true,
+          "system_of_record": "approved_email_allowlist table",
+          "state_machine": ["active", "used", "revoked"],
+          "fields_hint": [
+            "id uuid",
+            "email text not null unique",
+            "company_id uuid null",
+            "casino_id uuid null",
+            "invited_by uuid null",
+            "expires_at timestamptz null",
+            "used_at timestamptz null",
+            "created_at timestamptz default now()"
+          ],
+          "rls_posture": "insert/update: service_role only; select: authenticated (own email only) and service_role"
+        },
+        {
+          "name": "magic_link_login_form",
+          "kind": "ui_component",
+          "description": "Replaces LoginForm. Accepts email only (no password field). On submit, calls the sendMagicLink server action. Displays closed-pilot messaging if the email is not on the allowlist.",
+          "stateful": false,
+          "system_of_record": "components/magic-link-form.tsx",
+          "fields_hint": ["email"],
+          "replaces": "components/login-form.tsx (signInWithPassword path)"
+        },
+        {
+          "name": "request_access_form",
+          "kind": "ui_component",
+          "description": "Public form for prospective pilot operators to submit an access request. Creates a pilot_access_request row in pending state. Does not create an auth user.",
+          "stateful": false,
+          "system_of_record": "app/(public)/request-access/page.tsx or components/request-access-form.tsx",
+          "fields_hint": [
+            "name",
+            "email",
+            "casino_name",
+            "role",
+            "estimated_table_count",
+            "message (optional)"
+          ]
+        },
+        {
+          "name": "allowlist_gate",
+          "kind": "server_function",
+          "description": "Server-side check that confirms an email exists in approved_email_allowlist before signInWithOtp() is called. Returns a typed result: approved | not_approved | expired.",
+          "stateful": false,
+          "system_of_record": "services/pilot/allowlist.ts or app/actions/auth/check-allowlist.ts"
+        }
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "name": "submit_access_request",
+          "verb": "create",
+          "description": "Prospective operator submits the public request-access form. Inserts a pending row into pilot_access_requests. No auth user is created.",
+          "served_outcomes": ["OUT-3", "OUT-5"],
+          "fib_h_requirements": ["F5", "F6"],
+          "loop_steps": ["STEP-2", "STEP-3"]
+        },
+        {
+          "name": "check_email_allowlist_before_otp",
+          "verb": "read",
+          "description": "Before signInWithOtp() is called, the backend queries approved_email_allowlist for the submitted email. Rejects with closed-pilot messaging if not found. No OTP is sent, no auth user is created or interacted with.",
+          "served_outcomes": ["OUT-1", "OUT-2"],
+          "fib_h_requirements": ["F3"],
+          "loop_steps": ["STEP-5", "STEP-6"]
+        },
+        {
+          "name": "send_magic_link",
+          "verb": "create",
+          "description": "Calls supabase.auth.signInWithOtp() for an approved email. Supabase sends the magic link to the user's inbox. No password is accepted or stored.",
+          "served_outcomes": ["OUT-2"],
+          "fib_h_requirements": ["F2"],
+          "loop_steps": ["STEP-7"]
+        },
+        {
+          "name": "disable_public_signup",
+          "verb": "delete",
+          "description": "Replaces the /auth/sign-up route and SignUpForm component so supabase.auth.signUp() can no longer be called by any public path. The route redirects to or renders the request-access form.",
+          "served_outcomes": ["OUT-1"],
+          "fib_h_requirements": ["F1"],
+          "loop_steps": ["STEP-1"]
+        },
+        {
+          "name": "validate_allowlist_at_session_time",
+          "verb": "read",
+          "description": "After a magic link is verified and a session is established, /start queries approved_email_allowlist for the authenticated user's email before proceeding. A valid session without an allowlist entry is rejected and redirected.",
+          "served_outcomes": ["OUT-2", "OUT-4"],
+          "fib_h_requirements": ["F4", "F8"],
+          "loop_steps": ["STEP-9", "STEP-10"]
+        },
+        {
+          "name": "harden_onboarding_mutations",
+          "verb": "update",
+          "description": "Removes skipAuth: true from registerCompanyAction and bootstrapAction. Both server actions must resolve a real authenticated session via withServerAction before executing any mutation. Page-level redirects remain but are not the sole guard.",
+          "served_outcomes": ["OUT-6"],
+          "fib_h_requirements": ["F7"],
+          "loop_steps": ["STEP-11"]
+        },
+        {
+          "name": "retire_password_routes",
+          "verb": "delete",
+          "description": "Removes or redirects /auth/forgot-password and /auth/update-password. These routes have no function when password login is retired. Redirect target: /auth/login (the new magic-link login).",
+          "served_outcomes": ["OUT-1"],
+          "fib_h_requirements": ["F1", "F2"],
+          "loop_steps": ["STEP-1"]
+        },
+        {
+          "name": "display_closed_pilot_messaging",
+          "verb": "issue",
+          "description": "When an email is not on the allowlist, the login surface renders a clear message and a link to the request-access form. No technical details or auth state are leaked.",
+          "served_outcomes": ["OUT-3", "OUT-5"],
+          "fib_h_requirements": ["F3"],
+          "loop_steps": ["STEP-6"]
+        },
+        {
+          "name": "review_access_requests",
+          "verb": "read",
+          "description": "Application admin views pending pilot_access_requests through a minimal internal operational moderation surface. The surface lists pending requests with submitter details. It is not a generalized admin dashboard, CRM, or user-management console.",
+          "served_outcomes": ["OUT-8"],
+          "fib_h_requirements": ["F6"],
+          "loop_steps": ["STEP-4"]
+        },
+        {
+          "name": "approve_pilot_access",
+          "verb": "create",
+          "description": "Application admin approves a pending access request through the internal review surface. On approval, an entry is inserted into approved_email_allowlist and the request status is set to approved. Operation is server-side and guarded by explicit application-owner/admin authority. Idempotent on retry.",
+          "served_outcomes": ["OUT-8"],
+          "fib_h_requirements": ["F6"],
+          "loop_steps": ["STEP-4"]
+        },
+        {
+          "name": "revoke_pilot_access",
+          "verb": "update",
+          "description": "Application admin revokes a previously approved allowlist entry through the internal review surface. Sets the allowlist entry status to revoked. Future OTP issuance and /start progression fail closed for the revoked email. Status-based only — no lifecycle automation.",
+          "served_outcomes": ["OUT-4", "OUT-8"],
+          "fib_h_requirements": ["F4", "F6"],
+          "loop_steps": ["STEP-4"]
+        }
+      ]
+    },
+    "where": {
+      "primary_surface": "Auth entry surfaces (/auth/login, /signin) and the /start post-auth gateway",
+      "surfaces": [
+        {
+          "name": "Magic-link login page",
+          "path": "app/(public)/auth/login/page.tsx + app/(marketing)/signin/page.tsx",
+          "kind": "ui",
+          "change": "replace LoginForm (password) with MagicLinkForm (email only)"
+        },
+        {
+          "name": "Sign-up route",
+          "path": "app/(public)/auth/sign-up/page.tsx",
+          "kind": "ui",
+          "change": "replace SignUpForm with RequestAccessForm or redirect to /request-access"
+        },
+        {
+          "name": "Request-access page",
+          "path": "app/(public)/request-access/page.tsx",
+          "kind": "ui",
+          "change": "new public route — renders RequestAccessForm"
+        },
+        {
+          "name": "Forgot-password page",
+          "path": "app/(public)/auth/forgot-password/page.tsx",
+          "kind": "ui",
+          "change": "retire — redirect to /auth/login"
+        },
+        {
+          "name": "Update-password page",
+          "path": "app/(public)/auth/update-password/page.tsx",
+          "kind": "ui",
+          "change": "retire — redirect to /auth/login"
+        },
+        {
+          "name": "Auth confirm route",
+          "path": "app/(public)/auth/confirm/route.ts",
+          "kind": "api",
+          "change": "no structural change — already handles OTP token verification"
+        },
+        {
+          "name": "/start gateway",
+          "path": "app/(public)/start/page.tsx",
+          "kind": "api",
+          "change": "add allowlist validation step after auth check, before staff/onboarding routing"
+        },
+        {
+          "name": "sendMagicLink server action",
+          "path": "app/actions/auth/send-magic-link.ts",
+          "kind": "server_action",
+          "change": "new — checks allowlist then calls signInWithOtp()"
+        },
+        {
+          "name": "requestPilotAccess server action",
+          "path": "app/actions/auth/request-pilot-access.ts",
+          "kind": "server_action",
+          "change": "new — inserts into pilot_access_requests"
+        },
+        {
+          "name": "registerCompanyAction",
+          "path": "app/(onboarding)/register/_actions.ts",
+          "kind": "server_action",
+          "change": "remove skipAuth: true — enforce real session"
+        },
+        {
+          "name": "bootstrapAction",
+          "path": "app/(onboarding)/bootstrap/_actions.ts",
+          "kind": "server_action",
+          "change": "remove skipAuth: true — enforce real session"
+        },
+        {
+          "name": "DB migration — containment tables",
+          "path": "supabase/migrations/{timestamp}_pilot_auth_containment.sql",
+          "kind": "migration",
+          "change": "new — creates pilot_access_requests and approved_email_allowlist with RLS"
+        },
+        {
+          "name": "Internal pilot review page",
+          "path": "app/(internal)/pilot-review/page.tsx",
+          "kind": "ui",
+          "change": "new — minimal operational moderation surface: lists pending requests, approve/reject actions"
+        },
+        {
+          "name": "Pilot review server actions",
+          "path": "app/actions/pilot/review-actions.ts",
+          "kind": "server_action",
+          "change": "new — approvePilotAccess, rejectPilotAccess, revokePilotAccess (service-role, authority-gated)"
+        }
+      ],
+      "touchpoints": {
+        "inbound": [
+          {
+            "name": "Public visitor submits request-access form",
+            "type": "form_submit"
+          },
+          {
+            "name": "Approved pilot operator submits email on login surface",
+            "type": "form_submit"
+          },
+          {
+            "name": "User clicks magic link in email",
+            "type": "redirect"
+          },
+          {
+            "name": "Authenticated session reaches /start",
+            "type": "navigation"
+          }
+        ],
+        "outbound": [
+          {
+            "name": "Supabase sends magic-link email to approved address",
+            "type": "email"
+          },
+          {
+            "name": "Closed-pilot message displayed for non-approved email",
+            "type": "ui_response"
+          },
+          {
+            "name": "Session established, user routed through /start progression",
+            "type": "redirect"
+          },
+          {
+            "name": "Unapproved session rejected, redirected to request-access",
+            "type": "redirect"
+          }
+        ]
+      },
+      "bounded_contexts": [
+        "authentication (Supabase Auth)",
+        "pilot access governance (pilot_access_requests, approved_email_allowlist)",
+        "onboarding pipeline (register, bootstrap, setup)",
+        "public marketing surfaces (landing, request-access)"
+      ]
+    },
+    "who": {
+      "primary_actor": "approved_pilot_operator",
+      "actors": [
+        {
+          "role": "approved_pilot_operator",
+          "description": "An operator whose email exists in approved_email_allowlist. Can receive a magic link, establish a session, and proceed through the /start → onboarding progression.",
+          "permissions": [
+            "submit email on login surface",
+            "receive and use magic link",
+            "enter /start gateway",
+            "proceed through onboarding if allowlist valid at session time"
+          ],
+          "restrictions": [
+            "cannot use password login",
+            "cannot create an account without prior admin approval",
+            "session-time allowlist check must pass at /start"
+          ]
+        },
+        {
+          "role": "unapproved_public_visitor",
+          "description": "Any person who reaches the production domain without prior approval. Can only submit a request-access form.",
+          "permissions": [
+            "view landing and marketing pages",
+            "submit request-access form",
+            "view closed-pilot messaging on login surface"
+          ],
+          "restrictions": [
+            "cannot receive an OTP",
+            "cannot create an auth user",
+            "cannot enter onboarding",
+            "cannot create a company, casino, or operational environment"
+          ]
+        },
+        {
+          "role": "authenticated_unauthorized_user",
+          "description": "A user who has an existing Supabase auth session but whose email is not in approved_email_allowlist (e.g., stale session, revoked approval). Session is rejected at /start.",
+          "permissions": ["arrive at /start with a valid session"],
+          "restrictions": [
+            "cannot pass the session-time allowlist check",
+            "redirected to request-access with appropriate messaging",
+            "cannot enter any operator surface"
+          ]
+        },
+        {
+          "role": "application_admin",
+          "description": "The builder/owner who manually reviews pilot_access_requests and inserts rows into approved_email_allowlist. No automated approval path exists for this slice.",
+          "permissions": [
+            "read pilot_access_requests (via Supabase dashboard or direct DB access)",
+            "insert into approved_email_allowlist",
+            "update pilot_access_requests status to approved or rejected"
+          ],
+          "restrictions": [
+            "no automated approval workflow in this slice",
+            "pilot access review is performed through a minimal internal operational moderation surface. The surface is intentionally constrained and is not a generalized administrative platform."
+          ]
+        }
+      ],
+      "ownership": {
+        "business_owner": "Vladimir Ivanov",
+        "domain_owner": "Authentication / pilot access governance"
+      }
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "name": "public_visitor_submits_request",
+          "source": "user",
+          "preconditions": [
+            "visitor reaches /request-access",
+            "form fields are valid"
+          ]
+        },
+        {
+          "name": "approved_operator_submits_login_email",
+          "source": "user",
+          "preconditions": [
+            "user is on /auth/login or /signin",
+            "email field is populated"
+          ]
+        },
+        {
+          "name": "magic_link_clicked",
+          "source": "user",
+          "preconditions": [
+            "user received Supabase OTP email",
+            "token_hash and type params present in URL at /auth/confirm"
+          ]
+        },
+        {
+          "name": "session_arrives_at_start",
+          "source": "system",
+          "preconditions": [
+            "user has an authenticated Supabase session",
+            "user navigates to /start"
+          ]
+        },
+        {
+          "name": "onboarding_mutation_invoked",
+          "source": "user",
+          "preconditions": [
+            "user is in onboarding route (/register or /bootstrap)",
+            "server action is called"
+          ]
+        }
+      ],
+      "lifecycle_events": [
+        "access_request_submitted",
+        "access_request_pending_review",
+        "access_request_approved",
+        "access_request_rejected",
+        "allowlist_entry_created",
+        "login_email_submitted",
+        "allowlist_check_passed",
+        "allowlist_check_failed",
+        "magic_link_sent",
+        "magic_link_verified",
+        "session_established",
+        "session_time_allowlist_check_passed",
+        "session_time_allowlist_check_failed",
+        "onboarding_mutation_auth_verified",
+        "onboarding_mutation_rejected_unauthenticated"
+      ],
+      "timing_constraints": [
+        "Allowlist check occurs server-side before any call to supabase.auth.signInWithOtp().",
+        "Session-time allowlist check occurs inside /start, before any staff or casino routing.",
+        "Admin approval is manual for this slice; no SLA or timeout is enforced.",
+        "expires_at on allowlist entries is optional and not enforced by application logic in this slice — database constraint only."
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "statement": "No OTP may be issued to an email that does not exist in approved_email_allowlist at the time of the login attempt.",
+          "severity": "hard",
+          "maps_to_fib_h": "F3"
+        },
+        {
+          "id": "RULE-2",
+          "statement": "supabase.auth.signUp() must not be callable by any public-facing route or component.",
+          "severity": "hard",
+          "maps_to_fib_h": "F1"
+        },
+        {
+          "id": "RULE-3",
+          "statement": "Authentication alone does not imply pilot authorization. A valid session must also have an active allowlist entry to proceed past /start.",
+          "severity": "hard",
+          "maps_to_fib_h": "F4"
+        },
+        {
+          "id": "RULE-4",
+          "statement": "Onboarding server actions (registerCompanyAction, bootstrapAction) must resolve a real authenticated session. skipAuth: true must be removed or neutralized.",
+          "severity": "hard",
+          "maps_to_fib_h": "F7"
+        },
+        {
+          "id": "RULE-5",
+          "statement": "Password-based login (signInWithPassword) must not appear in any pilot-facing UX surface.",
+          "severity": "hard",
+          "maps_to_fib_h": "F2"
+        },
+        {
+          "id": "RULE-6",
+          "statement": "The /start gateway remains the canonical post-auth route resolver. No new orchestration layer or middleware intercept replaces it.",
+          "severity": "hard",
+          "maps_to_fib_h": "F8"
+        },
+        {
+          "id": "RULE-7",
+          "statement": "A failed allowlist check must not reveal technical details. The user-facing message must reference the request-access path only.",
+          "severity": "soft",
+          "maps_to_fib_h": "F3"
+        },
+        {
+          "id": "RULE-8",
+          "statement": "pilot_access_requests inserts are publicly writable (anon role). No auth is required to submit a request. The table must not expose other rows to public read.",
+          "severity": "hard",
+          "maps_to_fib_h": ["F5", "F6"]
+        },
+        {
+          "id": "RULE-9",
+          "statement": "The internal review surface is limited to operational moderation of pilot access requests and must not evolve into a generalized admin platform, IAM system, CRM, or user-management console. Any expansion beyond approve/reject/revoke and pending-request listing requires a separate FIB.",
+          "severity": "hard",
+          "maps_to_fib_h": "H6"
+        }
+      ],
+      "invariants": [
+        "If authentication alone can create an operator environment, the pilot boundary is broken.",
+        "The allowlist check is authoritative at both pre-OTP and session-time checkpoints — neither check alone is sufficient.",
+        "onboarding mutations are guarded at the action layer, not only at the page/route layer."
+      ],
+      "decision_notes": [
+        "Magic-link OTP is the sole login method for pilot. No password path survives this slice.",
+        "Admin approval is out-of-band (Supabase dashboard) for Phase 1. A minimal in-app admin surface is deferred to Phase 3.",
+        "The /auth/confirm route requires no structural change — it already handles verifyOtp() token processing.",
+        "FIB-H §H3 explicitly rejects global middleware — /start extension is the approved containment point.",
+        "expires_at is stored but not enforced by application logic in this slice. Enforcement can be added if the expansion trigger rule is met.",
+        "Two login surfaces exist (/auth/login and /signin under marketing layout). Both must be updated to MagicLinkForm."
+      ]
+    }
+  },
+  "containment": {
+    "loop": [
+      {
+        "id": "STEP-1",
+        "actor": "unapproved_public_visitor",
+        "action": "attempts to reach /auth/sign-up or any password-login path",
+        "system_response": "redirects to /request-access; supabase.auth.signUp() and signInWithPassword() are not reachable from any public surface"
+      },
+      {
+        "id": "STEP-2",
+        "actor": "unapproved_public_visitor",
+        "action": "fills in the request-access form with name, email, casino name, role, table count, and optional message",
+        "system_response": "form is publicly accessible with no auth requirement"
+      },
+      {
+        "id": "STEP-3",
+        "actor": "system",
+        "action": "requestPilotAccess server action inserts a pending row into pilot_access_requests",
+        "system_response": "returns success; no auth user is created; user sees confirmation messaging"
+      },
+      {
+        "id": "STEP-4",
+        "actor": "application_admin",
+        "action": "reviews pending pilot_access_requests in Supabase dashboard; approves eligible requests",
+        "system_response": "admin inserts approved email into approved_email_allowlist and sets request status to approved"
+      },
+      {
+        "id": "STEP-5",
+        "actor": "approved_pilot_operator",
+        "action": "navigates to /auth/login or /signin and submits their approved email address",
+        "system_response": "sendMagicLink server action is called; backend queries approved_email_allowlist"
+      },
+      {
+        "id": "STEP-6",
+        "actor": "system",
+        "action": "allowlist check fails (email not found or expired)",
+        "system_response": "no OTP is sent; no auth user is created or looked up; user receives closed-pilot message with link to /request-access"
+      },
+      {
+        "id": "STEP-7",
+        "actor": "system",
+        "action": "allowlist check passes",
+        "system_response": "supabase.auth.signInWithOtp() is called; Supabase sends magic link to the approved email"
+      },
+      {
+        "id": "STEP-8",
+        "actor": "approved_pilot_operator",
+        "action": "clicks the magic link from their inbox",
+        "system_response": "/auth/confirm route calls supabase.auth.verifyOtp(); on success, redirects to /start"
+      },
+      {
+        "id": "STEP-9",
+        "actor": "system",
+        "action": "/start gateway checks authentication and then queries approved_email_allowlist for the session user's email",
+        "system_response": "if allowlist check fails (stale session, revoked entry), user is redirected to request-access with messaging"
+      },
+      {
+        "id": "STEP-10",
+        "actor": "system",
+        "action": "allowlist check at /start passes",
+        "system_response": "existing /start routing logic proceeds: staff binding check → registration check → casino setup check → /pit"
+      },
+      {
+        "id": "STEP-11",
+        "actor": "approved_pilot_operator",
+        "action": "proceeds through /register or /bootstrap onboarding steps and submits a server action",
+        "system_response": "server action (registerCompanyAction or bootstrapAction) resolves the authenticated session via withServerAction; no skipAuth bypass; mutation proceeds only with a verified session"
+      }
+    ],
+    "frozen": true,
+    "expansion_requires_amendment": true
+  },
+  "dependencies": {
+    "required_existing": [
+      "Supabase Auth project configured with OTP/magic-link email enabled",
+      "Existing /auth/confirm route handling verifyOtp() — already in place",
+      "Existing /start gateway as canonical post-auth router — already in place",
+      "withServerAction compositor used by onboarding server actions — already in place",
+      "Supabase email delivery operational (Supabase built-in SMTP or custom SMTP configured)"
+    ],
+    "missing_dependencies": [
+      "pilot_access_requests table — does not exist",
+      "approved_email_allowlist table — does not exist",
+      "sendMagicLink server action — does not exist",
+      "requestPilotAccess server action — does not exist",
+      "MagicLinkForm component — does not exist",
+      "RequestAccessForm component — does not exist",
+      "/request-access route — does not exist",
+      "Allowlist query in /start gateway — not yet added",
+      "skipAuth removal from registerCompanyAction and bootstrapAction — not yet done"
+    ],
+    "assumptions": [
+      "Supabase OTP email delivery works without custom SMTP for pilot scale.",
+      "The application admin can manage allowlist entries directly in the Supabase dashboard for Phase 1.",
+      "The /start gateway pattern is stable enough to extend without restructuring.",
+      "withServerAction skipping session enforcement via skipAuth: true was a temporary scaffold, not an intentional architectural pattern.",
+      "The LoginForm password path is not used by any internal tooling, integration test fixture, or E2E test that must remain in production mode."
+    ]
+  },
+  "traceability": {
+    "outcomes": [
+      {
+        "id": "OUT-1",
+        "statement": "An unapproved public visitor cannot create an account, receive an OTP, or enter any onboarding route.",
+        "maps_to_fib_h": ["F1", "F3"]
+      },
+      {
+        "id": "OUT-2",
+        "statement": "An approved email can submit their address, receive a magic link, and proceed through the existing /start route progression.",
+        "maps_to_fib_h": ["F2", "F3", "F4", "F8"]
+      },
+      {
+        "id": "OUT-3",
+        "statement": "A public request-access path exists for prospective operators who are not yet approved.",
+        "maps_to_fib_h": ["F5"]
+      },
+      {
+        "id": "OUT-4",
+        "statement": "The allowlist is validated at session time; a stale or revoked approval cannot grant ongoing access.",
+        "maps_to_fib_h": ["F4"]
+      },
+      {
+        "id": "OUT-5",
+        "statement": "Failed allowlist checks display closed-pilot messaging with a request-access path. No technical details are leaked.",
+        "maps_to_fib_h": ["F3"]
+      },
+      {
+        "id": "OUT-6",
+        "statement": "Onboarding server actions require a real authenticated session. Page-level guards are no longer the sole protection.",
+        "maps_to_fib_h": ["F7"]
+      },
+      {
+        "id": "OUT-7",
+        "statement": "The /start gateway remains the canonical post-auth router. No global middleware layer is introduced.",
+        "maps_to_fib_h": ["F8"]
+      },
+      {
+        "id": "OUT-8",
+        "statement": "Internal pilot review can list pending access requests, approve, reject, and revoke pilot access through a minimal operational moderation surface. The surface does not exceed this scope.",
+        "maps_to_fib_h": ["F6", "H6"]
+      }
+    ],
+    "capability_to_outcome": [
+      {
+        "capability": "submit_access_request",
+        "outcomes": ["OUT-3", "OUT-5"]
+      },
+      {
+        "capability": "check_email_allowlist_before_otp",
+        "outcomes": ["OUT-1", "OUT-2", "OUT-5"]
+      },
+      {
+        "capability": "send_magic_link",
+        "outcomes": ["OUT-2"]
+      },
+      {
+        "capability": "disable_public_signup",
+        "outcomes": ["OUT-1"]
+      },
+      {
+        "capability": "validate_allowlist_at_session_time",
+        "outcomes": ["OUT-2", "OUT-4", "OUT-7"]
+      },
+      {
+        "capability": "harden_onboarding_mutations",
+        "outcomes": ["OUT-6"]
+      },
+      {
+        "capability": "retire_password_routes",
+        "outcomes": ["OUT-1"]
+      },
+      {
+        "capability": "display_closed_pilot_messaging",
+        "outcomes": ["OUT-5"]
+      },
+      {
+        "capability": "review_access_requests",
+        "outcomes": ["OUT-8"]
+      },
+      {
+        "capability": "approve_pilot_access",
+        "outcomes": ["OUT-8"]
+      },
+      {
+        "capability": "revoke_pilot_access",
+        "outcomes": ["OUT-4", "OUT-8"]
+      }
+    ],
+    "rule_to_loop_step": [
+      {
+        "rule_id": "RULE-1",
+        "loop_steps": ["STEP-5", "STEP-6", "STEP-7"]
+      },
+      {
+        "rule_id": "RULE-2",
+        "loop_steps": ["STEP-1"]
+      },
+      {
+        "rule_id": "RULE-3",
+        "loop_steps": ["STEP-9", "STEP-10"]
+      },
+      {
+        "rule_id": "RULE-4",
+        "loop_steps": ["STEP-11"]
+      },
+      {
+        "rule_id": "RULE-5",
+        "loop_steps": ["STEP-1", "STEP-5"]
+      },
+      {
+        "rule_id": "RULE-6",
+        "loop_steps": ["STEP-8", "STEP-9", "STEP-10"]
+      },
+      {
+        "rule_id": "RULE-7",
+        "loop_steps": ["STEP-6"]
+      },
+      {
+        "rule_id": "RULE-8",
+        "loop_steps": ["STEP-2", "STEP-3"]
+      },
+      {
+        "rule_id": "RULE-9",
+        "loop_steps": ["STEP-4"]
+      }
+    ],
+    "fib_h_requirement_to_capability": [
+      {
+        "requirement": "F1",
+        "capabilities": ["disable_public_signup", "retire_password_routes"]
+      },
+      {
+        "requirement": "F2",
+        "capabilities": ["send_magic_link", "retire_password_routes"]
+      },
+      {
+        "requirement": "F3",
+        "capabilities": [
+          "check_email_allowlist_before_otp",
+          "display_closed_pilot_messaging"
+        ]
+      },
+      {
+        "requirement": "F4",
+        "capabilities": ["validate_allowlist_at_session_time"]
+      },
+      { "requirement": "F5", "capabilities": ["submit_access_request"] },
+      {
+        "requirement": "F6",
+        "capabilities": [
+          "submit_access_request",
+          "check_email_allowlist_before_otp"
+        ]
+      },
+      { "requirement": "F7", "capabilities": ["harden_onboarding_mutations"] },
+      {
+        "requirement": "F8",
+        "capabilities": ["validate_allowlist_at_session_time"]
+      },
+      {
+        "requirement": "H6",
+        "capabilities": [
+          "review_access_requests",
+          "approve_pilot_access",
+          "revoke_pilot_access"
+        ]
+      }
+    ]
+  },
+  "governance": {
+    "scope_authority": {
+      "artifact": "FIB-H-PILOT-AUTH-CONTAINMENT-001",
+      "version": "v0",
+      "frozen": true
+    },
+    "open_questions_allowed_at_scaffold": [
+      "Exact Supabase SMTP configuration for magic-link delivery",
+      "Whether /auth/sign-up is redirected to /request-access or replaced in place",
+      "Exact error message copy for closed-pilot messaging",
+      "Whether expires_at enforcement is activated in this slice or deferred",
+      "Whether the /auth/update-password and /auth/forgot-password routes are hard-deleted or soft-redirected"
+    ],
+    "downstream_expansion_allowed_without_amendment": false,
+    "expansion_triggers": [
+      "More than one admin must manage pilot approvals",
+      "Multiple pilot properties require delegated invite control",
+      "Pricing or subscription rollout begins",
+      "Pilot access must support teams or seats",
+      "External customers require formal account administration",
+      "Regulatory or security review requires deeper audit trails"
+    ]
+  }
+}

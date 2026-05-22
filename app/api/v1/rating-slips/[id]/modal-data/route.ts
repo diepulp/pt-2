@@ -298,10 +298,10 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
             };
           }
 
-          // Financial section
+          // Financial section — pass FinancialValue through (PRD-080 §4B: value/type/source unchanged)
           const financialSection: FinancialSectionDTO = {
             totalCashIn: financialSummary.total_in,
-            totalChipsOut: financialSummary.total_out,
+            totalCashOut: financialSummary.total_out,
             netPosition: financialSummary.net_amount,
           };
 

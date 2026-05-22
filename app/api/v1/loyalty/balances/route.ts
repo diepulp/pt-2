@@ -30,7 +30,7 @@ export const dynamic = 'force-dynamic';
  *
  * Gets player loyalty balance and tier info.
  * Returns null if player has no loyalty record.
- * Query params: player_id, casino_id (both required).
+ * Query params: player_id (required). Casino scope derived from RLS context (DEC-3).
  */
 export async function GET(request: NextRequest) {
   const ctx = createRequestContext(request);
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
         const balance = await service.getBalance(
           query.player_id,
-          query.casino_id,
+          mwCtx.rlsContext!.casinoId,
         );
 
         return {

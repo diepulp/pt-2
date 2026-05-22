@@ -224,8 +224,12 @@ export function useExceptionsData(
       return items;
     },
     enabled: !!casinoId,
-    staleTime: 15_000,
-    refetchInterval: 15_000,
+    // FIB-RT-EXC-001: Reduced from 15s to 60s safety-net fallback.
+    // Primary refresh is now realtime (useDashboardRealtime subscribes to
+    // table_fill/table_credit INSERT+UPDATE events). This interval only
+    // fires if realtime delivery fails or reconnection is pending.
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   });
 
   const isLoading = cashObsLoading || shiftLoading || approvalsLoading;

@@ -1,0 +1,187 @@
+{
+  "id": "EXEC-083",
+  "prd": "PRD-083",
+  "title": "Pilot Authentication Containment Gate",
+  "status": "complete",
+  "created_at": "2026-05-12T00:00:00Z",
+  "updated_at": "2026-05-12T12:00:00Z",
+  "gov010_check": "waived:ADRs-verified-in-body",
+  "complexity_prescreen": "full",
+  "fib_s_loaded": true,
+  "fib_h_ref": "docs/issues/gaps/pilot-auth-containment/FIB-H-PILOT-AUTH-CONTAINMENT-001.md",
+  "fib_s_ref": "docs/issues/gaps/pilot-auth-containment/FIB-S-PILOT-AUTH-CONTAINMENT-001.json",
+  "write_path_classification": "detected",
+  "exec_spec_path": "docs/21-exec-spec/EXEC-083-pilot-auth-containment.md",
+  "current_phase": 5,
+  "spec_patches_absorbed": [
+    "service renamed: PilotAccessService → PilotContainmentService",
+    "bounded_context renamed: pilot-access-governance → pilot-containment",
+    "WS1: added CHECK constraints, lookup indexes, DB-layer enforcement",
+    "WS2: allowlist read uses server-only service-role helper (not authenticated client)",
+    "WS3: depends_on changed [WS1] → [WS2]; requireApprovedPilotSession() guard introduced",
+    "WS6: scope expanded — deep-link containment for dashboard/protected/onboarding route groups",
+    "WS7: requirePilotAdminSession(), atomic approval, structured telemetry (DEC-8)",
+    "WS8: non-admin redirect to /request-access (not /signin)",
+    "WS9: added DEC-8 telemetry test, atomic approval test, DB invariant tests",
+    "WS10: added direct-deeplink-containment.spec.ts",
+    "execution_phases: WS3 moved from Phase 2 to Phase 3"
+  ],
+  "completed_workstreams": [
+    {
+      "id": "WS1",
+      "name": "Containment Schema, RLS, and SRM Registration",
+      "completed_at": "2026-05-12T06:45:00Z",
+      "gate": "schema-validation",
+      "gate_result": "PASS",
+      "outputs": [
+        "supabase/migrations/20260512002136_add_pilot_auth_containment_tables.sql",
+        "types/database.types.ts",
+        "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      ]
+    },
+    {
+      "id": "WS2",
+      "name": "Pilot Service + Auth Server Actions",
+      "completed_at": "2026-05-12T08:00:00Z",
+      "gate": "type-check",
+      "gate_result": "PASS",
+      "outputs": [
+        "services/pilot/dtos.ts",
+        "services/pilot/schemas.ts",
+        "services/pilot/mappers.ts",
+        "services/pilot/crud.ts",
+        "services/pilot/keys.ts",
+        "services/pilot/index.ts",
+        "app/actions/auth/send-magic-link.ts",
+        "app/actions/auth/request-pilot-access.ts",
+        "lib/errors/domain-errors.ts"
+      ]
+    },
+    {
+      "id": "WS3",
+      "name": "Onboarding Mutation Hardening + requireApprovedPilotSession guard",
+      "completed_at": "2026-05-12T08:30:00Z",
+      "gate": "type-check",
+      "gate_result": "PASS",
+      "outputs": [
+        "lib/server-actions/guards/require-approved-pilot-session.ts",
+        "app/(onboarding)/register/_actions.ts",
+        "app/(onboarding)/bootstrap/_actions.ts"
+      ]
+    },
+    {
+      "id": "WS4",
+      "name": "Auth Surface Replacement + Public Form",
+      "completed_at": "2026-05-12T09:00:00Z",
+      "gate": "type-check",
+      "gate_result": "PASS",
+      "outputs": [
+        "components/magic-link-form.tsx",
+        "components/request-access-form.tsx",
+        "app/(public)/auth/login/page.tsx",
+        "app/(marketing)/signin/page.tsx",
+        "app/(public)/auth/sign-up/page.tsx",
+        "app/(public)/auth/forgot-password/page.tsx",
+        "app/(public)/auth/update-password/page.tsx"
+      ]
+    },
+    {
+      "id": "WS5",
+      "name": "Request Access Public Page",
+      "completed_at": "2026-05-12T09:30:00Z",
+      "gate": "type-check",
+      "gate_result": "PASS",
+      "outputs": [
+        "app/(public)/request-access/page.tsx"
+      ]
+    },
+    {
+      "id": "WS6",
+      "name": "Session-Time Pilot Authorization Gates",
+      "completed_at": "2026-05-12T10:00:00Z",
+      "gate": "type-check",
+      "gate_result": "PASS",
+      "outputs": [
+        "app/(public)/start/page.tsx",
+        "app/(dashboard)/layout.tsx",
+        "app/(protected)/layout.tsx",
+        "app/(onboarding)/register/page.tsx",
+        "app/(onboarding)/bootstrap/page.tsx"
+      ]
+    },
+    {
+      "id": "WS7",
+      "name": "Pilot Review Server Actions",
+      "completed_at": "2026-05-12T10:30:00Z",
+      "gate": "type-check",
+      "gate_result": "PASS",
+      "outputs": [
+        "app/actions/pilot/review-actions.ts"
+      ]
+    },
+    {
+      "id": "WS8",
+      "name": "Internal Pilot Review Surface",
+      "completed_at": "2026-05-12T11:00:00Z",
+      "gate": "type-check",
+      "gate_result": "PASS",
+      "outputs": [
+        "app/(internal)/pilot-review/page.tsx",
+        "app/(internal)/pilot-review/pilot-review-table.tsx"
+      ]
+    },
+    {
+      "id": "WS9",
+      "name": "Unit and Integration Tests",
+      "completed_at": "2026-05-12T11:30:00Z",
+      "gate": "test-pass",
+      "gate_result": "PASS",
+      "outputs": [
+        "services/pilot/__tests__/allowlist-gate.test.ts",
+        "services/pilot/__tests__/email-canonicalization.test.ts",
+        "app/actions/auth/__tests__/send-magic-link.test.ts",
+        "app/actions/auth/__tests__/request-pilot-access.test.ts",
+        "app/actions/pilot/__tests__/review-actions.test.ts",
+        "app/(onboarding)/register/__tests__/_actions.test.ts",
+        "app/(onboarding)/bootstrap/__tests__/_actions.test.ts"
+      ],
+      "notes": "All tests pass. Register/bootstrap actions updated to catch guard DomainError and return ServiceResult (previously propagated as unhandled exception)."
+    },
+    {
+      "id": "WS10",
+      "name": "E2E Write-Path Tests",
+      "completed_at": "2026-05-12T12:00:00Z",
+      "gate": "e2e-write-path",
+      "gate_result": "PASS (syntax valid; advisory tier — not CI-enforced)",
+      "outputs": [
+        "e2e/pilot-auth/request-access.spec.ts",
+        "e2e/pilot-auth/unapproved-login-rejection.spec.ts",
+        "e2e/pilot-auth/retired-routes.spec.ts",
+        "e2e/pilot-auth/direct-deeplink-containment.spec.ts"
+      ],
+      "notes": "Local Verification (Mode A). Authenticated non-allowlisted path verified at unit level (allowlist-gate.test.ts, review-actions.test.ts). OTP delivery deferred per PRD §7.2 risk note. E2E advisory — does not block merge."
+    }
+  ],
+  "pending_workstreams": [],
+  "dormant_workstreams": [],
+  "artifacts": {
+    "fib_s_amendments": [],
+    "decisions": {
+      "DEC-1": "Admin authority via PILOT_ADMIN_EMAILS env var",
+      "DEC-2": "/auth/sign-up replaced in place with RequestAccessForm",
+      "DEC-3": "expires_at stored but not enforced in this slice",
+      "DEC-4": "forgot-password and update-password soft-redirected to /auth/login",
+      "DEC-6": "Allowlist gate enforced in start/dashboard/protected/register/bootstrap routes",
+      "DEC-7": "DB CHECK constraints authoritative; service schemas defense-in-depth",
+      "DEC-8": "Telemetry: pilot_review.{action}.{result} namespace with structured metadata"
+    }
+  },
+  "validation": {
+    "structural": "PASS",
+    "governance": "PASS",
+    "write_path_classification": "detected (WS10 e2e-write-path gate satisfied)",
+    "temporal_integrity": "clean",
+    "final_type_check": "PASS (exit 0)",
+    "final_test_gate": "PASS (all unit tests exit 0)"
+  }
+}

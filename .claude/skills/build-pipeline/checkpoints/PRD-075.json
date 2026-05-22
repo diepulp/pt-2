@@ -1,0 +1,45 @@
+{
+  "prd": "PRD-075",
+  "prd_title": "Financial Telemetry — Wave 1 Phase 1.2B-B — Render Migration",
+  "current_phase": 2,
+  "status": "complete",
+  "complexity_prescreen": "streamlined",
+  "write_path_classification": "none",
+  "gov010_check": "waived:FIB-pair-is-intake-authority;no-ADR-gaps",
+  "fib_s_loaded": true,
+  "fib_h_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2b-b/FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-B-RENDER-MIGRATION.md",
+  "fib_s_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2b-b/FIB-S-FINANCIAL-TELEMETRY-PHASE-1-2B-B-RENDER-MIGRATION.json",
+  "exec_spec": "docs/21-exec-spec/PRD-075/EXEC-075-financial-telemetry-wave1-phase1.2b-b-render-migration.md",
+  "completed_workstreams": ["WS1_RENDER", "WS2_TRACKER"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "dormant_workstreams": [],
+  "artifacts": {
+    "WS1_RENDER": {
+      "output": "components/player-sessions/start-from-previous.tsx",
+      "gate": "build",
+      "gate_status": "passed",
+      "commit_sha": "2d68dcedb9c4c43e433c1c832c5881fe8c19a7b3",
+      "delivery_notes": {
+        "sanity_probe": "PASS — services/visit/crud.ts:515: 'Wrap integer-cent amounts in canonical FinancialValue envelope.' total_buy_in.value === 7500 for a $75 session.",
+        "q4_audit": "CLEAN — formatDollars hit only at start-from-previous.tsx lines 202/208/226 for the three FinancialValue.value target expressions. All other usages operate on bare number fields.",
+        "changes": "STEP-2: formatDollars→formatCents import; STEP-3/4/5: three call-site swaps; STEP-5b: stale dollar-float comment collapsed to one line."
+      }
+    },
+    "WS2_TRACKER": {
+      "output": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json",
+      "gate": "tracker-closed",
+      "gate_status": "passed",
+      "commit_sha": "976dcaca",
+      "delivery_notes": {
+        "def004": "closed — commit_sha_pending replaced with real SHA 2d68dcedb9c4c43e433c1c832c5881fe8c19a7b3 in follow-up commit 976dcaca",
+        "cursor": "last_closed_phase: 1.2B-B, next_action: Phase 1.2B-C"
+      }
+    }
+  },
+  "gates_passed": ["build (WS1_RENDER)", "build (WS2_TRACKER)", "tracker-closed (WS2_TRACKER)"],
+  "gates_pending": [],
+  "exec_spec_patches": ["PATCH-1:sanity-probe", "PATCH-2:q4-audit-broadened", "PATCH-3:line-numbers-indicative", "PATCH-4:precondition-consumer-boundary", "PATCH-5:sanity-probe-ac-evidence", "PATCH-6:build-gate-requires-probe", "PATCH-7:audit-limitation-note", "PATCH-8:tracker-follow-up-immediate"],
+  "created_at": "2026-05-03T20:56:05.000000+00:00",
+  "updated_at": "2026-05-03T21:35:00.000000+00:00"
+}

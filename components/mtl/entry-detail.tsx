@@ -165,7 +165,7 @@ export function EntryDetail({
             )}
           >
             {isInflow ? '+' : '-'}
-            {formatCents(entry.amount)}
+            {formatCents(entry.amount.value)}
           </div>
 
           {/* Details Grid */}

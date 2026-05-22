@@ -14,13 +14,15 @@ import type { Database } from '@/types/database.types';
 
 import * as crud from './crud';
 import type {
-  CreateFloorLayoutDTO,
+  AssignOrMoveResultDTO,
+  ClearResultDTO,
   FloorLayoutActivationDTO,
   FloorLayoutDTO,
   FloorLayoutListFilters,
   FloorLayoutVersionDTO,
   FloorLayoutVersionFilters,
   FloorLayoutVersionWithSlotsDTO,
+  PitAssignmentStateDTO,
 } from './dtos';
 
 // Re-export DTOs for consumers
@@ -69,6 +71,30 @@ export interface FloorLayoutServiceInterface {
    * Returns null if no layout is active.
    */
   getActiveLayout(casinoId: string): Promise<FloorLayoutActivationDTO | null>;
+
+  /**
+   * PRD-067: Aggregate pit-assignment state for the admin panel.
+   * Returns null when the casino has no active floor layout.
+   */
+  getPitAssignmentState(
+    casinoId: string,
+  ): Promise<PitAssignmentStateDTO | null>;
+
+  /**
+   * PRD-067: Assign a table to a slot, or move it from its current slot.
+   * Wraps the authoritative rpc_assign_or_move_table_to_slot RPC.
+   */
+  assignOrMoveTableToSlot(
+    tableId: string,
+    slotId: string,
+  ): Promise<AssignOrMoveResultDTO>;
+
+  /**
+   * PRD-067: Clear a slot's table assignment.
+   * Idempotent at the RPC layer — empty slots return success with
+   * `idempotent: true`.
+   */
+  clearSlotAssignment(slotId: string): Promise<ClearResultDTO>;
 }
 
 // === Service Factory ===
@@ -91,13 +117,24 @@ export function createFloorLayoutService(
     getVersionById: (versionId) => crud.getVersionById(supabase, versionId),
 
     getActiveLayout: (casinoId) => crud.getActiveLayout(supabase, casinoId),
+
+    getPitAssignmentState: (casinoId) =>
+      crud.getPitAssignmentState(supabase, casinoId),
+
+    assignOrMoveTableToSlot: (tableId, slotId) =>
+      crud.assignOrMoveTableToSlot(supabase, tableId, slotId),
+
+    clearSlotAssignment: (slotId) => crud.clearSlotAssignment(supabase, slotId),
   };
 }
 
 // Re-export CRUD functions for direct use in server actions
 export {
+  assignOrMoveTableToSlot,
+  clearSlotAssignment,
   getActiveLayout,
   getLayoutById,
+  getPitAssignmentState,
   getVersionById,
   listLayouts,
   listVersions,

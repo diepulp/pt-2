@@ -1,0 +1,808 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-3-UI-SPLIT-DISPLAY",
+    "status": "draft",
+    "feature_id": "FIB-S-FIN-PHASE-1-3",
+    "feature_name": "Financial Telemetry Phase 1.3 — UI Layer: Split Display + Labels",
+    "priority": "P1",
+    "decision_horizon": "wave-1-phase-1.3",
+    "owner": "Financial Telemetry (Cross-context)",
+    "opened_on": "2026-05-03",
+    "parent_prd": "docs/10-prd/PRD-077-financial-telemetry-wave1-phase1.3-ui-split-display-v0.md",
+    "predecessor_fib": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2b-c/FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-C-CONTRACT-EXPANSION.md",
+    "predecessor_phase": "Phase 1.2B (EXEC-074/075/076 — closed 2026-05-03, commits ad6d1748 / e73879f4)",
+    "successor_slice": "Phase 1.4 — Validation: Lint + Truth-Telling Tests"
+  },
+
+  "scope_guardrail": {
+    "governance_ref": "docs/70-governance/FIB_GENERATION_SCOPE_GUARDRAIL.md",
+    "primary_change_class": "Presentation (with semantic alignment)",
+    "migration_class": "Surface normalization",
+    "coverage_mode": {
+      "mode": "full",
+      "surfaces": [
+        "components/financial/FinancialValue.tsx — birth (new shared rendering primitive)",
+        "components/financial/AttributionRatio.tsx — birth (SRC §K1 rename)",
+        "components/financial/CompletenessBadge.tsx — birth",
+        "components/shift-dashboard-v3/left-rail/** — migrate to <FinancialValue>",
+        "components/shift-dashboard-v3/center/metrics-table.tsx — migrate",
+        "components/shift-dashboard-v3/right-rail/telemetry-rail-panel.tsx — migrate",
+        "components/pit-panels/analytics-panel.tsx — Handle→Estimated Drop + wrap",
+        "components/pit-panels/closed-sessions-panel.tsx — wrap currency renders",
+        "components/table/rundown-summary-panel.tsx — wrap fills/credits/drop/win-loss; Pattern B for derived",
+        "components/player-360/summary/summary-band.tsx — Theo→unknown envelope + Not computed badge",
+        "components/player-360/left-rail/filter-tile-stack.tsx — wrap currency render",
+        "components/player-sessions/start-from-previous.tsx — wrap total_buy_in/total_cash_out/net",
+        "components/cashier/amount-display.tsx — wrap committed amount",
+        "components/cashier/cash-out-form.tsx — wrap committed; Draft badge for pre-commit",
+        "components/rating-slip/buy-in-threshold-indicator.tsx — callers pass typed envelope",
+        "app/review/pit-map/components/table-card.tsx — wrap session totals",
+        "app/(landing)/floor-oversight/page.tsx — Coverage quality→Attribution Ratio; route through <AttributionRatio>",
+        "components/mtl/gaming-day-summary.tsx — <FinancialValue type=\"compliance\">",
+        "components/mtl/compliance-dashboard.tsx — formalize compliance labels",
+        "components/mtl/entry-badge.tsx — formalize",
+        "components/mtl/agg-badge.tsx — formalize",
+        "components/admin-alerts/alert-detail-card.tsx — <FinancialValue type=\"observed\">",
+        "components/loyalty/comp-confirm-panel.tsx — <FinancialValue type=\"actual\"> for face value cents",
+        "components/loyalty/entitlement-confirm-panel.tsx — <FinancialValue type=\"actual\">",
+        "components/rating-slip-modal/__tests__/rating-slip-modal.test.tsx — DEF-006 birth",
+        "components/player-sessions/__tests__/start-from-previous.test.tsx — DEF-006 birth",
+        "components/player-sessions/__tests__/start-from-previous-modal.test.tsx — DEF-006 birth"
+      ],
+      "surface_granularity": "concrete-instances-only",
+      "full_mode_justification": "Dedicated Presentation rollout slice per ROLLOUT-ROADMAP.md §3 Phase 1.3. Representative coverage insufficient: Phase 1.4 lint enforcement requires 100% migration before activation; partial migration fails Phase 1.3 exit gate 'no unlabeled currency in any rendered surface'. Surface inventory is bounded and fixed (Phase 1.0). GOV-FIB-001 §6.3 explicitly permits Full mode for dedicated rollout/inventory slices that do not also introduce new service semantics, transport shape, or infrastructure. This slice is UI-layer semantic enforcement of the already-stable upstream FinancialValue contract. Legacy shift-dashboard (components/shift-dashboard/) and shift-dashboard-v2 (app/review/shift-dashboard-v2/) are confirmed dead code and excluded from scope."
+    },
+    "layer_budget": {
+      "primary_layer": "UI",
+      "secondary_layers": [],
+      "secondary_layer_constraints": "none — no service, API, or infrastructure layer receives logic changes",
+      "dto_classification": "no DTO changes in this slice — service output is stable from Phase 1.2B"
+    },
+    "one_line_boundary": "This FIB normalizes existing financial UI surfaces so stable FinancialValue envelopes are rendered truthfully to operators by introducing shared display components and migrating all in-scope surface families; it does not change service output, API contracts, lint enforcement rules, or observability infrastructure.",
+    "migration_posture": "This phase is not feature delivery. It is a surface normalization migration and UI-layer semantic enforcement of an upstream contract. Review priority is consistency, uniformity, and semantic preservation over new UI flexibility or clever component abstraction. Reviewers must not treat this as cosmetic-only UI work: forbidden label correction, authority correction, completeness correction, and degradation behavior require semantic discipline.",
+    "atomicity_test": {
+      "ships_without_deferred_work": true,
+      "deferred_work_can_follow_without_rewrite": true,
+      "ships_as_correct_internal_contract": true,
+      "atomicity_notes": "After Phase 1.3, every PT-2 surface shows labeled financial values. Phase 1.4 lint rules and Playwright tests are independent tooling on the stable migrated surface set, but they must encode the semantic constraints established here to prevent regression. Component births without surface migrations would be truthfully incomplete (new primitives with no consumers). Full migration ships as a correct, internally consistent operator experience with sentinel source-of-truth validation for each authority class."
+    },
+    "semantic_alignment": {
+      "component_contract_freeze_required": true,
+      "manual_enforcement_only_in_phase_1_3": true,
+      "phase_1_4_must_encode_constraints": [
+        "authority ambiguity",
+        "hidden or unknown completeness",
+        "mixed-authority degradation behavior",
+        "no compliance mixing"
+      ],
+      "spot_check_matrix": [
+        "Actual-only surface → remains Actual",
+        "Mixed Actual + Estimated surface → degrades to Estimated",
+        "Compliance surface → remains isolated and is never merged with operational authorities",
+        "Unknown completeness surface → explicitly renders unknown / Not computed instead of $0, blank, or inferred completeness"
+      ],
+      "sentinel_correctness_gate": "For each authority class (actual, estimated, observed, compliance), at least one migrated surface must be validated against source-of-truth data. This is a sentinel check, not full semantic coverage."
+    },
+    "diff_size_sanity": {
+      "expected_logic_files_range": "29–32",
+      "directory_boundaries": [
+        "components/financial/ (new)",
+        "components/shift-dashboard-v3/",
+        "components/pit-panels/",
+        "components/table/",
+        "components/player-360/",
+        "components/player-sessions/",
+        "components/cashier/",
+        "components/mtl/",
+        "components/admin-alerts/",
+        "components/loyalty/",
+        "components/rating-slip/",
+        "app/(landing)/floor-oversight/",
+        "app/review/pit-map/"
+      ],
+      "bounded_contexts": [
+        "financial-display (new shared components)",
+        "shift-intelligence (shift-dashboard-v3)",
+        "player-sessions (start-from-previous)",
+        "visits (live-view display)",
+        "table-context (rundown, pit-panels)",
+        "player-financial (player-360, floor-oversight)",
+        "mtl (compliance display)",
+        "loyalty (comp/entitlement confirm)",
+        "rating-slip (modal, buy-in-threshold)"
+      ],
+      "hidden_multi_class_scope_review_required": false,
+      "multi_boundary_justification": "Scale exceeds §11 single-boundary default. Justified as dedicated full-inventory Presentation rollout phase (GOV-FIB-001 §6.3). Every file touched: replace bare currency display with <FinancialValue> call. No file requires knowledge of another file's logic beyond the shared component API. Scale is linear across surface families. Splitting component-birth from surface-migration produces an intermediate state where new components exist with zero consumers — fails §6.7 'ships as correct internal contract'. Surface inventory is bounded by Phase 1.0. Dead code (legacy shift-dashboard, shift-dashboard-v2) excluded — scope reduced accordingly."
+    },
+    "adjacent_consequence_ledger": [
+      {
+        "temptation": "ESLint no-unlabeled-financial-value / no-forbidden-financial-label rules",
+        "why_adjacent": "Enforcement infrastructure that follows stable surface deployment",
+        "disposition": "Phase 1.4 — must encode Phase 1.3 authority ambiguity, hidden/unknown completeness, degradation behavior, and no-compliance-mixing constraints",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "Playwright DOM assertions: no currency rendered without visible authority label",
+        "why_adjacent": "Automated coverage of migrated surfaces; depends on stable component API",
+        "disposition": "Phase 1.4",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "CI gate for envelope regression",
+        "why_adjacent": "Natural after surfaces, components, and lint rules are all stable",
+        "disposition": "Phase 1.4",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "I5 truth-telling harness subset",
+        "why_adjacent": "Validates completeness rendering; depends on stable <FinancialValue> component",
+        "disposition": "Phase 1.4",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "lib/format.ts exported helper removal (formatDollars, formatCents)",
+        "why_adjacent": "<FinancialValue> uses these internally; removal reduces duplication",
+        "disposition": "Phase 1.4 — removal requires lint guard first; breaking exports in Phase 1.3 makes migration order fragile",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "Attribution Ratio value computation logic changes",
+        "why_adjacent": "Label rename makes computation visibility natural next step",
+        "disposition": "Out of scope — service-layer concern; <AttributionRatio> renders what service provides",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "Structured log events per forbidden-label usage in production",
+        "why_adjacent": "Adjacent while touching surface files containing forbidden labels",
+        "disposition": "Phase 1.4 — Observability class; different change class from Presentation",
+        "removed_from_must": true
+      }
+    ],
+    "downstream_expansion_allowed_without_amendment": false
+  },
+
+  "phase_boundary": {
+    "one_line_invariant": "If a change births a shared financial display component, freezes the FinancialValue props contract, migrates a surface from bare formatter to <FinancialValue>, removes a forbidden label, aligns authority/completeness semantics, or births a DEF-006 component test — and nothing else — it is in scope.",
+    "primary_change_class": "Presentation (with semantic alignment)",
+    "primary_layer": "UI",
+    "coverage_mode": "Full",
+    "secondary_layers_allowed": [],
+    "stop_conditions": [
+      "service logic changes required",
+      "API contract / OpenAPI changes required",
+      "lint rule authoring required",
+      "Playwright test suite authoring required beyond DEF-006",
+      "CI pipeline authoring required",
+      "DTO shape changes required",
+      "hold_percent wrapped as FinancialValue",
+      "average_bet, policy thresholds, or loyalty points wrapped as FinancialValue",
+      "Attribution Ratio calculation logic changed",
+      "new financial authority values introduced"
+    ],
+    "prohibited": [
+      "Service layer changes (complete — Phases 1.1, 1.2A, 1.2B)",
+      "API contract / OpenAPI changes (complete — Phase 1.2B-C)",
+      "ESLint rule authoring (Phase 1.4 — must encode authority ambiguity, hidden/unknown completeness, degradation behavior, and no compliance mixing)",
+      "Playwright DOM assertion suite (Phase 1.4)",
+      "CI gate authoring (Phase 1.4)",
+      "I5 truth-telling harness (Phase 1.4)",
+      "lib/format.ts exported helper removal (Phase 1.4)",
+      "hold_percent FinancialValue wrapping (DEF-NEVER — all phases)",
+      "average_bet, min_bet, max_bet, watchlistFloor, ctrThreshold wrapping (WAVE-1-CLASSIFICATION-RULES §6)",
+      "Loyalty points wrapping (non-currency unit system)",
+      "Attribution Ratio value computation changes (service-layer concern)",
+      "SQL migrations (Wave 2)"
+    ]
+  },
+
+  "intent": {
+    "operator_problem": "Pit bosses and floor supervisors see bare currency values across PT-2 UI surfaces with no visible authority label. Some surfaces carry forbidden labels (Handle, Coverage quality) or placeholder zeros (Theo: 0) that misrepresent source authority. The operator cannot assess confidence in any displayed financial number. This violates SRC §L1 (every rendered currency value must declare its authority visibly) and blocks Wave 1 sign-off.",
+    "pilot_fit": "Labeled financial surfaces are a Wave 1 exit criterion. Service and API layers have fully propagated the FinancialValue envelope (Phases 1.1–1.2B). UI is the last unlabeled boundary. DEF-006 component test births are also a Phase 1.3 obligation deferred from Phase 1.1 due to DTO shape changes that stabilized in Phase 1.2B."
+  },
+
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "FinancialValue.tsx",
+          "kind": "artifact",
+          "description": "New shared rendering primitive. Renders { value, type, source, completeness } with visible authority badge (SRC §L2 — badge visible at first glance, not tooltip-only). Internal use of lib/format.ts formatCents for number formatting.",
+          "stateful": false,
+          "system_of_record": "components/financial/",
+          "fields_hint": [
+            "value: number (integer cents)",
+            "type: FinancialAuthority",
+            "source: string",
+            "completeness.status: CompletenessStatus",
+            "completeness.coverage?: number"
+          ]
+        },
+        {
+          "name": "AttributionRatio.tsx",
+          "kind": "artifact",
+          "description": "New KPI component for Attribution Ratio (SRC §K1 rename from 'Coverage'). Renders Rated / (Rated + Estimated) ratio as a percentage with appropriate label. Does not compute the ratio — renders what the service provides.",
+          "stateful": false,
+          "system_of_record": "components/financial/",
+          "fields_hint": [
+            "value: number (ratio 0.0–1.0)",
+            "rated: FinancialValue (optional, for split display)"
+          ]
+        },
+        {
+          "name": "CompletenessBadge.tsx",
+          "kind": "artifact",
+          "description": "New badge component rendering completeness status: complete | partial | unknown. Visual weight differentiated per status. Used inside FinancialValue.tsx and standalone for completeness-only surfaces.",
+          "stateful": false,
+          "system_of_record": "components/financial/",
+          "fields_hint": ["status: CompletenessStatus", "coverage?: number"]
+        },
+        {
+          "name": "types/financial.ts",
+          "kind": "artifact",
+          "description": "Existing type source. FinancialValue, FinancialAuthority, CompletenessStatus. No changes in Phase 1.3 — consumed by new components.",
+          "stateful": false,
+          "system_of_record": "types/financial.ts",
+          "fields_hint": [
+            "FinancialValue",
+            "FinancialAuthority",
+            "CompletenessStatus"
+          ]
+        },
+        {
+          "name": "11 in-scope UI surface families",
+          "kind": "view",
+          "description": "Existing surface files enumerated in WAVE-1-SURFACE-INVENTORY.md §5.2. Each family migrated from bare formatters / local label strings to <FinancialValue> component. See scope_guardrail.coverage_mode.surfaces for the complete concrete list. Legacy shift-dashboard and shift-dashboard-v2 are excluded (confirmed dead code).",
+          "stateful": false,
+          "system_of_record": "components/** + app/**",
+          "fields_hint": []
+        },
+        {
+          "name": "DEF-006 component tests",
+          "kind": "artifact",
+          "description": "Three test files born in Phase 1.3: rating-slip-modal.test.tsx, start-from-previous.test.tsx, start-from-previous-modal.test.tsx. Assert DTO shape from Phase 1.1/1.2B against component renders.",
+          "stateful": false,
+          "system_of_record": "components/rating-slip-modal/__tests__/ and components/player-sessions/__tests__/",
+          "fields_hint": []
+        }
+      ],
+      "boundaries": [
+        "No service layer changes — Phase 1.2B complete",
+        "No API / OpenAPI changes — Phase 1.2B-C complete",
+        "No lint rule authoring — Phase 1.4",
+        "No Playwright DOM assertion suite — Phase 1.4",
+        "hold_percent never FinancialValue (DEF-NEVER)",
+        "average_bet, policy thresholds, loyalty points not wrapped (WAVE-1-CLASSIFICATION-RULES §6)",
+        "lib/format.ts exported helpers unchanged — used internally by <FinancialValue>",
+        "Legacy shift-dashboard (components/shift-dashboard/) — dead code, no action",
+        "shift-dashboard-v2 (app/review/shift-dashboard-v2/) — dead code, no action"
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "Shared financial display component births",
+          "description": "Birth FinancialValue.tsx, AttributionRatio.tsx, CompletenessBadge.tsx in components/financial/. Each component consumes types/financial.ts types. FinancialValue renders value + type badge + completeness indicator with SRC §L2 visibility rule enforced structurally.",
+          "traces_to_loop_step": "1, 3",
+          "change_class": "Presentation (with semantic alignment)",
+          "output": "Shared rendering primitives available for all surface migrations"
+        },
+        {
+          "id": "CAP-1A",
+          "name": "FinancialValue props contract freeze",
+          "description": "Freeze the <FinancialValue> props contract before rollout. Allowed combinations: one authority class per render; unknown completeness must render explicitly; compliance cannot be accepted in combined/mixed variants; mixed actual/observed/estimated displays must declare degraded display authority and not hide contributing authorities.",
+          "traces_to_loop_step": "2",
+          "change_class": "Presentation (with semantic alignment)",
+          "output": "Phase 1.4 lint targets a stable component API and the migration does not rely on drifting manual conventions"
+        },
+        {
+          "id": "CAP-2",
+          "name": "Shift dashboard v3 migration",
+          "description": "shift-dashboard-v3 migration — secondary-kpi-stack and metrics-table unlabeled entries receive labels; all v3 currency renders route through <FinancialValue>. Legacy shift-dashboard (components/shift-dashboard/) and shift-dashboard-v2 (app/review/shift-dashboard-v2/) are confirmed dead code; excluded from scope.",
+          "traces_to_loop_step": "4",
+          "change_class": "Presentation (with semantic alignment)",
+          "output": "shift-dashboard-v3 surface family fully labeled; dead code excluded from scope"
+        },
+        {
+          "id": "CAP-3",
+          "name": "Pit, table, and floor-oversight surface migration",
+          "description": "analytics-panel Handle→Estimated Drop + wrap; closed-sessions-panel wrap; rundown-summary-panel fills/credits/drop/win-loss with Pattern B for derived; floor-oversight Coverage quality→Attribution Ratio + <AttributionRatio>; pit-map table-card session totals wrapped.",
+          "traces_to_loop_step": "5",
+          "change_class": "Presentation (with semantic alignment)",
+          "output": "Pit panels, table rundown, floor oversight, and pit map surfaces labeled"
+        },
+        {
+          "id": "CAP-4",
+          "name": "Player surfaces migration",
+          "description": "player-360 summary-band: theoEstimate→envelope with type 'estimated', completeness.status 'unknown', 'Not computed' badge (Q-A7). filter-tile-stack currency wrapped. start-from-previous total_buy_in/cash_out/net wrapped with Pattern B for net.",
+          "traces_to_loop_step": "5",
+          "change_class": "Presentation (with semantic alignment)",
+          "output": "Player 360 and player sessions surfaces labeled; Q-A7 Theo rendering resolved"
+        },
+        {
+          "id": "CAP-5",
+          "name": "Operator transaction surfaces migration",
+          "description": "cashier amount-display + cash-out-form committed amounts wrapped; pre-commit form input labeled Draft. rating-slip buy-in-threshold-indicator callers pass typed envelope. loyalty comp-confirm-panel + entitlement-confirm-panel face value cents wrapped as actual.",
+          "traces_to_loop_step": "5",
+          "change_class": "Presentation (with semantic alignment)",
+          "output": "Cashier, rating-slip, and loyalty transaction surfaces labeled"
+        },
+        {
+          "id": "CAP-6",
+          "name": "Compliance and monitoring surfaces migration",
+          "description": "MTL gaming-day-summary, compliance-dashboard, entry-badge, agg-badge: existing MTL labels formalized under <FinancialValue type=\"compliance\">. admin-alerts alert-detail-card: existing Observed labels formalized under <FinancialValue type=\"observed\">.",
+          "traces_to_loop_step": "6",
+          "change_class": "Presentation (with semantic alignment)",
+          "output": "MTL and admin-alerts surfaces labeled; compliance authority never merged with others"
+        },
+        {
+          "id": "CAP-7",
+          "name": "DEF-006 component test births",
+          "description": "Birth rating-slip-modal.test.tsx, start-from-previous.test.tsx, start-from-previous-modal.test.tsx. Assert integer-cents FinancialValue shape on DTO fields changed in Phases 1.1/1.2B. Test dirs absent from Phase 1.1; Phase 1.3 birth obligation.",
+          "traces_to_loop_step": "7",
+          "change_class": "Presentation",
+          "output": "DEF-006 closed; Phase 1.1/1.2B DTO shape changes have component-level test coverage"
+        },
+        {
+          "id": "CAP-8",
+          "name": "Dev-server walkthrough, semantic spot-checks, lead-architect sign-off, quality gates",
+          "description": "Run dev server; walk every financial surface — no bare numbers, no forbidden labels, Pattern A split where required, Compliance never merged. Enforce semantic spot-check matrix: actual-only stays Actual; mixed Actual + Estimated degrades to Estimated; Compliance remains isolated; unknown completeness renders explicitly. Validate at least one surface per authority class against source-of-truth data as a sentinel correctness check. Lead-architect sign-off on all labeled surfaces. Run npm run type-check + npm run lint + npm run build.",
+          "traces_to_loop_step": "8, 9, 10",
+          "change_class": "Presentation (with semantic alignment)",
+          "output": "Phase 1.3 exit gate met with sentinel semantic validation; Wave 1 UI criterion satisfied"
+        }
+      ]
+    },
+    "where": {
+      "primary_surface": "All PT-2 UI financial surfaces — see scope_guardrail.coverage_mode.surfaces for the complete concrete list",
+      "surfaces": [
+        {
+          "id": "SURF-1",
+          "name": "components/financial/ (new)",
+          "bounded_context": "financial-display",
+          "change_type": "birth — 3 shared components"
+        },
+        {
+          "id": "SURF-2",
+          "name": "components/shift-dashboard-v3/**",
+          "bounded_context": "shift-intelligence",
+          "change_type": "migration — formalize existing badges"
+        },
+        {
+          "id": "SURF-3",
+          "name": "components/pit-panels/**",
+          "bounded_context": "table-context",
+          "change_type": "migration — Handle violation fix"
+        },
+        {
+          "id": "SURF-4",
+          "name": "components/table/rundown-summary-panel.tsx",
+          "bounded_context": "table-context",
+          "change_type": "migration — Pattern B for derived"
+        },
+        {
+          "id": "SURF-5",
+          "name": "components/player-360/**",
+          "bounded_context": "player-financial",
+          "change_type": "migration — Theo Q-A7 fix"
+        },
+        {
+          "id": "SURF-6",
+          "name": "components/player-sessions/start-from-previous.tsx",
+          "bounded_context": "player-sessions",
+          "change_type": "migration"
+        },
+        {
+          "id": "SURF-7",
+          "name": "components/cashier/**",
+          "bounded_context": "player-sessions",
+          "change_type": "migration — Draft badge for pre-commit"
+        },
+        {
+          "id": "SURF-8",
+          "name": "components/rating-slip/buy-in-threshold-indicator.tsx",
+          "bounded_context": "rating-slip",
+          "change_type": "migration — caller passes typed envelope"
+        },
+        {
+          "id": "SURF-9",
+          "name": "app/review/pit-map/components/table-card.tsx",
+          "bounded_context": "table-context",
+          "change_type": "migration"
+        },
+        {
+          "id": "SURF-10",
+          "name": "app/(landing)/floor-oversight/page.tsx",
+          "bounded_context": "player-financial",
+          "change_type": "migration — Coverage quality violation fix"
+        },
+        {
+          "id": "SURF-11",
+          "name": "components/mtl/**",
+          "bounded_context": "mtl",
+          "change_type": "migration — formalize compliance badges"
+        },
+        {
+          "id": "SURF-12",
+          "name": "components/admin-alerts/alert-detail-card.tsx",
+          "bounded_context": "shift-intelligence",
+          "change_type": "migration — formalize observed labels"
+        },
+        {
+          "id": "SURF-13",
+          "name": "components/loyalty/**",
+          "bounded_context": "loyalty",
+          "change_type": "migration — face value cents only; points not wrapped"
+        },
+        {
+          "id": "SURF-14",
+          "name": "DEF-006 test births (3 files)",
+          "bounded_context": "rating-slip + player-sessions",
+          "change_type": "birth"
+        }
+      ],
+      "bounded_contexts": [
+        "financial-display (new shared components)",
+        "shift-intelligence (shift-dashboard-v3, admin-alerts)",
+        "table-context (pit-panels, rundown, pit-map)",
+        "player-financial (player-360, floor-oversight)",
+        "player-sessions (start-from-previous, cashier)",
+        "rating-slip (buy-in-threshold-indicator, modal tests)",
+        "mtl (compliance display)",
+        "loyalty (comp/entitlement face value)"
+      ]
+    },
+    "who": {
+      "primary_actor": "Pit boss / floor supervisor",
+      "actors": [
+        {
+          "id": "ACTOR-1",
+          "name": "Pit boss / floor supervisor",
+          "role": "Views financial data across PT-2 surfaces during shift. Needs visible authority labels to assess confidence in displayed values without consulting external documentation."
+        },
+        {
+          "id": "ACTOR-2",
+          "name": "Frontend developer",
+          "role": "Migrates surface files; births components; births DEF-006 tests; runs dev-server walkthrough."
+        },
+        {
+          "id": "ACTOR-3",
+          "name": "Lead architect",
+          "role": "Manual walkthrough sign-off on all labeled financial surfaces."
+        }
+      ]
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "id": "TRIG-1",
+          "description": "Phase 1.2B exit gate passed (all sub-phases closed, commits ad6d1748 / e73879f4, 2026-05-03): service output is integer-cents FinancialValue; API contract stable; BRIDGE-001 retired. UI is the last unlabeled boundary.",
+          "precondition": "Phase 1.2B complete"
+        },
+        {
+          "id": "TRIG-2",
+          "description": "Wave 1 exit criterion 1 ('SRC envelope present on every production financial surface — API + UI') and criterion 5 ('Attribution Ratio renders correctly') cannot be met without UI surface migration.",
+          "precondition": "Wave 1 sign-off blocked on UI layer"
+        },
+        {
+          "id": "TRIG-3",
+          "description": "DEF-006 component test births are a Phase 1.3 obligation: test dirs absent from Phase 1.1; DTO shape stabilized in Phase 1.2B.",
+          "precondition": "DEF-006 open in deferred_register"
+        }
+      ],
+      "lifecycle_events": [
+        "FinancialValue.tsx component born",
+        "All 11 in-scope surface families migrated to <FinancialValue>",
+        "Forbidden labels removed from production UI",
+        "DEF-006 component tests born and passing",
+        "Lead-architect manual surface walkthrough sign-off",
+        "Quality gates pass (type-check, lint, build)",
+        "Phase 1.3 exit gate met — Phase 1.4 entry unblocked"
+      ],
+      "timing_constraints": [
+        "Must complete before Phase 1.4 can begin (lint rules require stable component API)",
+        "Must complete before Wave 1 sign-off criterion 1 and 5 can be checked"
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "statement": "Every rendered currency value must carry a visible authority label (actual | estimated | observed | compliance) at first glance — not tooltip-only (SRC §L2). FinancialValue.tsx enforces this structurally.",
+          "severity": "hard",
+          "traces_to_loop_step": "1",
+          "traces_to_capability": "CAP-1"
+        },
+        {
+          "id": "RULE-2",
+          "statement": "Forbidden labels must not appear in production UI: Handle (→ Estimated Drop), Coverage quality (→ Attribution Ratio), Theo: 0 (→ unknown envelope + Not computed badge). See WAVE-1-FORBIDDEN-LABELS §2.A–E.",
+          "severity": "hard",
+          "traces_to_loop_step": "4, 5",
+          "traces_to_capability": "CAP-2, CAP-3, CAP-4"
+        },
+        {
+          "id": "RULE-3",
+          "statement": "Pattern A split display (SRC §8) must be applied wherever rated (actual) and unrated (estimated) values appear together. Mixed-class aggregates degrade to lowest authority present (D5: Actual > Observed > Estimated).",
+          "severity": "hard",
+          "traces_to_loop_step": "5, 6, 8",
+          "traces_to_capability": "CAP-3, CAP-4, CAP-5, CAP-6"
+        },
+        {
+          "id": "RULE-4",
+          "statement": "Compliance authority (compliance) must never be merged with actual, estimated, or observed in a single aggregate display. MTL surfaces must hold compliance amounts in their own component.",
+          "severity": "hard",
+          "traces_to_loop_step": "6, 8",
+          "traces_to_capability": "CAP-6"
+        },
+        {
+          "id": "RULE-5",
+          "statement": "hold_percent is never wrapped as FinancialValue. It is a dimensionless ratio — bare number. DEF-NEVER hard invariant survives all phases.",
+          "severity": "hard",
+          "traces_to_loop_step": "all",
+          "traces_to_capability": "all"
+        },
+        {
+          "id": "RULE-6",
+          "statement": "average_bet, policy thresholds (min_bet, max_bet, watchlistFloor, ctrThreshold), loyalty points, segment average_bet are not wrapped as FinancialValue per WAVE-1-CLASSIFICATION-RULES §6. Operator inputs remain bare numbers; points are a separate unit system.",
+          "severity": "hard",
+          "traces_to_loop_step": "all",
+          "traces_to_capability": "all"
+        },
+        {
+          "id": "RULE-7",
+          "statement": "FinancialValue.value is always integer cents at the service boundary. UI components must use formatCents (not formatDollars) for rendering. DEF-004 already migrated start-from-previous.tsx in Phase 1.2B-B — Phase 1.3 must not reintroduce formatDollars on FinancialValue fields.",
+          "severity": "hard",
+          "traces_to_loop_step": "1, 5, 6",
+          "traces_to_capability": "CAP-1, CAP-3, CAP-4, CAP-5, CAP-6"
+        },
+        {
+          "id": "RULE-8",
+          "statement": "DEF-006 component tests must be born before Phase 1.3 closes. They assert integer-cents FinancialValue shape on fields changed in Phases 1.1/1.2B.",
+          "severity": "hard",
+          "traces_to_loop_step": "7",
+          "traces_to_capability": "CAP-7"
+        },
+        {
+          "id": "RULE-9",
+          "statement": "The <FinancialValue> props contract must be frozen before rollout. Allowed combinations are documented before surface migration so Phase 1.4 lint has a stable target and Phase 1.3 does not introduce drift.",
+          "severity": "hard",
+          "traces_to_loop_step": "2",
+          "traces_to_capability": "CAP-1A"
+        },
+        {
+          "id": "RULE-10",
+          "statement": "Semantic spot-check matrix must pass during walkthrough: actual-only stays Actual; mixed Actual + Estimated degrades to Estimated; Compliance is never merged; unknown completeness renders explicitly.",
+          "severity": "hard",
+          "traces_to_loop_step": "8",
+          "traces_to_capability": "CAP-8"
+        },
+        {
+          "id": "RULE-11",
+          "statement": "For each authority class (actual, estimated, observed, compliance), at least one migrated surface must be validated against source-of-truth data as a sentinel correctness check. This is not full semantic coverage.",
+          "severity": "hard",
+          "traces_to_loop_step": "9",
+          "traces_to_capability": "CAP-8"
+        }
+      ],
+      "invariants": [
+        "hold_percent is never FinancialValue in any UI surface (DEF-NEVER)",
+        "FinancialValue.value is integer cents — never dollar-float (BRIDGE-001 retired Phase 1.2B-A)",
+        "Compliance authority is never merged with actual/estimated/observed in a single aggregate (SRC §C1)",
+        "Authority labels are visible at first glance — not tooltip-only (SRC §L2)",
+        "Completeness status is always declared (complete | partial | unknown) — never omitted, never guessed complete (SRC §L1)",
+        "No service or API logic changes in this phase — FinancialValue envelope shape is stable from Phase 1.2B"
+      ],
+      "decision_notes": [
+        "Legacy shift-dashboard (components/shift-dashboard/) excluded: confirmed dead code — zero UI imports (grep verified 2026-05-03); production route app/(protected)/shift-dashboard/page.tsx imports ShiftDashboardV3 exclusively.",
+        "shift-dashboard-v2 (app/review/shift-dashboard-v2/**) excluded: dev preview, dead code per owner confirmation (2026-05-03).",
+        "Pre-commit form inputs (cashier cash-out-form, rating slip buy-in inputs) are Draft-labeled, not FinancialValue-wrapped, per WAVE-1-CLASSIFICATION-RULES §6.1. 'Draft' badge is the correct UI treatment until the input is committed.",
+        "buy-in-threshold-indicator.tsx consumer pattern: the component is passed currency as a prop; Phase 1.3 ensures callers pass a typed FinancialValue envelope rather than a bare number. The component reads .type and .source for display.",
+        "Phase 1.3 defines the law but not the police: semantic constraints are enforced through component API discipline and manual walkthrough now; Phase 1.4 must encode them in lint/tests to prevent regression."
+      ]
+    }
+  },
+
+  "containment_loop": [
+    {
+      "step": 1,
+      "actor": "Developer",
+      "action": "Birth components/financial/FinancialValue.tsx consuming types/financial.ts FinancialValue type — renders value, type badge, source, and completeness with SRC §L2 visibility rule enforced structurally",
+      "system_response": "Shared rendering primitive exists; all currency renders in PT-2 have a conformant path",
+      "capability": "CAP-1"
+    },
+    {
+      "step": 2,
+      "actor": "Developer",
+      "action": "Freeze the <FinancialValue> props contract before surface rollout: integer-cents value or documented non-value state for unknown completeness; exactly one authority class; visible source affordance; explicit completeness; no compliance in mixed variants; degraded display authority for mixed actual/observed/estimated displays",
+      "system_response": "Phase 1.4 lint targets a frozen component API instead of drift introduced during migration",
+      "capability": "CAP-1A"
+    },
+    {
+      "step": 3,
+      "actor": "Developer",
+      "action": "Birth components/financial/AttributionRatio.tsx (SRC §K1 rename from Coverage) and components/financial/CompletenessBadge.tsx",
+      "system_response": "Labeled KPI and completeness primitives exist",
+      "capability": "CAP-1"
+    },
+    {
+      "step": 4,
+      "actor": "Developer",
+      "action": "Migrate shift-dashboard-v3 surfaces (left-rail, center/metrics-table, right-rail/telemetry-rail-panel) to <FinancialValue> — preserve existing semantic badges; label secondary-kpi-stack:74,80 and metrics-table:100–103 unlabeled entries",
+      "system_response": "shift-dashboard-v3 family fully conformant; legacy shift-dashboard and shift-dashboard-v2 are confirmed dead code requiring no action",
+      "capability": "CAP-2"
+    },
+    {
+      "step": 5,
+      "actor": "Developer",
+      "action": "Migrate all named pit/table/player/transaction surface families: analytics-panel (Handle→Estimated Drop), closed-sessions-panel, rundown-summary-panel (Pattern B for derived win/loss), player-360 summary-band (Theo→unknown + Not computed badge), filter-tile-stack, start-from-previous, cashier, rating-slip buy-in-threshold-indicator, pit-map table-card, floor-oversight (Coverage quality→Attribution Ratio)",
+      "system_response": "All pit, table, player, cashier, rating-slip, pit-map, and floor-oversight surface families labeled; forbidden labels removed",
+      "capability": "CAP-3, CAP-4, CAP-5"
+    },
+    {
+      "step": 6,
+      "actor": "Developer",
+      "action": "Migrate compliance and monitoring surfaces: MTL (gaming-day-summary, compliance-dashboard, entry-badge, agg-badge) under <FinancialValue type=\"compliance\">; admin-alerts (alert-detail-card) under <FinancialValue type=\"observed\">; loyalty (comp-confirm-panel, entitlement-confirm-panel) face value cents under <FinancialValue type=\"actual\">",
+      "system_response": "MTL, admin-alerts, and loyalty surfaces labeled; compliance authority never merged with others",
+      "capability": "CAP-6"
+    },
+    {
+      "step": 7,
+      "actor": "Developer",
+      "action": "Birth DEF-006 component tests: components/rating-slip-modal/__tests__/rating-slip-modal.test.tsx, components/player-sessions/__tests__/start-from-previous.test.tsx and start-from-previous-modal.test.tsx — assert integer-cents FinancialValue shape on DTO fields changed in Phases 1.1/1.2B",
+      "system_response": "DEF-006 closed; component-level test coverage for Phase 1.1/1.2B DTO shape changes",
+      "capability": "CAP-7"
+    },
+    {
+      "step": 8,
+      "actor": "Developer + Lead architect",
+      "action": "Run dev server; walk every financial surface — verify no bare numbers, no forbidden labels, Pattern A split where required, Compliance isolated, and semantic spot-check matrix passes: actual-only stays Actual; mixed Actual + Estimated degrades to Estimated; Compliance remains isolated; unknown completeness renders explicitly",
+      "system_response": "Operator-facing visual verification complete; semantic spot-check matrix passes; lead-architect manual walkthrough sign-off",
+      "capability": "CAP-8"
+    },
+    {
+      "step": 9,
+      "actor": "Developer + Lead architect",
+      "action": "Validate at least one surface for each authority class (actual, estimated, observed, compliance) against source-of-truth data, confirming rendered label and value are correct, not merely present",
+      "system_response": "Sentinel correctness gate passes without overstating full semantic coverage",
+      "capability": "CAP-8"
+    },
+    {
+      "step": 10,
+      "actor": "Developer",
+      "action": "Run npm run type-check, npm run lint, and npm run build",
+      "system_response": "Phase 1.3 quality gates pass; Wave 1 UI criterion satisfied; Phase 1.4 entry unblocked",
+      "capability": "CAP-8"
+    }
+  ],
+
+  "success_outcomes": [
+    {
+      "id": "OUT-1",
+      "description": "FinancialValue.tsx, AttributionRatio.tsx, CompletenessBadge.tsx exist as shared rendering primitives in components/financial/",
+      "traces_to_capability": "CAP-1"
+    },
+    {
+      "id": "OUT-2",
+      "description": "<FinancialValue> props contract is frozen before rollout and documents allowed authority/completeness combinations for Phase 1.4 lint alignment",
+      "traces_to_capability": "CAP-1A"
+    },
+    {
+      "id": "OUT-3",
+      "description": "Every currency value rendered in PT-2 UI carries a visible authority label (actual | estimated | observed | compliance) — visible at first glance, not tooltip-only",
+      "traces_to_capability": "CAP-2, CAP-3, CAP-4, CAP-5, CAP-6"
+    },
+    {
+      "id": "OUT-4",
+      "description": "Forbidden labels removed from production: Handle→Estimated Drop, Coverage quality→Attribution Ratio, Theo: 0→unknown envelope + Not computed badge",
+      "traces_to_capability": "CAP-2, CAP-3, CAP-4"
+    },
+    {
+      "id": "OUT-5",
+      "description": "Pattern A split display applied wherever rated + unrated appear together; mixed-authority aggregates degrade per D5; Compliance never merged",
+      "traces_to_capability": "CAP-3, CAP-4, CAP-5, CAP-6"
+    },
+    {
+      "id": "OUT-6",
+      "description": "Semantic spot-check matrix passes during walkthrough: actual-only stays Actual; mixed Actual + Estimated degrades to Estimated; Compliance is never merged; unknown completeness is explicitly rendered",
+      "traces_to_capability": "CAP-8"
+    },
+    {
+      "id": "OUT-7",
+      "description": "For each authority class (actual, estimated, observed, compliance), at least one migrated surface is validated against source-of-truth data as a sentinel correctness check, not full semantic coverage",
+      "traces_to_capability": "CAP-8"
+    },
+    {
+      "id": "OUT-8",
+      "description": "DEF-006 component tests born and passing — rating-slip-modal.test.tsx, start-from-previous.test.tsx, start-from-previous-modal.test.tsx",
+      "traces_to_capability": "CAP-7"
+    },
+    {
+      "id": "OUT-9",
+      "description": "Lead-architect manual surface walkthrough sign-off; dev-server verification clean",
+      "traces_to_capability": "CAP-8"
+    },
+    {
+      "id": "OUT-10",
+      "description": "npm run type-check, npm run lint, npm run build all exit 0",
+      "traces_to_capability": "CAP-8"
+    }
+  ],
+
+  "traceability_check": {
+    "operator_problem_to_loop_step": [
+      "Bare currency values with no authority label → steps 4–6 (surface migrations to <FinancialValue>)",
+      "Forbidden label Handle on analytics-panel → step 5",
+      "Forbidden label Coverage quality on floor-oversight → step 5",
+      "Placeholder Theo: 0 on player-360 → step 5",
+      "Component API drift risk → step 2",
+      "Semantic degradation/completeness/compliance risk → steps 8–9",
+      "Missing component tests for Phase 1.1/1.2B DTO changes → step 7",
+      "Wave 1 exit criterion 1+5 blocked → steps 8–10"
+    ],
+    "loop_step_to_capability": {
+      "1": "CAP-1",
+      "2": "CAP-1A",
+      "3": "CAP-1",
+      "4": "CAP-2",
+      "5": "CAP-3, CAP-4, CAP-5",
+      "6": "CAP-6",
+      "7": "CAP-7",
+      "8": "CAP-8",
+      "9": "CAP-8",
+      "10": "CAP-8"
+    },
+    "capability_to_outcome": {
+      "CAP-1": "OUT-1",
+      "CAP-1A": "OUT-2",
+      "CAP-2": "OUT-3, OUT-4",
+      "CAP-3": "OUT-3, OUT-4, OUT-5",
+      "CAP-4": "OUT-3, OUT-4, OUT-5",
+      "CAP-5": "OUT-3, OUT-5",
+      "CAP-6": "OUT-3, OUT-5",
+      "CAP-7": "OUT-8",
+      "CAP-8": "OUT-6, OUT-7, OUT-9, OUT-10"
+    },
+    "rule_to_loop_step": {
+      "RULE-1": [1],
+      "RULE-2": [4, 5],
+      "RULE-3": [5, 6, 8],
+      "RULE-4": [6, 8],
+      "RULE-5": "all",
+      "RULE-6": "all",
+      "RULE-7": [1, 5, 6],
+      "RULE-8": [7],
+      "RULE-9": [2],
+      "RULE-10": [8],
+      "RULE-11": [9]
+    }
+  },
+
+  "dependencies": {
+    "required_existing": [
+      "Phase 1.2B exit gate ✅ — integer-cents FinancialValue service output; BRIDGE-001 retired; API contract stable",
+      "types/financial.ts — FinancialValue, FinancialAuthority, CompletenessStatus types (Phase 1.0)",
+      "WAVE-1-SURFACE-INVENTORY.md §5.2 — enumerated surface families (Phase 1.0)",
+      "WAVE-1-FORBIDDEN-LABELS.md — denylist and replace-with mapping (Phase 1.0)",
+      "lib/format.ts — formatCents / formatDollars available for <FinancialValue> internal use"
+    ],
+    "missing_dependencies": [],
+    "assumptions": [
+      "All service fields that surface as FinancialValue in the UI are integer cents (BRIDGE-001 retired; financialValueSchema.int() enforced at service boundary)"
+    ]
+  },
+
+  "governance": {
+    "frozen_adrs": ["ADR-052", "ADR-053", "ADR-054", "ADR-055"],
+    "def_never_items": ["hold_percent FinancialValue wrapping"],
+    "classification_rules_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-CLASSIFICATION-RULES.md",
+    "forbidden_labels_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-FORBIDDEN-LABELS.md",
+    "surface_inventory_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-SURFACE-INVENTORY.md §5.2",
+    "deferred_register_items_to_close": ["DEF-006"],
+    "downstream_expansion_allowed_without_amendment": false,
+    "open_questions_allowed_at_scaffold": [],
+    "scope_authority": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-3-UI-SPLIT-DISPLAY",
+    "approval": "Vladimir Ivanov / 2026-05-03"
+  }
+}

@@ -4,10 +4,27 @@
  * Pattern A (Contract-First): Manual interfaces for cross-context consumption.
  * Financial transactions are append-only ledger entries consumed by multiple services.
  *
+ * Financial envelope wrapping (PRD-070 WS2):
+ *   - `VisitCashInWithAdjustmentsDTO.{original_total,adjustment_total,net_total}`
+ *     are wrapped in `FinancialValue` per WAVE-1-CLASSIFICATION-RULES §3.1
+ *     (PFT visit aggregate).
+ *   - `FinancialTransactionDTO.amount` and `VisitFinancialSummaryDTO.*` are
+ *     DEFERRED to Phase 1.2 — wrapping cascades into UI consumers in
+ *     `app/(dashboard)/cashier/...`, `components/cashier/`,
+ *     `hooks/mtl/use-patron-daily-total.ts`, and the WS4 modal-data route.
+ *     See inline DEFERRED annotations for specific consumer paths and
+ *     classification targets.
+ *   - Input DTOs (`CreateFinancialTxnInput.amount`,
+ *     `CreateFinancialAdjustmentInput.delta_amount`) keep bare `number` per
+ *     §6.1 carve-out (operator input).
+ *
  * @see PRD-009 Player Financial Service
+ * @see PRD-070 Financial Telemetry Wave 1 Phase 1.1
  * @see SERVICE_RESPONSIBILITY_MATRIX.md section PlayerFinancialService
  * @see EXECUTION-SPEC-PRD-009.md
  */
+
+import type { FinancialValue } from '@/types/financial';
 
 // === Enum Types ===
 // Note: These match the database enums defined in migration 20251211015115_prd009_player_financial_service.sql
@@ -63,7 +80,18 @@ export interface FinancialTransactionDTO {
   visit_id: string;
   /** Optional: Associated rating slip */
   rating_slip_id: string | null;
-  /** Transaction amount in cents (1 dollar = 100). Can be negative for adjustments. */
+  /**
+   * Transaction amount in cents (1 dollar = 100). Can be negative for adjustments.
+   *
+   * DEFERRED (PRD-070 WS2 → Phase 1.2): wrapping in `FinancialValue` cascades
+   * into UI consumers that read `.amount` as a bare number:
+   *   - `components/cashier/void-confirmation-dialog.tsx:117`
+   *   - `app/(dashboard)/cashier/patron-transactions/patron-transactions-view.tsx:236`
+   * Phase 1.1 G1 deferral — requires paired direct-consumer workstream.
+   * Classification target when wrapped (CLASSIFICATION-RULES §3.1):
+   *   type `'actual'`, source `"PFT"` (or `"PFT.adjustment"` when
+   *   `txn_kind === 'adjustment'`), completeness `'complete'` per row.
+   */
   amount: number;
   /** Transaction direction ('in' or 'out') */
   direction: FinancialDirection;
@@ -102,6 +130,12 @@ export interface FinancialTransactionDTO {
  * Visit financial summary (aggregated totals).
  *
  * Computed view of all transactions for a visit.
+ *
+ * Currency fields are wrapped as `FinancialValue` per PRD-080 WS2
+ * (CLASSIFICATION-RULES §3.1 PFT visit aggregate):
+ *   type `'actual'`, source `"PFT"`, completeness `'unknown'` at service layer
+ *   (visit lifecycle not available at mapper level — BFF routes with visit context
+ *   may project completeness contextually per PRD-080 §4B).
  */
 // eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Aggregated response type
 export interface VisitFinancialSummaryDTO {
@@ -109,12 +143,12 @@ export interface VisitFinancialSummaryDTO {
   visit_id: string;
   /** Casino scope */
   casino_id: string;
-  /** Total amount IN in cents (buy-ins, markers issued) */
-  total_in: number;
-  /** Total amount OUT in cents (cashouts, marker repayments) */
-  total_out: number;
-  /** Net amount in cents (total_in - total_out) */
-  net_amount: number;
+  /** Total amount IN. Envelope: actual / PFT / unknown (see type doc). */
+  total_in: FinancialValue;
+  /** Total amount OUT. Envelope: actual / PFT / unknown. */
+  total_out: FinancialValue;
+  /** Net amount (total_in − total_out). Envelope: actual / PFT / unknown. */
+  net_amount: FinancialValue;
   /** Number of transactions */
   event_count: number;
   /** First transaction timestamp */
@@ -138,7 +172,12 @@ export interface CreateFinancialTxnInput {
   player_id: string;
   /** Visit ID (required - NOT NULL) */
   visit_id: string;
-  /** Transaction amount in cents (positive number) */
+  /**
+   * Transaction amount in cents (positive number).
+   * Carve-out (WAVE-1-CLASSIFICATION-RULES §6.1): operator input — bare number.
+   * The committed transaction is emitted via `FinancialTransactionDTO.amount`
+   * (which is itself a Phase 1.2 deferral — see that DTO's annotation).
+   */
   amount: number;
   /** Transaction direction */
   direction: FinancialDirection;
@@ -237,6 +276,7 @@ export interface CreateFinancialAdjustmentInput {
   visit_id: string;
   /**
    * Delta amount in cents (signed).
+   * Carve-out (WAVE-1-CLASSIFICATION-RULES §6.1): operator input — bare number.
    * - Positive: increases total (e.g., +5000 cents = +$50 if buy-in was under-reported)
    * - Negative: decreases total (e.g., -10000 cents = -$100 if buy-in was over-reported)
    */
@@ -256,15 +296,30 @@ export interface CreateFinancialAdjustmentInput {
  *
  * Provides the UX of "editable total" while preserving audit trail.
  * Shows: Original entries, adjustment total, and net total.
+ *
+ * Currency totals are wrapped in `FinancialValue` per PRD-070 WS2
+ * (CLASSIFICATION-RULES §3.1 PFT visit aggregates). Visit-lifecycle is not
+ * resolvable at this aggregation layer, so completeness is emitted as
+ * `'unknown'` — consumers that know the visit state may re-wrap with
+ * lifecycle-aware completeness.
  */
 // eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Computed aggregate DTO, not a table projection
 export type VisitCashInWithAdjustmentsDTO = {
-  /** Sum of original 'in' transactions in cents (before adjustments) */
-  original_total: number;
-  /** Sum of all adjustment transactions in cents (can be negative) */
-  adjustment_total: number;
-  /** Net total in cents (original_total + adjustment_total) */
-  net_total: number;
+  /**
+   * Sum of original 'in' transactions in cents (before adjustments).
+   * Envelope: `actual` / `"PFT"` / completeness based on visit-lifecycle (see type doc).
+   */
+  original_total: FinancialValue;
+  /**
+   * Sum of all adjustment transactions in cents (can be negative).
+   * Envelope: `actual` / `"PFT.adjustment"` / completeness based on visit-lifecycle.
+   */
+  adjustment_total: FinancialValue;
+  /**
+   * Net total in cents (original_total.value + adjustment_total.value).
+   * Envelope: `actual` / `"PFT"` / completeness inherits from inputs (worst-of).
+   */
+  net_total: FinancialValue;
   /** Number of adjustment transactions */
   adjustment_count: number;
 };

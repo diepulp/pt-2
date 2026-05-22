@@ -163,19 +163,19 @@ export function ComplianceSummaryPdf({ data }: ComplianceSummaryPdfProps) {
                   {name}
                 </Text>
                 <Text style={[styles.tableCellRight, { width: COL.totalIn }]}>
-                  {formatCents(patron.totalInCents)}
+                  {formatCents(patron.totalInCents.value)}
                 </Text>
                 <Text style={[styles.tableCellRight, { width: COL.countIn }]}>
                   {formatNumber(patron.countIn)}
                 </Text>
                 <Text style={[styles.tableCellRight, { width: COL.totalOut }]}>
-                  {formatCents(patron.totalOutCents)}
+                  {formatCents(patron.totalOutCents.value)}
                 </Text>
                 <Text style={[styles.tableCellRight, { width: COL.countOut }]}>
                   {formatNumber(patron.countOut)}
                 </Text>
                 <Text style={[styles.tableCellRight, { width: COL.volume }]}>
-                  {formatCents(patron.totalVolumeCents)}
+                  {formatCents(patron.totalVolumeCents.value)}
                 </Text>
                 <Text
                   style={[

@@ -76,14 +76,14 @@ export async function createMtlEntry(
 
 /**
  * Fetches a paginated list of MTL entries with optional filters.
+ * casino_id is NOT serialized to the URL — derived from RLS context server-side (DEC-1).
  *
- * GET /api/v1/mtl/entries?casino_id=X&patron_uuid=Y&gaming_day=Z&...
+ * GET /api/v1/mtl/entries?patron_uuid=Y&gaming_day=Z&...
  */
 export async function listMtlEntries(
-  filters: MtlEntryFilters,
+  filters: Omit<MtlEntryFilters, 'casino_id'>,
 ): Promise<{ items: MtlEntryDTO[]; next_cursor: string | null }> {
   const {
-    casino_id,
     patron_uuid,
     gaming_day,
     min_amount,
@@ -95,7 +95,6 @@ export async function listMtlEntries(
   } = filters;
 
   const params = buildParams({
-    casino_id,
     patron_uuid,
     gaming_day,
     min_amount,
@@ -162,15 +161,14 @@ export async function getMtlAuditNotes(
 
 /**
  * Fetches the Gaming Day Summary - the COMPLIANCE AUTHORITY surface.
- * Aggregates per patron + gaming_day with separate in/out totals.
+ * casino_id is NOT serialized to the URL — derived from RLS context server-side (DEC-1).
  *
- * GET /api/v1/mtl/gaming-day-summary?casino_id=X&gaming_day=Y&...
+ * GET /api/v1/mtl/gaming-day-summary?gaming_day=Y&...
  */
 export async function getGamingDaySummary(
-  filters: MtlGamingDaySummaryFilters,
+  filters: Omit<MtlGamingDaySummaryFilters, 'casino_id'>,
 ): Promise<{ items: MtlGamingDaySummaryDTO[]; next_cursor: string | null }> {
   const {
-    casino_id,
     gaming_day,
     patron_uuid,
     agg_badge_in,
@@ -182,7 +180,6 @@ export async function getGamingDaySummary(
   } = filters;
 
   const params = buildParams({
-    casino_id,
     gaming_day,
     patron_uuid,
     agg_badge_in,

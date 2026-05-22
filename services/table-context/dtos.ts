@@ -4,7 +4,42 @@
  * Pattern A (Contract-First): Manual interfaces with domain contracts.
  * All types derived from Database types where applicable.
  *
+ * Financial envelope wrapping (PRD-070 WS2 — BLANKET DEFERRAL):
+ * All currency fields on this service's DTOs (every field suffixed `_cents`,
+ * plus `cash_out_observed_estimate_total` and `cash_out_observed_confirmed_total`
+ * on the CashObs*Rollup DTOs) are DEFERRED to Phase 1.2. Wrapping cascades into
+ * heavy UI consumption across `components/cashier/*`, `components/shift-dashboard-v3/*`,
+ * and `components/pit-panels/*`. Phase 1.1 G1 deferral per PRD-070 §2.3 —
+ * requires paired direct-consumer workstreams. The Phase 1.2 Deferral Register
+ * MUST be amended (WS9 obligation) to include the table-context fields below
+ * with their classification targets.
+ *
+ * Classification targets per WAVE-1-CLASSIFICATION-RULES §3.5:
+ *   - `TableFillDTO.amount_cents`             → `estimated` / `"table_session.fill.requested"`  / `'complete'`
+ *   - `TableFillDTO.confirmed_amount_cents`   → `estimated` / `"table_session.fill.confirmed"`  / `'complete'` if confirmed, `'unknown'` if null
+ *   - `TableCreditDTO.amount_cents`           → `estimated` / `"table_session.credit.requested"`/ `'complete'`
+ *   - `TableCreditDTO.confirmed_amount_cents` → `estimated` / `"table_session.credit.confirmed"`/ `'complete'` if confirmed, `'unknown'` if null
+ *   - `TableSessionDTO.credits_total_cents`   → `estimated` / `"table_session.credits_total"`  / `'partial'` while OPEN, `'complete'` when CLOSED
+ *   - `TableSessionDTO.fills_total_cents`     → `estimated` / `"table_session.fills_total"`    / session-lifecycle
+ *   - `TableSessionDTO.drop_total_cents`      → `estimated` / `"table_session.drop"`           / `'complete'` after post, `'unknown'` before
+ *   - `TableSessionDTO.need_total_cents`      → `estimated` / `"table_session.need"`           / session-lifecycle (derived, Pattern B)
+ *   - `TableRundownDTO.fills_total_cents` / `credits_total_cents` / `drop_total_cents` / `table_win_cents` → same as TableSession, `table_win_cents` is `"table_session.inventory_win"` (derived, worst-of inputs; `'unknown'` when `drop_posted_at` is NULL)
+ *   - `CashObs*RollupDTO.cash_out_observed_estimate_total`  → `estimated` / `"pit_cash_observation.extrapolated"` / `'partial'` if sampling gaps, `'unknown'` if coverage unknown
+ *   - `CashObs*RollupDTO.cash_out_observed_confirmed_total` → `observed`  / `"pit_cash_observation.confirmed"`     / `'partial'` in rollup if any row missing
+ *   - `TableInventorySnapshotDTO.discrepancy_cents` → `estimated` / `"table_inventory_snapshot.discrepancy"` / worst of (expected, observed)
+ *
+ * Carve-outs (§6.2, bare number):
+ *   - Operational bounds: `min_bet`, `max_bet`, hold percentages, target occupancy
+ *   - Operator inputs: `LogInventorySnapshotInput.discrepancyCents`,
+ *     `RequestTableFillInput.amountCents`, `RequestTableCreditInput.amountCents`,
+ *     and any RPC parameter shape.
+ *
+ * If the table-context cash-observation path still rounds dollars at the mapper
+ * boundary when these deferrals lift, use `dollarsToCents` from
+ * `@/lib/financial/rounding` — do NOT re-implement `Math.round(... * 100)`.
+ *
  * @see PRD-007 Table Context Service
+ * @see PRD-070 Financial Telemetry Wave 1 Phase 1.1
  * @see SERVICE_RESPONSIBILITY_MATRIX.md section 298-333
  */
 

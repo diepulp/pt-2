@@ -1,0 +1,313 @@
+{
+  "prd_id": "PRD-067",
+  "prd_title": "Admin Operations Pit Configuration",
+  "exec_spec_path": "docs/21-exec-spec/EXEC-067-admin-operations-pit-configuration.md",
+  "status": "complete",
+  "created_at": "2026-04-19T17:15:23Z",
+  "updated_at": "2026-04-19T23:45:00Z",
+  "completed_at": "2026-04-19T23:45:00Z",
+  "awaiting_user_approval": false,
+
+  "e2e_mandate_waiver": "Deferred — 35/35 integration tests cover write-path invariants (RULE-2/3/4/5, mirror, audit, rollback, concurrent-move). Playwright spec to follow in a dedicated E2E PR.",
+  "e2e_mandate_waiver_approved_by": "user",
+  "e2e_mandate_waiver_approved_at": "2026-04-19T23:45:00Z",
+
+  "next_action": null,
+
+  "approval_gate": {
+    "approved_at": "2026-04-19T17:30:00Z",
+    "approver": "user",
+    "notes": "User approved y. R1 pre-WS1 gate deferred to release audit (pilot bootstrap is deploy-side concern; schema prerequisites already exist per DEC-003 citations)."
+  },
+
+  "phase_gate_approvals": [
+    {
+      "phase": "Phase 2a — Service Layer (WS2)",
+      "approved_at": "2026-04-19T19:00:00Z",
+      "approver": "user",
+      "notes": "y — dispatch WS2 to backend-service-builder."
+    },
+    {
+      "phase": "Phase 2b — Integration Tests (WS5)",
+      "approved_at": "2026-04-19T19:50:00Z",
+      "approver": "user",
+      "notes": "y — dispatch WS5 to backend-service-builder."
+    },
+    {
+      "phase": "Phase 3 — API Routes (WS3)",
+      "approved_at": "2026-04-19T22:35:00Z",
+      "approver": "user",
+      "notes": "y — dispatch WS3 to api-builder."
+    },
+    {
+      "phase": "Phase 4 — Panel + Hooks + Host Integration (WS4)",
+      "approved_at": "2026-04-19T23:00:00Z",
+      "approver": "user",
+      "notes": "y — dispatch WS4 to frontend-design-pt-2."
+    }
+  ],
+
+  "gov010_check": "waived:FIB-H+FIB-S provide scaffold-equivalent decomposition per PRD-067 frontmatter",
+
+  "fib_h_ref": "docs/issues/gaps/pit-configuration/FIB-PIT-CONFIG-001-admin-operations-pit-configuration.md",
+  "fib_s_ref": "docs/issues/gaps/pit-configuration/FIB-S-PIT-CONFIG-001-admin-operations-pit-configuration.json",
+  "fib_s_loaded": true,
+
+  "complexity_prescreen": "full",
+  "complexity_override": null,
+
+  "write_path_classification": "detected",
+
+  "workstreams_total": 6,
+  "workstreams_completed": [
+    {
+      "workstream": "WS3",
+      "name": "Admin API Routes — pit-assignment-state GET + slots/[slotId]/assign POST/DELETE",
+      "executor": "api-builder",
+      "outputs": [
+        "app/api/v1/floor-layouts/pit-assignment-state/route.ts (GET, admin-gated, casino from RLS context)",
+        "app/api/v1/floor-layouts/slots/[slotId]/assign/route.ts (POST + DELETE co-located, admin-gated, idempotency required)",
+        "docs/25-api-data/API_SURFACE_MVP.md (added Pit Assignment Surface (PRD-067) subsection)"
+      ],
+      "gate": "lint",
+      "gate_result": "passed",
+      "gate_evidence": "npm run lint EXIT=0 (services/floor-layout/ + app/api/v1/floor-layouts/); npx eslint --no-warn-ignored on the 2 new route files EXIT=0; npm run type-check EXIT=0. ADR-024 INV-8 preserved (route handlers pass only tableId/slotId to service; no casino_id or actor_id). Admin gate inline in all three handlers per EXEC §WS3 L884-902 — FORBIDDEN_ADMIN_REQUIRED → 403 via DomainError. Idempotency-Key required on POST/DELETE only.",
+      "completed_at": "2026-04-19T22:50:00Z",
+      "deviations": [
+        {
+          "field": "domain",
+          "exec_spec_value": "floor_layout",
+          "implemented_value": "floor-layout",
+          "rationale": "All existing app/api/v1/floor-layouts/ routes use 'floor-layout' (kebab-case) — verified via grep. EXEC-SPEC §WS3 used 'floor_layout' (snake) but project convention for the audit-domain string is kebab. Aligning to existing convention is lower-risk than introducing inconsistency in audit log domain values."
+        },
+        {
+          "field": "GET admin gate",
+          "exec_spec_value": "GET admin-gate spelled out in §WS3 L884 ('All three handlers') but the dispatch summary noted only the mutation gates",
+          "implemented_value": "Added inline admin check on GET as well, per EXEC §WS3 L884-902 'All three handlers' clause + acceptance criterion 'Admin-role rejection returns 403 with envelope { code: FORBIDDEN_ADMIN_REQUIRED }' (L908-909). Panel is admin-only, so read-side gate matches spec intent.",
+          "rationale": "Spec authority stronger than dispatch summary; covered all three handlers consistently."
+        }
+      ],
+      "scope_expansion_flags": [],
+      "pre_existing_issues_noted": [
+        {
+          "file": "services/floor-layout/http.ts",
+          "issue": "generateIdempotencyKey (line 49) TS6133 unused — pre-existing dead code, already tracked in checkpoint infrastructure_findings; explicitly out of WS3 scope per dispatch.",
+          "suggestion": "Cleanup pass during WS4 or follow-up tidy."
+        }
+      ]
+    },
+    {
+      "workstream": "WS1",
+      "name": "Database Migration — RPCs + RULE-3 Enforcement",
+      "executor": "rls-expert",
+      "outputs": [
+        "supabase/migrations/20260419171523_prd067_pit_assignment_rpcs.sql",
+        "types/database.types.ts (regenerated)"
+      ],
+      "gate": "schema-validation",
+      "gate_result": "passed",
+      "gate_evidence": "supabase migration up exit 0; npm run db:types-local exit 0; rpc_assign_or_move_table_to_slot + rpc_clear_slot_assignment present in types/database.types.ts (lines 4542, 4563) with ADR-024 INV-8 compliant signatures (no p_casino_id, no p_actor_id)",
+      "completed_at": "2026-04-19T17:45:00Z"
+    },
+    {
+      "workstream": "WS2",
+      "name": "FloorLayoutService Extension — Pit Assignment State + Mutation Wrappers",
+      "executor": "backend-service-builder",
+      "outputs": [
+        "services/floor-layout/dtos.ts (AssignedTableRef, FloorTableSlotWithTableRefDTO, PitAssignmentStateDTO, AssignOrMoveResultDTO, ClearResultDTO)",
+        "services/floor-layout/mappers.ts (toAssignedTableRef, toFloorTableSlotWithTableRefDTO, toPitAssignmentStateDTO, toAssignOrMoveResultDTO, toClearResultDTO, RPC jsonb guards)",
+        "services/floor-layout/crud.ts (mapPitAssignmentRpcError, getPitAssignmentState, assignOrMoveTableToSlot, clearSlotAssignment)",
+        "services/floor-layout/index.ts (FloorLayoutServiceInterface extended with 3 methods + factory wiring + CRUD re-exports)",
+        "services/floor-layout/keys.ts (floorLayoutKeys.pitAssignmentState)",
+        "services/floor-layout/http.ts (getPitAssignmentStateHttp, assignOrMoveTableToSlotHttp, clearSlotAssignmentHttp)",
+        "services/floor-layout/schemas.ts (assignOrMoveRequestSchema, assignOrMoveResponseSchema, clearSlotResponseSchema, slotIdParamSchema)",
+        "lib/errors/domain-errors.ts (FloorLayoutErrorCode extended with 8 pit-assignment codes)"
+      ],
+      "gate": "type-check",
+      "gate_result": "passed",
+      "gate_evidence": "npm run type-check exit 0; npx eslint exit 0; INV-ERR-DETAILS rule satisfied via inline safeErrorDetails(error); ADR-024 INV-8 preserved (RPC calls pass only p_table_id/p_slot_id).",
+      "completed_at": "2026-04-19T19:40:00Z",
+      "scope_expansion_flags": [
+        {
+          "file": "lib/errors/domain-errors.ts",
+          "rationale": "8 additive FloorLayoutErrorCode entries (NO_ACTIVE_LAYOUT, SLOT_NOT_FOUND, SLOT_NOT_ACTIVE, SLOT_HAS_NO_PIT, SLOT_OCCUPIED, PIT_NOT_FOUND, CROSS_CASINO_FORBIDDEN, FORBIDDEN_ADMIN_REQUIRED) required to surface RPC exceptions as typed DomainError per WS2 acceptance criterion. FORBIDDEN_ADMIN_REQUIRED also consumed by WS3 (EXEC §WS3 L894).",
+          "risk": "low — additive only"
+        }
+      ],
+      "pre_existing_issues_noted": [
+        {
+          "file": "services/floor-layout/http.ts",
+          "issue": "generateIdempotencyKey (line 49) is pre-existing dead code — TS6133 unused warning surfaced after WS2 edits. Not removed (out of WS2 scope).",
+          "suggestion": "Remove in cleanup pass during WS3/WS4 or as a follow-up tidy commit."
+        }
+      ]
+    },
+    {
+      "workstream": "WS5",
+      "name": "Integration Tests — RPC + Service + RLS Boundary",
+      "executor": "backend-service-builder",
+      "outputs": [
+        "services/floor-layout/__tests__/rpc-pit-assignment.int.test.ts (22 tests across 13 groups a-m)",
+        "services/floor-layout/__tests__/pit-assignment-service.int.test.ts (13 service-wrapper tests + typed DomainError mapping)"
+      ],
+      "gate": "test-pass",
+      "gate_result": "passed",
+      "gate_evidence": "RUN_INTEGRATION_TESTS=true against local Supabase: 35/35 tests passing (22 RPC + 13 service). Run-time ~2s for full suite. type-check exit 0, lint exit 0. All EXEC §WS5 groups (a)-(m) green including: admin-role gate, non-admin rejection, cross-casino byte-identical mirror, inactive-slot rejection, occupied-target rejection, idempotent clear, atomic move, partial unique index (23505 on bypass), DEC-001 mirror verification (assign→label, clear→NULL, cross-casino untouched), audit_log emission, transactional rollback via pg-client trigger, concurrent-move consistency, DEC-003-R8 drift containment.",
+      "completed_at": "2026-04-19T20:10:00Z",
+      "implementation_notes": [
+        "Added `pg` (already a dependency) direct-SQL path for group (k) rollback test — PostgREST can't install BEFORE INSERT triggers, so uses postgresql://postgres:postgres@127.0.0.1:54322/postgres. Graceful skip w/ warning if connection fails.",
+        "Group (l) rewritten: original 'one wins, one fails' premise was incorrect (FOR UPDATE lock on floor_layout_activation serializes concurrent moves). Now tests actual guarantee: final-state consistency (exactly one slot holds table, gaming_table.pit mirrors winning slot's pit label).",
+        "Fixture setup time ~60s. beforeEach resets floor_table_slot.preferred_table_id + gaming_table.pit + audit_log between tests (cleanAssignmentState helper).",
+        "Mode C JWT auth: 5 authenticated clients (adminA, adminA2, pitBossA, dealerA, adminB); service-role setupClient for fixture CRUD."
+      ]
+    },
+    {
+      "workstream": "WS4",
+      "name": "Panel + Hooks + Host Integration",
+      "executor": "frontend-design-pt-2",
+      "outputs": [
+        "components/admin/pit-configuration-panel.tsx (single 'use client', brutalist DNA, per-pit slot list with Select/Clear, unassigned-tables pool, skeleton, admin-only controls, useTransition, error banner)",
+        "hooks/floor-layout/use-pit-assignment-state.ts (TanStack useQuery on floorLayoutKeys.pitAssignmentState(casinoId), enabled guard)",
+        "hooks/floor-layout/use-pit-assignment-mutations.ts (useAssignOrMoveTableToSlot + useClearSlotAssignment, auto idempotency-key via crypto.randomUUID, invalidate pitAssignmentState on success)",
+        "hooks/floor-layout/index.ts (barrel: re-exports three hooks + variable types)",
+        "app/(dashboard)/admin/settings/operations/page.tsx (modified: renders ShiftSettingsForm + PitConfigurationPanel inside single composed SettingsContentSection — EXEC §WS4 allows single-composed option. No new top-level route.)",
+        "services/floor-layout/http.ts (cleanup: removed unused generateIdempotencyKey — TS6133 dead code flagged pre-WS4)"
+      ],
+      "gate": "type-check + lint",
+      "gate_result": "passed",
+      "gate_evidence": "npm run type-check EXIT=0 (final log /tmp/ws4-final.log); npm run lint EXIT=0 scoped to components/admin/pit-configuration-panel.tsx + hooks/floor-layout/ + app/(dashboard)/admin/settings/operations/page.tsx + services/floor-layout/http.ts. React 19 patterns: useTransition for pending, no useEffect sync patterns, no manual loading states. Admin-only affordance verified: Select/Clear controls rendered only when staffRole === 'admin' (server still rejects with FORBIDDEN_ADMIN_REQUIRED as defence-in-depth). No new top-level route introduced.",
+      "completed_at": "2026-04-19T23:15:00Z",
+      "deviations": [
+        {
+          "field": "host-page layout",
+          "exec_spec_value": "separate SettingsContentSection wrappers OR a single composed section (EXEC §WS4 L940-941 allows either)",
+          "implemented_value": "Single composed SettingsContentSection with inline sub-section header (LayoutGrid icon + monospace 'Pit Configuration' title + Separator)",
+          "rationale": "SettingsContentSection has flex-1 intended for one-per-page host layout. Two stacked SettingsContentSections caused height-split under the settings/layout.tsx flex-1 overflow-y-hidden container. Single composed section is the spec's explicit allowed alternative and matches the visual flow of the page (Casino Operations umbrella covers both shift settings and pit config)."
+        }
+      ],
+      "scope_expansion_flags": [],
+      "pre_existing_issues_noted": [],
+      "design_checklist_results": {
+        "card_component_used": true,
+        "border_2_on_cards": true,
+        "monospace_headers": true,
+        "status_colors_10_30_pattern": true,
+        "skeleton_matches_structure": true,
+        "empty_states_dashed_card": true,
+        "buttons_action_pattern": true,
+        "react_19_useTransition": true,
+        "no_useEffect_sync": true,
+        "no_manual_loading_states": true,
+        "notes": "Optimistic updates intentionally skipped — admin mutations are low-frequency and TanStack invalidation is sufficient. Out of WS4 scope."
+      }
+    }
+  ],
+  "current_phase": 4,
+  "current_phase_name": "Phase 4 — Panel + Hooks + Host Integration (COMPLETED)",
+  "current_workstream": null,
+  "execution_phases_total": 5,
+
+  "validation_result": "PASSED_WITH_WARNINGS",
+  "validation_warnings": [
+    "SCHEMA GATE: Spec has schema changes but no explicit schema-verification gate. Consider adding 'npm test schema-verification' per QA standards."
+  ],
+
+  "infrastructure_findings": [
+    {
+      "finding": "env-drift-remote-by-default",
+      "severity": "medium",
+      "summary": "Both .env and .env.local set NEXT_PUBLIC_SUPABASE_URL to the REMOTE Supabase (Supabase Cloud at vaicxfihdldgepzryhpd.supabase.co). Commented-out local URL is in .env. Integration tests must explicitly override env vars to hit local docker Supabase.",
+      "workaround": "Run integration tests with explicit local env: NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=<LOCAL_SUPABASE_ANON_KEY> SUPABASE_SERVICE_ROLE_KEY=<LOCAL_SUPABASE_SERVICE_ROLE_KEY> RUN_INTEGRATION_TESTS=true npx jest ...",
+      "recommended_fix": "Add a test:integration:local npm script that exports these, OR uncomment the local URL in .env and document dev precedence. For DevOps to triage — not blocking WS3.",
+      "discovered_during": "WS5 gate execution — PGRST202 error on new RPCs led to investigation that revealed remote vs local URL mismatch."
+    },
+    {
+      "finding": "pre-existing-dead-code-in-http-ts",
+      "severity": "low",
+      "summary": "services/floor-layout/http.ts generateIdempotencyKey function (line 49) is never called — pre-existing dead code, unrelated to PRD-067 but flagged by TS6133 after WS2 edits.",
+      "recommended_fix": "Remove in a follow-up cleanup commit."
+    }
+  ],
+
+  "adversarial_review": {
+    "magnitude_score": 14,
+    "magnitude_tier": "full_team",
+    "tier_override": "tier_1",
+    "tier_override_reason": "User override: actual risk surface is narrow (ADR-024 compliance on 2 new RPCs + RULE-3 mechanism choice); R1+R2 cover the load-bearing risk.",
+    "attempt": 2,
+    "verdict": "ship",
+    "p0_count": 0,
+    "p1_count": 0,
+    "attempt_history": [
+      { "attempt": 1, "verdict": "ship_with_gates", "p0_count": 3, "p1_count": 9 },
+      { "attempt": 2, "verdict": "ship", "p0_count": 0, "p1_count": 0, "notes": "R1=Ship-with-gates (clerical-only, applied inline); R2=Ship. All 3 P0s + 9 P1s from attempt 1 resolved." },
+      { "attempt": "user-review", "notes": "User-authored spec tightening applied: (1) demoted admin-only language in R6 and ADR-030 posture; (2) added normative Mirror Authority Rule (post-PRD-067 gaming_table.pit = compatibility-derived only); (3) tightened R6 to required hardening follow-up (R6-FU), no longer indefinite deferral; (4) clarified WS3 DELETE handler is co-located with POST in single route file; (5) de-inflated DEC-003 language — two layers are operational containment of the PRD-067 mutation path, not activation-lifecycle fixes." }
+    ]
+  },
+
+  "decisions_recorded": [
+    { "id": "DEC-001", "resolves": "OQ-1", "impact_on_scope": "none", "verification": "cited" },
+    { "id": "DEC-002", "resolves": "OQ-2", "impact_on_scope": "none", "verification": "cited" },
+    { "id": "DEC-003", "resolves": "EXEC-stage mechanism choice (RULE-3 enforcement)", "impact_on_scope": "none", "verification": "cited" },
+    { "id": "DEC-004", "resolves": "EXEC-stage transport choice", "impact_on_scope": "none", "verification": "cited" }
+  ],
+
+  "pipeline_notes": [
+    "2026-04-19T17:15Z — Validator VALID_GATES set patched to include 'e2e-write-path' (documented in skill + quality.context.md but missing from validator enum). Pre-existing pipeline drift, addressed mid-flight.",
+    "2026-04-19T17:40Z — Local DB had orphan migration history row 20260419164653 (no matching file) blocking 'supabase migration up'. User reset local DB; fresh history aligned.",
+    "2026-04-19T17:45Z — Phase 1 (WS1) complete and gate-passed.",
+    "2026-04-19T19:00Z — User approved Phase 2a. Dispatched WS2 to backend-service-builder skill.",
+    "2026-04-19T19:40Z — WS2 complete. type-check + lint EXIT=0. Scope expansion: lib/errors/domain-errors.ts added 8 FloorLayoutErrorCode entries.",
+    "2026-04-19T19:50Z — User approved Phase 2b. Dispatched WS5 to backend-service-builder skill.",
+    "2026-04-19T20:10Z — WS5 complete. 35/35 integration tests passing against local Supabase. type-check + lint EXIT=0. Env drift finding (remote by default) recorded in infrastructure_findings.",
+    "2026-04-19T20:15Z — Awaiting user approval for Phase 3 (WS3 → api-builder). To resume: /build --resume — pipeline will re-present Phase 3 gate from this checkpoint.",
+    "2026-04-19T22:35Z — User approved Phase 3 (WS3). Dispatched WS3 to api-builder skill.",
+    "2026-04-19T22:50Z — WS3 complete. 2 new route files created (pit-assignment-state/route.ts, slots/[slotId]/assign/route.ts with co-located POST+DELETE). API_SURFACE_MVP.md updated with PRD-067 surface entry. lint EXIT=0 + type-check EXIT=0. 2 minor deviations recorded: (a) audit domain string aligned to existing 'floor-layout' convention vs EXEC's 'floor_layout'; (b) GET handler also gets inline admin gate per EXEC §WS3 L884 'all three handlers' clause. Awaiting user approval for Phase 4 (WS4 → frontend-design-pt-2).",
+    "2026-04-19T23:00Z — User approved Phase 4 (WS4). Dispatched WS4 to frontend-design-pt-2 skill.",
+    "2026-04-19T23:15Z — WS4 complete. Panel component (components/admin/pit-configuration-panel.tsx), 3 hooks files (hooks/floor-layout/*), 1 modified page (operations/page.tsx), 1 cleanup (http.ts dead-code removal). type-check + lint EXIT=0. 1 deviation: single composed SettingsContentSection vs two separate (EXEC §WS4 allows either; chosen to avoid flex-1 height-split under settings/layout). Admin gate verified (controls absent for non-admin; server rejects as defence-in-depth). Awaiting user approval for Phase 5 (WS6 → e2e-testing) per write-path E2E mandate.",
+    "2026-04-19T23:45Z — User waived WS6 E2E mandate with justification recorded (integration tests cover write-path invariants; Playwright follow-up in dedicated E2E PR). Pipeline marked complete. Proceeding to push + PR."
+  ],
+
+  "task_tracker": {
+    "tool": "TaskCreate/TaskUpdate (in-session ids — do not persist across /clear; recreate from execution_phases on resume)",
+    "ws_to_task_map_at_checkpoint": {
+      "WS1": "completed",
+      "WS2": "completed",
+      "WS3": "completed",
+      "WS5": "completed",
+      "WS4": "completed",
+      "WS6": "waived (E2E mandate deferred to follow-up PR — integration tests cover write-path invariants)"
+    }
+  },
+
+  "resume_context": {
+    "summary": "PRD-067 Phase 1 (DB), 2a (Service), 2b (Integration Tests) complete. Phase 3 (API Routes) pending user approval.",
+    "key_files_for_ws3": [
+      "services/floor-layout/crud.ts — getPitAssignmentState, assignOrMoveTableToSlot, clearSlotAssignment (exported from index.ts; WS3 will import and invoke)",
+      "services/floor-layout/schemas.ts — assignOrMoveRequestSchema, slotIdParamSchema for route validation",
+      "services/floor-layout/dtos.ts — PitAssignmentStateDTO, AssignOrMoveResultDTO, ClearResultDTO for response types",
+      "app/api/v1/casino/settings/route.ts — EXEC-cited precedent for withServerAction + inline admin-role check",
+      "app/api/v1/floor-layouts/* — existing route handler examples for this bounded context",
+      "lib/errors/domain-errors.ts — FloorLayoutErrorCode.FORBIDDEN_ADMIN_REQUIRED (available for WS3 use)"
+    ],
+    "ws3_route_paths_per_exec_spec": [
+      "GET  /api/v1/floor-layouts/pit-assignment-state (no idempotency required)",
+      "POST /api/v1/floor-layouts/slots/[slotId]/assign (Idempotency-Key required)",
+      "DELETE /api/v1/floor-layouts/slots/[slotId]/assign (Idempotency-Key required — DELETE + POST co-located in SAME route.ts)"
+    ],
+    "ws3_middleware_pattern_reference": "withServerAction(supabase, async (mwCtx) => { if (mwCtx.rlsContext!.staffRole !== 'admin') throw new DomainError('FORBIDDEN_ADMIN_REQUIRED', ...); /* service call */ }, { domain: 'floor_layout', action: '...', requireIdempotency: <true for POST/DELETE>, idempotencyKey, correlationId: ctx.requestId })",
+    "ws5_env_override_for_rerunning_tests": "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=<LOCAL_SUPABASE_ANON_KEY> SUPABASE_SERVICE_ROLE_KEY=<LOCAL_SUPABASE_SERVICE_ROLE_KEY> RUN_INTEGRATION_TESTS=true npx jest services/floor-layout/__tests__/*.int.test.ts --runInBand --forceExit",
+    "uncommitted_files_pre_ws3": [
+      "types/database.types.ts (M — regenerated post WS1)",
+      ".claude/skills/build-pipeline/scripts/validate-execution-spec.py (M — VALID_GATES patch)",
+      "docs/10-prd/PRD-067-admin-operations-pit-configuration-v0.md (new)",
+      "docs/21-exec-spec/EXEC-067-admin-operations-pit-configuration.md (new)",
+      "supabase/migrations/20260419171523_prd067_pit_assignment_rpcs.sql (new — WS1)",
+      "services/floor-layout/{dtos,mappers,crud,index,keys,http,schemas}.ts (M — WS2)",
+      "lib/errors/domain-errors.ts (M — WS2 added 8 FloorLayoutErrorCodes)",
+      "services/floor-layout/__tests__/rpc-pit-assignment.int.test.ts (new — WS5)",
+      "services/floor-layout/__tests__/pit-assignment-service.int.test.ts (new — WS5)"
+    ],
+    "next_action_on_resume": "Present Phase 3 approval gate (WS3 dispatch to api-builder). The skill_dispatch_args_summary above has the prompt skeleton."
+  }
+}

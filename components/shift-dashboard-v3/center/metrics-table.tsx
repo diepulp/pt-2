@@ -12,6 +12,7 @@
 import { ChevronRightIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { FinancialValue } from '@/components/financial';
 import { PitTable } from '@/components/shift-dashboard-v3/center/pit-table';
 import {
   MetricGradeBadge,
@@ -23,7 +24,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { formatCents } from '@/lib/format';
 import type {
   ShiftPitMetricsDTO,
   ShiftTableMetricsDTO,
@@ -92,15 +92,52 @@ function TableRow({
       </td>
       <td className="py-3 px-4 text-right font-mono tabular-nums">
         <span className="inline-flex items-center gap-1">
-          {formatCents(table.win_loss_estimated_cents)}
+          <FinancialValue
+            variant="compact"
+            label="Win/Loss"
+            value={{
+              value: table.win_loss_estimated_cents ?? 0,
+              type: 'estimated',
+              source: 'shift_metrics',
+              completeness: {
+                status:
+                  table.win_loss_estimated_cents == null
+                    ? 'unknown'
+                    : 'complete',
+              },
+            }}
+          />
           <OpeningSourceBadge source={table.opening_source} />
         </span>
       </td>
       <td className="py-3 px-4 text-right font-mono tabular-nums">
-        {formatCents(table.fills_total_cents)}
+        <FinancialValue
+          variant="compact"
+          label="Fills"
+          value={{
+            value: table.fills_total_cents ?? 0,
+            type: 'actual',
+            source: 'shift_metrics',
+            completeness: {
+              status: table.fills_total_cents == null ? 'unknown' : 'complete',
+            },
+          }}
+        />
       </td>
       <td className="py-3 px-4 text-right font-mono tabular-nums">
-        {formatCents(table.credits_total_cents)}
+        <FinancialValue
+          variant="compact"
+          label="Credits"
+          value={{
+            value: table.credits_total_cents ?? 0,
+            type: 'actual',
+            source: 'shift_metrics',
+            completeness: {
+              status:
+                table.credits_total_cents == null ? 'unknown' : 'complete',
+            },
+          }}
+        />
       </td>
       <td className="py-3 px-4 text-center">
         <TelemetryQualityIndicator

@@ -127,9 +127,9 @@ export type CreateMtlAuditNoteInput = z.infer<typeof createMtlAuditNoteSchema>;
 
 /**
  * Schema for MTL entry list query parameters
+ * casino_id is NOT accepted from clients — always derived from RLS context (DEC-1)
  */
 export const mtlEntryListQuerySchema = z.object({
-  casino_id: uuidFormat('casino UUID'),
   patron_uuid: uuidFormat('patron UUID').optional(),
   gaming_day: dateSchema('gaming_day').optional(),
   min_amount: z.coerce.number().positive().optional(),
@@ -144,9 +144,9 @@ export type MtlEntryListQuery = z.infer<typeof mtlEntryListQuerySchema>;
 
 /**
  * Schema for Gaming Day Summary query parameters
+ * casino_id is NOT accepted from clients — always derived from RLS context (DEC-1)
  */
 export const mtlGamingDaySummaryQuerySchema = z.object({
-  casino_id: uuidFormat('casino UUID'),
   gaming_day: dateSchema('gaming_day'),
   patron_uuid: uuidFormat('patron UUID').optional(),
   agg_badge_in: aggBadgeSchema.optional(),

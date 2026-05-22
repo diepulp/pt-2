@@ -1,14 +1,31 @@
+import {
+  Activity,
+  AlertTriangle,
+  Banknote,
+  Clock,
+  Eye,
+  LayoutDashboard,
+  Milestone,
+  Monitor,
+  ScrollText,
+  ShieldCheck,
+  TrendingUp,
+  User,
+  UserCheck,
+} from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
+import { LandingNav } from './_components/landing-nav';
 import { ProductTabs } from './_components/product-tabs';
 import { Reveal } from './_components/reveal';
 
 /* ─────────────────────────────────────────────────────────
- * PT-2 LANDING PAGE — Narrative Spine
+ * d3lt LANDING PAGE — Narrative Spine
  *
- * Architecture: Hero → Operating Loops → Product → Trust → CTA
+ * Architecture: Hero → Operational Domains → Product → Accountability → Intelligence → CTA
  * Visual DNA: Linear-inspired dark ground, glassmorphic surfaces,
  * gradient text, intersection-observer reveals.
  *
@@ -19,87 +36,151 @@ import { Reveal } from './_components/reveal';
  * Data
  * ────────────────────────────────────────────────────────── */
 
-/** Operating Loops — narrative router, not feature inventory */
-const operatingLoops = [
+/** Operational Domains — 4 executive domains per FDCM consolidation */
+const operationalDomains = [
   {
-    domain: 'Floor Oversight',
-    outcome: 'See the floor as it is now, not after the shift is over.',
-    motion:
-      'Track tables, coverage, checkpoints, and exceptions as play moves.',
+    domain: 'Run the Floor',
+    icon: <LayoutDashboard className="size-5" />,
+    iconCls:
+      'bg-cyan-500/[0.12] border-cyan-500/30 text-cyan-400 group-hover:bg-cyan-500/20 group-hover:border-cyan-400/50 group-hover:shadow-[0_0_20px_hsl(189_94%_60%/0.15)]',
+    claim:
+      'Monitor active tables, open sessions, and operational exceptions across all pits — visible as the floor operates.',
     href: '/floor-oversight',
   },
   {
-    domain: 'Session Tracking',
-    outcome: 'Follow every player from check-in to cash-out.',
-    motion:
-      'Manage visits, table moves, rating slips, and session continuity across breaks.',
+    domain: 'Understand the Player',
+    icon: <User className="size-5" />,
+    iconCls:
+      'bg-blue-500/[0.12] border-blue-500/30 text-blue-400 group-hover:bg-blue-500/20 group-hover:border-blue-400/50 group-hover:shadow-[0_0_20px_hsl(217_91%_60%/0.15)]',
+    claim:
+      'Player profiles, visit continuity, session value, and loyalty position — tied to every visit from check-in through closeout.',
     href: '/session-tracking',
   },
   {
-    domain: 'Cash Accountability',
-    outcome: 'Every dollar attributed, every transaction traced.',
-    motion:
-      'Record buy-ins with live threshold feedback. Process cash-outs and voids with audit trail.',
+    domain: 'Track the Money',
+    icon: <Banknote className="size-5" />,
+    iconCls:
+      'bg-emerald-500/[0.12] border-emerald-500/30 text-emerald-400 group-hover:bg-emerald-500/20 group-hover:border-emerald-400/50 group-hover:shadow-[0_0_20px_hsl(160_84%_39%/0.15)]',
+    claim:
+      'Record operational cash movement with attribution at every step — buy-ins, voids, fills, and credits.',
     href: '/cash-accountability',
   },
   {
-    domain: 'Audit Compliance',
-    outcome: 'During the shift, not after it.',
-    motion:
-      'Progressive MTL alerts, CTR banners at regulatory boundaries, per-patron daily aggregates.',
+    domain: 'Defend the Operation',
+    icon: <ShieldCheck className="size-5" />,
+    iconCls:
+      'bg-amber-500/[0.12] border-amber-500/30 text-amber-400 group-hover:bg-amber-500/20 group-hover:border-amber-400/50 group-hover:shadow-[0_0_20px_hsl(45_93%_47%/0.15)]',
+    claim:
+      'Surface regulatory thresholds and operational exceptions during the shift — not after it.',
     href: '/audit-compliance',
   },
 ];
 
-/** Product — UI proof surfaces */
+/** Product — operational surface proof with floor-origin framing */
 const productSurfaces = [
   {
     label: 'Shift Dashboard',
-    title: 'Live floor picture with checkpoint deltas',
+    icon: <LayoutDashboard className="size-[15px]" />,
+    iconCls: 'bg-cyan-500/[0.12] border-cyan-500/30 text-cyan-400',
+    iconClsMuted: 'bg-white/[0.04] border-white/[0.08] text-[#95A2B3]/50',
+    title: 'Floor Operations → Operational Intelligence',
     description:
-      'Active tables, open sessions, cash activity, shift KPIs. Take mid-shift snapshots and see exactly how performance changes.',
+      'Live floor picture: active tables, open sessions, cash activity, shift KPIs — with checkpoint delta tracking that shows how performance changes, not just where it stands.',
+    screenshotSrc: '/shift-dash-scren.png',
   },
   {
     label: 'Player 360',
-    title: 'Complete player profile in one screen',
+    icon: <User className="size-[15px]" />,
+    iconCls: 'bg-blue-500/[0.12] border-blue-500/30 text-blue-400',
+    iconClsMuted: 'bg-white/[0.04] border-white/[0.08] text-[#95A2B3]/50',
+    title: 'Session Tracking → Operational Accountability',
     description:
-      'Identity, visit history, rating slips, financial summary, loyalty tier and ledger, filterable interaction timeline.',
+      'Complete player operational record: identity, visit continuity, rating slips, financial activity, loyalty position, and a filterable interaction timeline.',
+    screenshotSrc: '/player-360-screen.png',
   },
   {
-    label: 'Cash Threshold',
-    title: 'Live compliance feedback as you type',
+    label: 'Compliance Dashboard',
+    icon: <ShieldCheck className="size-[15px]" />,
+    iconCls: 'bg-amber-500/[0.12] border-amber-500/30 text-amber-400',
+    iconClsMuted: 'bg-white/[0.04] border-white/[0.08] text-[#95A2B3]/50',
+    title: 'Cash Accountability → Compliance',
     description:
-      'Buy-in recording shows proximity to thresholds in real time. Progressive MTL alerts at $3K, CTR banner at $10K.',
+      'Buy-in entry with live threshold proximity — MTL at $3K, CTR visibility at $10K. Compliance feedback at point of entry, not after end-of-day reconciliation.',
+    screenshotSrc: '/mtl-screen.png',
   },
   {
-    label: 'Setup Wizard',
-    title: 'Operational in one session',
+    label: 'Pit Terminal',
+    icon: <Monitor className="size-[15px]" />,
+    iconCls: 'bg-violet-500/[0.12] border-violet-500/30 text-violet-400',
+    iconClsMuted: 'bg-white/[0.04] border-white/[0.08] text-[#95A2B3]/50',
+    title: 'Floor Operations → Session Tracking → Cash Accountability',
     description:
-      'Configure your property, import player records via CSV with column mapping and validation. No legacy migration project.',
+      'One surface for active tables, player sessions, and floor activity during the shift. The seat map shows live occupancy across all pits.',
+    screenshotSrc: '/pit-terminal.png',
   },
 ];
 
-/** Trust — structural properties */
-const trustProperties = [
+/** Accountability — operational trust record, 4 blocks */
+const accountabilityBlocks = [
   {
-    statement: 'Every number is traceable',
-    proof:
-      'Permanent financial records. Append-only audit trail. Timestamps on every mutation.',
+    title: 'Attributed Activity',
+    icon: <UserCheck className="size-5" />,
+    iconCls:
+      'bg-blue-500/[0.12] border-blue-500/30 text-blue-400 group-hover:bg-blue-500/20 group-hover:border-blue-400/50',
+    copy: 'Every supervisor action, void, adjustment, and operational change carries staff identity and timestamp. No shared logins. No unattributed changes.',
   },
   {
-    statement: 'Every action is attributed',
-    proof:
-      'Staff identity on every operation. Four roles with database-level access control. No shared logins.',
+    title: 'Regulatory Visibility',
+    icon: <Eye className="size-5" />,
+    iconCls:
+      'bg-amber-500/[0.12] border-amber-500/30 text-amber-400 group-hover:bg-amber-500/20 group-hover:border-amber-400/50',
+    copy: 'Progressive MTL and CTR thresholds integrated into operational workflows',
   },
   {
-    statement: 'Nothing gets rewritten',
-    proof:
-      'Corrections create new records with full lineage. The original entry is preserved.',
+    title: 'Shift Continuity',
+    icon: <Clock className="size-5" />,
+    iconCls:
+      'bg-cyan-500/[0.12] border-cyan-500/30 text-cyan-400 group-hover:bg-cyan-500/20 group-hover:border-cyan-400/50',
+    copy: 'Operational data preserved across the gaming day. Sessions, checkpoints, and table events remain coherent across shift boundaries without manual reconciliation.',
   },
   {
-    statement: 'Anomalies surface during operations',
-    proof:
-      'Live threshold feedback. Shift checkpoint deltas show change, not just state.',
+    title: 'Operational Audit Trail',
+    icon: <ScrollText className="size-5" />,
+    iconCls:
+      'bg-violet-500/[0.12] border-violet-500/30 text-violet-400 group-hover:bg-violet-500/20 group-hover:border-violet-400/50',
+    copy: 'Corrections create new records with full lineage. Voids carry the original entry, the correcting entry, and the reason. Nothing is overwritten.',
+  },
+];
+
+/** Intelligence — floor-origin insights, 4 blocks */
+const intelligenceBlocks = [
+  {
+    title: 'Shift Performance',
+    icon: <TrendingUp className="size-5" />,
+    iconCls:
+      'bg-emerald-500/[0.12] border-emerald-500/30 text-emerald-400 group-hover:bg-emerald-500/20 group-hover:border-emerald-400/50',
+    copy: 'Active table performance, session value, cash velocity, and coverage quality visible at the shift level.',
+  },
+  {
+    title: 'Checkpoint Analysis',
+    icon: <Milestone className="size-5" />,
+    iconCls:
+      'bg-blue-500/[0.12] border-blue-500/30 text-blue-400 group-hover:bg-blue-500/20 group-hover:border-blue-400/50',
+    copy: 'Mid-shift snapshots show how performance changes, not just where it stands. Delta tracking from any prior checkpoint.',
+  },
+  {
+    title: 'Anomaly Detection',
+    icon: <AlertTriangle className="size-5" />,
+    iconCls:
+      'bg-rose-500/[0.12] border-rose-500/30 text-rose-400 group-hover:bg-rose-500/20 group-hover:border-rose-400/50',
+    copy: 'Operational exceptions surface during the shift: coverage gaps, threshold proximity, unrated sessions, table activity patterns.',
+  },
+  {
+    title: 'Trend Visibility',
+    icon: <Activity className="size-5" />,
+    iconCls:
+      'bg-violet-500/[0.12] border-violet-500/30 text-violet-400 group-hover:bg-violet-500/20 group-hover:border-violet-400/50',
+    copy: 'Shift patterns visible because floor activity has been captured continuously — not compiled after the fact.',
   },
 ];
 
@@ -127,52 +208,7 @@ export default function LandingPage() {
       </div>
 
       {/* ── Navigation ── */}
-      <nav className="sticky top-0 z-50 bg-[#000212]/80 backdrop-blur-xl border-b border-white/[0.06]">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-accent/90 transition-all duration-300 group-hover:bg-accent group-hover:shadow-[0_0_16px_hsl(189_94%_43%/0.3)]">
-              <span className="text-[11px] font-bold tracking-tight text-white">
-                PT
-              </span>
-            </div>
-            <span className="text-sm font-medium tracking-tight text-[#F7F8F8]">
-              Player Tracker
-            </span>
-          </Link>
-
-          <div className="hidden items-center gap-7 md:flex">
-            {[
-              ['Operations', '#operations'],
-              ['Product', '#product'],
-              ['Trust', '#trust'],
-            ].map(([label, href]) => (
-              <a
-                key={label}
-                href={href}
-                className="text-[13px] text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8]"
-              >
-                {label}
-              </a>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Link
-              href="/auth/login"
-              className="hidden text-[13px] text-[#95A2B3] transition-colors duration-300 hover:text-[#F7F8F8] md:inline-block"
-            >
-              Sign in
-            </Link>
-            <Button
-              asChild
-              size="sm"
-              className="rounded-full bg-accent/90 text-white hover:bg-accent hover:shadow-[0_0_20px_hsl(189_94%_43%/0.3)] transition-all duration-300 text-[13px] px-5 h-8"
-            >
-              <Link href="/contact">Request a Demo</Link>
-            </Button>
-          </div>
-        </div>
-      </nav>
+      <LandingNav />
 
       {/* ═══════════════════════════════════════════════════
          S1: HERO
@@ -201,7 +237,7 @@ export default function LandingPage() {
                 <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
               </span>
               <span className="font-mono text-[11px] font-medium tracking-[0.12em] text-[#95A2B3]">
-                OPERATIONAL INTELLIGENCE
+                CASINO OPERATIONAL INTELLIGENCE
               </span>
             </div>
           </Reveal>
@@ -218,39 +254,20 @@ export default function LandingPage() {
           {/* Subtitle */}
           <Reveal delay={160}>
             <p className="mt-6 text-lg text-[#95A2B3] leading-relaxed max-w-xl mx-auto">
-              Floor oversight, session tracking, cash accountability, and audit
-              compliance — unified in one system built for how your team
-              actually works.
+              Built for casino operational leadership — from live floor
+              supervision to audit-ready operational history.
             </p>
           </Reveal>
 
-          {/* Capability taxonomy strip */}
-          <Reveal delay={240}>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-1">
-              {operatingLoops.map((loop, i) => (
-                <span key={loop.domain} className="flex items-center">
-                  {i > 0 && (
-                    <span className="mx-3 text-white/[0.12] select-none">
-                      /
-                    </span>
-                  )}
-                  <span className="font-mono text-[11px] tracking-[0.1em] text-[#95A2B3]/70">
-                    {loop.domain}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </Reveal>
-
           {/* CTAs */}
-          <Reveal delay={320}>
+          <Reveal delay={240}>
             <div className="mt-10 sm:mt-12 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center">
               <Button
                 asChild
                 size="lg"
                 className="rounded-full bg-accent text-white hover:bg-accent/90 px-8 h-12 text-sm font-semibold tracking-wide shadow-[0_1px_40px_hsl(189_94%_43%/0.25)] hover:shadow-[0_1px_50px_hsl(189_94%_43%/0.35)] transition-all duration-300 w-full sm:w-auto"
               >
-                <Link href="/contact">Start operational setup</Link>
+                <Link href="/signin">Explore Interactive Demo</Link>
               </Button>
               <Button
                 asChild
@@ -258,34 +275,15 @@ export default function LandingPage() {
                 size="lg"
                 className="rounded-full border border-white/[0.08] bg-white/[0.04] text-[#95A2B3] hover:bg-white/[0.08] hover:text-[#F7F8F8] backdrop-blur-sm px-8 h-12 text-sm font-medium tracking-wide transition-all duration-300 w-full sm:w-auto"
               >
-                <a href="#operations">See the operations</a>
+                <Link href="/contact">Request Operational Walkthrough</Link>
               </Button>
-            </div>
-          </Reveal>
-
-          {/* Proof strip — hero-adjacent trust scaffolding */}
-          <Reveal delay={400}>
-            <div className="mt-10 sm:mt-16 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-x-8 gap-y-2 sm:gap-y-3">
-              {[
-                'Traceable numbers',
-                'Attributed actions',
-                'Compliance-aware workflows',
-              ].map((claim) => (
-                <span
-                  key={claim}
-                  className="flex items-center gap-2 text-[13px] text-[#95A2B3]/60"
-                >
-                  <span className="inline-block size-1 rounded-full bg-accent/50" />
-                  {claim}
-                </span>
-              ))}
             </div>
           </Reveal>
         </div>
       </section>
 
       {/* ═══════════════════════════════════════════════════
-         S2: OPERATING LOOPS — Narrative Router
+         S2: OPERATIONAL DOMAINS — Narrative Router
          ═══════════════════════════════════════════════════ */}
       <section id="operations" className="relative py-16 sm:py-28">
         {/* Section glow */}
@@ -300,49 +298,80 @@ export default function LandingPage() {
         <div className="relative mx-auto max-w-5xl px-5 sm:px-6">
           <Reveal>
             <div className="mb-10 sm:mb-20 max-w-2xl">
-              <p className="mb-3 sm:mb-4 font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-accent/80">
-                Operations
-              </p>
+              <div className="mb-4 sm:mb-5 inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/[0.08] px-3.5 py-1.5">
+                <span className="size-1.5 rounded-full bg-accent shadow-[0_0_6px_hsl(189_94%_43%/0.6)]" />
+                <span className="font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-accent">
+                  Operations
+                </span>
+              </div>
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-gradient-heading">
-                What this system helps you do on a live casino floor.
+                Run the floor. Understand the player. Track the money. Defend
+                the operation.
               </h2>
             </div>
           </Reveal>
 
-          <div className="grid gap-px sm:grid-cols-2 rounded-2xl overflow-hidden border border-white/[0.06] bg-white/[0.03]">
-            {operatingLoops.map((loop, i) => (
-              <Reveal key={loop.domain} delay={i * 80}>
-                <a
-                  href={loop.href}
-                  className="group relative flex flex-col justify-between p-6 sm:p-8 md:p-10 bg-[#000212] transition-all duration-500 hover:bg-white/[0.02]"
-                >
-                  {/* Hover glow */}
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                    style={{
-                      background:
-                        'radial-gradient(ellipse at center, hsl(189 94% 43% / 0.04), transparent 70%)',
-                    }}
-                  />
+          <div className="grid gap-px sm:grid-cols-2 rounded-2xl overflow-hidden border border-white/[0.10] bg-white/[0.05]">
+            {operationalDomains.map((domain, i) => {
+              const isInformational = !domain.href;
+              const hoverGlow = (
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                  style={{
+                    background:
+                      'radial-gradient(ellipse at center, hsl(189 94% 43% / 0.04), transparent 70%)',
+                  }}
+                />
+              );
 
+              const cardInner = isInformational ? (
+                /* Informational card — no link, content centered */
+                <>
+                  {hoverGlow}
                   <div className="relative">
-                    <p className="mb-4 font-mono text-[11px] tracking-[0.12em] text-accent/60">
-                      {String(i + 1).padStart(2, '0')}
-                    </p>
-                    <h3 className="mb-3 text-lg font-semibold text-[#F7F8F8]">
-                      {loop.domain}
-                    </h3>
-                    <p className="text-[15px] leading-relaxed text-[#F7F8F8]/90 mb-2">
-                      {loop.outcome}
-                    </p>
-                    <p className="text-sm leading-relaxed text-[#95A2B3]/70">
-                      {loop.motion}
+                    <div className="flex items-center gap-3.5 mb-4">
+                      <div
+                        className={cn(
+                          'flex-shrink-0 flex size-10 items-center justify-center rounded-xl border transition-all duration-300',
+                          domain.iconCls,
+                        )}
+                      >
+                        {domain.icon}
+                      </div>
+                      <h3 className="text-lg font-semibold text-[#F7F8F8]">
+                        {domain.domain}
+                      </h3>
+                    </div>
+                    <p className="text-[15px] leading-relaxed text-[#F7F8F8]/90">
+                      {domain.claim}
                     </p>
                   </div>
-
+                </>
+              ) : (
+                /* Linked card — inline icon+title, arrow CTA at bottom */
+                <>
+                  {hoverGlow}
+                  <div className="relative">
+                    <div className="flex items-center gap-3.5 mb-4">
+                      <div
+                        className={cn(
+                          'flex-shrink-0 flex size-10 items-center justify-center rounded-xl border transition-all duration-300',
+                          domain.iconCls,
+                        )}
+                      >
+                        {domain.icon}
+                      </div>
+                      <h3 className="text-lg font-semibold text-[#F7F8F8]">
+                        {domain.domain}
+                      </h3>
+                    </div>
+                    <p className="text-[15px] leading-relaxed text-[#F7F8F8]/90">
+                      {domain.claim}
+                    </p>
+                  </div>
                   <div className="relative mt-8">
                     <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-accent/70 transition-all duration-300 group-hover:text-accent group-hover:gap-2.5">
-                      Explore {loop.domain.toLowerCase()}
+                      Explore {domain.domain.toLowerCase()}
                       <svg
                         className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5"
                         fill="none"
@@ -358,9 +387,26 @@ export default function LandingPage() {
                       </svg>
                     </span>
                   </div>
-                </a>
-              </Reveal>
-            ))}
+                </>
+              );
+
+              return (
+                <Reveal key={domain.domain} delay={i * 80} className="h-full">
+                  {domain.href ? (
+                    <a
+                      href={domain.href}
+                      className="group relative h-full flex flex-col justify-between p-6 sm:p-8 md:p-10 bg-[#000212] transition-all duration-500 hover:bg-white/[0.02]"
+                    >
+                      {cardInner}
+                    </a>
+                  ) : (
+                    <div className="group relative h-full flex flex-col justify-center p-6 sm:p-8 md:p-10 bg-[#000212] transition-all duration-500 hover:bg-white/[0.02]">
+                      {cardInner}
+                    </div>
+                  )}
+                </Reveal>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -380,14 +426,18 @@ export default function LandingPage() {
         <div className="relative mx-auto max-w-5xl px-5 sm:px-6">
           <Reveal>
             <div className="mb-10 sm:mb-20 max-w-2xl">
-              <p className="mb-3 sm:mb-4 font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-accent/80">
-                Product
-              </p>
+              <div className="mb-4 sm:mb-5 inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/[0.08] px-3.5 py-1.5">
+                <span className="size-1.5 rounded-full bg-accent shadow-[0_0_6px_hsl(189_94%_43%/0.6)]" />
+                <span className="font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-accent">
+                  Product
+                </span>
+              </div>
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-gradient-heading">
-                What it looks like in operation.
+                What operational leadership sees during a shift.
               </h2>
               <p className="mt-4 text-[15px] text-[#95A2B3] leading-relaxed">
-                Real surfaces built for real shift pressure. Not mockups.
+                From the shift dashboard to the buy-in panel — surfaces that
+                reflect the floor as it operates.
               </p>
             </div>
           </Reveal>
@@ -397,9 +447,9 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════
-         S4: TRUST — Structural Credibility
+         S4: OPERATIONAL ACCOUNTABILITY
          ═══════════════════════════════════════════════════ */}
-      <section id="trust" className="relative py-16 sm:py-28">
+      <section id="accountability" className="relative py-16 sm:py-28">
         <div
           className="pointer-events-none absolute inset-0"
           style={{
@@ -411,36 +461,42 @@ export default function LandingPage() {
         <div className="relative mx-auto max-w-5xl px-5 sm:px-6">
           <Reveal>
             <div className="mb-10 sm:mb-20 max-w-2xl">
-              <p className="mb-3 sm:mb-4 font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-accent/80">
-                Trust
-              </p>
+              <div className="mb-4 sm:mb-5 inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/[0.08] px-3.5 py-1.5">
+                <span className="size-1.5 rounded-full bg-accent shadow-[0_0_6px_hsl(189_94%_43%/0.6)]" />
+                <span className="font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-accent">
+                  Accountability
+                </span>
+              </div>
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-gradient-heading">
-                Compliance built into the architecture, not bolted on.
+                Activity tied to people, tables, and the gaming day.
               </h2>
               <p className="mt-4 text-[15px] text-[#95A2B3] leading-relaxed">
-                These are structural properties of the system — not features you
-                enable, not modules you purchase.
+                Floor activity, cash movement, corrections, and compliance
+                thresholds stay connected to staff identity, table context, and
+                gaming-day scope.
               </p>
             </div>
           </Reveal>
 
-          <div className="grid gap-px sm:grid-cols-2 rounded-2xl overflow-hidden border border-white/[0.06]">
-            {trustProperties.map((prop, i) => (
-              <Reveal key={prop.statement} delay={i * 60}>
-                <div className="flex flex-col p-6 sm:p-8 md:p-10 bg-[#000212] group transition-all duration-500 hover:bg-white/[0.015]">
-                  <div className="mb-4 flex size-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03]">
+          <div className="grid gap-px sm:grid-cols-2 rounded-2xl overflow-hidden border border-white/[0.10] bg-white/[0.05]">
+            {accountabilityBlocks.map((block, i) => (
+              <Reveal key={block.title} delay={i * 60} className="h-full">
+                <div className="h-full flex flex-col p-6 sm:p-8 md:p-10 bg-[#000212] group transition-all duration-500 hover:bg-white/[0.02]">
+                  <div className="flex items-center gap-3.5 mb-4">
                     <div
-                      className="size-1.5 rounded-full bg-accent/60 transition-all duration-500 group-hover:bg-accent group-hover:shadow-[0_0_8px_hsl(189_94%_43%/0.4)]"
-                      style={{
-                        animation: `glow-pulse ${3 + i * 0.5}s ease-in-out infinite`,
-                      }}
-                    />
+                      className={cn(
+                        'flex-shrink-0 flex size-10 items-center justify-center rounded-xl border transition-all duration-300',
+                        block.iconCls,
+                      )}
+                    >
+                      {block.icon}
+                    </div>
+                    <h3 className="text-[15px] font-semibold text-[#F7F8F8]">
+                      {block.title}
+                    </h3>
                   </div>
-                  <h3 className="mb-2 text-[15px] font-semibold text-[#F7F8F8]">
-                    {prop.statement}
-                  </h3>
                   <p className="text-sm leading-relaxed text-[#95A2B3]/70">
-                    {prop.proof}
+                    {block.copy}
                   </p>
                 </div>
               </Reveal>
@@ -450,7 +506,66 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════
-         S5: CTA — Outcome-Anchored Close
+         S5: OPERATIONAL INTELLIGENCE
+         ═══════════════════════════════════════════════════ */}
+      <section id="intelligence" className="relative py-16 sm:py-28">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(ellipse 50% 50% at 80% 50%, hsl(189 94% 43% / 0.03), transparent)',
+          }}
+        />
+
+        <div className="relative mx-auto max-w-5xl px-5 sm:px-6">
+          <Reveal>
+            <div className="mb-10 sm:mb-20 max-w-2xl">
+              <div className="mb-4 sm:mb-5 inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/[0.08] px-3.5 py-1.5">
+                <span className="size-1.5 rounded-full bg-accent shadow-[0_0_6px_hsl(189_94%_43%/0.6)]" />
+                <span className="font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-accent">
+                  Intelligence
+                </span>
+              </div>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-gradient-heading">
+                See what changed across the shift.
+              </h2>
+              <p className="mt-4 text-[15px] text-[#95A2B3] leading-relaxed">
+                Because floor activity is captured continuously across tables,
+                sessions, and cash movement, shift visibility reflects what is
+                happening on the floor as it happens.
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="grid gap-px sm:grid-cols-2 rounded-2xl overflow-hidden border border-white/[0.10] bg-white/[0.05]">
+            {intelligenceBlocks.map((block, i) => (
+              <Reveal key={block.title} delay={i * 60} className="h-full">
+                <div className="h-full flex flex-col p-6 sm:p-8 md:p-10 bg-[#000212] group transition-all duration-500 hover:bg-white/[0.02]">
+                  <div className="flex items-center gap-3.5 mb-4">
+                    <div
+                      className={cn(
+                        'flex-shrink-0 flex size-10 items-center justify-center rounded-xl border transition-all duration-300',
+                        block.iconCls,
+                      )}
+                    >
+                      {block.icon}
+                    </div>
+                    <h3 className="text-[15px] font-semibold text-[#F7F8F8]">
+                      {block.title}
+                    </h3>
+                  </div>
+                  <p className="text-sm leading-relaxed text-[#95A2B3]/70">
+                    {block.copy}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════
+         S6: CTA — Conversion Close
          ═══════════════════════════════════════════════════ */}
       <section className="relative py-20 sm:py-32">
         {/* Bottom glow */}
@@ -466,16 +581,15 @@ export default function LandingPage() {
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
               <span className="text-gradient-heading">
-                Numbers you can stand behind.
+                Evaluate the platform through your operational reality.
               </span>
             </h2>
           </Reveal>
 
           <Reveal delay={80}>
             <p className="mx-auto mt-5 max-w-lg text-[15px] text-[#95A2B3] leading-relaxed">
-              Talk to us about your floor. We&apos;ll walk through how Player
-              Tracker fits your property — your tables, your workflows, your
-              operation.
+              Walk through live operational workflows, accountability surfaces,
+              and floor-control scenarios with your team.
             </p>
           </Reveal>
 
@@ -486,15 +600,7 @@ export default function LandingPage() {
                 size="lg"
                 className="rounded-full bg-accent text-white hover:bg-accent/90 px-8 h-12 text-sm font-semibold tracking-wide shadow-[0_1px_40px_hsl(189_94%_43%/0.25)] hover:shadow-[0_1px_50px_hsl(189_94%_43%/0.35)] transition-all duration-300 w-full sm:w-auto"
               >
-                <Link href="/contact">Book a walkthrough</Link>
-              </Button>
-              <Button
-                asChild
-                variant="ghost"
-                size="lg"
-                className="rounded-full border border-white/[0.08] bg-white/[0.04] text-[#95A2B3] hover:bg-white/[0.08] hover:text-[#F7F8F8] backdrop-blur-sm px-8 h-12 text-sm font-medium tracking-wide transition-all duration-300 w-full sm:w-auto"
-              >
-                <a href="#operations">Back to operations</a>
+                <Link href="/signin">Explore Interactive Demo</Link>
               </Button>
             </div>
           </Reveal>
@@ -504,18 +610,17 @@ export default function LandingPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-white/[0.06] py-10">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-5 sm:px-6 sm:flex-row">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-6 items-center justify-center rounded-md bg-accent/80">
-              <span className="text-[9px] font-bold tracking-tight text-white">
-                PT
-              </span>
-            </div>
-            <span className="text-[12px] font-medium text-[#95A2B3]/60">
-              Player Tracker
+          <div className="flex flex-col items-start">
+            <span
+              className="text-lg tracking-wide text-[hsl(189_94%_43%)]/80"
+              style={{ fontFamily: 'var(--font-michroma)' }}
+            >
+              d3lt
             </span>
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-[hsl(189_94%_43%)]/25 to-transparent" />
           </div>
           <p className="text-[11px] text-[#95A2B3]/40">
-            &copy; {year} Player Tracker. All rights reserved.
+            &copy; {year} by Liminal Tech. All rights reserved.
           </p>
         </div>
       </footer>

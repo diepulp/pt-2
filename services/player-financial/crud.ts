@@ -14,6 +14,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
 import { safeErrorDetails } from '@/lib/errors/safe-error-details';
+import { financialValueSchema } from '@/lib/financial/schema';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -395,9 +396,24 @@ export async function getVisitSummary(
         return {
           visit_id: visitId,
           casino_id: '', // Will be populated by RLS context
-          total_in: 0,
-          total_out: 0,
-          net_amount: 0,
+          total_in: financialValueSchema.parse({
+            value: 0,
+            type: 'actual',
+            source: 'PFT',
+            completeness: { status: 'unknown' },
+          }),
+          total_out: financialValueSchema.parse({
+            value: 0,
+            type: 'actual',
+            source: 'PFT',
+            completeness: { status: 'unknown' },
+          }),
+          net_amount: financialValueSchema.parse({
+            value: 0,
+            type: 'actual',
+            source: 'PFT',
+            completeness: { status: 'unknown' },
+          }),
           event_count: 0,
           first_transaction_at: null,
           last_transaction_at: null,

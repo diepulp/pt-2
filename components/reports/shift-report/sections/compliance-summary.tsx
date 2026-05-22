@@ -165,19 +165,19 @@ export function ComplianceSummary({ data }: ComplianceSummaryProps) {
                   )}
                 </TableCell>
                 <TableCell className="text-right font-mono text-xs tabular-nums">
-                  {formatCents(patron.totalInCents)}
+                  {formatCents(patron.totalInCents.value)}
                   <span className="text-muted-foreground ml-1">
                     ({patron.countIn})
                   </span>
                 </TableCell>
                 <TableCell className="text-right font-mono text-xs tabular-nums">
-                  {formatCents(patron.totalOutCents)}
+                  {formatCents(patron.totalOutCents.value)}
                   <span className="text-muted-foreground ml-1">
                     ({patron.countOut})
                   </span>
                 </TableCell>
                 <TableCell className="text-right font-mono text-xs tabular-nums">
-                  {formatCents(patron.totalVolumeCents)}
+                  {formatCents(patron.totalVolumeCents.value)}
                 </TableCell>
                 <TableCell className="text-center">
                   <AggBadge badge={patron.aggBadgeIn} />

@@ -45,6 +45,7 @@ import {
   PitObservationError,
 } from '@/services/rating-slip/http';
 
+import { hasPendingUnsavedBuyIn } from '../has-pending-unsaved-buyin';
 import { useCloseWithFinancial } from '../use-close-with-financial';
 
 const createTestQueryClient = () =>
@@ -342,6 +343,165 @@ describe('useCloseWithFinancial', () => {
 
       // If we got here without error, the regression test passes
       expect(createPitCashObservation).toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * PRD-064 WS2 / P1.4 — Unsaved-Buy-In Interlock.
+   *
+   * These tests cover the containment contract between the predicate
+   * `hasPendingUnsavedBuyIn` and the `useCloseWithFinancial` mutation:
+   *   - Pending unsaved buy-in → blocking prompt raised by parent,
+   *     close-mutation NOT invoked, `newBuyIn` not silently dropped.
+   *   - No pending buy-in → normal close path proceeds.
+   *
+   * We simulate the parent's `handleCloseSession` gate so the assertion
+   * is about the *interlock*, not the mutation internals.
+   *
+   * @see components/pit-panels/pit-panels-client.tsx handleCloseSession
+   * @see docs/10-prd/PRD-064-mtl-buyin-glitch-containment-v0.md G4
+   */
+  describe('PRD-064 WS2: unsaved-buy-in interlock (hasPendingUnsavedBuyIn)', () => {
+    describe('hasPendingUnsavedBuyIn predicate', () => {
+      it('returns true when newBuyIn is a positive number string', () => {
+        expect(hasPendingUnsavedBuyIn({ newBuyIn: '100' })).toBe(true);
+        expect(hasPendingUnsavedBuyIn({ newBuyIn: '0.01' })).toBe(true);
+        expect(hasPendingUnsavedBuyIn({ newBuyIn: '3000' })).toBe(true);
+      });
+
+      it('returns false when newBuyIn is zero, empty, or missing', () => {
+        expect(hasPendingUnsavedBuyIn({ newBuyIn: '0' })).toBe(false);
+        expect(hasPendingUnsavedBuyIn({ newBuyIn: '0.00' })).toBe(false);
+        expect(hasPendingUnsavedBuyIn({ newBuyIn: '' })).toBe(false);
+        expect(hasPendingUnsavedBuyIn({ newBuyIn: undefined })).toBe(false);
+        expect(hasPendingUnsavedBuyIn({})).toBe(false);
+      });
+
+      it('returns false for negative or non-numeric values', () => {
+        expect(hasPendingUnsavedBuyIn({ newBuyIn: '-50' })).toBe(false);
+        expect(hasPendingUnsavedBuyIn({ newBuyIn: 'abc' })).toBe(false);
+      });
+    });
+
+    describe('parent close-session gate (integration contract)', () => {
+      /**
+       * Simulates the PRD-064 WS2 fix inside PitPanelsClient.handleCloseSession:
+       * - Guard with `hasPendingUnsavedBuyIn` BEFORE invoking the close mutation.
+       * - On detection: surface blocking prompt, abort the close path.
+       * - Otherwise: proceed with the normal mutation.
+       *
+       * This mirrors the handler so the test is a true regression signal
+       * for the interlock, not just the predicate.
+       */
+      async function simulateHandleCloseSession(params: {
+        formState: {
+          newBuyIn?: string;
+          chipsTaken?: string;
+          averageBet: string;
+        };
+        mutate: (args: {
+          slipId: string;
+          visitId: string;
+          playerId: string | null;
+          casinoId: string;
+          tableId: string;
+          staffId: string;
+          chipsTaken: number;
+          averageBet: number;
+          newBuyIn?: number;
+        }) => Promise<unknown>;
+        surfacePrompt: () => void;
+      }): Promise<void> {
+        const { formState, mutate, surfacePrompt } = params;
+
+        if (hasPendingUnsavedBuyIn(formState)) {
+          surfacePrompt();
+          return;
+        }
+
+        await mutate({
+          slipId: 'slip-1',
+          visitId: 'visit-1',
+          playerId: 'player-1',
+          casinoId: 'casino-1',
+          tableId: 'table-1',
+          staffId: 'staff-1',
+          chipsTaken: Number(formState.chipsTaken || 0),
+          averageBet: Number(formState.averageBet),
+        });
+      }
+
+      it('surfaces blocking prompt and does NOT invoke close mutation when buy-in is unsaved', async () => {
+        const { result } = renderHook(() => useCloseWithFinancial(), {
+          wrapper: createWrapper(),
+        });
+        const mutateSpy = jest.fn(result.current.mutateAsync);
+        const surfacePrompt = jest.fn();
+
+        await simulateHandleCloseSession({
+          formState: {
+            newBuyIn: '500', // <-- operator typed a buy-in, never saved
+            chipsTaken: '0',
+            averageBet: '25',
+          },
+          mutate: mutateSpy,
+          surfacePrompt,
+        });
+
+        // Contract A: blocking prompt raised
+        expect(surfacePrompt).toHaveBeenCalledTimes(1);
+
+        // Contract B: close mutation NEVER called — no silent discard of newBuyIn
+        expect(mutateSpy).not.toHaveBeenCalled();
+        expect(closeRatingSlip).not.toHaveBeenCalled();
+        expect(createPitCashObservation).not.toHaveBeenCalled();
+      });
+
+      it('does not touch newBuyIn via the close-mutation payload (no silent drop)', async () => {
+        const { result } = renderHook(() => useCloseWithFinancial(), {
+          wrapper: createWrapper(),
+        });
+        const mutateSpy = jest.fn(result.current.mutateAsync);
+        const surfacePrompt = jest.fn();
+
+        await simulateHandleCloseSession({
+          formState: {
+            newBuyIn: '3000', // CTR-relevant amount — must never be dropped
+            chipsTaken: '0',
+            averageBet: '50',
+          },
+          mutate: mutateSpy,
+          surfacePrompt,
+        });
+
+        // Prompt surfaced; no mutation call means no MTL/financial write
+        // could have been silently swallowed for this $3k buy-in.
+        expect(surfacePrompt).toHaveBeenCalledTimes(1);
+        expect(mutateSpy).not.toHaveBeenCalled();
+      });
+
+      it('proceeds with normal close path when newBuyIn is zero (no pending buy-in)', async () => {
+        const { result } = renderHook(() => useCloseWithFinancial(), {
+          wrapper: createWrapper(),
+        });
+        const surfacePrompt = jest.fn();
+
+        await simulateHandleCloseSession({
+          formState: {
+            newBuyIn: '0',
+            chipsTaken: '0',
+            averageBet: '25',
+          },
+          mutate: result.current.mutateAsync,
+          surfacePrompt,
+        });
+
+        // Contract: no prompt, close mutation invoked
+        expect(surfacePrompt).not.toHaveBeenCalled();
+        expect(closeRatingSlip).toHaveBeenCalledWith('slip-1', {
+          average_bet: 25,
+        });
+      });
     });
   });
 

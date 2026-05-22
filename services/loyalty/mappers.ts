@@ -5,7 +5,13 @@
  * Uses explicit types for RPC returns since they don't depend on table Row types.
  * Eliminates `as` type assertions per SLAD v2.2.0 section 327-365.
  *
+ * Financial envelope wrapping (PRD-070 WS2): `AccrueOnCloseOutput.theo` is
+ * wrapped as `FinancialValue` per WAVE-1-CLASSIFICATION-RULES §3.6. Other
+ * loyalty currency fields (comp/entitlement face values, suggestedTheo) are
+ * Phase 1.2 deferrals — see `dtos.ts` for the deferral/carve-out annotations.
+ *
  * @see PRD-004 Loyalty Service
+ * @see PRD-070 Financial Telemetry Wave 1 Phase 1.1
  * @see EXECUTION-SPEC-PRD-004.md WS4
  */
 
@@ -209,7 +215,12 @@ export function toAccrueOnCloseOutput(
   return {
     ledgerId: response.ledger_id,
     pointsDelta: response.points_delta,
-    theo: response.theo,
+    theo: {
+      value: response.theo,
+      type: 'estimated',
+      source: 'loyalty.theo',
+      completeness: { status: 'complete' },
+    },
     balanceAfter: response.balance_after,
     isExisting: response.is_existing,
   };

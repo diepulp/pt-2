@@ -10,15 +10,18 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md section 1580-1719
  */
 
-import { fetchJSON } from '@/lib/http/fetch-json';
+import { fetchJSON, mutateJSON } from '@/lib/http/fetch-json';
 
 import type {
+  AssignOrMoveResultDTO,
+  ClearResultDTO,
   FloorLayoutActivationDTO,
   FloorLayoutDTO,
   FloorLayoutListFilters,
   FloorLayoutVersionDTO,
   FloorLayoutVersionFilters,
   FloorLayoutVersionWithSlotsDTO,
+  PitAssignmentStateDTO,
 } from './dtos';
 
 const BASE = '/api/v1/floor-layouts';
@@ -38,13 +41,6 @@ function buildParams(
   return new URLSearchParams(
     entries.map(([key, value]) => [key, String(value)]),
   );
-}
-
-/**
- * Generates a unique idempotency key for mutations.
- */
-function generateIdempotencyKey(): string {
-  return crypto.randomUUID();
 }
 
 // === Layout CRUD ===
@@ -123,4 +119,54 @@ export async function getActiveFloorLayout(
   const params = buildParams({ casino_id: casinoId });
   const url = `${BASE}/active?${params}`;
   return fetchJSON<FloorLayoutActivationDTO | null>(url);
+}
+
+// === Pit Assignment HTTP (PRD-067) ===
+
+/**
+ * Fetches the aggregate pit-assignment state for the active layout version.
+ * Casino is derived server-side from RLS context — not a query parameter.
+ *
+ * GET /api/v1/floor-layouts/pit-assignment-state
+ */
+export async function getPitAssignmentStateHttp(): Promise<PitAssignmentStateDTO | null> {
+  return fetchJSON<PitAssignmentStateDTO | null>(
+    `${BASE}/pit-assignment-state`,
+  );
+}
+
+/**
+ * Assigns a table to a slot, or moves it from its current slot.
+ * Requires idempotency key.
+ *
+ * POST /api/v1/floor-layouts/slots/{slotId}/assign
+ */
+export async function assignOrMoveTableToSlotHttp(
+  slotId: string,
+  body: { table_id: string },
+  idempotencyKey: string,
+): Promise<AssignOrMoveResultDTO> {
+  return mutateJSON<AssignOrMoveResultDTO, { table_id: string }>(
+    `${BASE}/slots/${slotId}/assign`,
+    body,
+    idempotencyKey,
+  );
+}
+
+/**
+ * Clears a slot's table assignment. Idempotent at the RPC layer.
+ * Requires idempotency key.
+ *
+ * DELETE /api/v1/floor-layouts/slots/{slotId}/assign
+ */
+export async function clearSlotAssignmentHttp(
+  slotId: string,
+  idempotencyKey: string,
+): Promise<ClearResultDTO> {
+  return fetchJSON<ClearResultDTO>(`${BASE}/slots/${slotId}/assign`, {
+    method: 'DELETE',
+    headers: {
+      'Idempotency-Key': idempotencyKey,
+    },
+  });
 }

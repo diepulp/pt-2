@@ -1,0 +1,93 @@
+{
+  "id": "PRD-078",
+  "exec_spec": "docs/21-exec-spec/PRD-078/EXEC-078-financial-telemetry-wave1-phase1.4-validation-lint-truth.md",
+  "prd": "docs/10-prd/PRD-078-financial-telemetry-wave1-phase1.4-validation-lint-truth-v0.md",
+  "fib_s_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-4/FIB-S-FINANCIAL-TELEMETRY-PHASE-1-4-VALIDATION-LINT-TRUTH.json",
+  "fib_s_loaded": true,
+  "status": "complete",
+  "complexity_prescreen": "streamlined",
+  "gov010_check": "waived:enforcement-only PRD; no scaffold artifact required; ADRs frozen at ADR-052/053/054/055 per FIB-S governance",
+  "write_path_classification": "none",
+  "e2e_mandate_waiver": "no-write-paths-detected",
+  "created_at": "2026-05-05T00:54:00Z",
+  "updated_at": "2026-05-05T05:00:00Z",
+  "closed_at": "2026-05-05T05:00:00Z",
+  "current_phase": 5,
+  "gates_passed": {
+    "gate-lint-rules-authored": {
+      "passed_at": "2026-05-05T03:41:00Z",
+      "notes": "npm run lint exits 0 with no financial-enforcement violations. Rule calibration: denylist approach for DTO regression gate; import-path guard added; KPI_ROUTE_PATTERN removed from Coverage scope; Win/loss lookahead made case-insensitive. Three Phase 1.3 carry-over UI violations fixed in analytics-panel.tsx and rundown-summary-panel.tsx."
+    },
+    "gate-surface-tests": {
+      "passed_at": "2026-05-05T00:00:00Z",
+      "notes": "13/13 tests pass in __tests__/financial-surface/financial-api-envelope.test.ts. Three sections: ServiceHttpResult envelope (3 tests), FinancialValue shape (5 tests), DEF-NEVER guard (5 tests). npm run test:surface exit 0."
+    },
+    "gate-e2e-spec-authored": {
+      "passed_at": "2026-05-05T00:00:00Z",
+      "notes": "e2e/financial-enforcement.spec.ts written. Mode A Local Verification. I5-1 (rating slip panel authority labels, no forbidden labels) + I5-2 (player-360 summary-band Theo-unknown). tsc --noEmit exit 0. Advisory tier — does not block merge."
+    },
+    "gate-full-validation": {
+      "passed_at": "2026-05-05T00:00:00Z",
+      "notes": "WS5 validation sequence: lint exit 0, test:surface 13/13 exit 0, type-check exit 0. ROLLOUT-TRACKER.json cursor advanced to 1.5. I5_truthfulness → complete."
+    }
+  },
+  "pending_workstreams": [],
+  "in_progress_workstreams": [],
+  "completed_workstreams": [
+    "WS1",
+    "WS2",
+    "WS3",
+    "WS4",
+    "WS5"
+  ],
+  "dormant_workstreams": [],
+  "open_question_decisions": {
+    "DEC-1": {
+      "topic": "DTO allowlist for no-unlabeled-financial-value",
+      "resolution": "denylist-approach",
+      "verification": "validated-against-actual-dtos",
+      "denylist_keys": [
+        "visit/dtos.ts",
+        "player-financial/dtos.ts",
+        "loyalty/dtos.ts"
+      ],
+      "notes": "rating-slip/dtos.ts removed: amount:number in CreatePitCashObservationInput is an input DTO (legitimate bare number); read-side is already FinancialValue at line 276. shift-intelligence/dtos.ts removed: all 4 fields are in RatioAnomalyAlertDTO (hold_percent carve-out, DEF-NEVER)."
+    },
+    "DEC-2": {
+      "topic": "API test execution mode",
+      "resolution": "jest-node-mocked-supabase",
+      "verification": "assumption"
+    },
+    "DEC-3": {
+      "topic": "Playwright seed data gap",
+      "resolution": "no-ws0-required",
+      "verification": "assumption",
+      "evidence": "seed.sql Players 1/3/4 have open slips for partial completeness; open slips without computed_theo_cents for Theo-unknown"
+    },
+    "DEC-4": {
+      "topic": "test:surface Jest --testPathPatterns",
+      "resolution": "explicit-pattern",
+      "pattern": "(components/financial/__tests__|components/player-sessions/__tests__|components/modals/rating-slip/__tests__|__tests__/financial-surface/)",
+      "verification": "cited"
+    }
+  },
+  "artifacts": {
+    "exec_spec_validated": true,
+    "intake_traceability": "pass",
+    "temporal_integrity": "pass",
+    "WS1_output": ".eslint-rules/no-forbidden-financial-label.js",
+    "WS2_output_rule": ".eslint-rules/no-unlabeled-financial-value.js",
+    "WS2_output_config": "eslint.config.mjs",
+    "phase1_lint_gate": "PASS",
+    "WS3_output": "__tests__/financial-surface/financial-api-envelope.test.ts",
+    "WS3_test_count": 13,
+    "phase2_surface_gate": "PASS",
+    "WS4_output": "e2e/financial-enforcement.spec.ts",
+    "WS4_verification_class": "Local Verification — Mode A",
+    "WS4_advisory_tier": true,
+    "WS5_lint": "PASS",
+    "WS5_test_surface": "PASS (13/13)",
+    "WS5_type_check": "PASS",
+    "WS5_tracker_synced": true
+  }
+}

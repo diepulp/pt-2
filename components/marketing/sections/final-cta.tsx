@@ -10,8 +10,8 @@ export function FinalCTASection() {
         Talk to us about your floor.
       </h2>
       <p className="mx-auto mt-3 max-w-lg text-base text-muted-foreground md:text-lg">
-        We&apos;ll walk through how Player Tracker fits your property — your
-        tables, your workflows, your pain points. No pitch deck.
+        We&apos;ll walk through how d3lt fits your property — your tables, your
+        workflows, your pain points. No pitch deck.
       </p>
       <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Button size="lg" asChild>

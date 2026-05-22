@@ -1,0 +1,684 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-4-VALIDATION-LINT-TRUTH",
+    "status": "draft",
+    "feature_id": "FIB-S-FIN-PHASE-1-4",
+    "feature_name": "Financial Telemetry Phase 1.4 — Validation: Lint Enforcement + Truth-Telling Tests",
+    "priority": "P1",
+    "decision_horizon": "wave-1-phase-1.4",
+    "owner": "Financial Telemetry (Cross-context)",
+    "opened_on": "2026-05-04",
+    "parent_prd": "docs/10-prd/PRD-078-financial-telemetry-wave1-phase1.4-validation-lint-truth-v0.md",
+    "predecessor_fib": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-3/FIB-H-FINANCIAL-TELEMETRY-PHASE-1-3-UI-SPLIT-DISPLAY.md",
+    "predecessor_phase": "Phase 1.3 — UI Layer: Split Display + Labels (EXEC-077, closed 2026-05-04)",
+    "successor_slice": "Phase 1.5 — Rollout & Sign-off"
+  },
+
+  "scope_guardrail": {
+    "governance_ref": "docs/70-governance/FIB_GENERATION_SCOPE_GUARDRAIL.md",
+    "primary_change_class": "Enforcement",
+    "coverage_mode": {
+      "mode": "targeted",
+      "coverage_mode_label": "Targeted (representative enforcement)",
+      "surfaces": [
+        ".eslint-rules/no-forbidden-financial-label.js — new ESLint rule (global activation)",
+        ".eslint-rules/no-unlabeled-financial-value.js — new ESLint rule (global activation)",
+        "eslint.config.mjs — 2 import lines + 2 scoped config blocks",
+        "package.json — 1 new test:surface script",
+        "__tests__/financial-surface/ or app/api/__tests__/ — 1 new Jest file, 1-2 representative routes",
+        "e2e/financial-enforcement.spec.ts — 1 new Playwright file: 2-3 DOM assertions + 2 I5 scenarios"
+      ],
+      "surface_granularity": "concrete-instances-only",
+      "targeted_mode_justification": "Lint rules activate globally — partial activation produces no meaningful protection for Enforcement. Runtime validation (API tests, Playwright) is intentionally limited to representative surfaces sufficient to prove invariants. Exhaustive surface Playwright coverage is a separate regression suite category and does not belong in an Enforcement FIB. Phase 1.4 is a CI guardrail, not a validation system."
+    },
+    "layer_budget": {
+      "primary_layer": "Enforcement",
+      "secondary_layers": [],
+      "secondary_layer_constraints": "none — no service, API shape, UI component, or infrastructure layer receives logic changes",
+      "dto_classification": "no DTO changes in this slice — service DTOs are stable from Phase 1.2B; the no-unlabeled-financial-value rule reads DTO definitions, it does not change them"
+    },
+    "one_line_boundary": "This FIB introduces CI guardrails — minimal ESLint rules and targeted test assertions — that prevent reintroduction of unlabeled financial values, forbidden labels, and misleading completeness rendering. It does not introduce exhaustive surface validation or new enforcement infrastructure.",
+    "atomicity_test": {
+      "ships_without_deferred_work": true,
+      "deferred_work_can_follow_without_rewrite": true,
+      "ships_as_correct_internal_contract": true,
+      "atomicity_notes": "After Phase 1.4 ships, CI is red on any new violation; the system is correctly enforced. lib/format.ts helper removal requires the lint guard this phase provides, not the reverse. I1-I4 harness begins from outbox DDL and consumer, not from lint rules."
+    },
+    "adjacent_consequence_ledger": [
+      {
+        "temptation": "lib/format.ts exported helper removal (formatDollars, formatCents)",
+        "why_adjacent": "Completing the formatters-consolidated-into-FinancialValue story; natural final step of the migration",
+        "disposition": "Phase 1.5 cleanup or named follow-on slice — removal requires lint guard first (which this FIB provides); breaking exports before the guard exists makes the migration order fragile",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "Full I1-I4 failure harness activation (atomicity, crash recovery, duplicate delivery, replay)",
+        "why_adjacent": "Harness file is labeled EXEC-READY; activating the whole thing alongside I5 feels complete",
+        "disposition": "Wave 2 only — finance_outbox, outbox consumer, and projections do not exist in Wave 1; writing tests against stubs produces no production signal",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "OpenAPI YAML lint rule (spectral, redocly, or custom YAML parser)",
+        "why_adjacent": "Logical complement to no-unlabeled-financial-value at the schema level",
+        "disposition": "Separate toolchain decision — not part of the ESLint flat config pattern; requires its own CI step, configuration file, and ruleset definition",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "Runtime usage tracking / structured logs per deprecated-label or forbidden-label hit",
+        "why_adjacent": "Adjacent while wiring CI — 'add observability while we're here' pattern",
+        "disposition": "Observability class — GOV-FIB-001 §14 places Observability after Enforcement; explicitly deferred since Phase 1.2B-C",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "WAVE-2-PREP-DECISIONS.md Q1-Q4 resolution documentation",
+        "why_adjacent": "Questions surface naturally during Phase 1.4 review; last implementation phase before Rollout",
+        "disposition": "Post-Phase 1.5 — gated on Wave 1 sign-off; authoring in Phase 1.4 may conflict with operator feedback from Phase 1.5 walkthrough",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "Full surface Playwright coverage (all 13 migrated families)",
+        "why_adjacent": "Would guarantee every surface is continuously validated after Phase 1.3",
+        "disposition": "Rejected — Phase 1.4 is an enforcement gate, not a full UI validation system; representative coverage (2-3 surfaces) is sufficient to prove the authority-label invariant while keeping CI fast and stable",
+        "removed_from_must": true
+      }
+    ],
+    "downstream_expansion_allowed_without_amendment": false
+  },
+
+  "phase_boundary": {
+    "one_line_invariant": "If a change authors an ESLint enforcement rule, adds a test:surface script, births API boundary envelope tests for representative financial routes, or authors Playwright DOM / I5 truth-telling assertions against already-migrated surfaces — and nothing else — it is in scope.",
+    "primary_change_class": "Enforcement",
+    "primary_layer": "Enforcement",
+    "coverage_mode": "Targeted (representative enforcement)",
+    "secondary_layers_allowed": [],
+    "stop_conditions": [
+      "service logic changes required",
+      "API contract / OpenAPI shape changes required",
+      "DTO shape changes required",
+      "UI component births or props changes required",
+      "lib/format.ts exported helper removal",
+      "full I1-I4 harness activation (finance_outbox not present)",
+      "OpenAPI YAML lint tooling required",
+      "hold_percent, average_bet, policy thresholds, or loyalty points flagged by lint rules",
+      "new authority classes or completeness status values introduced",
+      "SQL migrations required"
+    ],
+    "prohibited": [
+      "Service layer changes (complete — Phases 1.1, 1.2A, 1.2B)",
+      "API contract / OpenAPI changes (complete — Phase 1.2B-C, EXEC-076)",
+      "UI surface migrations (complete — Phase 1.3, EXEC-077)",
+      "FinancialValue.tsx props changes (frozen — Phase 1.3 EXEC-077 §WS1)",
+      "lib/format.ts exported helper removal (Phase 1.5 or named follow-on — requires lint guard first)",
+      "Full I1-I4 failure harness (Wave 2 — finance_outbox not present)",
+      "hold_percent flagged by no-unlabeled-financial-value (DEF-NEVER invariant)",
+      "average_bet, min_bet, max_bet, watchlistFloor, ctrThreshold flagged (WAVE-1-CLASSIFICATION-RULES §6)",
+      "Loyalty points flagged (non-currency unit system)",
+      "SQL migrations (Wave 2)"
+    ]
+  },
+
+  "intent": {
+    "operator_problem": "Pit bosses and floor supervisors see correctly authority-labeled financial values across PT-2 surfaces after Phase 1.3. Without automated enforcement, nothing prevents a future code change from reintroducing a bare currency number in a service DTO, adding a forbidden label back to a UI component, or rendering $0 or blank when completeness is partial or unknown. The operator would see a number that appears complete and authoritative but is silently misrepresenting incomplete data. No CI gate prevents violations from re-entering; no automated test verifies surfaces correctly communicate incomplete or uncomputed financial data.",
+    "pilot_fit": "Phase 1.4 delivers Wave 1 exit criteria 2 (lint rule red on violations, active in CI) and 3 (truth-telling test suite passes, harness I5 subset). Without both, the Wave 1 → Wave 2 handoff gate cannot be passed regardless of surface cleanliness. Phase 1.3 EXEC-077 explicitly deferred enforcement to Phase 1.4 in its Adjacent Consequence Ledger and Phase 1.4 handoff section."
+  },
+
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "no-forbidden-financial-label.js",
+          "kind": "artifact",
+          "description": "New CJS ESLint rule in .eslint-rules/ implementing §4.1-4.5 from WAVE-1-FORBIDDEN-LABELS.md: Handle with derived-rename exception, Win with qualifier whitelist, Coverage KPI-context scoped to named file patterns and JSX elements, Theo:0/$0 patterns, DTO chip identifier patterns on services/**/dtos.ts files.",
+          "stateful": false,
+          "system_of_record": ".eslint-rules/no-forbidden-financial-label.js",
+          "fields_hint": [
+            "create(context) — CJS module export",
+            "AST visitors: Identifier, Literal, JSXAttribute",
+            "Sub-rules: §4.1 Handle, §4.2 Win, §4.3 Coverage, §4.4 Theo:0, §4.5 DTO chip identifiers"
+          ]
+        },
+        {
+          "name": "no-unlabeled-financial-value.js",
+          "kind": "artifact",
+          "description": "New CJS ESLint rule in .eslint-rules/ with deliberately simple, explicit scope: in services/**/dtos.ts, flag explicitly identified financial fields in DTOs (fields previously migrated in Phase 1.3) that remain typed as number or number | null. The DTO sub-rule operates on a maintained allowlist of known financial DTO fields, not all numeric fields. In components/**/*.tsx and app/**/*.tsx, flag direct formatDollars(x.value) / formatDollars(field.value) call expressions where the argument is a member access on a FinancialValue-typed variable. No heuristic identifier-pattern inference.",
+          "stateful": false,
+          "system_of_record": ".eslint-rules/no-unlabeled-financial-value.js",
+          "fields_hint": [
+            "create(context) — CJS module export",
+            "AST visitors: TSPropertySignature, TSTypeAliasDeclaration, CallExpression",
+            "Scope: services/**/dtos.ts for DTO sub-rule; components/**/*.tsx + app/**/*.tsx for render sub-rule"
+          ]
+        },
+        {
+          "name": "eslint.config.mjs additions",
+          "kind": "artifact",
+          "description": "Two new import lines (top-level import block, matching existing pattern for 10 current rules) and two new scoped config blocks: one targeting components/**/*.{ts,tsx} and app/**/*.{ts,tsx} for no-forbidden-financial-label and the formatDollars render sub-rule of no-unlabeled-financial-value; one targeting services/**/dtos.ts for the DTO currency-field sub-rule and §4.5 chip-identifier sub-rule. Test file glob exclusions follow existing convention.",
+          "stateful": false,
+          "system_of_record": "eslint.config.mjs",
+          "fields_hint": [
+            "import noForbiddenFinancialLabel from './.eslint-rules/no-forbidden-financial-label.js'",
+            "import noUnlabeledFinancialValue from './.eslint-rules/no-unlabeled-financial-value.js'",
+            "2 scoped config blocks with plugins + rules entries"
+          ]
+        },
+        {
+          "name": "test:surface script",
+          "kind": "artifact",
+          "description": "New package.json script following test:slice:* naming pattern. Runs jest with --testPathPatterns covering: components/financial/__tests__ (Phase 1.3 shared component tests), Phase 1.3 DEF-006 test dirs, and Phase 1.4-born API boundary envelope test file. Exact pattern TBD during EXEC-SPEC scaffolding.",
+          "stateful": false,
+          "system_of_record": "package.json scripts",
+          "fields_hint": [
+            "\"test:surface\": \"jest --testPathPatterns='<pattern>'\"",
+            "Includes Phase 1.3 test targets (DEF-006, financial components)",
+            "Includes Phase 1.4 API boundary test file"
+          ]
+        },
+        {
+          "name": "API route boundary envelope test file",
+          "kind": "artifact",
+          "description": "One new Jest test file targeting 1-2 representative financial routes sufficient to validate envelope shape at the API boundary. Each test asserts response body carries FinancialValue-shaped objects: integer value, non-null type, non-null source, non-null completeness.status at known financial field paths.",
+          "stateful": false,
+          "system_of_record": "__tests__/financial-surface/ or app/api/__tests__/",
+          "fields_hint": [
+            "Representative financial route: GET /api/v1/players/[playerId]/recent-sessions",
+            "Representative financial route: GET /api/v1/mtl/gaming-day-summary",
+            "Assertions: response.body.field.value is integer, .type non-null, .source non-null, .completeness.status non-null"
+          ]
+        },
+        {
+          "name": "financial-enforcement.spec.ts",
+          "kind": "artifact",
+          "description": "One new Playwright E2E test file combining minimal DOM authority assertions (2-3 representative surfaces) and the I5 truth-telling Wave 1 subset (2 scenarios). I5 Scenario 1: open visit → start-from-previous panel → assert Partial badge, no $0.00 for total_buy_in/total_cash_out/net. I5 Scenario 2: Theo-unknown player → player 360 summary-band → assert 'Not computed' or 'Unknown' near Theo row, no $0.00.",
+          "stateful": false,
+          "system_of_record": "e2e/financial-enforcement.spec.ts",
+          "fields_hint": [
+            "DOM authority assertions: 2-3 surfaces (shift-dashboard-v3 + player-360)",
+            "I5 Scenario 1: start-from-previous panel, partial completeness",
+            "I5 Scenario 2: player-360 summary-band, Theo unknown"
+          ]
+        }
+      ],
+      "boundaries": [
+        "No service layer changes — Phase 1.2B complete",
+        "No API / OpenAPI contract changes — Phase 1.2B-C complete (EXEC-076)",
+        "No UI component births or props changes — Phase 1.3 complete (EXEC-077); FinancialValue.tsx props contract frozen",
+        "hold_percent never flagged by no-unlabeled-financial-value (DEF-NEVER)",
+        "average_bet, min_bet, max_bet, watchlistFloor, ctrThreshold not flagged (WAVE-1-CLASSIFICATION-RULES §6)",
+        "Loyalty points not flagged (non-currency unit system)",
+        "lib/format.ts exported helpers unchanged — removal deferred to Phase 1.5",
+        "Full I1-I4 harness not activated — Wave 2 infrastructure does not exist"
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "no-forbidden-financial-label ESLint rule",
+          "description": "Author .eslint-rules/no-forbidden-financial-label.js following the existing CJS flat-config plugin pattern. Implement sub-rules §4.1-4.5 verbatim from WAVE-1-FORBIDDEN-LABELS.md. Global activation via eslint.config.mjs.",
+          "traces_to_loop_step": "1, 3",
+          "change_class": "Enforcement",
+          "output": "CI exits non-zero on any forbidden label appearing in production UI or DTO files; exits 0 on clean post-Phase-1.3 codebase"
+        },
+        {
+          "id": "CAP-2",
+          "name": "no-unlabeled-financial-value ESLint rule",
+          "description": "Author .eslint-rules/no-unlabeled-financial-value.js with explicit, reliable scope: DTO number-typed fields in services/**/dtos.ts and direct formatDollars member-access call expressions in component/app files. No heuristic inference. Activation via eslint.config.mjs.",
+          "traces_to_loop_step": "2, 3",
+          "change_class": "Enforcement",
+          "output": "CI exits non-zero on allowlisted financial DTO fields that remain typed as number or number | null and bare formatter calls on FinancialValue-typed variables; exits 0 on clean codebase; rule scope is narrow enough to avoid false-positives on hold_percent, average_bet, policy thresholds"
+        },
+        {
+          "id": "CAP-3",
+          "name": "eslint.config.mjs integration",
+          "description": "Import both new rules at the top of eslint.config.mjs following the established pattern for all 10 existing rules. Add two scoped config blocks with appropriate glob patterns. Test file exclusions follow existing convention.",
+          "traces_to_loop_step": "3",
+          "change_class": "Enforcement",
+          "output": "Both rules active in npm run lint; zero violations on clean post-Phase-1.3 codebase; test introduction of label: 'Handle' causes npm run lint to exit non-zero"
+        },
+        {
+          "id": "CAP-4",
+          "name": "test:surface script birth",
+          "description": "Add test:surface to package.json following test:slice:* naming pattern. Script includes Phase 1.3 test targets (components/financial/__tests__, DEF-006 dirs) and Phase 1.4-born API boundary test file. Exact pattern defined during EXEC-SPEC scaffolding.",
+          "traces_to_loop_step": "4",
+          "change_class": "Enforcement",
+          "output": "npm run test:surface is a stable, invokable exit gate runner for the Phase 1.4 enforcement gate test set"
+        },
+        {
+          "id": "CAP-5",
+          "name": "API route boundary envelope tests",
+          "description": "Author 1 Jest test file with tests for 1-2 representative financial routes. Each test asserts the response body carries FinancialValue-shaped objects (integer value, non-null type, non-null source, non-null completeness.status) at known financial field paths. Representative coverage proves the contract holds at the wire without duplicating Phase 1.2B-C route matrices.",
+          "traces_to_loop_step": "5",
+          "change_class": "Enforcement",
+          "output": "Runtime contract validation layer; representative routes prove API surface contract holds post-Phase-1.3"
+        },
+        {
+          "id": "CAP-6",
+          "name": "Playwright DOM assertions + I5 truth-telling tests",
+          "description": "Author e2e/financial-enforcement.spec.ts combining: (a) DOM authority label presence assertions on 2-3 representative surfaces (shift-dashboard-v3 + player-360); (b) I5 Scenario 1: open visit → start-from-previous panel → assert Partial badge, no $0.00; (c) I5 Scenario 2: Theo-unknown player → player-360 summary-band → assert 'Not computed'/'Unknown', no $0.00. All concerns in one file to minimize test infrastructure overhead.",
+          "traces_to_loop_step": "6",
+          "change_class": "Enforcement",
+          "output": "Authority label visibility proven on representative surfaces; I5 Wave 1 invariant verified — completeness never silently misrepresented as complete or zero"
+        },
+        {
+          "id": "CAP-7",
+          "name": "Validation sequence + tracker update",
+          "description": "Run full validation: npm run lint (both new rules, zero violations), npm run test:surface (all Jest targets pass), npm run e2e:playwright (Playwright file passes). Update ROLLOUT-TRACKER.json: advance cursor to active_phase 1.5, record Phase 1.4 exit date, EXEC reference, commit SHA.",
+          "traces_to_loop_step": "7, 8",
+          "change_class": "Enforcement",
+          "output": "All Phase 1.4 exit gate criteria met; tracker cursor at 1.5; Phase 1.5 entry unblocked"
+        }
+      ]
+    },
+    "where": {
+      "primary_surface": "CI pipeline — npm run lint and npm run test:surface; Playwright E2E suite for I5 truth-telling. PT-2 UI surfaces are tested targets, not modified artifacts.",
+      "surfaces": [
+        {
+          "id": "SURF-1",
+          "name": ".eslint-rules/no-forbidden-financial-label.js",
+          "bounded_context": "cross-cutting enforcement",
+          "change_type": "birth — new ESLint rule"
+        },
+        {
+          "id": "SURF-2",
+          "name": ".eslint-rules/no-unlabeled-financial-value.js",
+          "bounded_context": "cross-cutting enforcement",
+          "change_type": "birth — new ESLint rule"
+        },
+        {
+          "id": "SURF-3",
+          "name": "eslint.config.mjs",
+          "bounded_context": "cross-cutting enforcement",
+          "change_type": "addition — 2 imports + 2 scoped config blocks"
+        },
+        {
+          "id": "SURF-4",
+          "name": "package.json scripts",
+          "bounded_context": "cross-cutting enforcement",
+          "change_type": "addition — test:surface script"
+        },
+        {
+          "id": "SURF-5",
+          "name": "__tests__/financial-surface/ or app/api/__tests__/ (1 file)",
+          "bounded_context": "financial-display (API contract enforcement)",
+          "change_type": "birth — API boundary envelope test"
+        },
+        {
+          "id": "SURF-6",
+          "name": "e2e/financial-enforcement.spec.ts",
+          "bounded_context": "financial-display (E2E enforcement)",
+          "change_type": "birth — Playwright DOM + I5 truth-telling spec"
+        }
+      ],
+      "touchpoints": {
+        "inbound": [
+          {
+            "name": "pull_request_opened",
+            "type": "event",
+            "description": "Developer opens a PR touching financial DTO, UI component, or app route — lint runs on the diff"
+          },
+          {
+            "name": "ci_test_run",
+            "type": "event",
+            "description": "CI invokes npm run test:surface and npm run e2e:playwright on every PR"
+          }
+        ],
+        "outbound": [
+          {
+            "name": "ci_lint_failure",
+            "type": "event",
+            "description": "npm run lint exits non-zero — PR blocked at CI boundary on forbidden label or unlabeled DTO field"
+          },
+          {
+            "name": "ci_test_failure",
+            "type": "event",
+            "description": "npm run test:surface or npm run e2e:playwright exits non-zero — PR blocked at CI boundary"
+          }
+        ]
+      },
+      "bounded_contexts": [
+        "cross-cutting enforcement (lint rules span all financial service boundaries)",
+        "financial-display (Playwright DOM assertions target migrated surfaces; API tests target financial routes)"
+      ]
+    },
+    "who": {
+      "primary_actor": "Developer committing code to the pt-2 repository (stopped at CI boundary on violation)",
+      "actors": [
+        {
+          "id": "ACTOR-1",
+          "name": "Developer",
+          "role": "Authors lint rules, test:surface script, API boundary tests, and Playwright E2E spec. Stopped at CI boundary if a violation is introduced in a future PR.",
+          "permissions": [
+            "write .eslint-rules/",
+            "write eslint.config.mjs",
+            "write package.json",
+            "write e2e/",
+            "write __tests__/"
+          ],
+          "restrictions": [
+            "must not modify FinancialValue.tsx props contract (frozen Phase 1.3)",
+            "must not author service, API, or DTO shape changes"
+          ]
+        },
+        {
+          "id": "ACTOR-2",
+          "name": "CI system",
+          "role": "Runs npm run lint, npm run test:surface, npm run e2e:playwright on every PR. Enforces Phase 1.4 gates without human gate-keeping.",
+          "permissions": [
+            "read all source files",
+            "run lint and test commands"
+          ],
+          "restrictions": []
+        },
+        {
+          "id": "ACTOR-3",
+          "name": "Pit boss / floor supervisor",
+          "role": "End-user protected by enforcement. The I5 truth-telling tests exist so the operator never sees $0 or blank when completeness is partial or unknown.",
+          "permissions": ["view PT-2 financial surfaces"],
+          "restrictions": []
+        }
+      ],
+      "ownership": {
+        "business_owner": "Vladimir Ivanov",
+        "domain_owner": "Financial Telemetry (Cross-context)"
+      }
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "id": "TRIG-1",
+          "name": "phase_1_3_exit_gate_passed",
+          "source": "system",
+          "description": "EXEC-077 closed 2026-05-04: all 13 surface families migrated; FinancialValue.tsx props contract frozen; sentinel grep CLEAN; npm run type-check, npm run lint, npm run build all exit 0. Phase 1.4 entry unblocked.",
+          "preconditions": ["Phase 1.3 complete"]
+        },
+        {
+          "id": "TRIG-2",
+          "name": "wave1_exit_criteria_2_and_3_open",
+          "source": "system",
+          "description": "Wave 1 exit criterion 2 ('Lint rule red on violations, active in CI') and criterion 3 ('Truth-telling test suite passes, harness I5 subset') cannot be met without Phase 1.4. Wave 1 → Wave 2 handoff gate blocked.",
+          "preconditions": ["Phase 1.3 exit gate passed"]
+        }
+      ],
+      "lifecycle_events": [
+        "no-forbidden-financial-label.js authored and tested",
+        "no-unlabeled-financial-value.js authored and tested",
+        "Both rules imported and scoped in eslint.config.mjs",
+        "test:surface script added to package.json",
+        "API route boundary envelope test file authored and passing",
+        "financial-enforcement.spec.ts authored and passing (DOM assertions + I5 Scenario 1 + I5 Scenario 2)",
+        "Full validation sequence passes: npm run lint (0 violations), npm run test:surface (all pass), npm run e2e:playwright (all pass)",
+        "ROLLOUT-TRACKER.json cursor advanced to Phase 1.5",
+        "Phase 1.4 exit gate met — Phase 1.5 entry unblocked"
+      ],
+      "timing_constraints": [
+        "Must complete before Phase 1.5 Rollout & Sign-off can begin",
+        "Must complete before Wave 1 exit criteria 2 and 3 can be declared met",
+        "Playwright seed data must provide: (1) a player with an open visit (partial completeness scenario) and (2) a player with a Theo-unknown state (unknown completeness scenario) — EXEC-SPEC must verify or patch seed"
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "statement": "no-forbidden-financial-label must catch all five forbidden-label patterns from WAVE-1-FORBIDDEN-LABELS.md §4.1-4.5: Handle (with derived-rename exception), Win (with qualifier whitelist), Coverage (KPI-context scoped), Theo:0/$0, DTO chip identifiers on services/**/dtos.ts files.",
+          "severity": "hard",
+          "traces_to_loop_step": "1, 3",
+          "traces_to_capability": "CAP-1"
+        },
+        {
+          "id": "RULE-2",
+          "statement": "no-unlabeled-financial-value must operate only on a maintained allowlist of explicitly identified financial DTO fields in services/**/dtos.ts that remain typed as number or number | null, and explicit formatDollars member-access calls in component/app files. No heuristic identifier-pattern inference. The Playwright assertions cover what the rule cannot reach.",
+          "severity": "hard",
+          "traces_to_loop_step": "2, 3",
+          "traces_to_capability": "CAP-2"
+        },
+        {
+          "id": "RULE-3",
+          "statement": "The no-unlabeled-financial-value rule must NOT flag hold_percent (dimensionless ratio), average_bet, policy thresholds (min_bet, max_bet, watchlistFloor, ctrThreshold), loyalty points, or current_segment_average_bet. These are operator inputs, ratios, or non-currency unit systems per WAVE-1-CLASSIFICATION-RULES §6.",
+          "severity": "hard",
+          "traces_to_loop_step": "2",
+          "traces_to_capability": "CAP-2"
+        },
+        {
+          "id": "RULE-4",
+          "statement": "test:surface script must include Phase 1.3 test targets (components/financial/__tests__, DEF-006 dirs) and Phase 1.4-born API boundary test file. It must be the single exit gate runner for the Phase 1.4 enforcement gate test set.",
+          "severity": "hard",
+          "traces_to_loop_step": "4",
+          "traces_to_capability": "CAP-4"
+        },
+        {
+          "id": "RULE-5",
+          "statement": "API route boundary envelope tests must assert that each tested route response carries FinancialValue-shaped objects: value is integer (not float), type is non-null, source is non-null, completeness.status is non-null. Representative coverage (1-2 routes) is sufficient; exhaustive route testing is not the goal.",
+          "severity": "hard",
+          "traces_to_loop_step": "5",
+          "traces_to_capability": "CAP-5"
+        },
+        {
+          "id": "RULE-6",
+          "statement": "I5 Scenario 1: Navigate to a player session with an open visit. Open the start-from-previous panel. Assert the DOM contains the partial-completeness badge text (Partial or equivalent). Assert no $0.00 or empty currency cell for total_buy_in, total_cash_out, or net.",
+          "severity": "hard",
+          "traces_to_loop_step": "6",
+          "traces_to_capability": "CAP-6"
+        },
+        {
+          "id": "RULE-7",
+          "statement": "I5 Scenario 2: Navigate to a player 360 profile where the Theo estimate is unknown. Assert the DOM contains 'Not computed' or 'Unknown' near the Theo row. Assert the Theo row does not contain $0.00 or bare zero.",
+          "severity": "hard",
+          "traces_to_loop_step": "6",
+          "traces_to_capability": "CAP-6"
+        },
+        {
+          "id": "RULE-8",
+          "statement": "ROLLOUT-TRACKER.json must be updated with Phase 1.4 closure: cursor advanced to active_phase 1.5, exit date recorded, EXEC reference and commit SHA recorded. ROLLOUT-PROGRESS.md must be kept in sync.",
+          "severity": "hard",
+          "traces_to_loop_step": "8",
+          "traces_to_capability": "CAP-7"
+        }
+      ],
+      "invariants": [
+        "CI exits non-zero on any new forbidden label (Handle, unqualified Win, Coverage quality, Theo:0/$0, totalChipsOut/totalChipsIn) in production UI or DTO files",
+        "CI exits non-zero on any allowlisted financial DTO field in services/**/dtos.ts that remains typed as number or number | null instead of FinancialValue",
+        "npm run test:surface passes on clean post-Phase-1.3 codebase",
+        "Playwright assertions confirm authority labels are visible in DOM on representative surfaces",
+        "Completeness is never silently misrepresented — I5 invariant: partial renders Partial badge, unknown renders Not computed, neither renders $0.00 or blank",
+        "hold_percent is never FinancialValue — lint rule must not flag it (DEF-NEVER, all phases)",
+        "No service, API, DTO shape, or UI component changes in this phase — all upstream contracts are stable"
+      ],
+      "decision_notes": [
+        "Coverage mode is Targeted (representative enforcement), not Full. Lint rules are global by nature and provide comprehensive protection. Runtime tests (API, Playwright) prove invariants on representative surfaces — exhaustive coverage is a regression suite, not an Enforcement FIB.",
+        "no-unlabeled-financial-value is intentionally simple: explicit DTO definition detection + explicit member-access formatDollars call detection. Heuristic identifier-pattern inference (e.g., *Cents, *Amount suffixes) was rejected as unreliable and likely to produce false-positives on non-currency fields with similar naming patterns.",
+        "I5 Wave 1 scope is Playwright DOM navigation only — no FailureFlags injection, no crash simulation, no finance_outbox interaction. Full I1-I4 harness is Wave 2. Two I5 scenarios prove the specific completeness rendering invariant that Phase 1.3 established.",
+        "Whether API route boundary envelope tests run as Jest/JSDOM simulations or against a live local Supabase instance is an open question for EXEC-SPEC to decide based on CI cost and route handler testability. Both modes are acceptable; the FIB requires the tests exist and pass.",
+        "Playwright seed data verification is an open question for EXEC-SPEC: must confirm local seed provides a player with an open visit (I5 Scenario 1) and a player with a Theo-unknown state (I5 Scenario 2). If seed gaps exist, EXEC-SPEC must include a seed data patch as a WS0 prerequisite."
+      ]
+    }
+  },
+
+  "containment_loop": [
+    {
+      "step": 1,
+      "actor": "Developer",
+      "action": "Author .eslint-rules/no-forbidden-financial-label.js as a CJS module with create(context) export, implementing sub-rules §4.1-4.5 from WAVE-1-FORBIDDEN-LABELS.md verbatim: Handle with derived-rename exception, Win with qualifier whitelist, Coverage KPI-context scoped, Theo:0/$0 patterns, DTO chip identifiers on services/**/dtos.ts files",
+      "system_response": "Rule file exists; all five sub-rules are implemented against the authoritative regex specifications in WAVE-1-FORBIDDEN-LABELS.md §4",
+      "capability": "CAP-1"
+    },
+    {
+      "step": 2,
+      "actor": "Developer",
+      "action": "Author .eslint-rules/no-unlabeled-financial-value.js as a CJS module with create(context) export, implementing explicit scope: (a) in services/**/dtos.ts, flag explicitly identified financial fields in DTOs (fields previously migrated in Phase 1.3) that remain typed as number or number | null, using a maintained allowlist of known financial DTO fields rather than all numeric fields; (b) in components/**/*.tsx and app/**/*.tsx, flag direct formatDollars(x.value) or formatDollars(field.value) call expressions where the argument is a member access on a FinancialValue-typed variable. No heuristic identifier-pattern inference.",
+      "system_response": "Rule file exists; scope is narrow and explicit; hold_percent, average_bet, policy thresholds, and loyalty points are not flagged",
+      "capability": "CAP-2"
+    },
+    {
+      "step": 3,
+      "actor": "Developer",
+      "action": "Import both new rules in eslint.config.mjs at the top-level import block (matching existing pattern for all 10 current rules); add two scoped config blocks with glob patterns targeting components/**/*.{ts,tsx} + app/**/*.{ts,tsx} for no-forbidden-financial-label and the render sub-rule of no-unlabeled-financial-value, and services/**/dtos.ts for the DTO currency-field sub-rule and §4.5 chip-identifier sub-rule. Apply test file glob exclusions per existing convention.",
+      "system_response": "npm run lint exits 0 on clean post-Phase-1.3 codebase; test introduction of label: 'Handle' in a component file causes npm run lint to exit non-zero",
+      "capability": "CAP-3"
+    },
+    {
+      "step": 4,
+      "actor": "Developer",
+      "action": "Add test:surface script to package.json following test:slice:* naming pattern with jest --testPathPatterns covering Phase 1.3 test targets (components/financial/__tests__, DEF-006 dirs) and Phase 1.4-born API boundary test file; exact pattern defined during EXEC-SPEC scaffolding to avoid sweeping unrelated test dirs",
+      "system_response": "npm run test:surface is a stable, invokable command that runs the Phase 1.4 enforcement gate test set",
+      "capability": "CAP-4"
+    },
+    {
+      "step": 5,
+      "actor": "Developer",
+      "action": "Author 1 Jest test file with API route boundary envelope tests for 1-2 representative financial routes sufficient to validate envelope shape at the API boundary; each test asserts response body carries FinancialValue-shaped objects (integer value, non-null type, non-null source, non-null completeness.status) at known financial field paths",
+      "system_response": "Runtime contract validation layer exists; representative API routes prove the FinancialValue contract holds at the wire",
+      "capability": "CAP-5"
+    },
+    {
+      "step": 6,
+      "actor": "Developer",
+      "action": "Author e2e/financial-enforcement.spec.ts combining: (a) DOM authority label presence on 2-3 representative surfaces (at least one shift-dashboard-v3 surface and one player-360 surface — assert presence of at least one visible authority-labeled financial value on each representative surface); (b) I5 Scenario 1: open visit → start-from-previous panel → assert Partial badge text present, no $0.00 or empty currency for total_buy_in/total_cash_out/net; (c) I5 Scenario 2: Theo-unknown player → player-360 summary-band → assert 'Not computed' or 'Unknown' present near Theo row, no $0.00 or bare zero",
+      "system_response": "Authority label visibility proven on representative surfaces; I5 Wave 1 invariant verified — completeness is never silently misrepresented as complete or zero",
+      "capability": "CAP-6"
+    },
+    {
+      "step": 7,
+      "actor": "Developer",
+      "action": "Run full validation sequence: npm run lint (both new rules active, zero violations on clean codebase), npm run test:surface (all Jest targets pass), npm run e2e:playwright (financial-enforcement.spec.ts passes); record output in implementation notes",
+      "system_response": "All Phase 1.4 exit gate criteria met: CI is red on violations; API contract holds at the wire; completeness is never silently misrepresented",
+      "capability": "CAP-7"
+    },
+    {
+      "step": 8,
+      "actor": "Developer",
+      "action": "Update ROLLOUT-TRACKER.json: advance cursor to active_phase 1.5, record Phase 1.4 exit date, EXEC-078 reference, and commit SHA; sync ROLLOUT-PROGRESS.md with Phase 1.4 closure status",
+      "system_response": "Tracker cursor at Phase 1.5; Phase 1.5 Rollout & Sign-off entry unblocked; Wave 1 exit criteria 2 and 3 declared met",
+      "capability": "CAP-7"
+    }
+  ],
+
+  "success_outcomes": [
+    {
+      "id": "OUT-1",
+      "description": "ESLint no-forbidden-financial-label is active in CI: npm run lint exits non-zero on any forbidden label (Handle, unqualified Win, Coverage quality, Theo:0/$0, totalChipsOut/totalChipsIn) appearing in production UI or DTO files; exits 0 on the clean post-Phase-1.3 codebase",
+      "traces_to_capability": "CAP-1, CAP-3"
+    },
+    {
+      "id": "OUT-2",
+      "description": "ESLint no-unlabeled-financial-value is active in CI: exits non-zero on allowlisted financial DTO fields in services/**/dtos.ts that remain typed as number or number | null instead of FinancialValue and on direct formatDollars calls on FinancialValue-typed member accesses in UI/app files; exits 0 on clean codebase; does not flag hold_percent, average_bet, policy thresholds, or loyalty points",
+      "traces_to_capability": "CAP-2, CAP-3"
+    },
+    {
+      "id": "OUT-3",
+      "description": "npm run test:surface script exists and passes, covering: Phase 1.3 shared financial component tests, DEF-006 component tests, and Phase 1.4 API route boundary envelope tests (1-2 representative routes)",
+      "traces_to_capability": "CAP-4, CAP-5"
+    },
+    {
+      "id": "OUT-4",
+      "description": "Playwright DOM assertions pass on 2-3 representative surfaces — at least one visible authority-labeled financial value is present on each representative surface",
+      "traces_to_capability": "CAP-6"
+    },
+    {
+      "id": "OUT-5",
+      "description": "I5 truth-telling Playwright tests pass: (1) partial completeness state renders explicit Partial badge text — no $0.00 or blank for total_buy_in/total_cash_out/net in start-from-previous panel; (2) unknown completeness state renders 'Not computed' or 'Unknown' near Theo row — no $0.00 or bare zero in player-360 summary-band",
+      "traces_to_capability": "CAP-6"
+    },
+    {
+      "id": "OUT-6",
+      "description": "npm run lint, npm run test:surface, and npm run e2e:playwright all exit 0 as the Phase 1.4 exit gate — Wave 1 exit criteria 2 and 3 declared met",
+      "traces_to_capability": "CAP-7"
+    },
+    {
+      "id": "OUT-7",
+      "description": "ROLLOUT-TRACKER.json updated with Phase 1.4 closure — cursor at active_phase 1.5; exit date, EXEC-078 reference, and commit SHA recorded; ROLLOUT-PROGRESS.md in sync",
+      "traces_to_capability": "CAP-7"
+    }
+  ],
+
+  "traceability_check": {
+    "operator_problem_to_loop_step": [
+      "Future code change reintroduces bare currency number in DTO → step 2 (no-unlabeled-financial-value rule) + step 3 (eslint.config.mjs activation)",
+      "Future code change adds forbidden label back to UI → step 1 (no-forbidden-financial-label rule) + step 3 (eslint.config.mjs activation)",
+      "API surface loses FinancialValue envelope shape → step 5 (API boundary envelope tests)",
+      "Surface renders $0.00 or blank when completeness is partial → step 6 (I5 Scenario 1 Playwright)",
+      "Surface renders $0.00 or blank when completeness is unknown → step 6 (I5 Scenario 2 Playwright)",
+      "No single test runner for financial surface corpus → step 4 (test:surface script)",
+      "Wave 1 → Wave 2 handoff gate blocked on exit criteria 2 and 3 → steps 7, 8"
+    ],
+    "loop_step_to_capability": {
+      "1": "CAP-1",
+      "2": "CAP-2",
+      "3": "CAP-1, CAP-2, CAP-3",
+      "4": "CAP-4",
+      "5": "CAP-5",
+      "6": "CAP-6",
+      "7": "CAP-7",
+      "8": "CAP-7"
+    },
+    "capability_to_outcome": {
+      "CAP-1": "OUT-1",
+      "CAP-2": "OUT-2",
+      "CAP-3": "OUT-1, OUT-2",
+      "CAP-4": "OUT-3",
+      "CAP-5": "OUT-3",
+      "CAP-6": "OUT-4, OUT-5",
+      "CAP-7": "OUT-6, OUT-7"
+    },
+    "rule_to_loop_step": {
+      "RULE-1": [1, 3],
+      "RULE-2": [2, 3],
+      "RULE-3": [2],
+      "RULE-4": [4],
+      "RULE-5": [5],
+      "RULE-6": [6],
+      "RULE-7": [6],
+      "RULE-8": [8]
+    }
+  },
+
+  "dependencies": {
+    "required_existing": [
+      "Phase 1.3 exit gate ✅ (EXEC-077, 2026-05-04) — all 13 surface families migrated; FinancialValue.tsx props contract frozen; sentinel grep CLEAN; npm run type-check + lint + build exit 0",
+      "components/financial/FinancialValue.tsx — frozen props contract from EXEC-077 §WS1 is the lint rule target; Phase 1.4 reads this contract, does not modify it",
+      "WAVE-1-FORBIDDEN-LABELS.md §4 — regex specifications §4.1-4.5 are the authoritative input for no-forbidden-financial-label; the FIB does not re-derive the patterns",
+      ".eslint-rules/ directory — 10 existing CJS rules; Phase 1.4 follows the established CJS module pattern exactly",
+      "eslint.config.mjs — flat config with FlatCompat; existing import pattern for all 10 current rules is the template",
+      "e2e/ directory with Playwright config — Phase 1.4 adds spec files under this directory; no new Playwright configuration required",
+      "Local Supabase instance with seed data supporting partial completeness (player with open visit) and unknown completeness (player with Theo-unknown state) — EXEC-SPEC must verify or patch"
+    ],
+    "missing_dependencies": [],
+    "open_questions": [
+      "Exact test:surface Jest --testPathPatterns value — depends on Phase 1.4 test file naming conventions decided during EXEC-SPEC scaffolding; set of included targets is defined by this FIB",
+      "Whether API route boundary envelope tests run as Jest/JSDOM simulations or against local Supabase instance — EXEC-SPEC decides based on route handler testability and CI cost; both modes acceptable",
+      "Playwright seed data verification — EXEC-SPEC must confirm local seed provides required player states for I5 Scenarios 1 and 2; if seed gaps exist, EXEC-SPEC must include a WS0 seed data patch prerequisite"
+    ],
+    "assumptions": [
+      "Phase 1.3 FinancialValue.tsx props contract is frozen and stable — lint rules encode this contract as a read-only input",
+      "WAVE-1-FORBIDDEN-LABELS.md §4.1-4.5 regex specifications are complete and accurate — rule implementation uses them verbatim without re-derivation",
+      "10 existing .eslint-rules/*.js files use CJS module pattern with create(context) export — Phase 1.4 rules follow the identical pattern without deviation"
+    ]
+  },
+
+  "governance": {
+    "frozen_adrs": ["ADR-052", "ADR-053", "ADR-054", "ADR-055"],
+    "def_never_items": [
+      "hold_percent FinancialValue wrapping",
+      "hold_percent flagged by no-unlabeled-financial-value"
+    ],
+    "classification_rules_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-CLASSIFICATION-RULES.md",
+    "forbidden_labels_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-FORBIDDEN-LABELS.md",
+    "failure_harness_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/FAILURE-SIMULATION-HARNESS.md",
+    "rollout_tracker_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json",
+    "deferred_register_items_to_close": [],
+    "wave_1_exit_criteria_addressed": [
+      "Criterion 2: Lint rule red on violations, active in CI — addressed by CAP-1, CAP-2, CAP-3",
+      "Criterion 3: Truth-telling test suite passes, harness I5 subset — addressed by CAP-4, CAP-5, CAP-6"
+    ],
+    "downstream_expansion_allowed_without_amendment": false,
+    "open_questions_allowed_at_scaffold": [
+      "test:surface Jest --testPathPatterns exact value",
+      "API boundary test execution mode (JSDOM vs live Supabase)",
+      "Playwright seed data gap verification and potential WS0 seed patch"
+    ],
+    "scope_authority": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-4-VALIDATION-LINT-TRUTH",
+    "approval": "Vladimir Ivanov / 2026-05-04"
+  }
+}

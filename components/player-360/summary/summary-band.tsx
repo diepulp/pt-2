@@ -134,7 +134,7 @@ export const SummaryBand = memo(function SummaryBand({
       <SummaryTile
         title="Session Value"
         primaryValue={formatDollars(data.sessionValue.netWinLoss)}
-        secondaryValue={`Theo: ${formatDollars(data.sessionValue.theoEstimate)}`}
+        secondaryValue={`Theo (Estimated): ${formatDollars(data.sessionValue.theoEstimate)}`}
         microDetail={
           data.sessionValue.lastActionAt
             ? formatTimeAgo(data.sessionValue.lastActionAt)
@@ -149,8 +149,8 @@ export const SummaryBand = memo(function SummaryBand({
       {/* Cash Velocity Tile */}
       <SummaryTile
         title="Cash Velocity"
-        primaryValue={formatRate(data.cashVelocity.ratePerHour)}
-        secondaryValue={`Total: ${formatDollars(data.cashVelocity.sessionTotal)}`}
+        primaryValue={`Estimated: ${formatRate(data.cashVelocity.ratePerHour)}`}
+        secondaryValue={`Actual: ${formatDollars(data.cashVelocity.sessionTotal)}`}
         microDetail={
           data.cashVelocity.lastBuyInAt
             ? `Last buy-in ${formatTimeAgo(data.cashVelocity.lastBuyInAt)}`

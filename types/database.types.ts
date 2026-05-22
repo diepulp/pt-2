@@ -61,6 +61,42 @@ export type Database = {
           },
         ]
       }
+      approved_email_allowlist: {
+        Row: {
+          casino_id: string | null
+          company_id: string | null
+          created_at: string
+          email: string
+          expires_at: string | null
+          id: string
+          invited_by: string | null
+          status: string
+          used_at: string | null
+        }
+        Insert: {
+          casino_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string | null
+          status?: string
+          used_at?: string | null
+        }
+        Update: {
+          casino_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string | null
+          status?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -348,34 +384,52 @@ export type Database = {
       }
       finance_outbox: {
         Row: {
-          attempt_count: number
+          aggregate_id: string
           casino_id: string
           created_at: string
+          delivery_attempts: number
+          event_id: string
           event_type: string
-          id: string
-          ledger_id: string
+          fact_class: string
+          last_attempted_at: string | null
+          last_error: string | null
+          origin_label: string
           payload: Json
+          player_id: string | null
           processed_at: string | null
+          table_id: string
         }
         Insert: {
-          attempt_count?: number
+          aggregate_id: string
           casino_id: string
           created_at?: string
+          delivery_attempts?: number
+          event_id: string
           event_type: string
-          id?: string
-          ledger_id: string
+          fact_class: string
+          last_attempted_at?: string | null
+          last_error?: string | null
+          origin_label: string
           payload: Json
+          player_id?: string | null
           processed_at?: string | null
+          table_id: string
         }
         Update: {
-          attempt_count?: number
+          aggregate_id?: string
           casino_id?: string
           created_at?: string
+          delivery_attempts?: number
+          event_id?: string
           event_type?: string
-          id?: string
-          ledger_id?: string
+          fact_class?: string
+          last_attempted_at?: string | null
+          last_error?: string | null
+          origin_label?: string
           payload?: Json
+          player_id?: string | null
           processed_at?: string | null
+          table_id?: string
         }
         Relationships: [
           {
@@ -386,17 +440,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "finance_outbox_ledger_id_fkey"
-            columns: ["ledger_id"]
+            foreignKeyName: "finance_outbox_table_id_fkey"
+            columns: ["table_id"]
             isOneToOne: false
-            referencedRelation: "measurement_audit_event_correlation_v"
-            referencedColumns: ["pft_id"]
-          },
-          {
-            foreignKeyName: "finance_outbox_ledger_id_fkey"
-            columns: ["ledger_id"]
-            isOneToOne: false
-            referencedRelation: "player_financial_transaction"
+            referencedRelation: "gaming_table"
             referencedColumns: ["id"]
           },
         ]
@@ -1519,6 +1566,48 @@ export type Database = {
           },
         ]
       }
+      pilot_access_requests: {
+        Row: {
+          casino_name: string
+          created_at: string
+          email: string
+          estimated_table_count: number | null
+          id: string
+          message: string | null
+          name: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          role: string
+          status: string
+        }
+        Insert: {
+          casino_name: string
+          created_at?: string
+          email: string
+          estimated_table_count?: number | null
+          id?: string
+          message?: string | null
+          name: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role: string
+          status?: string
+        }
+        Update: {
+          casino_name?: string
+          created_at?: string
+          email?: string
+          estimated_table_count?: number | null
+          id?: string
+          message?: string | null
+          name?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role?: string
+          status?: string
+        }
+        Relationships: []
+      }
       pit_cash_observation: {
         Row: {
           amount: number
@@ -2163,6 +2252,32 @@ export type Database = {
             columns: ["removed_by"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processed_messages: {
+        Row: {
+          casino_id: string
+          message_id: string
+          processed_at: string
+        }
+        Insert: {
+          casino_id: string
+          message_id: string
+          processed_at?: string
+        }
+        Update: {
+          casino_id?: string
+          message_id?: string
+          processed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processed_messages_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
             referencedColumns: ["id"]
           },
         ]
@@ -3092,6 +3207,7 @@ export type Database = {
           amount_cents: number
           casino_id: string
           created_at: string
+          event_type: string
           gaming_day: string
           id: string
           idempotency_key: string | null
@@ -3109,6 +3225,7 @@ export type Database = {
           amount_cents: number
           casino_id: string
           created_at?: string
+          event_type: string
           gaming_day: string
           id?: string
           idempotency_key?: string | null
@@ -3126,6 +3243,7 @@ export type Database = {
           amount_cents?: number
           casino_id?: string
           created_at?: string
+          event_type?: string
           gaming_day?: string
           id?: string
           idempotency_key?: string | null
@@ -4382,6 +4500,7 @@ export type Database = {
           suggested_theo: number
         }[]
       }
+      generate_uuid_v7: { Args: never; Returns: string }
       get_player_exclusion_status: {
         Args: { p_casino_id: string; p_player_id: string }
         Returns: string
@@ -4539,6 +4658,10 @@ export type Database = {
           points_delta: number
         }[]
       }
+      rpc_assign_or_move_table_to_slot: {
+        Args: { p_slot_id: string; p_table_id: string }
+        Returns: Json
+      }
       rpc_bootstrap_casino: {
         Args: {
           p_casino_name: string
@@ -4551,11 +4674,38 @@ export type Database = {
           staff_role: string
         }[]
       }
+      rpc_bootstrap_casino_pit_layout: { Args: never; Returns: Json }
       rpc_check_table_seat_availability: {
         Args: { p_seat_number: number; p_table_id: string }
         Returns: Json
       }
+      rpc_claim_outbox_batch: {
+        Args: { p_batch_size?: number }
+        Returns: {
+          aggregate_id: string
+          casino_id: string
+          created_at: string
+          delivery_attempts: number
+          event_id: string
+          event_type: string
+          fact_class: string
+          last_attempted_at: string | null
+          last_error: string | null
+          origin_label: string
+          payload: Json
+          player_id: string | null
+          processed_at: string | null
+          table_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "finance_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       rpc_clear_pin_attempts: { Args: never; Returns: undefined }
+      rpc_clear_slot_assignment: { Args: { p_slot_id: string }; Returns: Json }
       rpc_close_rating_slip: {
         Args: { p_average_bet?: number; p_rating_slip_id: string }
         Returns: {
@@ -4615,6 +4765,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rpc_commit_consumer_receipt: {
+        Args: { p_casino_id: string; p_message_id: string }
+        Returns: string
       }
       rpc_complete_casino_setup: { Args: { p_skip?: boolean }; Returns: Json }
       rpc_compute_rolling_baseline: {
@@ -5436,6 +5590,7 @@ export type Database = {
           amount_cents: number
           casino_id: string
           created_at: string
+          event_type: string
           gaming_day: string
           id: string
           idempotency_key: string | null

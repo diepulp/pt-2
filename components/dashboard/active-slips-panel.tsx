@@ -19,6 +19,7 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useActiveSlipsForDashboard, dashboardKeys } from '@/hooks/dashboard';
+import { getErrorMessage } from '@/lib/errors/error-utils';
 import { cn } from '@/lib/utils';
 import type { RatingSlipWithPlayerDTO } from '@/services/rating-slip/dtos';
 import {
@@ -209,7 +210,7 @@ export function ActiveSlipsPanel({
               Error Loading Slips
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              {error.message}
+              {getErrorMessage(error)}
             </p>
           </div>
         </CardContent>

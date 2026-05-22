@@ -1,0 +1,812 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-CANONICALIZATION",
+    "status": "draft",
+    "feature_id": "FIB-S-FIN-PHASE-1-2B-A-CANONICALIZATION",
+    "feature_name": "Financial Telemetry Phase 1.2B-A - Service Canonicalization (STRICT)",
+    "priority": "P1",
+    "decision_horizon": "phase-1-2b-a-close",
+    "owner": "Financial Telemetry (Cross-context)",
+    "opened_on": "2026-04-30",
+    "parent_prd": "PRD-074",
+    "parent_prd_note": "PRD-074 v0 describes broader Phase 1.2B; this FIB-S follows the stricter FIB-H split into Phase 1.2B-A and successor Phase 1.2B-B.",
+    "predecessor_fib": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2/FIB-S-FINANCIAL-TELEMETRY-PHASE-1-2-API-ENVELOPE.json",
+    "predecessor_phase": "Phase 1.2A - API Transport Stabilization (EXEC-071, closed 2026-04-30)",
+    "successor_slice": "Phase 1.2B-B - Surface Alignment"
+  },
+
+  "phase_boundary": {
+    "one_line_invariant": "If a change removes /100, promotes a deferred DTO type, or performs named pass-through contract/test updates required to keep this slice truthful - and nothing else - it is in scope.",
+    "scope_containment_note": "This FIB governs Phase 1.2B-A only. UI migration, full OpenAPI expansion, route matrix coverage, runtime observability, and component tests require successor FIB/PRD authority.",
+    "primary_change_class": "Semantics",
+    "primary_layer": "Service/Data",
+    "coverage_mode": "Representative",
+    "secondary_layers_allowed": [
+      "API contract artifact: pass-through documentation updates only for named existing OpenAPI path entries",
+      "Enforcement artifact: focused assertion updates only in named existing Phase 1.2A route test files",
+      "Governance artifact: ROLLOUT-TRACKER.json status updates only",
+      "Mechanical compatibility artifact: direct or metric-type-aware property access updates in components that consume a promoted field (e.g. financial metrics read x.value.toFixed(); hold_percent keeps x.toFixed()), with no new business logic, formatting rules, styling, layout, or rendering semantics. Branching is allowed only to choose between FinancialValue.value and bare-number access for the existing metricType discriminant. Must not expand beyond components directly consuming the affected fields."
+    ],
+    "secondary_layer_constraints": [
+      "Secondary layer updates must be strictly shape-alignment to existing fields",
+      "No new fields, scenarios, coverage patterns, paths, schemas, components, route logic, UI work, or runtime logging may be introduced",
+      "OpenAPI updates must not modify paths, schemas, or components outside the explicitly named path entries, even if nearby inconsistencies are observed",
+      "Any shift-intelligence authority discrepancy must be resolved in service mappers and DTO schemas only"
+    ],
+    "concrete_in_scope_service_data_surfaces": [
+      "services/visit/crud.ts",
+      "services/rating-slip/mappers.ts",
+      "services/shift-intelligence/mappers.ts",
+      "services/shift-intelligence/dtos.ts"
+    ],
+    "concrete_in_scope_openapi_path_entries": [
+      "GET /visits/{visit_id}/live-view",
+      "GET /players/{player_id}/recent-sessions",
+      "GET /shift-intelligence/anomaly-alerts"
+    ],
+    "concrete_in_scope_route_test_files": [
+      "app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts",
+      "app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts"
+    ],
+    "conditional_surface_note": "GET /api/v1/shift-intelligence/alerts may receive service DTO changes through ShiftAlertDTO, but Phase 1.2B-A may not birth a new OpenAPI path entry or route test for it unless a Phase 1.2A-authored path/test already exists and this FIB is amended.",
+    "stop_conditions": [
+      "new test files required",
+      "new OpenAPI paths required",
+      "UI component edits required",
+      "route-level FinancialValue construction required",
+      "runtime observability required",
+      "OpenAPI/schema/component changes outside named entries required"
+    ],
+    "prohibited": [
+      "formatDollars to formatCents UI migration",
+      "full 28-route OpenAPI expansion",
+      "full recent-sessions or live-view 4-case route test matrices",
+      "runtime structured log events for deprecated-field usage",
+      "BRIDGE-001 consumer audit as implementation work",
+      "route handler type/source/completeness authoring",
+      "hold_percent wrapping in FinancialValue",
+      "financialValueSchema.int() enforcement before /100 removal",
+      "Phase 1.3 financial UI components",
+      "Phase 1.3 component test births",
+      "Phase 1.4 ESLint rules",
+      "Wave 2 infrastructure"
+    ]
+  },
+
+  "intent": {
+    "operator_problem": "Phase 1.2A proved route transport honesty but deliberately left service-layer semantic gaps: BRIDGE-001 still converts database integer cents into dollar-float FinancialValue.value on recent-sessions and live-view surfaces, and shift-intelligence alert DTOs still expose financial metric values as bare number|null even though resolveShiftMetricAuthority already exists.",
+    "pilot_fit": "Phase 1.2B-A is the minimum service-layer canonicalization slice needed before surface alignment. It removes the BRIDGE-001 unit lie, enforces integer-cents DTO validation after the unit change, and promotes shift-intelligence financial metric fields using the existing authority router without coupling to UI, route expansion, or observability.",
+    "success_outcomes": [
+      "OUT-1: BRIDGE-001 /100 conversion is removed from both known service mapper sites and FinancialValue.value emits integer cents for RecentSessionDTO and VisitLiveViewDTO financial fields",
+      "OUT-2: financialValueSchema.int() is enforced at the relevant DTO outbound boundaries after /100 removal, rejects fractional numeric values, and exact-value tests prove cents-unit semantics",
+      "OUT-3: AnomalyAlertDTO and ShiftAlertDTO financial metric fields emit FinancialValue|null using resolveShiftMetricAuthority return values",
+      "OUT-4: hold_percent remains bare number|null at every layer and is explicitly verified as DEF-NEVER",
+      "OUT-5: Named existing OpenAPI path entries and BRIDGE-001 route tests are shape-aligned to the canonical service contract without expanding route inventory or coverage pattern",
+      "OUT-6: ROLLOUT-TRACKER.json records DEF-001, DEF-002, DEF-003, DEF-007 closure and BRIDGE-001 retirement after implementation commit SHA is known",
+      "OUT-7: Phase 1.2B-B can proceed against canonical integer-cents service DTOs without rewriting this slice"
+    ],
+    "explicit_exclusions": [
+      "UI render migration from formatDollars to formatCents - Phase 1.2B-B",
+      "Full OpenAPI expansion beyond the named existing path entries - Phase 1.2B-B",
+      "Full route contract test matrices and remaining route-boundary tests - Phase 1.2B-B / Phase 1.4",
+      "Runtime deprecation observability and structured log events - Phase 1.2B-B",
+      "BRIDGE-001 consumer audit as an active delivery obligation - Phase 1.2B-B",
+      "Phase 1.3 components/financial/FinancialValue.tsx, AttributionRatio.tsx, and CompletenessBadge.tsx",
+      "Component test births for rating-slip-modal, start-from-previous, and start-from-previous-modal - Phase 1.3",
+      "Broad forbidden-label cleanup and formatter consolidation - Phase 1.3",
+      "ESLint no-unlabeled-financial-value and no-forbidden-financial-label rules - Phase 1.4",
+      "I5 truth-telling harness subset and CI mechanical enforcement - Phase 1.4",
+      "finance_outbox DDL, producers, workers, projection refactors, or pit_cash_observation.amount migration - Wave 2",
+      "Any hold_percent FinancialValue wrapping in any phase - DEF-NEVER"
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Bundle UI migration into Phase 1.2B-A",
+        "why_considered": "Integer cents make render migration necessary next",
+        "why_rejected_now": "UI migration introduces component surface coupling, Q-4 discovery risk, and visual regression surface. Phase 1.2B-A canonicalizes the service layer; Phase 1.2B-B aligns surfaces."
+      },
+      {
+        "idea": "Expand all remaining OpenAPI routes in Phase 1.2B-A",
+        "why_considered": "Contract expansion becomes easier once DTO meaning stabilizes",
+        "why_rejected_now": "Full expansion is a surface-alignment and inventory task, not required to canonicalize service semantics. Named path entries are enough to keep existing public contract artifacts truthful."
+      },
+      {
+        "idea": "Wire runtime deprecation observability in Phase 1.2B-A",
+        "why_considered": "Deprecation usage should eventually be measurable",
+        "why_rejected_now": "Runtime logs are route-layer surface work. This slice must not touch route handlers for observability."
+      },
+      {
+        "idea": "Build full 4-case route test matrices",
+        "why_considered": "Broader route coverage would catch more transport regressions",
+        "why_rejected_now": "Full matrices are validation-layer work after stable semantics and surface alignment. Phase 1.2B-A needs only integer-value regression guards in named existing files."
+      },
+      {
+        "idea": "Enforce financialValueSchema.int() before removing /100",
+        "why_considered": "Validator enforcement is one of the desired outcomes",
+        "why_rejected_now": "Ordering is mandatory because z.number().int() rejects fractional numeric values but does not prove currency units. /100 removal must precede runtime integer enforcement, and exact-value tests must prove cents-unit semantics."
+      },
+      {
+        "idea": "Wrap hold_percent in FinancialValue with an is_ratio flag",
+        "why_considered": "hold_percent appears alongside financial alert metrics",
+        "why_rejected_now": "hold_percent is a dimensionless ratio, not currency. resolveShiftMetricAuthority returns null for it and DEF-NEVER forbids wrapping."
+      },
+      {
+        "idea": "Patch shift-intelligence mapping discrepancies at route or UI level",
+        "why_considered": "A downstream compensation can appear faster if mapper promotion reveals a mismatch",
+        "why_rejected_now": "The mapper and DTO schema are the only authority for this slice. Route-level or UI-level compensation violates the service canonicalization boundary."
+      }
+    ]
+  },
+
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "FinancialValue",
+          "kind": "primitive",
+          "description": "Currency envelope emitted at service and API boundaries. Phase 1.2B-A makes BRIDGE-001 surfaces carry integer cents in value and enforces integer validation at DTO outbound.",
+          "stateful": false,
+          "system_of_record": "types/financial.ts and lib/financial/schema.ts",
+          "fields_hint": [
+            "value: integer cents",
+            "type: FinancialAuthority",
+            "source: string",
+            "completeness.status: complete|partial|unknown"
+          ]
+        },
+        {
+          "name": "RecentSessionDTO",
+          "kind": "dto",
+          "description": "Visit continuation response item whose financial fields currently carry BRIDGE-001 dollar-float values and must become integer-cents FinancialValue fields.",
+          "stateful": false,
+          "system_of_record": "services/visit/dtos.ts",
+          "mapping_owner": "services/visit/crud.ts",
+          "fields_in_scope": ["total_buy_in", "total_cash_out", "net"]
+        },
+        {
+          "name": "VisitLiveViewDTO",
+          "kind": "dto",
+          "description": "Aggregated live-view DTO whose session financial totals currently divide cents by 100 in the rating-slip mapper and must emit integer-cents FinancialValue fields.",
+          "stateful": false,
+          "system_of_record": "services/visit/dtos.ts",
+          "mapping_owner": "services/rating-slip/mappers.ts",
+          "fields_in_scope": [
+            "session_total_buy_in",
+            "session_total_cash_out",
+            "session_net"
+          ]
+        },
+        {
+          "name": "AnomalyAlertDTO",
+          "kind": "dto",
+          "description": "Shift-intelligence anomaly alert DTO whose financial metric fields must be promoted from bare number|null to FinancialValue|null using resolveShiftMetricAuthority.",
+          "stateful": false,
+          "system_of_record": "services/shift-intelligence/dtos.ts",
+          "mapping_owner": "services/shift-intelligence/mappers.ts",
+          "fields_in_scope": [
+            "observedValue",
+            "baselineMedian",
+            "baselineMad",
+            "thresholdValue"
+          ]
+        },
+        {
+          "name": "ShiftAlertDTO",
+          "kind": "dto",
+          "description": "Shift-intelligence shift alert DTO whose financial metric fields must be promoted from bare number|null to FinancialValue|null using resolveShiftMetricAuthority.",
+          "stateful": false,
+          "system_of_record": "services/shift-intelligence/dtos.ts",
+          "mapping_owner": "services/shift-intelligence/mappers.ts",
+          "fields_in_scope": ["observedValue", "baselineMedian", "baselineMad"]
+        },
+        {
+          "name": "MetricType.hold_percent",
+          "kind": "record",
+          "description": "Dimensionless ratio metric that must remain number|null and must never be wrapped in FinancialValue.",
+          "stateful": false,
+          "system_of_record": "services/shift-intelligence/dtos.ts",
+          "fields_hint": [
+            "hold_percent -> null from resolveShiftMetricAuthority",
+            "value remains number|null"
+          ]
+        },
+        {
+          "name": "OpenAPI named path entries",
+          "kind": "artifact",
+          "description": "Existing representative path entries that may be shape-aligned to the canonical service DTO contract and no further.",
+          "stateful": false,
+          "system_of_record": "docs/25-api-data/api-surface.openapi.yaml",
+          "fields_hint": [
+            "GET /visits/{visit_id}/live-view",
+            "GET /players/{player_id}/recent-sessions",
+            "GET /shift-intelligence/anomaly-alerts"
+          ]
+        },
+        {
+          "name": "ROLLOUT-TRACKER",
+          "kind": "artifact",
+          "description": "Governance status artifact for retiring BRIDGE-001 and closing deferred DEF records after the implementation commit is known.",
+          "stateful": true,
+          "system_of_record": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json",
+          "fields_hint": [
+            "DEF-001 closed",
+            "DEF-002 closed",
+            "DEF-003 closed",
+            "DEF-007 closed",
+            "BRIDGE-001 retired with commit SHA"
+          ]
+        }
+      ],
+      "relationships": [
+        "RecentSessionDTO financial fields are assembled in services/visit/crud.ts and must stop dividing database integer cents by 100.",
+        "VisitLiveViewDTO financial fields are mapped in services/rating-slip/mappers.ts and must stop dividing database integer cents by 100.",
+        "AnomalyAlertDTO and ShiftAlertDTO use resolveShiftMetricAuthority as the only approved source/type router for financial metric wrapping.",
+        "hold_percent is a non-currency ratio and remains outside FinancialValue even when adjacent shift-intelligence fields are promoted.",
+        "Named OpenAPI and route test artifacts follow the service DTO shape; they do not create new behavior."
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "bridge-001-retirement",
+          "verb": "update",
+          "owner": "backend-service-builder",
+          "description": "Remove /100 from services/visit/crud.ts centsToDollars and services/rating-slip/mappers.ts toVisitLiveViewDTO so FinancialValue.value carries integer cents.",
+          "served_outcomes": ["OUT-1", "OUT-7"],
+          "loop_steps": ["STEP-1"]
+        },
+        {
+          "id": "CAP-2",
+          "name": "integer-cents-outbound-validation",
+          "verb": "update",
+          "owner": "backend-service-builder",
+          "description": "Enable financialValueSchema.int() at the relevant DTO outbound boundaries after /100 removal so fractional numeric values fail validation, with exact-value tests proving cents-unit semantics.",
+          "served_outcomes": ["OUT-2"],
+          "loop_steps": ["STEP-2"]
+        },
+        {
+          "id": "CAP-3",
+          "name": "shift-intelligence-financialvalue-promotion",
+          "verb": "update",
+          "owner": "backend-service-builder",
+          "description": "Assign resolveShiftMetricAuthority return values into FinancialValue construction for AnomalyAlertDTO and ShiftAlertDTO financial metric fields.",
+          "served_outcomes": ["OUT-3", "OUT-4"],
+          "loop_steps": ["STEP-3"]
+        },
+        {
+          "id": "CAP-4",
+          "name": "shift-intelligence-outbound-schema-birth",
+          "verb": "create",
+          "owner": "backend-service-builder",
+          "description": "Introduce outbound Zod schemas for AnomalyAlertDTO and ShiftAlertDTO, lifting the DEF-007 waiver while preserving hold_percent as number|null.",
+          "served_outcomes": ["OUT-3", "OUT-4"],
+          "loop_steps": ["STEP-3"]
+        },
+        {
+          "id": "CAP-5",
+          "name": "named-contract-shape-alignment",
+          "verb": "update",
+          "owner": "api-builder",
+          "description": "Update only named existing OpenAPI path entries to reflect integer BRIDGE-001 values and promoted anomaly-alert FinancialValue fields.",
+          "served_outcomes": ["OUT-5"],
+          "loop_steps": ["STEP-4"]
+        },
+        {
+          "id": "CAP-6",
+          "name": "integer-regression-test-assertions",
+          "verb": "update",
+          "owner": "api-builder / qa-specialist",
+          "description": "Replace key-presence-only assertions with integer-value assertions in the two named existing BRIDGE-001 route test files.",
+          "served_outcomes": ["OUT-1", "OUT-2", "OUT-5"],
+          "loop_steps": ["STEP-4"]
+        },
+        {
+          "id": "CAP-7",
+          "name": "rollout-tracker-closure",
+          "verb": "update",
+          "owner": "lead-architect",
+          "description": "Update ROLLOUT-TRACKER.json only for the listed DEF closures and BRIDGE-001 retirement after implementation commit SHA is available.",
+          "served_outcomes": ["OUT-6"],
+          "loop_steps": ["STEP-5"]
+        }
+      ]
+    },
+    "where": {
+      "primary_surface": "service DTO boundary",
+      "surfaces": [
+        {
+          "name": "visit service recent-sessions mapper",
+          "kind": "service",
+          "path": "services/visit/crud.ts"
+        },
+        {
+          "name": "rating-slip service live-view mapper",
+          "kind": "service",
+          "path": "services/rating-slip/mappers.ts"
+        },
+        {
+          "name": "shift-intelligence DTO declarations and schemas",
+          "kind": "service",
+          "path": "services/shift-intelligence/dtos.ts"
+        },
+        {
+          "name": "shift-intelligence mappers",
+          "kind": "service",
+          "path": "services/shift-intelligence/mappers.ts"
+        },
+        {
+          "name": "api-surface.openapi.yaml named path entries",
+          "kind": "artifact",
+          "path": "docs/25-api-data/api-surface.openapi.yaml"
+        },
+        {
+          "name": "recent-sessions existing route test",
+          "kind": "artifact",
+          "path": "app/api/v1/players/[playerId]/recent-sessions/__tests__/route.test.ts"
+        },
+        {
+          "name": "live-view existing route test",
+          "kind": "artifact",
+          "path": "app/api/v1/visits/[visitId]/live-view/__tests__/route.test.ts"
+        },
+        {
+          "name": "rollout tracker",
+          "kind": "artifact",
+          "path": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json"
+        }
+      ],
+      "touchpoints": {
+        "inbound": [
+          {
+            "name": "GET /api/v1/players/[playerId]/recent-sessions",
+            "type": "api_call"
+          },
+          {
+            "name": "GET /api/v1/visits/[visitId]/live-view",
+            "type": "api_call"
+          },
+          {
+            "name": "GET /api/v1/shift-intelligence/anomaly-alerts",
+            "type": "api_call"
+          },
+          {
+            "name": "GET /api/v1/shift-intelligence/alerts",
+            "type": "api_call"
+          }
+        ],
+        "outbound": [
+          {
+            "name": "RecentSessionDTO FinancialValue envelope with integer-cents value",
+            "type": "api_response"
+          },
+          {
+            "name": "VisitLiveViewDTO FinancialValue envelope with integer-cents value",
+            "type": "api_response"
+          },
+          {
+            "name": "AnomalyAlertDTO FinancialValue envelope for financial metric fields",
+            "type": "api_response"
+          },
+          {
+            "name": "ShiftAlertDTO FinancialValue envelope for financial metric fields",
+            "type": "api_response"
+          },
+          {
+            "name": "OpenAPI named path entries aligned to canonical DTO shapes",
+            "type": "artifact"
+          }
+        ]
+      },
+      "bounded_contexts": [
+        "visit",
+        "rating-slip",
+        "shift-intelligence",
+        "api-contract",
+        "rollout-governance"
+      ]
+    },
+    "who": {
+      "primary_actor": "backend-service-builder",
+      "actors": [
+        {
+          "role": "backend-service-builder",
+          "permissions": [
+            "remove /100 from named service mapper sites",
+            "enable DTO outbound integer validation after unit canonicalization",
+            "promote shift-intelligence DTO financial fields using resolveShiftMetricAuthority",
+            "introduce outbound Zod schemas for AnomalyAlertDTO and ShiftAlertDTO"
+          ],
+          "restrictions": [
+            "may not migrate UI render calls",
+            "may not move financial construction into route handlers",
+            "may not wrap hold_percent",
+            "may not invent new financial authorities or source classifications"
+          ]
+        },
+        {
+          "role": "api-builder",
+          "permissions": [
+            "shape-align named existing OpenAPI path entries",
+            "update integer assertions in named existing route test files"
+          ],
+          "restrictions": [
+            "may not add new OpenAPI path entries",
+            "may not modify schemas or components outside named entries",
+            "may not add route logic or observability",
+            "may not create new route test files or new scenarios"
+          ]
+        },
+        {
+          "role": "qa-specialist",
+          "permissions": [
+            "review focused integer-value regression assertions",
+            "verify hold_percent remains bare number|null"
+          ],
+          "restrictions": [
+            "may not expand into full route test matrices",
+            "may not birth component tests"
+          ]
+        },
+        {
+          "role": "lead-architect",
+          "permissions": [
+            "gate any scope amendment",
+            "update rollout tracker status for listed closure records"
+          ],
+          "restrictions": [
+            "scope changes require FIB amendment before EXEC-SPEC update"
+          ]
+        }
+      ],
+      "ownership": {
+        "business_owner": "Financial Telemetry (Cross-context)",
+        "domain_owner": "Lead Architect (EXEC-074 spec steward)"
+      }
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "name": "phase-1-2a-exit-gate-passed",
+          "source": "system",
+          "preconditions": [
+            "EXEC-071 closed on 2026-04-30",
+            "Phase 1.2A pass-through route tests and representative OpenAPI entries exist",
+            "BRIDGE-001 documented as active dollar-float state"
+          ]
+        },
+        {
+          "name": "exec-074-scaffolded",
+          "source": "system",
+          "preconditions": [
+            "FIB-H and FIB-S for Phase 1.2B-A exist",
+            "PRD-074 exists or is amended to the stricter Phase 1.2B-A boundary"
+          ]
+        },
+        {
+          "name": "mapper-emits-financialvalue",
+          "source": "system",
+          "preconditions": [
+            "service mapper receives database integer cents",
+            "/100 bridge has been removed before validation"
+          ]
+        },
+        {
+          "name": "contract-test-run",
+          "source": "system",
+          "preconditions": [
+            "named existing route test files are present",
+            "integer-value assertions have replaced key-presence-only assertions"
+          ]
+        },
+        {
+          "name": "rollout-tracker-closure",
+          "source": "system",
+          "preconditions": [
+            "implementation commit SHA is available",
+            "DEF closure and BRIDGE-001 retirement evidence has passed validation"
+          ]
+        }
+      ],
+      "lifecycle_events": [
+        "BRIDGE-001 active -> retired",
+        "RecentSessionDTO/VisitLiveViewDTO FinancialValue.value dollar-float -> integer cents",
+        "financialValueSchema present but not outbound-enforced -> DTO outbound integer enforcement active",
+        "AnomalyAlertDTO/ShiftAlertDTO financial metric fields bare number|null -> FinancialValue|null",
+        "hold_percent carve-out implicit -> hold_percent DEF-NEVER verified",
+        "Phase 1.2B-A service canonicalization -> Phase 1.2B-B surface alignment"
+      ],
+      "timing_constraints": [
+        "Phase 1.2B-A may not begin before Phase 1.2A exit gate passes",
+        "/100 removal must precede financialValueSchema.int() outbound enforcement",
+        "Phase 1.2B-B may not begin before Phase 1.2B-A exit gate passes",
+        "Phase 1.3 component work may not begin before Phase 1.2B-B exit gate passes"
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "statement": "BRIDGE-001 retirement removes /100 from the two named mapper sites and nowhere else unless this FIB is amended.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-2",
+          "statement": "financialValueSchema.int() outbound enforcement is allowed only after /100 removal.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-3",
+          "statement": "Shift-intelligence financial metric fields are wrapped only in service mappers using resolveShiftMetricAuthority return values.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-4",
+          "statement": "hold_percent remains bare number|null at every layer and must never become FinancialValue.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-5",
+          "statement": "Route handlers are transport only and may not construct, re-author, or compensate for FinancialValue semantics.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-6",
+          "statement": "OpenAPI edits are limited to named existing path entries and shape-alignment of existing fields.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-7",
+          "statement": "Route test edits are limited to integer-value regression assertions in the two named existing BRIDGE-001 route test files.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-8",
+          "statement": "UI migration, full OpenAPI expansion, route test matrices, and runtime observability belong to Phase 1.2B-B.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-9",
+          "statement": "Component test birth belongs to Phase 1.3, not Phase 1.2B-A.",
+          "severity": "hard"
+        }
+      ],
+      "invariants": [
+        "FinancialValue.value is integer cents at the service boundary for RecentSessionDTO and VisitLiveViewDTO after this slice.",
+        "No /100 conversion remains in the named BRIDGE-001 mapper sites after STEP-1.",
+        "hold_percent remains number|null and is never wrapped.",
+        "resolveShiftMetricAuthority remains the only approved shift-intelligence metric authority router.",
+        "Route handlers do not assign type, source, completeness, or FinancialValue wrappers.",
+        "Secondary artifact updates do not introduce new fields, paths, schemas, components, scenarios, or coverage patterns."
+      ],
+      "decision_notes": [
+        "Phase 1.2A established transport honesty and documented the current non-canonical state; Phase 1.2B-A changes service semantics.",
+        "The Phase 1.2B-A / 1.2B-B split avoids the PRD-070 failure pattern of bundling root-cause canonicalization with downstream surface alignment.",
+        "OpenAPI and route-test edits are allowed only to keep already-covered public contracts truthful after service canonicalization.",
+        "The tracker pending_scope component-test listing is treated as stale because PRD-071 Appendix D and DEF-006 classify component test birth as Phase 1.3."
+      ]
+    }
+  },
+
+  "containment": {
+    "loop": [
+      {
+        "id": "STEP-1",
+        "actor": "backend-service-builder",
+        "action": "Remove /100 from services/visit/crud.ts centsToDollars and services/rating-slip/mappers.ts toVisitLiveViewDTO.",
+        "system_response": "RecentSessionDTO and VisitLiveViewDTO financial fields carry integer-cents FinancialValue.value from service mappers."
+      },
+      {
+        "id": "STEP-2",
+        "actor": "backend-service-builder",
+        "action": "Enable financialValueSchema.int() at the DTO outbound boundary for RecentSessionDTO and VisitLiveViewDTO after STEP-1.",
+        "system_response": "Fractional numeric values fail DTO outbound validation, and exact-value tests catch cents-unit regressions."
+      },
+      {
+        "id": "STEP-3",
+        "actor": "backend-service-builder",
+        "action": "Promote resolveShiftMetricAuthority void-reads into FinancialValue construction for AnomalyAlertDTO and ShiftAlertDTO financial metric fields; add outbound schemas; preserve hold_percent as number|null.",
+        "system_response": "Shift-intelligence service DTOs expose FinancialValue|null for financial metric fields and retain the hold_percent carve-out."
+      },
+      {
+        "id": "STEP-4",
+        "actor": "api-builder + qa-specialist",
+        "action": "Shape-align only named existing OpenAPI path entries and replace key-presence assertions with integer-value assertions in named BRIDGE-001 route test files.",
+        "system_response": "Existing public contract artifacts and tests match canonical service semantics without expanding route inventory or scenarios."
+      },
+      {
+        "id": "STEP-5",
+        "actor": "lead-architect",
+        "action": "Update ROLLOUT-TRACKER.json for DEF-001, DEF-002, DEF-003, DEF-007 closure and BRIDGE-001 retirement with implementation commit SHA.",
+        "system_response": "Governance state records Phase 1.2B-A closure and enables Phase 1.2B-B planning."
+      }
+    ],
+    "frozen": true,
+    "expansion_requires_amendment": true,
+    "stop_on_boundary_breach": true
+  },
+
+  "dependencies": {
+    "required_existing": [
+      "Phase 1.2A exit gate passed on 2026-04-30 (EXEC-071, commit 46229a98)",
+      "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-CANONICALIZATION.md",
+      "phase-scope-containment.md guardrail review",
+      "types/financial.ts - FinancialValue and FinancialAuthority",
+      "lib/financial/schema.ts - financialValueSchema with integer value constraint",
+      "services/shift-intelligence/mappers.ts - resolveShiftMetricAuthority from PRD-073",
+      "docs/25-api-data/api-surface.openapi.yaml - Phase 1.2A representative path entries",
+      "Named Phase 1.2A BRIDGE-001 route test files"
+    ],
+    "missing_dependencies": [
+      "EXEC-074 not yet scaffolded at FIB-S generation time",
+      "Implementation commit SHA unknown until EXEC-074 completion; ROLLOUT-TRACKER.json must be updated with the real SHA during execution"
+    ],
+    "assumptions": [
+      "Database and RPC sources already return integer cents before the BRIDGE-001 /100 conversion.",
+      "No route handler performs financial math; Phase 1.2A grep confirmed route pass-through.",
+      "The named OpenAPI path entries are sufficient to keep already-covered public contracts truthful for Phase 1.2B-A.",
+      "Any additional route, UI, observability, or test-matrix need means this FIB must be amended or split before implementation continues."
+    ]
+  },
+
+  "traceability": {
+    "outcomes": [
+      {
+        "id": "OUT-1",
+        "statement": "BRIDGE-001 /100 conversion is removed from both known service mapper sites and FinancialValue.value emits integer cents for RecentSessionDTO and VisitLiveViewDTO financial fields."
+      },
+      {
+        "id": "OUT-2",
+        "statement": "financialValueSchema.int() is enforced at the relevant DTO outbound boundaries after /100 removal, rejects fractional numeric values, and exact-value tests prove cents-unit semantics."
+      },
+      {
+        "id": "OUT-3",
+        "statement": "AnomalyAlertDTO and ShiftAlertDTO financial metric fields emit FinancialValue|null using resolveShiftMetricAuthority return values."
+      },
+      {
+        "id": "OUT-4",
+        "statement": "hold_percent remains bare number|null at every layer and is explicitly verified as DEF-NEVER."
+      },
+      {
+        "id": "OUT-5",
+        "statement": "Named existing OpenAPI path entries and BRIDGE-001 route tests are shape-aligned to the canonical service contract without expanding route inventory or coverage pattern."
+      },
+      {
+        "id": "OUT-6",
+        "statement": "ROLLOUT-TRACKER.json records DEF-001, DEF-002, DEF-003, DEF-007 closure and BRIDGE-001 retirement after implementation commit SHA is known."
+      },
+      {
+        "id": "OUT-7",
+        "statement": "Phase 1.2B-B can proceed against canonical integer-cents service DTOs without rewriting this slice."
+      }
+    ],
+    "capability_to_outcome": [
+      {
+        "capability": "CAP-1",
+        "outcomes": ["OUT-1", "OUT-7"]
+      },
+      {
+        "capability": "CAP-2",
+        "outcomes": ["OUT-2"]
+      },
+      {
+        "capability": "CAP-3",
+        "outcomes": ["OUT-3", "OUT-4"]
+      },
+      {
+        "capability": "CAP-4",
+        "outcomes": ["OUT-3", "OUT-4"]
+      },
+      {
+        "capability": "CAP-5",
+        "outcomes": ["OUT-5"]
+      },
+      {
+        "capability": "CAP-6",
+        "outcomes": ["OUT-1", "OUT-2", "OUT-5"]
+      },
+      {
+        "capability": "CAP-7",
+        "outcomes": ["OUT-6"]
+      }
+    ],
+    "rule_to_loop_step": [
+      {
+        "rule_id": "RULE-1",
+        "loop_steps": ["STEP-1"]
+      },
+      {
+        "rule_id": "RULE-2",
+        "loop_steps": ["STEP-2"]
+      },
+      {
+        "rule_id": "RULE-3",
+        "loop_steps": ["STEP-3"]
+      },
+      {
+        "rule_id": "RULE-4",
+        "loop_steps": ["STEP-3"]
+      },
+      {
+        "rule_id": "RULE-5",
+        "loop_steps": ["STEP-3", "STEP-4"]
+      },
+      {
+        "rule_id": "RULE-6",
+        "loop_steps": ["STEP-4"]
+      },
+      {
+        "rule_id": "RULE-7",
+        "loop_steps": ["STEP-4"]
+      },
+      {
+        "rule_id": "RULE-8",
+        "loop_steps": ["STEP-4"]
+      },
+      {
+        "rule_id": "RULE-9",
+        "loop_steps": ["STEP-4"]
+      }
+    ],
+    "loop_step_to_capability": [
+      {
+        "loop_step": "STEP-1",
+        "capabilities": ["CAP-1"]
+      },
+      {
+        "loop_step": "STEP-2",
+        "capabilities": ["CAP-2"]
+      },
+      {
+        "loop_step": "STEP-3",
+        "capabilities": ["CAP-3", "CAP-4"]
+      },
+      {
+        "loop_step": "STEP-4",
+        "capabilities": ["CAP-5", "CAP-6"]
+      },
+      {
+        "loop_step": "STEP-5",
+        "capabilities": ["CAP-7"]
+      }
+    ]
+  },
+
+  "governance": {
+    "scope_authority": {
+      "artifact": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-CANONICALIZATION",
+      "version": "v1 (STRICT, 2026-04-30)",
+      "frozen": true,
+      "scope_review": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2b/phase-scope-containment.md"
+    },
+    "open_questions_allowed_at_scaffold": [
+      {
+        "id": "Q-1",
+        "question": "Does EXEC-074 need to pin exact AnomalyAlertDTO nullability for each promoted field where resolveShiftMetricAuthority returns null?",
+        "owner": "lead-architect + backend-service-builder",
+        "boundary": "Resolution may refine DTO/schema implementation but may not wrap hold_percent or move compensation to route/UI layers."
+      },
+      {
+        "id": "Q-2",
+        "question": "Does EXEC-074 need to pin exact ShiftAlertDTO non-nullability/nullability for observedValue, baselineMedian, and baselineMad?",
+        "owner": "lead-architect + backend-service-builder",
+        "boundary": "Resolution may refine DTO/schema implementation but may not add new fields or new route surfaces."
+      },
+      {
+        "id": "Q-3",
+        "question": "Do the named existing OpenAPI path entries already cover the exact fields requiring shape-alignment?",
+        "owner": "api-builder",
+        "boundary": "If not, implementation stops for amendment; Phase 1.2B-A may not create new path entries."
+      }
+    ],
+    "downstream_expansion_allowed_without_amendment": false,
+    "companion_fib_h": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2b/FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-CANONICALIZATION.md",
+    "predecessor_fib_s": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2/FIB-S-FINANCIAL-TELEMETRY-PHASE-1-2-API-ENVELOPE.json",
+    "parent_prd": "docs/10-prd/PRD-074-financial-telemetry-wave1-phase1.2b-canonicalization-v0.md",
+    "predecessor_prd": "docs/10-prd/PRD-071-financial-telemetry-wave1-phase1.2-api-envelope-at-wire-v0.md",
+    "rollout_tracker": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json",
+    "successor_fib_required": "Phase 1.2B-B - Surface Alignment (UI migration + full OpenAPI expansion + route matrices + runtime observability)"
+  }
+}

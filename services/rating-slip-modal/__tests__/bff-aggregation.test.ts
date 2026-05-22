@@ -62,7 +62,7 @@ const mockLoyaltySection: LoyaltySectionDTO = {
 
 const mockFinancialSection: FinancialSectionDTO = {
   totalCashIn: 50000,
-  totalChipsOut: 30000,
+  totalCashOut: 30000,
   netPosition: 20000,
 };
 
@@ -206,14 +206,14 @@ describe('LoyaltySectionDTO', () => {
 describe('FinancialSectionDTO', () => {
   it('should have cash in, chips out, and net position', () => {
     expect(mockFinancialSection.totalCashIn).toBe(50000);
-    expect(mockFinancialSection.totalChipsOut).toBe(30000);
+    expect(mockFinancialSection.totalCashOut).toBe(30000);
     expect(mockFinancialSection.netPosition).toBe(20000);
   });
 
   it('should support negative net position (player winning)', () => {
     const winningSession: FinancialSectionDTO = {
       totalCashIn: 10000,
-      totalChipsOut: 25000,
+      totalCashOut: 25000,
       netPosition: -15000,
     };
 
@@ -223,12 +223,12 @@ describe('FinancialSectionDTO', () => {
   it('should support zero amounts for new sessions', () => {
     const newSession: FinancialSectionDTO = {
       totalCashIn: 0,
-      totalChipsOut: 0,
+      totalCashOut: 0,
       netPosition: 0,
     };
 
     expect(newSession.totalCashIn).toBe(0);
-    expect(newSession.totalChipsOut).toBe(0);
+    expect(newSession.totalCashOut).toBe(0);
     expect(newSession.netPosition).toBe(0);
   });
 });

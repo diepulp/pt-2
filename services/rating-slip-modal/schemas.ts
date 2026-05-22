@@ -75,7 +75,7 @@ export const loyaltySectionSchema = z.object({
  */
 export const financialSectionSchema = z.object({
   totalCashIn: z.number(),
-  totalChipsOut: z.number(),
+  totalCashOut: z.number(),
   netPosition: z.number(),
 });
 

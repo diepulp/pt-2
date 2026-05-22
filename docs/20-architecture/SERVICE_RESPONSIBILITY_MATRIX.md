@@ -1,7 +1,7 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.23.0
+nsversion: 4.24.0
 status: CANONICAL
 effective: 2026-02-23
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
@@ -28,8 +28,8 @@ source_of_truth:
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.23.0 (EmailService — Pilot SMTP email wiring, append-only send attempt log)
-> **Date**: 2026-03-25
+> **Version**: 4.24.0 (PilotContainmentService — Pilot access governance, allowlist-gated magic-link auth)
+> **Date**: 2026-05-12
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -55,6 +55,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.24.0 (2026-05-12)** – **PilotContainmentService (PRD-083 Pilot Authentication Containment Gate)**: Registered `PilotContainmentService` as new `Pilot Access Governance` bounded context. New tables: `pilot_access_requests` (public INSERT, service_role SELECT/UPDATE), `approved_email_allowlist` (service_role only — never read by authenticated client). Both tables enforce canonical email via CHECK constraint and finite status values. Server actions: `sendMagicLinkAction`, `requestPilotAccessAction`, `approvePilotAccessAction`, `rejectPilotAccessAction`, `revokePilotAccessAction`. Service: `services/pilot/` with `createPilotContainmentService` factory. Admin authority via `PILOT_ADMIN_EMAILS` env var (server-only). Containment primitive — must not absorb IAM, billing, CRM, or RBAC (FIB-S RULE-9). See `docs/10-prd/PRD-083-pilot-auth-containment-v0.md` and `docs/21-exec-spec/EXEC-083-pilot-auth-containment.md`.
 - **4.23.0 (2026-04-06)** – **EmailService (PRD-062 Pilot SMTP & Email Wiring)**: Registered `EmailService` as pilot-scoped utility service (Operational context). New table: `email_send_attempt` (append-only send log). RLS: Pattern C hybrid SELECT + INSERT only (no UPDATE/DELETE). No RPCs — writes via authenticated Supabase client after `set_rls_context_from_staff()` in server actions. 3 server actions: `sendShiftReportAction`, `retryShiftReportAction`, `dismissFailedAttemptAction`. Infrastructure adapter: `lib/email/` with provider-agnostic interface, Resend implementation. Service: `services/email/` with `createEmailService` factory. See `docs/10-prd/PRD-062-pilot-smtp-email-wiring-v0.md` and `docs/21-exec-spec/EXEC-062-pilot-smtp-email-wiring.md`.
 - **4.22.0 (2026-03-25)** – **ShiftIntelligenceService Alert Maturity (PRD-056)**: Added `shift_alert`, `alert_acknowledgment` to Owns. 2 new RPCs: `rpc_persist_anomaly_alerts` (SECURITY DEFINER), `rpc_acknowledge_alert` (SECURITY DEFINER). 1 new RPC: `rpc_get_alert_quality` (SECURITY INVOKER). 3 new API routes: `POST /api/v1/shift-intelligence/persist-alerts`, `POST /api/v1/shift-intelligence/acknowledge-alert`, `GET /api/v1/shift-intelligence/alerts`. ALTER `table_metric_baseline` add `last_error`. Pattern C RLS + DELETE denial on new tables. RPC-only mutation posture.
 - **4.21.0 (2026-03-23)** – **ShiftIntelligenceService**: Registered `ShiftIntelligenceService` (Operational context) for shift anomaly detection. New table: `table_metric_baseline`. 2 new RPCs: `rpc_compute_rolling_baseline` (SECURITY DEFINER, ADR-024), `rpc_get_anomaly_alerts` (SECURITY INVOKER). 2 API routes: `POST /api/shift-intelligence/compute-baselines`, `GET /api/shift-intelligence/anomaly-alerts`. Dependencies: TableContextService (source metric RPCs), CasinoService (casino_settings), TemporalAuthority (compute_gaming_day). Cross-context reads only; writes confined to owned `table_metric_baseline`.
@@ -130,6 +131,7 @@ Approved JSON blobs (all others require first-class columns):
 | **Onboarding**   | PlayerImportService     | import_batch, import_row                                                                                                   | CSV player import & staging ⁵                               |
 | **Analytics**    | Player360DashboardService ⁷ | (read-only aggregation across LoyaltyService + PromoService)                                                          | Player 360 dashboard data aggregation                       |
 | **Operational**  | EmailService ⁸          | email_send_attempt                                                                                                         | Pilot email delivery & send attempt logging                 |
+| **Access Governance** | PilotContainmentService ⁹ | pilot_access_requests, approved_email_allowlist                                                                       | Pilot access governance — allowlist-gated magic-link auth   |
 
 > ¹ `finance_outbox` is **post-MVP** (ADR-016 planned for payment gateway integration). MVP uses synchronous processing only.
 > ² `player_identity` is **planned (MVP)** per ADR-022 v7.1. `player_tax_identity` and scanner integration (`player_identity_scan`) are **deferred post-MVP**.
@@ -139,6 +141,7 @@ Approved JSON blobs (all others require first-class columns):
 > ⁶ `player_exclusion` — Source-of-truth for exclusion/ban/watchlist records (ADR-042). Critical table per ADR-030 D4 (session-var-only writes). Enforcement delegated to downstream consumers. Property-scoped MVP; company-wide deferred.
 > ⁷ `Player360DashboardService` is a read-only aggregation service (follows `PlayerTimelineService` precedent). Owns no tables; reads from LoyaltyService (`loyalty_ledger`, `promo_coupon`) for reward history display. See PRD-052.
 > ⁸ `EmailService` is a pilot-scoped utility service. Owns `email_send_attempt` (append-only send log). May be absorbed into a broader operational context if email scope grows post-pilot. See PRD-062.
+> ⁹ `PilotContainmentService` is a pilot containment primitive. Owns `pilot_access_requests` and `approved_email_allowlist`. All allowlist reads are server-only (service_role) — never exposed to client-side queries. Admin operations guarded by `PILOT_ADMIN_EMAILS` env var. Scope is strictly containment; expansion requires a separate FIB (FIB-S RULE-9). See PRD-083.
 
 ---
 
@@ -933,6 +936,75 @@ No UPDATE or DELETE policies. Append-only log design.
 |-----------|---------|-----|
 | **Reads** | CasinoService | `casino` FK on `email_send_attempt` |
 | **Writes** | (own table only) | `email_send_attempt` |
+
+---
+
+## PilotContainmentService (Access Governance Context — Pilot)
+
+**Bounded Context**: "Who is authorized to access the pilot, and how is that authorization enforced before and after authentication?"
+
+| Attribute | Value |
+|-----------|-------|
+| **Owns** | `pilot_access_requests`, `approved_email_allowlist` |
+| **Pattern** | B (server actions with service-role client; no HTTP route boundary) |
+| **Status** | ✅ IMPLEMENTED (PRD-083, pilot-containment scope) |
+| **PRD** | `docs/10-prd/PRD-083-pilot-auth-containment-v0.md` |
+| **EXEC** | `docs/21-exec-spec/EXEC-083-pilot-auth-containment.md` |
+
+### Schema Invariants
+
+| Table | Invariant |
+|-------|-----------|
+| `pilot_access_requests.email` | `CHECK (email = lower(trim(email)))` — canonical form enforced at DB layer |
+| `pilot_access_requests.status` | `CHECK (status IN ('pending','approved','rejected'))` |
+| `pilot_access_requests` | Partial unique index on `(email) WHERE status = 'pending'` — prevents duplicate pending requests |
+| `approved_email_allowlist.email` | `CHECK (email = lower(trim(email)))` — canonical form enforced at DB layer |
+| `approved_email_allowlist.status` | `CHECK (status IN ('active','revoked'))` |
+| `approved_email_allowlist.expires_at` | Stored but not enforced by application logic in this slice (DEC-3) |
+
+### Server Actions
+
+| Action | Location | Description |
+|--------|----------|-------------|
+| `sendMagicLinkAction` | `app/actions/auth/send-magic-link.ts` | Allowlist check → `signInWithOtp()`. Fail closed if not approved. Never calls `signUp()`. |
+| `requestPilotAccessAction` | `app/actions/auth/request-pilot-access.ts` | Insert pending row. Safe duplicate response for existing pending email. No auth required. |
+| `approvePilotAccessAction` | `app/actions/pilot/review-actions.ts` | Admin-only. Upserts allowlist entry (active) + sets request status=approved. Atomic. |
+| `rejectPilotAccessAction` | `app/actions/pilot/review-actions.ts` | Admin-only. Sets request status=rejected only. No allowlist mutation. |
+| `revokePilotAccessAction` | `app/actions/pilot/review-actions.ts` | Admin-only. Sets allowlist status=revoked. Blocks future OTP issuance and /start passage. |
+
+### RLS Policies
+
+| Table | Policy | Operation | Role | Condition |
+|-------|--------|-----------|------|-----------|
+| `pilot_access_requests` | `anon_insert_pilot_access_requests` | INSERT | anon | `WITH CHECK (true)` |
+| `pilot_access_requests` | (none for SELECT/UPDATE) | — | — | service_role bypasses RLS |
+| `approved_email_allowlist` | (none) | — | — | service_role bypasses RLS; no client access |
+
+### Authority Model
+
+Admin operations (`approvePilotAccessAction`, `rejectPilotAccessAction`, `revokePilotAccessAction`) require:
+1. Valid authenticated Supabase session
+2. Session email present in `PILOT_ADMIN_EMAILS` environment variable (server-only, comma-separated)
+3. Service-role client created **only after** authority check passes
+
+### Scope Boundary (FIB-S RULE-9)
+
+This service is a **pilot containment primitive**, not an administrative platform. Expansion beyond:
+- approve/reject/revoke pending requests
+- allowlist entry management
+- pending-request listing
+
+requires a separate FIB. See FIB-H §H6 and FIB-S RULE-9.
+
+### Cross-Context Dependencies
+
+| Direction | Service | Via |
+|-----------|---------|-----|
+| **Reads** | (none — standalone containment tables) | — |
+| **Writes** | (own tables only) | `pilot_access_requests`, `approved_email_allowlist` |
+| **Consumed by** | `/start` gateway | Allowlist check before staff routing |
+| **Consumed by** | `sendMagicLinkAction` | Pre-OTP allowlist gate |
+| **Consumed by** | `registerCompanyAction`, `bootstrapAction` | `requireApprovedPilotSession()` guard |
 
 ---
 

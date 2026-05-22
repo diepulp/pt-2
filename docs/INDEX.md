@@ -1,6 +1,6 @@
 # PT-2 Documentation Index
 
-**Last Updated**: 2026-02-19
+**Last Updated**: 2026-04-27
 **Taxonomy Version**: 1.4 (ADR-035 Client State Lifecycle, ADR-032 Error Boundaries, ADR-031 Financial Convention, ADR-030 Auth Hardening)
 **Architecture Strategy**: Hybrid Model (HORIZONTAL + VERTICAL)
 **Reference**: [SDLC_TAXONOMY_INVENTORY.md](srn-modularization/SDLC_TAXONOMY_INVENTORY.md)
@@ -190,6 +190,8 @@
 | QA-003 | Service Testing Patterns & Examples | Draft | `40-quality/QA-003-service-testing-patterns.md` |
 | QA-004 | Test-Driven Development (TDD) Standard | Draft | `40-quality/QA-004-tdd-standard.md` |
 | QA-005 | Route Handler Testing Patterns | Active | `40-quality/QA-005-route-handler-testing.md` |
+| QA-006 | End-to-End (E2E) Testing Standard | Proposed | `40-quality/QA-006-e2e-testing-standard.md` |
+| QA-007 | Implemented Validation Gates for Agentic Workflows | Active | `40-quality/QA-007-validation-gates-implemented.md` |
 
 **Purpose**: Test strategy, coverage goals, quality gates, performance budgets, TDD workflows
 

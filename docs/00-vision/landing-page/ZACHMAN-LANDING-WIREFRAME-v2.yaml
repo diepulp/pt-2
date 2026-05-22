@@ -1,0 +1,309 @@
+# ZACHMAN-LANDING-WIREFRAME-v2.yaml
+#
+# Purpose:
+#   Remedial structural wireframe for landing-page refactor.
+#   Reorganizes the page around operational causality instead of
+#   flattened capability taxonomy.
+#
+# Core corrective principle:
+#
+#     Floor Operations
+#          ↓
+#     Operational Accountability
+#          ↓
+#     Financial Provenance
+#          ↓
+#     Operational Intelligence
+#
+# Audience:
+#   - Director of Operations
+#   - General Manager
+#   - Shift Manager
+#   - Pit leadership
+#
+# Narrative architecture:
+#
+#   Hero
+#     → Operational Domains
+#     → System Flow
+#     → Operational Accountability
+#     → Financial Provenance
+#     → Product Surfaces
+#     → Operational Intelligence
+#     → CTA
+#
+
+meta:
+  schema_version: "2.0"
+  page: "/"
+  status: "PROPOSED_REFACTOR"
+
+  structural_principles:
+    - operations_first
+    - downstream_semantics
+    - operational_causality
+    - embedded_trust
+    - no_feature_flattening
+    - one_conversion_posture
+
+sections:
+
+  - id: NAV
+    label: Navigation
+
+    prose:
+      nav_links:
+        - label: "Operations"
+          href: "#operations"
+
+        - label: "Accountability"
+          href: "#accountability"
+
+        - label: "Intelligence"
+          href: "#intelligence"
+
+        - label: "Pricing"
+          href: "/pricing"
+
+      primary_cta:
+        label: "Request an operational walkthrough"
+        href: "/contact"
+
+    flags_resolved:
+      - CTA fragmentation removed
+      - Pricing path surfaced
+      - Navigation aligned to operational layers
+
+  - id: S1
+    label: Hero
+
+    prose:
+      eyebrow: "Casino Operational Intelligence"
+
+      headline: >
+        Capture floor activity once.
+        Turn it into operational oversight,
+        compliance visibility,
+        financial traceability,
+        and operational intelligence.
+
+      subtitle: >
+        Built for casino operational leadership —
+        from live floor supervision to audit-ready operational history.
+
+      primary_cta:
+        label: "Request an operational walkthrough"
+        href: "/contact"
+
+      secondary_cta:
+        label: "Explore operational domains"
+        href: "#operations"
+
+    structural_objective: >
+      Establish the system as an operations-first platform,
+      not a dashboard collection or analytics product.
+
+  - id: S2
+    label: Operational Domains
+    anchor: "#operations"
+
+    prose:
+      heading: >
+        Operational control across the live casino floor.
+
+      domains:
+
+        - title: "Floor Oversight"
+          purpose: >
+            Monitor active tables, shift activity,
+            exceptions, and supervisor workflows in real time.
+
+        - title: "Session Tracking"
+          purpose: >
+            Preserve player-session continuity from buy-in through closeout.
+
+        - title: "Cash Accountability"
+          purpose: >
+            Record operational cash movement with traceable audit history.
+
+        - title: "Audit Compliance"
+          purpose: >
+            Surface regulatory thresholds and operational exceptions
+            during the shift — not after it.
+
+    structural_objective: >
+      Introduce the operational responsibilities the platform unifies.
+
+  - id: S3
+    label: System Flow
+
+    prose:
+      heading: >
+        One operational source.
+        Multiple downstream outcomes.
+
+      flow:
+        - "Floor Operations"
+        - "Operational Telemetry"
+        - "Compliance & Financial Provenance"
+        - "Operational Intelligence"
+
+      explanatory_copy: >
+        Activity recorded on the floor propagates through the system
+        into accountability, oversight, and reporting surfaces automatically.
+
+    structural_objective: >
+      Explain operational causality and eliminate
+      the perception of disconnected modules.
+
+  - id: S4
+    label: Operational Accountability
+    anchor: "#accountability"
+
+    prose:
+      heading: >
+        Operational history that remains defensible under review.
+
+      content_blocks:
+
+        - title: "Regulatory Visibility"
+          copy: >
+            Progressive MTL and threshold visibility
+            integrated into operational workflows.
+
+        - title: "Traceable Activity"
+          copy: >
+            Supervisor actions, voids, adjustments,
+            and operational changes remain attributable and reviewable.
+
+        - title: "Shift Continuity"
+          copy: >
+            Preserve operational context across the gaming day
+            without fragmented spreadsheets or disconnected logs.
+
+    structural_objective: >
+      Embed trust into operational accountability
+      instead of isolating it as a marketing section.
+
+  - id: S5
+    label: Financial Provenance
+
+    prose:
+      heading: >
+        Financial visibility without false certainty.
+
+      copy: >
+        The system preserves operational financial activity
+        with source visibility, attribution context,
+        and audit-ready traceability.
+
+      supporting_points:
+        - "Operational telemetry preserved at the point of activity"
+        - "Authority and provenance retained through downstream surfaces"
+        - "Designed for operational accountability, not fabricated settlement totals"
+
+    structural_objective: >
+      Align landing-page claims with ADR-052/053/054
+      and prevent accidental accounting-positioning drift.
+
+  - id: S6
+    label: Product Surfaces
+
+    prose:
+      heading: >
+        Operational surfaces built around live floor workflows.
+
+      surfaces:
+        - "Shift Dashboard"
+        - "Player 360"
+        - "Cash Threshold Monitoring"
+        - "Operational Setup"
+
+      guidance: >
+        Screenshots must be contextualized operationally.
+        Every visual should answer:
+        'What operational responsibility becomes easier here?'
+
+    structural_objective: >
+      Present UI proof only after operational framing exists.
+
+  - id: S7
+    label: Operational Intelligence
+    anchor: "#intelligence"
+
+    prose:
+      heading: >
+        Intelligence built from operational telemetry.
+
+      content:
+        - "Shift-level operational visibility"
+        - "Table-performance insight"
+        - "Operational anomaly detection"
+        - "Player activity patterns"
+        - "Operational trend analysis"
+
+      caution: >
+        Analytics are downstream consumers of operational telemetry,
+        not the primary product identity.
+
+    structural_objective: >
+      Prevent analytics-first positioning drift.
+
+  - id: S8
+    label: CTA
+
+    prose:
+      heading: >
+        Evaluate the platform through your operational reality.
+
+      copy: >
+        Walk through live operational workflows,
+        accountability surfaces,
+        and floor-control scenarios with your team.
+
+      primary_cta:
+        label: "Request an operational walkthrough"
+        href: "/contact"
+
+    structural_objective: >
+      Maintain one consistent conversion posture
+      across the entire landing experience.
+
+global_flags_resolved:
+
+  - id: GF-1
+    issue: "Semantic flattening"
+    resolution: >
+      Replaced peer-level feature grouping with operational dependency sequencing.
+
+  - id: GF-2
+    issue: "CTA fragmentation"
+    resolution: >
+      Unified all conversion language under one operational walkthrough posture.
+
+  - id: GF-3
+    issue: "Trust isolation"
+    resolution: >
+      Embedded trust into accountability and provenance sections.
+
+  - id: GF-4
+    issue: "Analytics-first drift"
+    resolution: >
+      Repositioned intelligence as downstream operational output.
+
+  - id: GF-5
+    issue: "Disconnected module perception"
+    resolution: >
+      Added explicit system-flow topology section.
+
+  - id: GF-6
+    issue: "Audience ambiguity"
+    resolution: >
+      Stabilized narrative around operational leadership perspective.
+
+closing_statement: >
+  The landing page must behave like a model of casino floor operations,
+  not a catalog of software capabilities.
+
+  The system's differentiation is operational coherence:
+  one operational source producing multiple downstream truths.

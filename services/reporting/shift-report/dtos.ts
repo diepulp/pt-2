@@ -24,6 +24,7 @@ import type {
   AlertQualityDTO,
   BaselineCoverageDTO,
 } from '@/services/shift-intelligence/dtos';
+import type { FinancialValue } from '@/types/financial';
 
 // ── Assembly Input ──────────────────────────────────────────────────────────
 
@@ -128,11 +129,11 @@ export interface CompliancePatronRow {
   patronFirstName: string | null;
   patronLastName: string | null;
   gamingDay: string;
-  totalInCents: number;
+  totalInCents: FinancialValue;
   countIn: number;
-  totalOutCents: number;
+  totalOutCents: FinancialValue;
   countOut: number;
-  totalVolumeCents: number;
+  totalVolumeCents: FinancialValue;
   aggBadgeIn: AggBadge;
   aggBadgeOut: AggBadge;
 }

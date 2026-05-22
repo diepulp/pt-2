@@ -10,6 +10,7 @@
  */
 
 import type { Database } from '@/types/database.types';
+import type { FinancialValue } from '@/types/financial';
 
 // === Base Row Types (for Pick/Omit derivation) ===
 
@@ -137,8 +138,8 @@ export interface ActiveVisitDTO {
  * ADR-026: Extended with `resumed` and `gamingDay` for gaming-day-scoped visits.
  * - `resumed`: true if resuming same-day visit (vs creating new)
  * - `gamingDay`: ISO date (YYYY-MM-DD) for the visit's gaming day
+ * @see rpc_start_visit_for_player — RPC response type
  */
-
 export interface StartVisitResultDTO {
   /** The visit (new or existing) */
   visit: VisitDTO;
@@ -240,12 +241,12 @@ export interface VisitLiveViewDTO {
   // Session totals (aggregated across all slips)
   /** Total play duration in seconds (closed slips + active slip) */
   session_total_duration_seconds: number;
-  /** Total buy-in amount in dollars (converted from cents at service layer) */
-  session_total_buy_in: number;
-  /** Total cash-out amount in dollars (converted from cents at service layer) */
-  session_total_cash_out: number;
-  /** Net amount in dollars (buy_in - cash_out, converted at service layer) */
-  session_net: number;
+  /** Total buy-in — dollar float (Phase 1.1 label; value = cents/100). Phase 1.2 will canonicalize to integer cents. */
+  session_total_buy_in: FinancialValue;
+  /** Total cash-out — dollar float (Phase 1.1 label; value = cents/100). Phase 1.2 will canonicalize to integer cents. */
+  session_total_cash_out: FinancialValue;
+  /** Net amount — dollar float (Phase 1.1 label; value = cents/100). Phase 1.2 will canonicalize to integer cents. */
+  session_net: FinancialValue;
   /** Total loyalty points earned (0 until loyalty system implemented) */
   session_points_earned: number;
   /** Count of rating slip segments for this visit */
@@ -314,12 +315,12 @@ export interface RecentSessionDTO {
   last_seat_number: number | null;
   /** Total session duration in seconds */
   total_duration_seconds: number;
-  /** Total buy-in amount in dollars (converted from cents at service layer) */
-  total_buy_in: number;
-  /** Total cash-out amount in dollars (converted from cents at service layer) */
-  total_cash_out: number;
-  /** Net amount in dollars (converted from cents at service layer) */
-  net: number;
+  /** Total buy-in amount — dollar float (Phase 1.1 label; value = cents/100). Phase 1.2 will canonicalize to integer cents. */
+  total_buy_in: FinancialValue;
+  /** Total cash-out amount — dollar float (Phase 1.1 label; value = cents/100). Phase 1.2 will canonicalize to integer cents. */
+  total_cash_out: FinancialValue;
+  /** Net amount — dollar float (Phase 1.1 label; value = cents/100). Phase 1.2 will canonicalize to integer cents. */
+  net: FinancialValue;
   /** Total loyalty points earned */
   points_earned: number;
   /** Number of rating slip segments */

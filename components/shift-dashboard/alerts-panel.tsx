@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useGamingDay } from '@/hooks/casino/use-gaming-day';
 import {
   usePersistAlerts,
   useShiftAlerts,
@@ -211,8 +212,10 @@ export function AlertsPanel({ data, isLoading }: AlertsPanelProps) {
   const warnCount = data?.filter((a) => a.severity === 'warn').length ?? 0;
   const totalCount = data?.length ?? 0;
 
-  // PRD-056: Persistent baseline alerts
-  const gamingDay = new Date().toISOString().slice(0, 10);
+  // PRD-056: Persistent baseline alerts, keyed on the canonical casino gaming
+  // day (TEMP-002). useShiftAlerts gates on truthy gamingDay.
+  const { data: gamingDayData } = useGamingDay();
+  const gamingDay = gamingDayData?.gaming_day ?? '';
   const persistMutation = usePersistAlerts();
   const { data: shiftAlertsData, isLoading: isLoadingBaseline } =
     useShiftAlerts(gamingDay);

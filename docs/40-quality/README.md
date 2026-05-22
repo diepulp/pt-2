@@ -39,6 +39,9 @@ last_review: 2025-10-25
 - `QA-002` — CI/CD Quality Gates (`QA-002-quality-gates.md`)
 - `QA-003` — Service Testing Patterns & Examples (`QA-003-service-testing-patterns.md`)
 - `QA-004` — Test-Driven Development (TDD) Standard (`QA-004-tdd-standard.md`)
+- `QA-005` — Route Handler Testing Patterns (`QA-005-route-handler-testing.md`)
+- `QA-006` — End-to-End (E2E) Testing Standard (`QA-006-e2e-testing-standard.md`)
+- `QA-007` — Implemented Validation Gates for Agentic Workflows (`QA-007-validation-gates-implemented.md`)
 
 ## Related Categories
 

@@ -1,0 +1,21 @@
+{
+  "exec_id": "EXEC-LP-001",
+  "prd": "FIB-H-LP-001",
+  "status": "complete",
+  "created_at": "2026-05-14T00:00:00Z",
+  "updated_at": "2026-05-14T00:00:00Z",
+  "complexity_prescreen": "streamlined",
+  "gov010_check": "n/a",
+  "write_path_classification": "none",
+  "fib_s_loaded": false,
+  "current_phase": 4,
+  "pending_workstreams": [],
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4"],
+  "dormant_workstreams": [],
+  "exemplar_contract_gate": "PENDING_CONFIRMATION",
+  "artifacts": {
+    "exec_spec": "docs/21-exec-spec/FIB-H-LP-001/EXEC-LP-001-landing-page-narrative-refactor.md",
+    "primary_output": "app/(landing)/page.tsx",
+    "component_output": "app/(landing)/_components/product-tabs.tsx"
+  }
+}

@@ -13,6 +13,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { normalizeClientError } from '@/lib/errors/normalize-client-error';
 import type { GamingDayDTO } from '@/services/casino/dtos';
 import type { Database } from '@/types/database.types';
 
@@ -43,7 +44,7 @@ export async function fetchDashboardTables(
   );
 
   if (error) {
-    throw new Error(error.message);
+    throw normalizeClientError(error);
   }
 
   return (data as unknown as DashboardTableDTO[]) ?? [];
@@ -61,7 +62,7 @@ export async function fetchDashboardStats(
   const { data, error } = await supabase.rpc('rpc_get_dashboard_stats');
 
   if (error) {
-    throw new Error(`Failed to fetch dashboard stats: ${error.message}`);
+    throw normalizeClientError(error);
   }
 
   if (!data) {
@@ -92,7 +93,7 @@ export async function fetchGamingDayServer(
   const { data, error } = await supabase.rpc('rpc_current_gaming_day');
 
   if (error) {
-    throw new Error(`Failed to fetch gaming day: ${error.message}`);
+    throw normalizeClientError(error);
   }
 
   return {

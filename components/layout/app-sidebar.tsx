@@ -212,19 +212,6 @@ export function AppSidebar() {
         >
           {/* Collapsed content - icon-only view */}
           <div className="flex flex-col h-full">
-            <div className="p-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary border border-sidebar-primary/20 cursor-default">
-                    <span className="font-mono text-sm font-bold">PT</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8}>
-                  PT-2 Pit Station
-                </TooltipContent>
-              </Tooltip>
-            </div>
-
             <div className="flex-1 flex flex-col items-center py-2 gap-1">
               {flatNavItems.map((item) => {
                 const Icon = item.icon;
@@ -290,23 +277,6 @@ export function AppSidebar() {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        {/* Header */}
-        <div className="p-2">
-          <div className="flex items-center gap-3 px-2 py-1.5">
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary border border-sidebar-primary/20">
-              <span className="font-mono text-sm font-bold">PT</span>
-            </div>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold text-sidebar-foreground">
-                PT-2
-              </span>
-              <span className="truncate text-xs text-muted-foreground">
-                Pit Station
-              </span>
-            </div>
-          </div>
-        </div>
-
         {/* Main Navigation - Grouped with collapsible trees */}
         <div className="flex-1 overflow-auto py-2">
           <NavMain groups={navGroups} />

@@ -24,10 +24,12 @@ import type { MtlEntryQueryFilters } from '@/services/mtl/keys';
 
 /**
  * Converts camelCase query filters to snake_case HTTP filters.
+ * casino_id is excluded — derived from RLS context server-side (DEC-1).
  */
-function toHttpFilters(filters: MtlEntryQueryFilters): MtlEntryFilters {
+function toHttpFilters(
+  filters: MtlEntryQueryFilters,
+): Omit<MtlEntryFilters, 'casino_id'> {
   return {
-    casino_id: filters.casinoId,
     patron_uuid: filters.patronId,
     gaming_day: filters.gamingDay,
     min_amount: filters.minAmount,

@@ -93,7 +93,10 @@ export function MetricWidget({
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <p className="text-sm text-muted-foreground">Metric unavailable</p>
             <p className="text-xs text-muted-foreground/70 mt-1">
-              {error.message}
+              {
+                // eslint-disable-next-line client-error-safety/no-raw-provider-message -- WidgetError.message is a pre-defined application message (createWidgetError), not raw provider content
+                error.message
+              }
             </p>
             <Button
               variant="outline"

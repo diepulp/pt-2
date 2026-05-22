@@ -37,7 +37,6 @@ import { mtlGamingDaySummaryQuerySchema } from '@/services/mtl/schemas';
  * and Tier 2 aggregate badges for CTR compliance.
  *
  * Query params:
- * - casino_id: Casino UUID (defaults to RLS context)
  * - gaming_day: Date in YYYY-MM-DD format (required)
  * - patron_uuid?: Filter by patron
  * - agg_badge_in?: Filter by cash-in aggregate badge
@@ -63,9 +62,8 @@ export async function GET(request: NextRequest) {
 
         const service = createMtlService(mwCtx.supabase);
 
-        // Use casino_id from RLS context if not provided in query
         const filters = {
-          casino_id: query.casino_id || mwCtx.rlsContext!.casinoId,
+          casino_id: mwCtx.rlsContext!.casinoId,
           gaming_day: query.gaming_day,
           patron_uuid: query.patron_uuid,
           agg_badge_in: query.agg_badge_in,

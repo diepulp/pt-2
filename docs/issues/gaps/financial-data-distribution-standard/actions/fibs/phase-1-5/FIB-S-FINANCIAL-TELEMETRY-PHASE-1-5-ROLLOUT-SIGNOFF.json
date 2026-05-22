@@ -1,0 +1,549 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-5-ROLLOUT-SIGNOFF",
+    "status": "draft",
+    "feature_id": "FIB-S-FIN-ROLLOUT-1.5",
+    "feature_name": "Financial Telemetry Wave 1 — Phase 1.5 Rollout & Sign-off",
+    "priority": "P0",
+    "decision_horizon": "wave-1-phase-1.5-exit",
+    "owner": "Vladimir Ivanov",
+    "opened_on": "2026-05-05",
+    "parent_prd": "PRD-079 (to be drafted)",
+    "predecessor_fib": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-4/FIB-H-FINANCIAL-TELEMETRY-PHASE-1-4-VALIDATION-LINT-TRUTH.md",
+    "predecessor_phase": "Phase 1.4 — Validation: Lint Enforcement + Truth-Telling Tests (EXEC-078, commit 05e34782)",
+    "successor_slice": "Wave 2 CI/CD prerequisites and schema roadmap"
+  },
+  "scope_guardrail": {
+    "governance_ref": "docs/70-governance/FIB_GENERATION_SCOPE_GUARDRAIL.md",
+    "primary_change_class": "Release Validation",
+    "coverage_mode": {
+      "mode": "full",
+      "coverage_mode_label": "Full rollout/sign-off coverage",
+      "surfaces": [
+        "Vercel Preview deployment for PR ref/financial-standard -> main",
+        "Blocking PR CI gates: npm run lint, npm run type-check, npm run build",
+        "Advisory validation: npm run test:surface and E2E I5-1/I5-2",
+        "Operator walkthrough: shift dashboard",
+        "Operator walkthrough: player 360",
+        "Operator walkthrough: rating slip modal",
+        "Operator walkthrough: compliance view",
+        "Production smoke check: five financial API routes at pt-2-weld.vercel.app",
+        "Wave 1 retrospective and release notes"
+      ],
+      "surface_granularity": "named-rollout-surfaces-only",
+      "full_mode_justification": "Phase 1.5 is the dedicated Wave 1 rollout/sign-off slice. Representative coverage is insufficient because the exit gate is operator sign-off that the SRC envelope is live and interpretable on every production financial surface, with no new semantics, transport shape, service logic, UI behavior, schema, or CI/CD remediation introduced."
+    },
+    "layer_budget": {
+      "primary_layer": "Validation",
+      "secondary_layers": ["Infrastructure"],
+      "secondary_layer_constraints": "Infrastructure work is limited to adding the three missing public Supabase credentials to the Vercel Preview environment so the validation surface can authenticate. No workflow repair, staging project, branch protection, schema change, or application logic change is allowed.",
+      "dto_classification": "No DTO changes in this slice. Existing FinancialValue contracts from Phases 1.1-1.4 are validated only."
+    },
+    "one_line_boundary": "This FIB fixes the Vercel Preview authentication gap and executes the Wave 1 merge-to-production sign-off procedure; it does not remediate CI/CD pipeline defects or provision staging infrastructure.",
+    "atomicity_test": {
+      "ships_without_deferred_work": true,
+      "deferred_work_can_follow_without_rewrite": true,
+      "ships_as_correct_internal_contract": true,
+      "atomicity_notes": "Wave 1 can close after Preview authentication, CI validation, operator walkthrough, merge, production smoke check, and retrospective. CI/CD hardening, staging isolation, and Wave 2 schema work can begin later from the retrospective without rewriting this sign-off slice."
+    },
+    "diff_size_sanity": {
+      "expected_logic_files": 0,
+      "expected_configuration_changes": ["Vercel Preview env vars only"],
+      "directory_boundaries": [],
+      "bounded_contexts": [],
+      "hidden_multi_class_scope_review_required": false
+    },
+    "adjacent_consequence_ledger": [
+      {
+        "temptation": "Fix deploy-staging.yml and deploy-production.yml by adding workflow_call to ci.yml",
+        "why_adjacent": "Deploy workflows are visibly broken and the missing workflow_call looks like a simple fix while preparing release",
+        "disposition": "Deferred to Wave 2 CI/CD prerequisites because the downstream staging Supabase project and migration automation are not ready",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "Configure main branch protection before merging",
+        "why_adjacent": "Branch protection is the correct long-term enforcement mechanism for blocking checks",
+        "disposition": "Deferred to Wave 2 prerequisites after staging and migration gates exist; adding protection now creates a false governance signal",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "Provision a pt-2-staging Supabase project and staging Vercel environment",
+        "why_adjacent": "Preview and production currently share the same Supabase project during validation",
+        "disposition": "Deferred to Wave 2 CI/CD prerequisites; Phase 1.5 carries no schema changes and accepts shared-database risk as a documented caveat",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "Promote financial-enforcement.spec.ts to a blocking CI job",
+        "why_adjacent": "Phase 1.4 authored the truth-telling spec and rollout is the natural time to enforce it",
+        "disposition": "Deferred until branch protection and E2E CI hardening exist. Phase 1.5 records advisory results but does not change CI enforcement level",
+        "removed_from_must": true
+      },
+      {
+        "temptation": "Remediate Supabase advisor findings before merge",
+        "why_adjacent": "Advisor checks may be run as part of release posture",
+        "disposition": "Record findings in the retrospective. Do not block Phase 1.5 unless a finding is a regression directly caused by the Preview env var addition",
+        "removed_from_must": true
+      }
+    ],
+    "downstream_expansion_allowed_without_amendment": false
+  },
+  "phase_boundary": {
+    "one_line_invariant": "If a change only enables the PR Preview authentication surface, validates existing Wave 1 financial envelopes, records operator sign-off, merges the branch, smoke-checks production, or documents release posture, it is in scope.",
+    "primary_change_class": "Release Validation",
+    "primary_layer": "Validation",
+    "coverage_mode": "Full rollout/sign-off coverage",
+    "secondary_layers_allowed": [
+      "Infrastructure prerequisite: Vercel Preview env vars only"
+    ],
+    "stop_conditions": [
+      "GitHub Actions workflow remediation required",
+      "branch protection configuration required",
+      "new Supabase project or staging environment required",
+      "SQL migration required",
+      "service, DTO, API, or UI logic change required",
+      "new financial semantics required",
+      "new OpenAPI contract required",
+      "financial-enforcement.spec.ts promoted to blocking CI",
+      "production tag release process required",
+      "custom domain configuration required"
+    ],
+    "prohibited": [
+      "CI/CD remediation beyond documentation",
+      "Staging infrastructure provisioning",
+      "Branch protection or required-check configuration",
+      "Automated migration pipeline changes",
+      "Promotion of advisory tests to blocking gates",
+      "Production tag-based release activation",
+      "Custom domain setup",
+      "Wave 2 schema, outbox, producer, or consumer work",
+      "Supabase advisor remediation unrelated to a Phase 1.5-caused regression"
+    ]
+  },
+  "intent": {
+    "operator_problem": "Financial-standard has completed Phases 1.1-1.4, but operators cannot validate the hosted result because the branch is not merged and the Vercel PR Preview cannot authenticate with Supabase. The Wave 1 exit gate requires operator sign-off that financial surfaces are interpretable in the hosted application, not only locally.",
+    "pilot_fit": "Phase 1.5 is the final Wave 1 gate. It closes the surface-only Wave 1 rollout before Wave 2 schema-bearing work opens. The minimal unblock is adding the missing Preview Supabase credentials, validating the PR, obtaining walkthrough sign-off, merging to main, and smoke-checking production."
+  },
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "Vercel Preview Supabase credentials",
+          "kind": "configuration",
+          "description": "Three public Supabase values added to the Vercel Preview environment so PR Preview deployments can authenticate against the existing hosted Supabase project.",
+          "stateful": true,
+          "system_of_record": "Vercel project pt-2 Preview environment",
+          "fields_hint": [
+            "NEXT_PUBLIC_SUPABASE_URL",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+            "SUPABASE_SERVICE_ROLE_KEY or project-required server credential if already used by the app"
+          ]
+        },
+        {
+          "name": "PR Preview deployment",
+          "kind": "runtime_surface",
+          "description": "Vercel Preview URL created for the ref/financial-standard -> main PR. It is the pre-merge hosted validation surface for the operator walkthrough.",
+          "stateful": false,
+          "system_of_record": "Vercel Preview deployment"
+        },
+        {
+          "name": "Blocking PR gates",
+          "kind": "validation_gate",
+          "description": "Lint, type-check, and build must pass before merge. These are treated as blocking gates for Phase 1.5 sign-off regardless of repository branch-protection state.",
+          "stateful": false,
+          "system_of_record": "GitHub PR checks and local verification log",
+          "fields_hint": ["npm run lint", "npm run type-check", "npm run build"]
+        },
+        {
+          "name": "Advisory validation results",
+          "kind": "validation_record",
+          "description": "test:surface and E2E I5 results are recorded. Failures require explicit written merge justification by the engineering lead before walkthrough and merge proceed.",
+          "stateful": true,
+          "system_of_record": "Phase 1.5 sign-off / retrospective artifact",
+          "fields_hint": [
+            "npm run test:surface",
+            "E2E I5-1",
+            "E2E I5-2",
+            "written advisory-failure disposition"
+          ]
+        },
+        {
+          "name": "Operator sign-off record",
+          "kind": "approval_record",
+          "description": "Pit boss or floor supervisor records that authority labels, completeness states, non-authoritative totals, and split displays are interpretable on the Preview URL.",
+          "stateful": true,
+          "system_of_record": "Phase 1.5 sign-off artifact"
+        },
+        {
+          "name": "Production smoke-check record",
+          "kind": "validation_record",
+          "description": "After merge and Vercel production deployment, five financial API routes are checked for FinancialValue envelope shape at pt-2-weld.vercel.app.",
+          "stateful": true,
+          "system_of_record": "Phase 1.5 sign-off artifact"
+        },
+        {
+          "name": "Wave 1 retrospective",
+          "kind": "governance_document",
+          "description": "Release retrospective documenting CI/CD gaps, Q1-Q4 deferral rationale, shared-database caveat, advisor findings, release notes, and Wave 2 prerequisite register.",
+          "stateful": true,
+          "system_of_record": "docs/issues/gaps/financial-data-distribution-standard/actions/"
+        }
+      ],
+      "boundaries": [
+        "No application logic changes",
+        "No service or DTO changes",
+        "No API or OpenAPI contract changes",
+        "No UI behavior changes",
+        "No SQL migrations",
+        "No CI/CD remediation beyond documentation",
+        "No staging or branch-protection setup",
+        "No Wave 2 schema or outbox work"
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "Preview authentication unblock",
+          "description": "Add the three missing Supabase credentials to the Vercel Preview environment and verify the PR Preview deployment can authenticate.",
+          "traces_to_loop_step": "1, 2, 3"
+        },
+        {
+          "id": "CAP-2",
+          "name": "Blocking PR validation",
+          "description": "Run and record lint, type-check, and build results for the ref/financial-standard -> main PR. These must be green before merge.",
+          "traces_to_loop_step": "4"
+        },
+        {
+          "id": "CAP-3",
+          "name": "Advisory financial validation",
+          "description": "Run and record test:surface and I5 E2E validation. Failures do not automatically block merge, but each failure requires written engineering-lead acceptance before proceeding.",
+          "traces_to_loop_step": "5"
+        },
+        {
+          "id": "CAP-4",
+          "name": "Operator interpretability walkthrough",
+          "description": "Walk the Preview URL through shift dashboard, player 360, rating slip modal, and compliance view; record operator interpretation of authority labels, completeness, non-authoritative totals, and split displays.",
+          "traces_to_loop_step": "6, 7"
+        },
+        {
+          "id": "CAP-5",
+          "name": "Merge and production smoke check",
+          "description": "Merge the PR after sign-off, wait for the Vercel production deploy, and smoke-check five financial API routes for FinancialValue envelope shape.",
+          "traces_to_loop_step": "7, 8"
+        },
+        {
+          "id": "CAP-6",
+          "name": "Wave 1 retrospective and handoff",
+          "description": "Document CI/CD gaps as Wave 2 prerequisites, Q1-Q4 deferral rationale, release notes, shared-database caveat, and any advisor findings.",
+          "traces_to_loop_step": "9"
+        }
+      ]
+    },
+    "where": {
+      "locations": [
+        "Vercel project pt-2 Preview environment",
+        "GitHub PR ref/financial-standard -> main",
+        "Vercel PR Preview URL",
+        "pt-2-weld.vercel.app",
+        "docs/issues/gaps/financial-data-distribution-standard/actions/"
+      ]
+    },
+    "who": {
+      "actors": [
+        {
+          "role": "Engineering lead",
+          "responsibilities": [
+            "Add Preview env vars",
+            "Open and validate PR",
+            "Accept or reject advisory test failures in writing",
+            "Authorize merge",
+            "Run production smoke check",
+            "Author retrospective"
+          ]
+        },
+        {
+          "role": "Pit boss / floor supervisor",
+          "responsibilities": [
+            "Perform Preview URL walkthrough",
+            "Confirm interpretability of labels and completeness states",
+            "Record operator sign-off or defects"
+          ]
+        }
+      ]
+    },
+    "when": {
+      "trigger": "Phase 1.4 exit gate passed (EXEC-078, commit 05e34782)",
+      "sequence": [
+        "Preview env var addition",
+        "PR creation and Preview deployment",
+        "Preview auth verification",
+        "Blocking CI validation",
+        "Advisory validation",
+        "Operator walkthrough",
+        "Merge to main",
+        "Production smoke check",
+        "Wave 1 retrospective"
+      ]
+    },
+    "why": {
+      "business_reason": "Wave 1 cannot close until hosted financial surfaces are visible, interpretable, and signed off by the operator persona.",
+      "technical_reason": "The completed SRC envelope, integer-cents canonicalization, UI split-display components, and enforcement rules must be validated in the deployed environment before schema-bearing Wave 2 work opens."
+    }
+  },
+  "feature_containment_loop": [
+    {
+      "step": 1,
+      "description": "Add three missing Supabase credentials to the Vercel Preview environment.",
+      "expected_result": "Preview deployments can authenticate with Supabase.",
+      "capability": "CAP-1"
+    },
+    {
+      "step": 2,
+      "description": "Open PR from ref/financial-standard to main.",
+      "expected_result": "Vercel creates a Preview deployment URL.",
+      "capability": "CAP-1"
+    },
+    {
+      "step": 3,
+      "description": "Verify the PR Preview deployment is functional.",
+      "expected_result": "Financial routes return data and Supabase auth succeeds before walkthrough.",
+      "capability": "CAP-1"
+    },
+    {
+      "step": 4,
+      "description": "Run blocking CI gates on the PR.",
+      "expected_result": "lint, type-check, and build are green.",
+      "capability": "CAP-2"
+    },
+    {
+      "step": 5,
+      "description": "Run advisory validation suite locally.",
+      "expected_result": "test:surface and E2E I5-1/I5-2 results are recorded; any failure has written merge justification.",
+      "capability": "CAP-3"
+    },
+    {
+      "step": 6,
+      "description": "Run operator walkthrough on Preview URL.",
+      "expected_result": "Operator confirms authority labels, completeness states, non-authoritative totals, and split displays are interpretable.",
+      "capability": "CAP-4"
+    },
+    {
+      "step": 7,
+      "description": "Record operator sign-off and merge PR to main.",
+      "expected_result": "ref/financial-standard enters main after approval.",
+      "capability": "CAP-4, CAP-5"
+    },
+    {
+      "step": 8,
+      "description": "Wait for Vercel production deployment and smoke-check five financial API routes.",
+      "expected_result": "Production URL reflects Wave 1 work and FinancialValue envelope shape is present.",
+      "capability": "CAP-5"
+    },
+    {
+      "step": 9,
+      "description": "Author Wave 1 retrospective.",
+      "expected_result": "CI/CD gaps, Q1-Q4 deferrals, release notes, and Wave 2 prerequisites are recorded.",
+      "capability": "CAP-6"
+    }
+  ],
+  "requirements": {
+    "must": [
+      {
+        "id": "REQ-1",
+        "description": "Vercel Preview deployments authenticate with Supabase after the three missing credentials are added.",
+        "traces_to_capability": "CAP-1"
+      },
+      {
+        "id": "REQ-2",
+        "description": "Blocking gates lint, type-check, and build pass on the PR before merge.",
+        "traces_to_capability": "CAP-2"
+      },
+      {
+        "id": "REQ-3",
+        "description": "Advisory validation results are recorded, and every advisory failure has explicit written engineering-lead merge justification.",
+        "traces_to_capability": "CAP-3"
+      },
+      {
+        "id": "REQ-4",
+        "description": "Operator walkthrough confirms authority labels, completeness states, non-authoritative totals, and split displays are interpretable on the Preview URL.",
+        "traces_to_capability": "CAP-4"
+      },
+      {
+        "id": "REQ-5",
+        "description": "PR is merged to main only after Preview auth, blocking gates, advisory disposition, and operator sign-off are complete.",
+        "traces_to_capability": "CAP-5"
+      },
+      {
+        "id": "REQ-6",
+        "description": "Production smoke check verifies five financial API routes expose FinancialValue objects with value, type, source, and completeness.status.",
+        "traces_to_capability": "CAP-5"
+      },
+      {
+        "id": "REQ-7",
+        "description": "Wave 1 retrospective records CI/CD gap register, Q1-Q4 deferral rationale, release notes, shared-database caveat, and any advisor findings.",
+        "traces_to_capability": "CAP-6"
+      }
+    ],
+    "must_not": [
+      "Do not remediate GitHub Actions deploy workflow defects.",
+      "Do not provision staging infrastructure.",
+      "Do not configure branch protection.",
+      "Do not add or run schema migrations.",
+      "Do not promote advisory test jobs to blocking CI.",
+      "Do not change service, DTO, API, OpenAPI, or UI logic.",
+      "Do not start Wave 2 schema/outbox work."
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "description": "Preview authentication succeeds on the PR Preview URL.",
+      "verification": "Open Preview URL and confirm authenticated Supabase-backed financial surfaces load."
+    },
+    {
+      "id": "AC-2",
+      "description": "Blocking gates are green.",
+      "verification": "Record successful lint, type-check, and build results from PR checks or local commands."
+    },
+    {
+      "id": "AC-3",
+      "description": "Advisory validation posture is explicit.",
+      "verification": "Record test:surface and E2E I5-1/I5-2 results; include written engineering-lead acceptance for each failure if any."
+    },
+    {
+      "id": "AC-4",
+      "description": "Operator sign-off is recorded.",
+      "verification": "Pit boss or floor supervisor confirms all four interpretability checks from the FIB-H required outcomes."
+    },
+    {
+      "id": "AC-5",
+      "description": "Production reflects Wave 1 after merge.",
+      "verification": "pt-2-weld.vercel.app deploy completes and five financial API smoke checks show FinancialValue envelope shape."
+    },
+    {
+      "id": "AC-6",
+      "description": "Wave 1 closes with truthful release posture.",
+      "verification": "Retrospective records CI/CD gaps as Wave 2 prerequisites and does not claim staging, branch protection, or deploy workflow remediation exists."
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "OUT-1",
+      "description": "Vercel PR Preview deployments authenticate with Supabase using the existing hosted project.",
+      "traces_to_capability": "CAP-1"
+    },
+    {
+      "id": "OUT-2",
+      "description": "The ref/financial-standard -> main PR has green blocking lint, type-check, and build gates.",
+      "traces_to_capability": "CAP-2"
+    },
+    {
+      "id": "OUT-3",
+      "description": "Advisory financial validation is recorded with explicit failure disposition if needed.",
+      "traces_to_capability": "CAP-3"
+    },
+    {
+      "id": "OUT-4",
+      "description": "Operator sign-off confirms Wave 1 financial surfaces are interpretable.",
+      "traces_to_capability": "CAP-4"
+    },
+    {
+      "id": "OUT-5",
+      "description": "ref/financial-standard is merged to main and production reflects the Wave 1 financial telemetry work.",
+      "traces_to_capability": "CAP-5"
+    },
+    {
+      "id": "OUT-6",
+      "description": "Five production financial API route smoke checks confirm FinancialValue envelope shape.",
+      "traces_to_capability": "CAP-5"
+    },
+    {
+      "id": "OUT-7",
+      "description": "Wave 1 retrospective provides the handoff artifact for Wave 2 CI/CD prerequisites and schema planning.",
+      "traces_to_capability": "CAP-6"
+    }
+  ],
+  "traceability_check": {
+    "operator_problem_to_loop_step": [
+      "Preview cannot authenticate with Supabase -> steps 1-3",
+      "Completed Wave 1 code is not merge-validated -> steps 4-5",
+      "Operator interpretability is not confirmed in hosted app -> steps 6-7",
+      "Production does not yet reflect Wave 1 -> step 8",
+      "Wave 2 cannot open without truthful gap register -> step 9"
+    ],
+    "loop_step_to_capability": {
+      "1": "CAP-1",
+      "2": "CAP-1",
+      "3": "CAP-1",
+      "4": "CAP-2",
+      "5": "CAP-3",
+      "6": "CAP-4",
+      "7": "CAP-4, CAP-5",
+      "8": "CAP-5",
+      "9": "CAP-6"
+    },
+    "capability_to_outcome": {
+      "CAP-1": "OUT-1",
+      "CAP-2": "OUT-2",
+      "CAP-3": "OUT-3",
+      "CAP-4": "OUT-4",
+      "CAP-5": "OUT-5, OUT-6",
+      "CAP-6": "OUT-7"
+    },
+    "requirement_to_acceptance": {
+      "REQ-1": "AC-1",
+      "REQ-2": "AC-2",
+      "REQ-3": "AC-3",
+      "REQ-4": "AC-4",
+      "REQ-5": "AC-5",
+      "REQ-6": "AC-5",
+      "REQ-7": "AC-6"
+    }
+  },
+  "dependencies": {
+    "required_existing": [
+      "Phase 1.4 exit gate passed — EXEC-078 complete, commit 05e34782",
+      "Vercel CLI authenticated as vladimirivanovdev-4624 and project pt-2 linked via .vercel/project.json",
+      "Single hosted Supabase project vaicxfihdldgepzryhpd is available",
+      "Vercel native Git integration deploys main to pt-2-weld.vercel.app",
+      "No Wave 1 schema changes pending",
+      "Operator is available to perform walkthrough during validation window"
+    ],
+    "missing_dependencies": [
+      "Three public Supabase credentials are absent from Vercel Preview and must be added in this phase"
+    ],
+    "assumptions": [
+      "Preview and production share the same Supabase remote project during validation; this is accepted for pre-production and documented as a Wave 2 prerequisite gap",
+      "The PR Preview URL is the only valid pre-merge hosted walkthrough surface",
+      "Vercel production deploy completes from native Git integration after merge without using GitHub Actions deploy workflows"
+    ],
+    "open_questions": [
+      "Operator walkthrough outcome is determined during execution",
+      "Supabase advisor findings are recorded during retrospective and do not block unless caused by the Phase 1.5 env var change"
+    ]
+  },
+  "governance": {
+    "frozen_adrs": ["ADR-052", "ADR-053", "ADR-054", "ADR-055"],
+    "rollout_tracker_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json",
+    "rollout_progress_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-PROGRESS.md",
+    "rollout_roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md",
+    "phase_1_4_fib_s_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-4/FIB-S-FINANCIAL-TELEMETRY-PHASE-1-4-VALIDATION-LINT-TRUTH.json",
+    "companion_fib_h": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-5/FIB-H-FINANCIAL-TELEMETRY-PHASE-1-5-ROLLOUT-SIGNOFF.md",
+    "scope_authority": "FIB-H-FINANCIAL-TELEMETRY-PHASE-1-5-ROLLOUT-SIGNOFF",
+    "scope_authority_version": "v0",
+    "downstream_expansion_allowed_without_amendment": false,
+    "open_questions_allowed_at_scaffold": [
+      "Operator walkthrough pass/fail",
+      "Supabase advisor finding contents"
+    ],
+    "wave_1_exit_criteria_addressed": [
+      "SRC envelope present on every production financial surface",
+      "Operator sign-off on interpretability",
+      "Open questions Q1-Q4 resolved or explicitly deferred with documented rationale",
+      "Release posture truthfully records remaining CI/CD gaps before Wave 2"
+    ],
+    "approval": "Pending — Vladimir Ivanov"
+  }
+}

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useCallback } from 'react';
 
+import { FinancialValue } from '@/components/financial';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -41,7 +42,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useGamingDaySummary } from '@/hooks/mtl/use-gaming-day-summary';
-import { formatCents } from '@/lib/format';
+import { getErrorMessage } from '@/lib/errors/error-utils';
 import { cn } from '@/lib/utils';
 import type { MtlGamingDaySummaryDTO } from '@/services/mtl/dtos';
 
@@ -118,7 +119,7 @@ export function GamingDaySummary({
         )}
       >
         <p className="text-sm text-destructive">
-          Failed to load summary: {error.message}
+          Failed to load summary: {getErrorMessage(error)}
         </p>
         <Button
           variant="outline"
@@ -269,7 +270,11 @@ export function GamingDaySummary({
                           'text-green-600 dark:text-green-400',
                         )}
                       >
-                        {formatCents(summary.total_in)}
+                        <FinancialValue
+                          variant="compact"
+                          label="Cash In"
+                          value={summary.total_in}
+                        />
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {summary.count_in} txn
@@ -285,7 +290,11 @@ export function GamingDaySummary({
                           'text-red-600 dark:text-red-400',
                         )}
                       >
-                        {formatCents(summary.total_out)}
+                        <FinancialValue
+                          variant="compact"
+                          label="Cash Out"
+                          value={summary.total_out}
+                        />
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {summary.count_out} txn

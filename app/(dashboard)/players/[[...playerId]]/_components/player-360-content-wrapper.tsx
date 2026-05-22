@@ -12,6 +12,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useCallback } from 'react';
 
+import { PanelErrorBoundary } from '@/components/error-boundary';
 import {
   Player360Body,
   Player360Header,
@@ -81,18 +82,22 @@ export function Player360ContentWrapper({
     <div data-testid="player-360-page" className="flex flex-col h-full">
       {/* Header with identity, search, and edit button */}
       <Player360Header>
-        <Player360HeaderContent
-          playerId={playerId}
-          player={player}
-          playerLoading={playerLoading}
-          playerError={playerError}
-          onSelectPlayer={handleSelectPlayer}
-        />
+        <PanelErrorBoundary panelName="player-header">
+          <Player360HeaderContent
+            playerId={playerId}
+            player={player}
+            playerLoading={playerLoading}
+            playerError={playerError}
+            onSelectPlayer={handleSelectPlayer}
+          />
+        </PanelErrorBoundary>
       </Player360Header>
 
       {/* Body with timeline */}
       <Player360Body>
-        <TimelinePageContent playerId={playerId} gamingDay={gamingDay} />
+        <PanelErrorBoundary panelName="player-timeline">
+          <TimelinePageContent playerId={playerId} gamingDay={gamingDay} />
+        </PanelErrorBoundary>
       </Player360Body>
     </div>
   );

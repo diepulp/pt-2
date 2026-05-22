@@ -7,7 +7,24 @@
  * AUTHORITATIVE METRICS: These are based on inventory snapshots and custody events,
  * distinct from telemetry-only cash observations.
  *
+ * Financial envelope wrapping (PRD-070 WS2 — DEFERRED):
+ * All `_cents` fields here (`opening_bankroll_total_cents`,
+ * `closing_bankroll_total_cents`, `fills_total_cents`, `credits_total_cents`,
+ * `estimated_drop_rated_cents`, `estimated_drop_grind_cents`,
+ * `estimated_drop_buyins_cents`, `win_loss_inventory_cents`,
+ * `win_loss_estimated_cents`, `opening_bankroll_cents`) cascade into
+ * `components/shift-dashboard-v3/*` (heavy metric table + telemetry rail
+ * consumption). Blanket Phase 1.2 deferral — see `../dtos.ts` top-of-file
+ * block for classification targets (CLASSIFICATION-RULES §3.5).
+ *
+ * Derived metrics (estimated_drop_*, win_loss_*) are Pattern B envelopes per
+ * §C3: declare input sources and surface worst-of completeness when wrapped.
+ * The existing `provenance` sibling module already models source/coverage —
+ * when the deferral lifts, Phase 1.2 must reconcile `provenance` with the
+ * `FinancialValue.completeness.coverage` slot to avoid duplicate semantics.
+ *
  * @see PRD-Shift-Dashboards-v0.2
+ * @see PRD-070 Financial Telemetry Wave 1 Phase 1.1
  * @see SHIFT_METRICS_CATALOG §2-3
  * @see rpc_shift_table_metrics, rpc_shift_pit_metrics, rpc_shift_casino_metrics
  */

@@ -11,13 +11,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import type { RecentSessionDTO } from '@/services/visit/dtos';
 
 import { StartFromPreviousPanel } from './start-from-previous';
-import type {
-  GamingDayInfo,
-  PlayerInfo,
-  SessionData,
-} from './start-from-previous';
+import type { GamingDayInfo, PlayerInfo } from './start-from-previous';
 
 // ============================================================================
 // Types
@@ -31,7 +28,7 @@ export interface StartFromPreviousModalProps {
   /** Player data (null when modal is closed or loading) */
   player: PlayerInfo | null;
   /** Recent closed sessions (scoped to gaming day) */
-  recentSessions: SessionData[];
+  recentSessions: RecentSessionDTO[];
   /** Gaming day context */
   gamingDay?: GamingDayInfo;
   /** Loading state */
@@ -112,14 +109,14 @@ export function StartFromPreviousModal({
 export interface UseStartFromPreviousModalState {
   isOpen: boolean;
   selectedPlayer: PlayerInfo | null;
-  recentSessions: SessionData[];
+  recentSessions: RecentSessionDTO[];
   isLoading: boolean;
 }
 
 export interface UseStartFromPreviousModalActions {
   open: (player: PlayerInfo) => void;
   close: () => void;
-  setSessionData: (recentSessions: SessionData[]) => void;
+  setRecentSessionDTO: (recentSessions: RecentSessionDTO[]) => void;
   setLoading: (loading: boolean) => void;
 }
 
@@ -150,7 +147,7 @@ export function useStartFromPreviousModal(): [
           isOpen: false,
         }));
       },
-      setSessionData: (recentSessions: SessionData[]) => {
+      setRecentSessionDTO: (recentSessions: RecentSessionDTO[]) => {
         setState((prev) => ({
           ...prev,
           recentSessions,

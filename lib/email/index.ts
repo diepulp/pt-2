@@ -6,3 +6,5 @@ export function createEmailProvider(): EmailProvider {
 }
 
 export type { EmailProvider, EmailSendOutcome } from './types';
+export { createResendProvider } from './resend-adapter';
+export { createSmtpProvider } from './smtp-adapter';

@@ -1,0 +1,71 @@
+{
+  "skill_name": "financial-model-authority",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "The team wants to simplify the financial model by adding an is_rated boolean to player_financial_transaction so we can store both rated buy-ins and unrated grind in a single table. Fewer tables, simpler joins. Does this work under the current architecture?",
+      "expected_output": "Clear rejection of the is_rated proposal citing ADR-052 §4 (explicitly rejected direction), explains why it contaminates ledger semantics and violates attribution constraints, explains the dual-layer model and why the two classes must stay separate.",
+      "files": [],
+      "assertions": [
+        "Explicitly rejects the is_rated / single unified ledger proposal",
+        "Cites ADR-052 as the authority for the rejection",
+        "Explains attribution constraint: Class B (grind) has no player attribution by construction",
+        "Explains the two-class model: Class A (PFT/ledger) vs Class B (operational/grind)",
+        "Does NOT suggest a workaround that still merges the classes"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "We're building the shift financial summary for the pit boss dashboard. The product wants a single 'Total Drop' number that combines everything — rated buy-ins from PFT and unrated grind from TBT. Can we expose that as an authoritative metric on the dashboard?",
+      "expected_output": "Rejects authoritative Total Drop per ADR-053, explains scope boundary, explains what the system CAN show (labeled partial aggregates with authority + completeness), describes the correct Split Display pattern: Rated In (Actual) + Unrated In (Estimated) shown separately, optionally a derived Estimated Total labeled as such.",
+      "files": [],
+      "assertions": [
+        "Rejects 'Total Drop' as an authoritative metric, citing ADR-053",
+        "Explains the system scope boundary: no authoritative totals, system is operational telemetry not custody",
+        "Describes what IS allowed: labeled partial aggregates with source + authority + completeness",
+        "Mentions the Split Display pattern: showing Rated (Actual) and Unrated (Estimated) separately",
+        "References the Surface Rendering Contract requiring type/source/completeness fields"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I'm implementing the grind buy-in recording path in the backend service. The PFT write path already works. What do I need to implement to make the grind authoring path fully conformant with the frozen ADRs? Walk me through what the implementation must include.",
+      "expected_output": "Walks through: Class B storage (table_buyin_telemetry grind partition), required discriminator fields (fact_class='operational', origin_label='estimated'), table_id mandatory, player_id explicitly NULL, outbox coupling in the same transaction (flags GAP-F1 as not yet implemented), authoring parity rules from ADR-055 (same envelope shape, same transaction primitive, same validation strictness as Class A), forbidden dual-write from PFT.",
+      "files": [],
+      "assertions": [
+        "Identifies Class B storage: table_buyin_telemetry grind partition",
+        "States fact_class='operational' and origin_label='estimated' must be set at insert",
+        "States table_id is mandatory, player_id must be explicitly NULL",
+        "Mentions outbox coupling requirement (same transaction as authoring write)",
+        "Mentions or flags GAP-F1 as a known gap (zero outbox producers)",
+        "References ADR-055 authoring parity: same discipline as Class A (envelope, transaction primitive, validation)"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "On the visit panel, I have financial values coming from visit_financial_summary. The senior dev says to just use that for the total buy-in and total cash-out displayed to the floor supervisor. Should I? What's the right DTO shape for those values?",
+      "expected_output": "Flags visit_financial_summary as a derived projection, not authoritative fact. Points to canonical PFT facts for operator-facing financial truth. Provides the FinancialValue DTO shape (value, type, source, completeness). Notes the active bridge DTO from PRD-072 for current visit surfaces (dollar-float, simplified completeness envelope). Explains completeness.status is mandatory.",
+      "files": [],
+      "assertions": [
+        "Flags visit_financial_summary as a derived projection, not a fact or authoritative source",
+        "Provides the FinancialValue DTO shape: value, type, source, completeness.status",
+        "States completeness.status is mandatory (never omitted, 'unknown' is valid)",
+        "Mentions the active bridge DTO (PRD-072/EXEC-072) for current visit surface fields",
+        "Does not suggest treating visit_financial_summary as authoritative"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "We're getting discrepancies between what the PFT ledger shows and what the TBT buy-in telemetry shows for the same table session. The floor supervisor wants to know the 'true' number. Should we build a reconciliation feature that compares the two and resolves the variance?",
+      "expected_output": "No — reconciliation is out of scope per ADR-053. Explains why: system lacks custody inputs (count room, inventory) needed to arbitrate. Explains what the system CAN do: expose both numbers with authority labels so the discrepancy is visible, declare completeness, surface the gap. External reconciliation process consumes this data; the system is not that process.",
+      "files": [],
+      "assertions": [
+        "Rejects building a reconciliation feature, citing ADR-053",
+        "Explains the system lacks custody inputs required to arbitrate",
+        "Explains what the system can do: expose both values with authority labels, make the discrepancy visible",
+        "States reconciliation is an external domain that consumes the system's output",
+        "Does not propose a 'best-effort' reconciliation with a disclaimer (also rejected)"
+      ]
+    }
+  ]
+}

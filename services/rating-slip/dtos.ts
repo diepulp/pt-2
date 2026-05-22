@@ -13,6 +13,7 @@
  */
 
 import type { Database, Json } from '@/types/database.types';
+import type { FinancialValue } from '@/types/financial';
 
 // === Base Row Types (for Pick/Omit derivation) ===
 
@@ -52,6 +53,10 @@ export type RatingSlipStatus =
  * // 1. Query visit where id = slip.visit_id
  * // 2. Use visit.player_id (nullable for ghost visits)
  */
+// PRD-070 carve-out: `average_bet` is a bet-rate INPUT parameter (dealer entry),
+// not a reported financial fact. Per WAVE-1-CLASSIFICATION-RULES §6 and
+// WAVE-1-SURFACE-INVENTORY §3.2, it stays a bare `number | null` (dollars) and
+// is NOT wrapped in `FinancialValue`. UI must still label it per SRC rules.
 export type RatingSlipDTO = Pick<
   RatingSlipRow,
   | 'id'
@@ -260,8 +265,15 @@ export type PitCashObservationDTO = {
   visitId: PitCashObservationRow['visit_id'];
   ratingSlipId: PitCashObservationRow['rating_slip_id'];
   direction: PitCashObservationRow['direction'];
-  /** Observed cash amount in dollars */
-  amount: PitCashObservationRow['amount'];
+  /**
+   * Observed cash amount wrapped in canonical envelope.
+   * Per PRD-070 Phase 1.1 / WAVE-1-SURFACE-INVENTORY §3.2:
+   *   authority: `observed`
+   *   source:    `"pit_cash_observation"`
+   *   value:     cents (integer) — dollars converted via `dollarsToCents()` at mapper
+   *   completeness.status: `complete` per single-row observation
+   */
+  amount: FinancialValue;
   amountKind: PitCashObservationRow['amount_kind'];
   source: PitCashObservationRow['source'];
   observedAt: PitCashObservationRow['observed_at'];
@@ -292,6 +304,8 @@ export interface RatingSlipWithPlayerDTO {
   start_time: string;
   end_time: string | null;
   status: RatingSlipStatus;
+  // PRD-070 carve-out: bet-rate input, not a financial fact — stays bare dollars.
+  // See WAVE-1-CLASSIFICATION-RULES §6 + SURFACE-INVENTORY §3.2.
   average_bet: number | null;
   player: {
     id: string;
@@ -321,7 +335,11 @@ export interface ActivePlayerForDashboardDTO {
   seatNumber: string | null;
   startTime: string;
   status: 'open' | 'paused';
-  /** Average bet in dollars */
+  /**
+   * Average bet in dollars.
+   * PRD-070 carve-out: bet-rate input, not a financial fact — stays bare dollars
+   * per WAVE-1-CLASSIFICATION-RULES §6 + SURFACE-INVENTORY §3.2.
+   */
   averageBet: number | null;
   player: {
     id: string;
@@ -351,7 +369,11 @@ export interface ClosedSlipForGamingDayDTO {
   start_time: string;
   end_time: string;
   final_duration_seconds: number | null;
-  /** Average bet in dollars */
+  /**
+   * Average bet in dollars.
+   * PRD-070 carve-out: bet-rate input, not a financial fact — stays bare dollars
+   * per WAVE-1-CLASSIFICATION-RULES §6 + SURFACE-INVENTORY §3.2.
+   */
   average_bet: number | null;
   player: {
     id: string;

@@ -12,6 +12,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { financialValueSchema } from '@/lib/financial/schema';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -58,7 +59,7 @@ interface RpcModalDataResponse {
   } | null;
   financial: {
     totalCashIn: number;
-    totalChipsOut: number;
+    totalCashOut: number;
     netPosition: number;
   };
   tables: Array<{
@@ -97,7 +98,7 @@ function isValidRpcModalDataResponse(
   if (!obj.financial || typeof obj.financial !== 'object') return false;
   const financial = obj.financial as Record<string, unknown>;
   if (typeof financial.totalCashIn !== 'number') return false;
-  if (typeof financial.totalChipsOut !== 'number') return false;
+  if (typeof financial.totalCashOut !== 'number') return false;
   if (typeof financial.netPosition !== 'number') return false;
 
   // Validate tables section (required, array)
@@ -253,9 +254,24 @@ export async function getModalDataViaRPC(
         }
       : null,
     financial: {
-      totalCashIn: data.financial.totalCashIn,
-      totalChipsOut: data.financial.totalChipsOut,
-      netPosition: data.financial.netPosition,
+      totalCashIn: financialValueSchema.parse({
+        value: data.financial.totalCashIn,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      }),
+      totalCashOut: financialValueSchema.parse({
+        value: data.financial.totalCashOut,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      }),
+      netPosition: financialValueSchema.parse({
+        value: data.financial.netPosition,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      }),
     },
     tables: data.tables.map((t) => ({
       id: t.id,

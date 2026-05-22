@@ -8,6 +8,13 @@
  *
  * Issue: ISSUE-607F9CCB (Rating Slip Testing Coverage Gap)
  * Workstream: WS7 (PRD-011 Phase 3 - FinancialService)
+ *
+ * Route contract governed by INV-MTL-BRIDGE-ATOMICITY (PRD-064 §6):
+ * A 201 response asserts both player_financial_transaction AND mtl_entry
+ * have committed. A non-2xx asserts neither has committed.
+ * See docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md for the full
+ * invariant and docs/10-prd/PRD-064-mtl-buyin-glitch-containment-v0.md
+ * for the containment slice.
  */
 
 import { createMockRequest } from '@/lib/testing/route-test-helpers';

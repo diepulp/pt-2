@@ -24,6 +24,15 @@ import {
   type FormState,
 } from '@/components/modals/rating-slip/rating-slip-modal';
 import { ActivationDrawer } from '@/components/table/activation-drawer';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useGamingDay } from '@/hooks/casino/use-gaming-day';
 import {
   useDashboardTables,
@@ -37,9 +46,10 @@ import {
   useCloseWithFinancial,
   useMovePlayer,
   useRatingSlipModalData,
+  hasPendingUnsavedBuyIn,
 } from '@/hooks/rating-slip-modal';
 import { useCurrentTableSession } from '@/hooks/table-context/use-table-session';
-import { toast, useModal, usePitDashboardUI } from '@/hooks/ui';
+import { toast, useModal, useOpenSlip, usePitDashboardUI } from '@/hooks/ui';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -47,7 +57,6 @@ import {
   logError,
   isFetchError,
 } from '@/lib/errors/error-utils';
-import { createBrowserComponentClient } from '@/lib/supabase/client';
 import {
   groupTablesByPit,
   findPitIdForTable,
@@ -58,7 +67,6 @@ import {
   resumeRatingSlip,
   closeRatingSlip,
 } from '@/services/rating-slip/http';
-import { resolveCurrentSlipContext } from '@/services/rating-slip-modal/rpc';
 import { useRatingSlipModalStore } from '@/store/rating-slip-modal-store';
 
 import { NewSlipModal } from '../dashboard/new-slip-modal';
@@ -90,6 +98,9 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     open: openModal,
     close: closeModal,
   } = useModal();
+
+  // Shared slip opener — also used by ShiftOpsPanel's ActivityPanel
+  const openSlip = useOpenSlip();
 
   // Zustand: Pit dashboard UI state
   const {
@@ -132,6 +143,13 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   // Tracks both status changes AND table selection changes so switching
   // to an OPEN table (or re-selecting the same one) reopens the drawer.
   const [activationDrawerOpen, setActivationDrawerOpen] = React.useState(false);
+
+  // PRD-064 WS2 / P1.4: Unsaved-buy-in interlock — blocking prompt when
+  // operator attempts Close Session with a pending, unsaved buy-in.
+  // Non-dismissible: only control returns focus to the rating-slip modal's
+  // save flow. @see hasPendingUnsavedBuyIn.
+  const [unsavedBuyInPromptOpen, setUnsavedBuyInPromptOpen] =
+    React.useState(false);
   React.useEffect(() => {
     if (currentSession?.status === 'OPEN') {
       setActivationDrawerOpen(true);
@@ -343,6 +361,16 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
       return;
     }
 
+    // PRD-064 WS2 / P1.4 — Unsaved-Buy-In Interlock.
+    // If the operator typed a non-zero `newBuyIn` but has not saved it (the
+    // save mutation resets the field to '0' via initializeForm), block the
+    // close and surface a non-dismissible prompt that returns to the save
+    // flow. Never silently drop `newBuyIn`.
+    if (hasPendingUnsavedBuyIn(formState)) {
+      setUnsavedBuyInPromptOpen(true);
+      return;
+    }
+
     try {
       await closeWithFinancial.mutateAsync({
         slipId: selectedSlipId,
@@ -421,10 +449,10 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     const seatNumber = String(index + 1);
 
     if (occupant) {
-      // Seat is occupied - use entry gate via handleSlipClick
+      // Seat is occupied - open via entry gate
       const slipOccupant = seatOccupants.get(seatNumber);
       if (slipOccupant?.slipId) {
-        await handleSlipClick(slipOccupant.slipId);
+        await openSlip(slipOccupant.slipId);
       }
     } else {
       // Guard: block new seating when session is not ACTIVE
@@ -439,28 +467,6 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   const handleNewSlip = () => {
     setNewSlipSeatNumber(undefined);
     openModal('new-slip', {});
-  };
-
-  // Handle slip click from active slips list
-  // GAP-ADR-026-UI-SHIPPABLE: Entry gate ensures current gaming day context
-  const handleSlipClick = async (slipId: string) => {
-    try {
-      const supabase = createBrowserComponentClient();
-      const ctx = await resolveCurrentSlipContext(supabase, slipId);
-
-      setSelectedSlip(ctx.slipIdCurrent);
-      openModal('rating-slip', { slipId: ctx.slipIdCurrent });
-
-      if (ctx.rolledOver) {
-        toast.info("Session rolled over to today's gaming day.");
-      }
-      if (ctx.readOnly) {
-        toast.info('Read-only: no player bound to this slip.');
-      }
-    } catch (error) {
-      toast.error('Error', { description: getErrorMessage(error) });
-      logError(error, { component: 'PitPanels', action: 'handleSlipClick' });
-    }
   };
 
   // Handle errors
@@ -507,7 +513,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     // Callbacks
     onSeatClick: handleSeatClick,
     onNewSlip: handleNewSlip,
-    onSlipClick: handleSlipClick,
+    onSlipClick: openSlip,
     // PRD-059: Reopen activation drawer from session action buttons
     onActivateRequest: () => setActivationDrawerOpen(true),
   };
@@ -553,6 +559,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         onCloseSession={handleCloseSession}
         onMovePlayer={handleMovePlayer}
         isMovePlayerPending={movePlayer.isPending}
+        isSavePending={saveWithBuyIn.isPending}
       />
 
       {/* PRD-059: Activation Drawer — OPEN → ACTIVE custody gate */}
@@ -566,6 +573,42 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
             tableId={selectedTableId}
           />
         )}
+
+      {/*
+        PRD-064 WS2 / P1.4 — Unsaved-Buy-In Interlock.
+        Non-dismissible blocking prompt shown when the operator hits Close
+        Session with a pending, unsaved buy-in. The only control dismisses
+        the alert and keeps the rating-slip modal open on the save surface
+        — never the close path. No silent discard of newBuyIn.
+      */}
+      <AlertDialog
+        open={unsavedBuyInPromptOpen}
+        // Intentionally omit onOpenChange so the overlay / Escape cannot
+        // dismiss the dialog. Operator must use the action button.
+      >
+        <AlertDialogContent data-testid="unsaved-buyin-interlock">
+          <AlertDialogHeader>
+            <AlertDialogTitle
+              className="text-sm font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Unsaved Buy-In Detected
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Unsaved buy-in detected. Save it before closing session.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              data-testid="unsaved-buyin-interlock-return"
+              onClick={() => setUnsavedBuyInPromptOpen(false)}
+              className="h-8 text-xs font-semibold uppercase tracking-wider"
+            >
+              Return to Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

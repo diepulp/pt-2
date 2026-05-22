@@ -93,6 +93,54 @@ export type FloorTableSlotDTO = Pick<
   | 'metadata'
 >;
 
+// === Pit Assignment DTOs (PRD-067) ===
+
+/** Compact reference to a gaming_table for assignment rendering. */
+export type AssignedTableRef = Pick<
+  Database['public']['Tables']['gaming_table']['Row'],
+  'id' | 'label' | 'type' | 'status'
+>;
+
+/** Slot row enriched with assigned-table ref (for panel rendering). */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- computed type: base DTO + joined table ref
+export type FloorTableSlotWithTableRefDTO = FloorTableSlotDTO & {
+  preferred_table_id: FloorTableSlotRow['preferred_table_id'];
+  assigned_table: AssignedTableRef | null;
+};
+
+/**
+ * Aggregate shape returned by getPitAssignmentState.
+ *
+ * Flat sibling arrays matching FloorLayoutVersionWithSlotsDTO precedent
+ * (see dtos.ts:117-120). Client groups slots by pit_id for rendering.
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- RPC aggregate: sibling arrays, not single table projection
+export type PitAssignmentStateDTO = {
+  layout_version_id: string;
+  pits: FloorPitDTO[];
+  slots: FloorTableSlotWithTableRefDTO[];
+  unassigned_tables: AssignedTableRef[];
+};
+
+/** Result of rpc_assign_or_move_table_to_slot. */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- RPC response: jsonb aggregate
+export type AssignOrMoveResultDTO = {
+  table_id: string;
+  slot_id: string;
+  pit_id: string;
+  pit_label: string;
+  previous_slot_id: string | null;
+};
+
+/** Result of rpc_clear_slot_assignment. Idempotent when slot was already empty. */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- RPC response: jsonb aggregate
+export type ClearResultDTO = {
+  cleared: boolean;
+  slot_id: string;
+  previous_table_id: string | null;
+  idempotent?: boolean;
+};
+
 // === Activation DTOs ===
 
 /** Floor layout activation record */

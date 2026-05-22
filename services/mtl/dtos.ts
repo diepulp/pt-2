@@ -5,11 +5,26 @@
  * Pattern A allows manual interfaces since DTOs are domain contracts,
  * not schema mirrors. Mappers enforce the boundary with compile-time safety.
  *
+ * Financial envelope wrapping (PRD-070 WS2):
+ * All currency fields in this service are DEFERRED to Phase 1.2. MTL DTOs
+ * cascade directly into heavy UI consumption across `components/mtl/*` and
+ * `app/review/mtl-form/*`; wrapping would require a paired direct-consumer
+ * workstream per PRD-070 G1. The Phase 1.2 Deferral Register MUST be
+ * amended (WS9 obligation) to include the MTL fields enumerated below with
+ * their classification targets. Compliance isolation rule (§3.4) applies
+ * regardless of envelope state: compliance-class values MUST NEVER be
+ * aggregated with any other authority class.
+ *
+ * Inputs and filter thresholds are §6.1/§6.2 carve-outs (bare number, not
+ * emitted financial facts).
+ *
  * @see PRD-005 MTL Service
+ * @see PRD-070 Financial Telemetry Wave 1 Phase 1.1
  * @see ADR-025 MTL Authorization Model
  */
 
 import type { Database } from '@/types/database.types';
+import type { FinancialValue } from '@/types/financial';
 
 // ============================================================================
 // Enum Types (derived from database enums for type safety)
@@ -81,8 +96,14 @@ export interface MtlEntryDTO {
   staff_id: string | null;
   rating_slip_id: string | null;
   visit_id: string | null;
-  /** Amount in CENTS per ISSUE-FB8EB717 standardization (e.g., 300000 = $3,000) */
-  amount: number;
+  /**
+   * Transaction amount. Envelope: compliance / mtl_entry / complete.
+   *
+   * Each committed MTL row is always complete — no partial state for individual entries.
+   * Compliance isolation rule: MUST NEVER be aggregated with non-compliance authorities.
+   * Consumers must read `.amount.value` for arithmetic (PRD-080 F-10).
+   */
+  amount: FinancialValue;
   direction: MtlDirection;
   txn_type: MtlTxnType;
   source: MtlSource;
@@ -136,24 +157,43 @@ export interface MtlGamingDaySummaryDTO {
   /** Patron date of birth for compliance disambiguation */
   patron_date_of_birth: string | null;
   gaming_day: string;
-  // Cash-in aggregates (all amounts in CENTS per ISSUE-FB8EB717)
-  total_in: number;
+  // Cash-in aggregates.
+  //
+  // Envelope (PRD-080 WS5): compliance / mtl_entry / unknown.
+  // DEC-1: completeness always 'unknown' — view has no gaming-day close column.
+  // Compliance isolation rule: NEVER aggregate with non-compliance authorities.
+  // Consumers must read `.value` for arithmetic (PRD-080 F-10).
+  /**
+   * Daily cash-in total. Envelope: compliance / mtl_entry / unknown (DEC-1).
+   */
+  total_in: FinancialValue;
   count_in: number;
-  max_single_in: number | null;
+  /**
+   * Largest single cash-in. null means no transactions (DEC-2). Envelope: compliance / mtl_entry / unknown.
+   */
+  max_single_in: FinancialValue | null;
   first_in_at: string | null;
   last_in_at: string | null;
   /** Tier 2 aggregate badge for cash-in (COMPLIANCE) */
   agg_badge_in: AggBadge;
-  // Cash-out aggregates (all amounts in CENTS per ISSUE-FB8EB717)
-  total_out: number;
+  // Cash-out aggregates. Same envelope as total_in.
+  /**
+   * Daily cash-out total. Envelope: compliance / mtl_entry / unknown (DEC-1).
+   */
+  total_out: FinancialValue;
   count_out: number;
-  max_single_out: number | null;
+  /**
+   * Largest single cash-out. null means no transactions (DEC-2). Envelope: compliance / mtl_entry / unknown.
+   */
+  max_single_out: FinancialValue | null;
   first_out_at: string | null;
   last_out_at: string | null;
   /** Tier 2 aggregate badge for cash-out (COMPLIANCE) */
   agg_badge_out: AggBadge;
-  // Overall
-  total_volume: number;
+  /**
+   * Combined cash volume (in + out). Envelope: compliance / mtl_entry / unknown (DEC-1).
+   */
+  total_volume: FinancialValue;
   entry_count: number;
 }
 
@@ -170,7 +210,11 @@ export interface CreateMtlEntryInput {
   staff_id?: string;
   rating_slip_id?: string;
   visit_id?: string;
-  /** Amount in CENTS per ISSUE-FB8EB717 standardization (e.g., 300000 = $3,000) */
+  /**
+   * Amount in CENTS per ISSUE-FB8EB717 standardization (e.g., 300000 = $3,000).
+   * Carve-out (WAVE-1-CLASSIFICATION-RULES §6.1): operator input — bare number.
+   * The committed row is emitted via `MtlEntryDTO.amount` (Phase 1.2 deferral).
+   */
   amount: number;
   direction: MtlDirection;
   txn_type: MtlTxnType;
@@ -203,7 +247,10 @@ export interface MtlEntryFilters {
   casino_id: string;
   patron_uuid?: string;
   gaming_day?: string;
-  /** Filter entries with amount >= this value (in CENTS per ISSUE-FB8EB717) */
+  /**
+   * Filter entries with amount >= this value (in CENTS per ISSUE-FB8EB717).
+   * Carve-out (WAVE-1-CLASSIFICATION-RULES §6.2): filter threshold — bare number.
+   */
   min_amount?: number;
   txn_type?: MtlTxnType;
   source?: MtlSource;
@@ -226,9 +273,15 @@ export interface MtlGamingDaySummaryFilters {
   agg_badge_in?: AggBadge;
   /** Filter by aggregate badge level for cash-out */
   agg_badge_out?: AggBadge;
-  /** Filter summaries with total_in >= this value (in CENTS per ISSUE-FB8EB717) */
+  /**
+   * Filter summaries with total_in >= this value (in CENTS per ISSUE-FB8EB717).
+   * Carve-out (WAVE-1-CLASSIFICATION-RULES §6.2): filter threshold — bare number.
+   */
   min_total_in?: number;
-  /** Filter summaries with total_out >= this value (in CENTS per ISSUE-FB8EB717) */
+  /**
+   * Filter summaries with total_out >= this value (in CENTS per ISSUE-FB8EB717).
+   * Carve-out (WAVE-1-CLASSIFICATION-RULES §6.2): filter threshold — bare number.
+   */
   min_total_out?: number;
   /** Cursor for pagination */
   cursor?: string;

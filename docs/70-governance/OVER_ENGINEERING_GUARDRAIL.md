@@ -151,3 +151,7 @@ When a trigger is met: raise a Mini-ADR (§7).
 
 **Result:** ☐ Proceed  ☐ Needs Mini-ADR  ☐ Reject (remove complexity)
 ```
+
+## 15. Related Guardrails
+
+- `FIB_GENERATION_SCOPE_GUARDRAIL.md` - prevents phase compression and consequence bundling before a Feature Intake Brief becomes downstream scope authority.

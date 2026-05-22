@@ -1,0 +1,43 @@
+{
+  "id": "EXEC-074",
+  "prd": "PRD-074",
+  "status": "in_progress",
+  "created_at": "2026-04-30T08:00:40Z",
+  "updated_at": "2026-04-30T10:00:00Z",
+  "gov010_check": "passed",
+  "complexity_prescreen": "streamlined",
+  "fib_s_loaded": true,
+  "write_path_classification": "none",
+  "q4_preflight": "resolved-amendment",
+  "q4_resolution": "FIB-H amended 2026-04-30 with Mechanical Compatibility Exception. anomaly-alert-card.tsx .toFixed(1) -> .value.toFixed(1) is mechanical shape adaptation. WS2_SHIFT_INTEL active.",
+  "exec_spec_path": "docs/21-exec-spec/PRD-074/EXEC-074-financial-telemetry-wave1-phase1.2b-canonicalization.md",
+  "current_phase": 3,
+  "status": "complete",
+  "completed_at": "2026-04-30T11:00:00Z",
+  "implementation_commit": "e83a2c125cf24e33c0c533b9f8bc8e516154cec0",
+  "pending_workstreams": [],
+  "completed_workstreams": [
+    "WS1_BRIDGE001",
+    "WS2_SHIFT_INTEL",
+    "WS3_CONTRACT",
+    "WS4_TRACKER"
+  ],
+  "dormant_workstreams": [],
+  "artifacts": {
+    "exec_spec": "docs/21-exec-spec/PRD-074/EXEC-074-financial-telemetry-wave1-phase1.2b-canonicalization.md",
+    "fib_h": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2b/FIB-H-FINANCIAL-TELEMETRY-PHASE-1-2B-CANONICALIZATION.md",
+    "fib_s": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/phase-1-2b/FIB-S-FINANCIAL-TELEMETRY-PHASE-1-2B-CANONICALIZATION.json",
+    "ws1_outputs": [
+      "services/visit/crud.ts",
+      "services/rating-slip/mappers.ts",
+      "services/rating-slip/__tests__/mappers.test.ts"
+    ],
+    "ws2_outputs": [
+      "services/shift-intelligence/dtos.ts",
+      "services/shift-intelligence/mappers.ts",
+      "services/shift-intelligence/schemas.ts",
+      "services/shift-intelligence/__tests__/mappers.test.ts",
+      "components/shift-intelligence/anomaly-alert-card.tsx"
+    ]
+  }
+}
