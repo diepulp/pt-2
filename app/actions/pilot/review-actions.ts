@@ -185,11 +185,12 @@ export async function approvePilotAccessAction(
   // Send magic link to approved evaluator so they can sign in without returning
   // to /signin manually. Best-effort: allowlist row is committed regardless.
   // Skip OTP entirely for admin target emails (PRD-085 WS5).
-  const siteUrl =
+  const siteUrl = (
     process.env.NEXT_PUBLIC_SITE_URL ??
     (process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000');
+      : 'http://localhost:3000')
+  ).trim();
 
   let otpError: Awaited<
     ReturnType<typeof supabase.auth.signInWithOtp>

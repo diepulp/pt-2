@@ -87,11 +87,12 @@ export async function sendMagicLinkAction(
   // Approved: issue OTP via server client (cookie-aware for auth flow).
   // emailRedirectTo must point to the current host — without it Supabase uses the
   // project's configured Site URL (Vercel), which won't establish a session on localhost.
-  const siteUrl =
+  const siteUrl = (
     process.env.NEXT_PUBLIC_SITE_URL ??
     (process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000');
+      : 'http://localhost:3000')
+  ).trim();
 
   const supabase = await createClient();
   // shouldCreateUser: true — the allowlist gate above is the containment barrier.
