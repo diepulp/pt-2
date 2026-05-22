@@ -5,12 +5,12 @@ import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import type { EmailProvider } from './types';
 
 export function createResendProvider(): EmailProvider {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
     throw new Error('RESEND_API_KEY environment variable is not set');
   }
 
-  const senderDomain = process.env.RESEND_SENDER_DOMAIN;
+  const senderDomain = process.env.RESEND_SENDER_DOMAIN?.trim();
   if (!senderDomain) {
     throw new Error('RESEND_SENDER_DOMAIN environment variable is not set');
   }

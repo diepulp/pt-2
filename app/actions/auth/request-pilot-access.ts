@@ -69,20 +69,21 @@ export async function requestPilotAccessAction(
     };
   }
 
-  // Best-effort: fire notification + confirmation emails after DB insert succeeds.
-  // Email failure does not fail the action — the request is already persisted.
-  void Promise.all([
+  // Best-effort: await both emails before returning so Vercel doesn't terminate
+  // the function before sends complete. Per-promise catch keeps email failure
+  // from failing the action — the request is already persisted.
+  await Promise.all([
     sendDemoRequestNotification({
       name: parsed.name,
       email: parsed.email,
       company: parsed.casino_name,
       message: parsed.message,
-    }),
+    }).catch(() => {}),
     sendDemoRequestConfirmation({
       name: parsed.name,
       email: parsed.email,
-    }),
-  ]).catch(() => {});
+    }).catch(() => {}),
+  ]);
 
   return {
     ok: true,
