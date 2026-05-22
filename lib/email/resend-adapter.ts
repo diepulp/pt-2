@@ -19,12 +19,21 @@ export function createResendProvider(): EmailProvider {
   const from = `noreply@${senderDomain}`;
 
   return {
-    async send({ to, subject, html }) {
+    async send({ to, subject, html, attachments }) {
       const { data, error } = await resend.emails.send({
         from,
         to,
         subject,
         html,
+        ...(attachments?.length
+          ? {
+              attachments: attachments.map((a) => ({
+                filename: a.filename,
+                content: Buffer.from(a.content),
+                ...(a.contentType ? { content_type: a.contentType } : {}),
+              })),
+            }
+          : {}),
       });
 
       if (error) {

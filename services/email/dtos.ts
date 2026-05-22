@@ -26,6 +26,12 @@ export interface ShiftReportEmailInput {
   shiftId: string;
   recipients: string[];
   reportDate: string;
+  /** Optional PDF attachment (EXEC-065 WS4: canonical report PDF) */
+  attachment?: {
+    filename: string;
+    content: Buffer | Uint8Array;
+    contentType?: string;
+  };
 }
 
 /** Result returned by sendShiftReport */

@@ -25,13 +25,23 @@ export function createEmailService(
 ): EmailServiceInterface {
   return {
     async sendShiftReport(input) {
-      const { casinoId, shiftId, recipients, reportDate } = input;
+      const { casinoId, shiftId, recipients, reportDate, attachment } = input;
       const attemptIds: string[] = [];
       const failures: Array<{ recipient: string; error: string }> = [];
 
-      // Build a stub HTML template for pilot wiring validation
       const subject = `Shift Report - ${reportDate}`;
       const html = `<h1>Shift Report</h1><p>Shift ID: ${shiftId}</p><p>Date: ${reportDate}</p><p>Casino: ${casinoId}</p>`;
+
+      // Build attachments array if PDF attachment provided (EXEC-065 WS4)
+      const attachments = attachment
+        ? [
+            {
+              filename: attachment.filename,
+              content: attachment.content,
+              contentType: attachment.contentType,
+            },
+          ]
+        : undefined;
 
       for (const recipient of recipients) {
         try {
@@ -39,6 +49,7 @@ export function createEmailService(
             to: recipient,
             subject,
             html,
+            attachments,
           });
 
           const attempt = await crud.insertSendAttempt(supabase, {
