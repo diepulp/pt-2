@@ -88,6 +88,7 @@ The agent runner buffers all stdout/stderr in memory. Large output WILL crash VS
    ```
 5. **General rule**: If a command might produce large output, **write to /tmp first, then read selectively**. No exceptions.
 6. **Before removing a worktree with `--force`**, always run `git status` inside the worktree first to inventory untracked files. Untracked files are NOT in git — `--force` deletes them permanently with no recovery path. If untracked files exist, either commit them, `git stash -u`, or copy them out before removal.
+7. **Shell CWD persists across Bash tool calls.** A `cd` inside any command (e.g. `cd /path/to/worktree && npx tsc`) shifts the shell's working directory for ALL subsequent commands in the session. Git commands run without `-C` will then target the wrong worktree/branch silently. **Always use `git -C /home/diepulp/projects/pt-2 <command>` for main-branch operations** rather than relying on CWD. If CWD may have drifted, run `pwd` and `git branch --show-current` to confirm context before any destructive or branch-mutating git operation.
 
 ## Service Layer Pattern
 

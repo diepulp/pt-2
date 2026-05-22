@@ -71,8 +71,7 @@ const navGroups: NavGroup[] = [
         icon: LayoutDashboard,
         children: [
           { title: 'Overview', url: '/shift-dashboard' },
-          { title: 'Cash Observations', url: '/shift-dashboard?view=cash' },
-          { title: 'Staff Performance', url: '/shift-dashboard?view=staff' },
+          { title: 'Shift Report', url: '/admin/reports/shift-summary' },
         ],
       },
       {

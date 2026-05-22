@@ -1,13 +1,15 @@
 {
   "python-envs.pythonProjects": [],
 
-    "files.watcherExclude": {
+  "files.watcherExclude": {
     "**/node_modules/**": true,
     "**/.git/**": true,
     "**/.venv/**": true,
     "**/venv/**": true,
     "**/.uvenv/**": true,
-    "**/.env/**": true
+    "**/.env/**": true,
+    "**/trees/**/node_modules/**": true,
+    "**/.next/**": true
   },
   "search.exclude": {
     "**/node_modules": true,
@@ -17,17 +19,13 @@
     "**/.uvenv": true
   },
 
-   "files.exclude": {
-    "**/node_modules": true,
+  "files.exclude": {
+    "**/node_modules": true
     // "**/.venv": true,
     // "**/venv": true,
     // "**/.uvenv": true,
     // "**/.env": true
   },
-   // Python analysis example (Pylance)
-  "python.analysis.exclude": [
-    "**/.venv/**",
-    "**/venv/**",
-    "**/.uvenv/**"
-  ]
+  // Python analysis example (Pylance)
+  "python.analysis.exclude": ["**/.venv/**", "**/venv/**", "**/.uvenv/**"]
 }

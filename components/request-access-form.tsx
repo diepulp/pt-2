@@ -60,7 +60,7 @@ export function RequestAccessForm({ className }: { className?: string }) {
   return (
     <div className={className}>
       <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 sm:p-8">
-        <div className="mb-6">
+        <div className="mb-4">
           <h1
             className="text-2xl font-bold"
             style={{
@@ -73,8 +73,14 @@ export function RequestAccessForm({ className }: { className?: string }) {
           >
             Request Access
           </h1>
-          <p className="mt-2 text-[15px] text-[#95A2B3]">
-            d3lt is currently in closed pilot. Tell us about your operation and
+          <p className="mt-1.5 text-[14px] text-[#95A2B3]">
+            <span
+              className="text-[hsl(189_94%_43%)]/80"
+              style={{ fontFamily: 'var(--font-michroma)' }}
+            >
+              d3lt
+            </span>{' '}
+            is currently in closed pilot. Tell us about your operation and
             we&apos;ll be in touch.
           </p>
         </div>
@@ -86,83 +92,70 @@ export function RequestAccessForm({ className }: { className?: string }) {
           </div>
         ) : (
           <form action={formAction}>
-            <div className="flex flex-col gap-4">
-              <div className="grid gap-2">
-                <label htmlFor="ra-name" className={labelStyles}>
-                  Your name
-                </label>
-                <input
-                  id="ra-name"
-                  name="name"
-                  type="text"
-                  autoComplete="name"
-                  placeholder="Jane Smith"
-                  required
-                  className={inputStyles}
-                />
+            <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <label htmlFor="ra-name" className={labelStyles}>
+                    Your name
+                  </label>
+                  <input
+                    id="ra-name"
+                    name="name"
+                    type="text"
+                    autoComplete="name"
+                    placeholder="Jane Smith"
+                    required
+                    className={inputStyles}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="ra-email" className={labelStyles}>
+                    Work email
+                  </label>
+                  <input
+                    id="ra-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="jane@casino.com"
+                    required
+                    className={inputStyles}
+                  />
+                </div>
               </div>
 
-              <div className="grid gap-2">
-                <label htmlFor="ra-email" className={labelStyles}>
-                  Work email
-                </label>
-                <input
-                  id="ra-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="jane@casino.com"
-                  required
-                  className={inputStyles}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <label htmlFor="ra-casino" className={labelStyles}>
-                  Casino / property name
-                </label>
-                <input
-                  id="ra-casino"
-                  name="casino_name"
-                  type="text"
-                  placeholder="Grand Casino"
-                  required
-                  className={inputStyles}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <label htmlFor="ra-role" className={labelStyles}>
-                  Your role
-                </label>
-                <input
-                  id="ra-role"
-                  name="role"
-                  type="text"
-                  placeholder="Pit Manager"
-                  required
-                  className={inputStyles}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <label htmlFor="ra-tables" className={labelStyles}>
-                  Estimated table count{' '}
-                  <span className="text-xs text-[#95A2B3]/50">(optional)</span>
-                </label>
-                <input
-                  id="ra-tables"
-                  name="estimated_table_count"
-                  type="number"
-                  min="1"
-                  placeholder="12"
-                  className={`${inputStyles} tabular-nums`}
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <label htmlFor="ra-casino" className={labelStyles}>
+                    Casino / property
+                  </label>
+                  <input
+                    id="ra-casino"
+                    name="casino_name"
+                    type="text"
+                    placeholder="Grand Casino"
+                    required
+                    className={inputStyles}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="ra-role" className={labelStyles}>
+                    Your role
+                  </label>
+                  <input
+                    id="ra-role"
+                    name="role"
+                    type="text"
+                    placeholder="Pit Manager"
+                    required
+                    className={inputStyles}
+                  />
+                </div>
               </div>
 
               <div className="grid gap-2">
                 <label htmlFor="ra-message" className={labelStyles}>
-                  Anything else you&apos;d like to share{' '}
+                  Anything to share{' '}
                   <span className="text-xs text-[#95A2B3]/50">(optional)</span>
                 </label>
                 <textarea
@@ -170,8 +163,8 @@ export function RequestAccessForm({ className }: { className?: string }) {
                   name="message"
                   rows={3}
                   maxLength={1000}
-                  placeholder="Tell us about your operation or specific needs…"
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm text-[#F7F8F8] placeholder:text-[#95A2B3]/40 transition-all duration-300 focus:border-[hsl(189_94%_43%/0.3)] focus:outline-none focus:ring-2 focus:ring-[hsl(189_94%_43%/0.2)] font-mono resize-none"
+                  placeholder="Your operation, current system…"
+                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm text-[#F7F8F8] placeholder:text-[#95A2B3]/40 transition-all duration-300 focus:border-[hsl(189_94%_43%/0.3)] focus:outline-none focus:ring-2 focus:ring-[hsl(189_94%_43%/0.2)] font-mono resize-none h-20"
                 />
               </div>
 
