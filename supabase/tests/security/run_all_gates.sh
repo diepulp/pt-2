@@ -60,6 +60,7 @@ GATES=(
   "sql|adr040_identity_provenance.test.sql|ADR-040 Identity provenance enforcement"
   "sql|09_search_path_body_check.sql|SEC-009 Search path / body consistency"
   "sql|10_authenticated_grant_audit.sql|SEC-010 Authenticated GRANT audit"
+  "sql|outbox_transport_access.test.sql|SEC-011 Outbox transport access control (ADR-054 R3)"
 )
 
 PASS_COUNT=0

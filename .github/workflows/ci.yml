@@ -48,8 +48,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
 
   # Move 7 (ADR-044): Unit tests under correct node runtime.
-  # Advisory — continue-on-error while stabilizing.
-  # Node suite: 2,627 tests, 0 failures (bounded-context rollout complete).
+  # Advisory — continue-on-error pending .env vs .env.local integration-test env isolation fix.
   # See: docs/issues/gaps/testing-arch-remediation/TESTING-GOVERNANCE-REMEDIATION.md
   test:
     runs-on: ubuntu-latest

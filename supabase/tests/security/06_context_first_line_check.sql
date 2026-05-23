@@ -14,12 +14,27 @@ DECLARE
   rec record;
   v_first_perform text;
   v_allowlist text[] := ARRAY[
+    -- Auth-flow functions with no staff JWT context available
     'rpc_get_rating_slip_duration',
     'rpc_bootstrap_casino',
     'rpc_accept_staff_invite',
     'rpc_register_company',
     'rpc_current_gaming_day',
-    'rpc_gaming_day_range'
+    'rpc_gaming_day_range',
+    -- Wave 2 outbox relay / lifecycle infrastructure (service_role-only — ADR-054 R3)
+    -- These are invoked by the relay worker / cron with service_role credentials.
+    -- No staff JWT context exists at call time; set_rls_context_from_staff() would fail.
+    'rpc_claim_outbox_batch',
+    'rpc_commit_consumer_receipt',
+    'rpc_acknowledge_outbox_delivery',
+    'rpc_get_outbox_relay_health',
+    'rpc_get_outbox_event_page',
+    'rpc_claim_class_a_outbox_batch',
+    'rpc_process_class_a_projection',
+    'rpc_claim_operational_outbox_batch',
+    'rpc_process_operational_projection',
+    'rpc_cleanup_outbox_processed',
+    'rpc_close_gaming_day'
   ];
 BEGIN
   FOR rec IN

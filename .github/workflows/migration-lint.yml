@@ -52,10 +52,19 @@ jobs:
               CONTEXT_CALL=$(grep -icE 'PERFORM\s+set_rls_context_(from_staff|internal)\s*\(' "$FILE" || true)
               # Count lines with bare set_rls_context( excluding _from_staff and _internal
               DEPRECATED_CALL=$(grep -P 'PERFORM\s+set_rls_context\s*\(' "$FILE" | grep -vcP 'set_rls_context_(from_staff|internal)' || echo 0)
+              # Explicit service_role_only_rpc marker — exempts from context injection requirement.
+              # Use only for relay/lifecycle RPCs never called with a staff JWT (ADR-054 R3).
+              # Requires: -- service_role_only_rpc: ADR-054 R3   near the function definition.
+              SERVICE_ROLE_MARKER=$(grep -c 'service_role_only_rpc:' "$FILE" || echo 0)
 
-              if [ "$CONTEXT_CALL" -eq 0 ]; then
+              if [ "$CONTEXT_CALL" -eq 0 ] && [ "$SERVICE_ROLE_MARKER" -gt 0 ]; then
+                echo "✅ $FILE: $RPC_COUNT RPC function(s) marked service_role_only — context injection exempt (ADR-054 R3)"
+              elif [ "$CONTEXT_CALL" -eq 0 ]; then
                 echo "❌ VIOLATION: $FILE"
                 echo "   Found $RPC_COUNT RPC function(s) but NO context injection call"
+                echo "   If this is a service_role-only relay/lifecycle RPC, add the following"
+                echo "   comment near the function definition and justify in the PR description:"
+                echo "     -- service_role_only_rpc: ADR-054 R3"
                 echo ""
                 VIOLATIONS_FOUND=$((VIOLATIONS_FOUND + 1))
               elif [ "$DEPRECATED_CALL" -gt 0 ]; then
