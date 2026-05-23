@@ -61,6 +61,42 @@ export type Database = {
           },
         ]
       }
+      approved_email_allowlist: {
+        Row: {
+          casino_id: string | null
+          company_id: string | null
+          created_at: string
+          email: string
+          expires_at: string | null
+          id: string
+          invited_by: string | null
+          status: string
+          used_at: string | null
+        }
+        Insert: {
+          casino_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string | null
+          status?: string
+          used_at?: string | null
+        }
+        Update: {
+          casino_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string | null
+          status?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -1558,6 +1594,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pilot_access_requests: {
+        Row: {
+          casino_name: string
+          created_at: string
+          email: string
+          estimated_table_count: number | null
+          id: string
+          message: string | null
+          name: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          role: string
+          status: string
+        }
+        Insert: {
+          casino_name: string
+          created_at?: string
+          email: string
+          estimated_table_count?: number | null
+          id?: string
+          message?: string | null
+          name: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role: string
+          status?: string
+        }
+        Update: {
+          casino_name?: string
+          created_at?: string
+          email?: string
+          estimated_table_count?: number | null
+          id?: string
+          message?: string | null
+          name?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role?: string
+          status?: string
+        }
+        Relationships: []
       }
       pit_cash_observation: {
         Row: {
@@ -4742,6 +4820,10 @@ export type Database = {
           staff_id: string
           staff_role: string
         }[]
+      }
+      rpc_bootstrap_casino_pit_layout: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       rpc_check_table_seat_availability: {
         Args: { p_seat_number: number; p_table_id: string }
