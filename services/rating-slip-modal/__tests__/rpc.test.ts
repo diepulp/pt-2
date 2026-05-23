@@ -237,9 +237,24 @@ describe('getModalDataViaRPC - Successful Data Mapping', () => {
         },
       },
       financial: {
-        totalCashIn: 50000,
-        totalCashOut: 30000,
-        netPosition: 20000,
+        totalCashIn: {
+          value: 50000,
+          type: 'actual',
+          source: 'PFT',
+          completeness: { status: 'unknown' },
+        },
+        totalCashOut: {
+          value: 30000,
+          type: 'actual',
+          source: 'PFT',
+          completeness: { status: 'unknown' },
+        },
+        netPosition: {
+          value: 20000,
+          type: 'actual',
+          source: 'PFT',
+          completeness: { status: 'unknown' },
+        },
       },
       tables: [
         {
@@ -270,7 +285,7 @@ describe('getModalDataViaRPC - Successful Data Mapping', () => {
     expect(result.player).toBeNull();
     expect(result.loyalty).toBeNull();
     expect(result.slip.seatNumber).toBeNull();
-    expect(result.financial.totalCashIn).toBe(0);
+    expect(result.financial.totalCashIn.value).toBe(0);
     expect(result.tables).toHaveLength(1);
   });
 
@@ -620,9 +635,9 @@ describe('getModalDataViaRPC - Edge Cases', () => {
 
     const result = await getModalDataViaRPC(supabase, SLIP_ID, CASINO_ID);
 
-    expect(result.financial.totalCashIn).toBe(0);
-    expect(result.financial.totalCashOut).toBe(0);
-    expect(result.financial.netPosition).toBe(0);
+    expect(result.financial.totalCashIn.value).toBe(0);
+    expect(result.financial.totalCashOut.value).toBe(0);
+    expect(result.financial.netPosition.value).toBe(0);
   });
 
   it('handles negative net position (player winning)', async () => {
@@ -638,7 +653,7 @@ describe('getModalDataViaRPC - Edge Cases', () => {
 
     const result = await getModalDataViaRPC(supabase, SLIP_ID, CASINO_ID);
 
-    expect(result.financial.netPosition).toBe(-15000);
+    expect(result.financial.netPosition.value).toBe(-15000);
   });
 
   it('handles large numbers correctly', async () => {

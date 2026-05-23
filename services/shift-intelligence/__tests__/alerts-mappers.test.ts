@@ -6,19 +6,21 @@
  * @jest-environment node
  */
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import type { Database } from '@/types/database.types';
+
+import { getAlerts } from '../alerts';
 import {
   mapAcknowledgeResult,
   mapAlertQualityResult,
   mapPersistResult,
 } from '../mappers';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/database.types';
-import { getAlerts } from '../alerts';
 
 // ── Minimal row fixture matching the getAlerts Supabase join shape ───────────
 
 const SHIFT_ALERT_BASE = {
-  id: 'alert-001',
+  id: '00000000-0000-4000-8000-000000000001',
   table_id: 'tbl-001',
   casino_id: 'casino-abc',
   metric_type: 'drop_total',

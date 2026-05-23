@@ -3,8 +3,8 @@
 // I3 — Idempotency: runConsumer() called twice on the same event_id produces
 // 'processed' on the first call and 'duplicate' on the second. No duplicate
 // consumer side effect occurs. The 'duplicate' path is a safe durable prior
-// commit — rpc_commit_consumer_receipt enforces this via the processed_messages
-// unique constraint on (message_id, casino_id).
+// commit — rpc_process_class_a_projection enforces this via the processed_messages
+// unique constraint on (message_id, casino_id) inside its atomic BEGIN…COMMIT.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -57,10 +57,9 @@ describe('I3 — Idempotency: duplicate delivery produces no duplicate consumer 
     await runConsumer(supabase, event);
 
     const expectedArgs = [
-      'rpc_commit_consumer_receipt',
+      'rpc_process_class_a_projection',
       {
         p_message_id: event.event_id,
-        p_casino_id: event.casino_id,
       },
     ];
     expect(rpcMock).toHaveBeenNthCalledWith(1, ...expectedArgs);
