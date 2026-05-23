@@ -261,7 +261,7 @@ BEGIN
        AND pg_catalog.pg_get_function_identity_arguments(p.oid)
          = 'p_player_id uuid, p_visit_id uuid, p_delta_amount numeric, p_reason_code adjustment_reason_code, p_note text, p_original_txn_id uuid, p_idempotency_key text'
        AND p.prosecdef IS TRUE
-       AND array_to_string(p.proconfig, ',') = 'search_path='
+       AND array_to_string(p.proconfig, ',') = 'search_path=""'
   ) THEN
     RAISE EXCEPTION 'POST-STATE FAIL: rpc_create_financial_adjustment must be SECURITY DEFINER with search_path='''' before helper revoke.';
   END IF;
@@ -313,7 +313,11 @@ BEGIN
      WHERE n.nspname = 'public'
        AND p.proname = 'fn_finance_outbox_emit'
        AND pg_catalog.pg_function_is_visible(p.oid)
-       AND p.proacl::text LIKE '%=X/%'
+       AND (
+         p.proacl IS NULL
+         OR p.proacl::text LIKE '{=X/%'
+         OR p.proacl::text LIKE '%,=X/%'
+       )
   ) THEN
     RAISE EXCEPTION 'POST-STATE FAIL: PUBLIC has EXECUTE on fn_finance_outbox_emit.';
   END IF;

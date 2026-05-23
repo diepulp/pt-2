@@ -139,7 +139,7 @@ describe('PlayerDashboard Integration', () => {
   });
 
   describe('UI consistency', () => {
-    it('maintains PT-2 design system appearance', () => {
+    it('maintains d3lt design system appearance', () => {
       const { container } = render(<PlayerDashboard />);
 
       // Verify backdrop blur utility class is applied

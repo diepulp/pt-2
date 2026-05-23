@@ -13,6 +13,7 @@
  */
 
 import type { Pool, QueryResult } from 'pg';
+
 import { claimBatch } from '../src/repo';
 
 // ---------------------------------------------------------------------------

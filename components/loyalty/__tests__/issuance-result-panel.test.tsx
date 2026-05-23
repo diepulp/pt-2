@@ -2,8 +2,8 @@
 
 import { render, screen, fireEvent } from '@testing-library/react';
 
-import type { CompIssuanceResult, IssuanceResultDTO } from '@/services/loyalty';
 import type { PrintInvocationMode } from '@/lib/print/types';
+import type { CompIssuanceResult, IssuanceResultDTO } from '@/services/loyalty';
 
 import { IssuanceResultPanel } from '../issuance-result-panel';
 

@@ -645,7 +645,7 @@ const RUN_INTEGRATION =
 
         if (error) {
           // exec_sql RPC may not exist in all environments — skip gracefully
-          // eslint-disable-next-line no-console
+
           console.warn('SEC_NOTE M7 test skipped: exec_sql RPC not available');
           return;
         }

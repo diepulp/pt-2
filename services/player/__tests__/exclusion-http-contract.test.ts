@@ -13,9 +13,9 @@
  * @see EXEC-050 WS7
  */
 
-import * as exclusionsRoute from '@/app/api/v1/players/[playerId]/exclusions/route';
-import * as activeRoute from '@/app/api/v1/players/[playerId]/exclusions/active/route';
 import * as liftRoute from '@/app/api/v1/players/[playerId]/exclusions/[exclusionId]/lift/route';
+import * as activeRoute from '@/app/api/v1/players/[playerId]/exclusions/active/route';
+import * as exclusionsRoute from '@/app/api/v1/players/[playerId]/exclusions/route';
 
 import * as http from '../exclusion-http';
 

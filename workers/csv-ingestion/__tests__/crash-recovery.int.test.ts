@@ -15,11 +15,12 @@
  */
 
 import type { Pool, QueryResult } from 'pg';
-import { reapStaleBatches, insertRows, completeBatch } from '../src/repo';
-import type { RowInsert } from '../src/repo';
+
 import { reapAndClaim } from '../src/claim';
 import type { Config } from '../src/config';
 import type { Logger } from '../src/logger';
+import type { RowInsert } from '../src/repo';
+import { reapStaleBatches, insertRows, completeBatch } from '../src/repo';
 
 // ---------------------------------------------------------------------------
 // Helpers

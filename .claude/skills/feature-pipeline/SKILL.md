@@ -126,8 +126,25 @@ Phase 0 is lean — ownership sentence and boundary table only. Narrative fields
 - **Options:** 2–4 with tradeoffs
 - **Decision to make:** What needs deciding
 - **Dependencies and Risks / Open questions**
+- **Feature Classification block** (see sub-step below)
 
-**Gate:** `scaffold-approved` — 2+ options with tradeoffs and 5+ non-goals required. In fib-bound mode: fails if scaffold introduces entities, capabilities, or surfaces absent from FIB-S (file Intake Amendment first).
+**Classification Sub-step (required before `scaffold-approved` gate):**
+
+Walk the decision tree in `docs/70-governance/feature-intake/FEATURE-CLASSIFICATION-AND-TRANSPORT-SELECTION-STANDARD.yaml` (`§how.decision_tree`, steps 2–8) to determine:
+
+1. **`primary_classification`** — one of: `ui_interaction | read_composition | authoring | projection_input | projection_consumer | surface_value | external_integration`
+2. **`secondary_classifications`** — any additional classes that apply, or `None`
+3. **`selected_transport`** — narrowest valid mechanism from `§how.transport_selection_matrix`
+4. **`scope_expansion_check`** — verify none of the 10 `§when.scope_expansion_triggers` apply; if any do, file an Intake Amendment before continuing (ADM-10 requires a link)
+
+Record these in the scaffold frontmatter. The classification drives Phase 2 RFC direction and the Phase 5 PRD required section.
+
+**Scope expansion triggers that require a FIB amendment before proceeding:**
+`new_actor`, `new_operator_workflow`, `new_user_visible_surface`, `new_automation_path`, `new_external_integration`, `new_authority_claim`, `new_projection_consumer`, `new_event_category`, `new_outbox_producer`, `new_reconciliation_or_settlement_implication`
+
+**Coherence check (fib-bound):** Any expansion trigger discovered must not already be excluded by `coherence.non_goals[]` — if it is, the FIB amendment is mandatory.
+
+**Gate:** `scaffold-approved` — 2+ options with tradeoffs and 5+ non-goals required. Classification block (primary_classification + selected_transport) must be present. In fib-bound mode: fails if scaffold introduces entities, capabilities, or surfaces absent from FIB-S (file Intake Amendment first).
 
 **Coherence checkpoint (fib-bound):** Non-goals must be consistent with `coherence.non_goals[]`. May elaborate FIB exclusions but not contradict them. `coherence.non_goals[]` is owned by the FIB — do not overwrite.
 
@@ -135,7 +152,7 @@ Phase 0 is lean — ownership sentence and boundary table only. Narrative fields
 
 ## Phase 2: Design Brief / RFC
 
-**Goal:** Propose direction with enough detail to identify ADR-worthy decisions.  
+**Goal:** Propose direction with enough detail to identify ADR-worthy decisions. The `selected_transport` from Phase 1 classification anchors the proposed direction — the RFC must be consistent with the transport chain declared there.  
 **Rule:** Funnel style — context → scope → overview → details → alternatives.
 
 **Template:** `docs/02-design/TEMPLATE.md`  
@@ -196,8 +213,23 @@ Phase 0 is lean — ownership sentence and boundary table only. Narrative fields
 - `adr_refs:` frontmatter listing ADR IDs
 - `intake_ref:` and `structured_ref:` frontmatter (fib-bound only) — required for build-pipeline handoff
 - Reference to FIB containment loop steps in acceptance criteria (fib-bound only)
+- **Feature Classification and Transport Selection section** (mandatory — per `FEATURE-CLASSIFICATION-AND-TRANSPORT-SELECTION-STANDARD.yaml` §required_sections.prd):
 
-**Gate:** `prd-approved` — Criteria must be provable by a test. No unresolved P0 findings from adversarial review.
+  | Field | Required | Notes |
+  |-------|----------|-------|
+  | `primary_classification` | yes | enum from taxonomy |
+  | `secondary_classifications` | yes | name or `None` |
+  | `authors_domain_fact` | yes | boolean; name the fact if true |
+  | `emits_projection_input` | yes | boolean; name event_type + category if true |
+  | `requires_transactional_outbox` | yes | boolean; explain why if true |
+  | `consumes_outbox_events` | yes | boolean; name consumer + projection store if true |
+  | `renders_financial_surface_values` | yes | boolean; name source/authority/completeness if true |
+  | `selected_transport` | yes | enum from transport_selection_matrix |
+  | `narrowest_valid_transport_justification` | yes | prose paragraph |
+  | `rejected_mechanisms` | yes | array of `{mechanism, reason}` |
+  | `fib_amendment_required` | yes | boolean; link amendment if true |
+
+**Gate:** `prd-approved` — Criteria must be provable by a test. Feature Classification and Transport Selection section must be complete (ADM-1 through ADM-10 all answered). If ADM-9 is true (new surface/actor/integration/workflow introduced), ADM-10 must provide a FIB amendment link — gate fails without it. No unresolved P0 findings from adversarial review.
 
 **Adversarial review:** After `prd-writer` produces the PRD, run the DA review per `references/da-team-protocol.md`. That reference covers: temporal integrity check (including FIB artifacts), magnitude assessment (Tier 0/1/2), DA team dispatch, two-phase review, synthesis, retry protocol, and gate logic.
 
@@ -271,11 +303,11 @@ If no checkpoint exists:
 
 ## State Management
 
-### Checkpoint Structure (v4)
+### Checkpoint Structure (v5)
 
 ```json
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "feature_id": "csv-player-import",
   "current_phase": 3,
   "status": "in_progress",
@@ -300,6 +332,18 @@ If no checkpoint exists:
     "sec_note": null,
     "adr": null,
     "prd": null
+  },
+  "feature_classification": {
+    "primary": null,
+    "secondary": [],
+    "selected_transport": null,
+    "scope_expansion_check_ran": false,
+    "expansion_triggers_found": [],
+    "fib_amendment_required": false,
+    "adm_checks": {
+      "ADM-1": null, "ADM-2": null, "ADM-3": null, "ADM-4": null, "ADM-5": null,
+      "ADM-6": null, "ADM-7": null, "ADM-8": null, "ADM-9": null, "ADM-10": null
+    }
   },
   "da_review": {
     "magnitude_score": 0, "magnitude_tier": null, "magnitude_signals": [],
@@ -330,6 +374,8 @@ If no checkpoint exists:
 - **`fib_context.mode`** must be `"fib-bound"` or `"fib-absent"`. Set at pipeline startup.
 - **`gates`** keys: `srm-ownership`, `scaffold-approved`, `design-approved`, `sec-approved`, `adr-frozen`, `prd-approved`. No others.
 - **`artifacts`** keys: `feature_boundary`, `scaffold`, `rfc`, `sec_note`, `adr`, `prd`. No others.
+- **`feature_classification.primary`** must be set before `scaffold-approved` passes.
+- **`feature_classification.adm_checks`** all 10 values must be non-null before `prd-approved` passes.
 - **Forbidden fields:** `exec_spec`, `dod_gates`, `exec_spec_workstreams`, `execution_phases` — build-pipeline state. If present, strip and warn.
 
 ### Migration
@@ -339,6 +385,8 @@ If no checkpoint exists:
 **v2 → v3:** Set `schema_version: 3`. Inject `"fib-approved": { "passed": false, "timestamp": null }` before `srm-ownership`. Inject `"fib_h": null, "fib_s": null` before `feature_boundary`. Expand `coherence` with `feature_loop`, `feature_loop_frozen`, `deferred_items`, `scope_authority`. Shift `current_phase` by +1.
 
 **v3 → v4:** Set `schema_version: 4`. Inject `fib_context` block: `mode` from `gates["fib-approved"].passed` (`"fib-bound"` if true, else `"fib-absent"`); `fib_h_ref`/`fib_s_ref` from `artifacts.fib_h`/`artifacts.fib_s`; `loaded_at` from `gates["fib-approved"].timestamp`. Remove `fib-approved` from `gates`. Remove `fib_h`/`fib_s` from `artifacts`. Shift `current_phase` by -1; clamp minimum to 0.
+
+**v4 → v5:** Set `schema_version: 5`. Inject `feature_classification` block with all null/empty defaults (see schema above). Existing checkpoints that have already passed `scaffold-approved` should backfill `primary` and `selected_transport` from the scaffold frontmatter if readable; otherwise leave null and re-run Phase 1 classification sub-step.
 
 ---
 
@@ -382,6 +430,7 @@ If no checkpoint exists:
 | `references/da-team-protocol.md` | Phase 5 DA review: magnitude assessment, team protocol, retry logic |
 | `docs/01-scaffolds/TEMPLATE.md` | Phase 1 scaffold template |
 | `docs/02-design/TEMPLATE.md` | Phase 2 RFC template |
+| `docs/70-governance/feature-intake/FEATURE-CLASSIFICATION-AND-TRANSPORT-SELECTION-STANDARD.yaml` | Phase 1 classification decision tree (§how.decision_tree steps 2–8); transport selection matrix; scope expansion triggers; Phase 5 PRD required section schema (ADM-1–10); audit checklist AUD-01–12 |
 
 ---
 
@@ -390,11 +439,13 @@ If no checkpoint exists:
 - [ ] **FIB pair** loaded at startup — `fib-bound` or `fib-absent` recorded in `fib_context`
 - [ ] SRM ownership sentence written; boundary declared and table-validated against SRM
 - [ ] Scaffold cites FIB scope authority (fib-bound); 5+ non-goals, 2+ options with tradeoffs
-- [ ] RFC proposes direction, names ADR-worthy decisions; scope validated against FIB non-goals (fib-bound)
+- [ ] **Feature Classification block present in scaffold** — `primary_classification`, `selected_transport`, scope expansion check ran; `feature_classification.primary` set in checkpoint
+- [ ] RFC proposes direction consistent with `selected_transport`; names ADR-worthy decisions; scope validated against FIB non-goals (fib-bound)
 - [ ] If new UI surface: Surface Classification declared; preliminary MEAS-IDs identified
 - [ ] SEC Note covers assets, threats, controls, deferred risks
 - [ ] ADR(s) contain only durable decisions (no SQL/code); validated against FIB exclusions (fib-bound)
 - [ ] PRD references ADR IDs and FIB containment loop (fib-bound); testable acceptance criteria
+- [ ] **PRD includes Feature Classification and Transport Selection section** — all ADM-1 through ADM-10 checks answered; `feature_classification.adm_checks` fully populated in checkpoint
 - [ ] PRD frontmatter includes `intake_ref`/`structured_ref` (fib-bound) for build-pipeline handoff
 - [ ] Adversarial review passed (no P0 findings, or override-with-reason recorded)
 - [ ] Handoff displayed with all artifact paths

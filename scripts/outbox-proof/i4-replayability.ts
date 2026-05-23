@@ -1,3 +1,6 @@
+// @ts-nocheck — PRD-082 Phase 2.0 proof script. outbox_integration_proof_state was torn down in
+// 20260517141021_remove_prd082_harness_receipt_proof_state.sql (Phase 2.1 teardown). I4 invariant
+// coverage is superseded by class-a-projection.int.test.ts (WS4_TESTS, PRD-087).
 // scripts/outbox-proof/i4-replayability.ts
 // PRD-082 I4 Replayability: live fingerprint === replay fingerprint.
 // Fingerprint: md5 of (event_id|event_type|aggregate_id) ordered by event_id. Excludes consumed_at.

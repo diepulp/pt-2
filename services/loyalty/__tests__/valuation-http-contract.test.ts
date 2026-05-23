@@ -8,8 +8,8 @@
  * valuation serialization bug class (ISSUE-C4D2AA48).
  */
 
-import { updateValuationPolicySchema } from '../schemas';
 import type { UpdateValuationPolicyInput } from '../dtos';
+import { updateValuationPolicySchema } from '../schemas';
 
 describe('HTTP -> Route serialization contract', () => {
   it('updateValuationRate body matches route schema', () => {

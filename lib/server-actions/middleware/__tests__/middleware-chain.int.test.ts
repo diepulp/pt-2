@@ -195,7 +195,6 @@ const RUN_INTEGRATION =
       });
 
       it('should reject unauthenticated client without skipAuth', async () => {
-        // eslint-disable-next-line no-restricted-imports -- Integration test: anon client intentionally has no session
         const { createClient } = await import('@supabase/supabase-js');
         const supabaseUrl =
           process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';

@@ -10,6 +10,7 @@
  */
 
 import type { Database } from '@/types/database.types';
+
 import { mapSendAttemptRow } from '../mappers';
 
 type EmailSendAttemptRow =

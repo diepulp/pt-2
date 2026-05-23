@@ -10,9 +10,10 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import type { EmailProvider } from '@/lib/email/types';
-import type { Database } from '@/types/database.types';
 import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 // --- Mock crud module (must precede service import) ---
 jest.mock('../crud', () => ({
@@ -23,9 +24,9 @@ jest.mock('../crud', () => ({
 }));
 
 import * as crud from '../crud';
+import type { ShiftReportEmailInput } from '../dtos';
 import { createEmailService } from '../index';
 import type { EmailServiceInterface } from '../index';
-import type { ShiftReportEmailInput } from '../dtos';
 
 // === Fixtures ===
 

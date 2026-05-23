@@ -42,14 +42,14 @@ jobs:
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: |
-          for i in $(seq 1 15); do
+          for i in $(seq 1 30); do
             if psql "${DB_URL}" -c "SELECT 1" > /dev/null 2>&1; then
               echo "DB is ready (attempt ${i})"
               exit 0
             fi
             sleep 2
           done
-          echo "ERROR: DB not ready after 30 seconds"
+          echo "ERROR: DB not ready after 60 seconds"
           exit 1
 
       # ── Apply migrations (db start may not auto-apply) ──────────

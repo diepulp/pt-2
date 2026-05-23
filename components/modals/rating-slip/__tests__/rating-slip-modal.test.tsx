@@ -84,16 +84,16 @@ jest.mock('@/components/player-360/header/issue-reward-button', () => ({
 
 // ── Imports after mocks ───────────────────────────────────────────────────────
 
-import { useRatingSlipModalData } from '@/hooks/rating-slip-modal';
-import { useRatingSlipModal } from '@/hooks/ui/use-rating-slip-modal';
 import { useGamingDay } from '@/hooks/casino/use-gaming-day';
 import { usePatronDailyTotal } from '@/hooks/mtl/use-patron-daily-total';
-import { useAuth } from '@/hooks/use-auth';
+import { useCreateFinancialAdjustment } from '@/hooks/player-financial';
 import {
   usePauseRatingSlip,
   useResumeRatingSlip,
 } from '@/hooks/rating-slip/use-rating-slip-mutations';
-import { useCreateFinancialAdjustment } from '@/hooks/player-financial';
+import { useRatingSlipModalData } from '@/hooks/rating-slip-modal';
+import { useRatingSlipModal } from '@/hooks/ui/use-rating-slip-modal';
+import { useAuth } from '@/hooks/use-auth';
 
 import { RatingSlipModal } from '../rating-slip-modal';
 

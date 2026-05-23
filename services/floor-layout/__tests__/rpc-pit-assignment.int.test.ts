@@ -1136,7 +1136,6 @@ describeIntegration(
           `);
           triggerInstalled = true;
         } catch (e) {
-          // eslint-disable-next-line no-console
           console.warn(
             '[WS5 group k] DB trigger install failed; test will skip assertion. Error:',
             (e as Error).message,
@@ -1162,7 +1161,6 @@ describeIntegration(
 
       it('rolls back slot + mirror UPDATEs when audit_log INSERT fails', async () => {
         if (!triggerInstalled) {
-          // eslint-disable-next-line no-console
           console.warn(
             '[WS5 group k] trigger unavailable; skipping rollback assertion',
           );

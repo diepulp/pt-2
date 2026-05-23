@@ -48,7 +48,7 @@ function buildMutationInput(formValues: {
  * These converters were added to handleSubmit, converting YYYY-MM-DD → ISO datetime.
  * They conflict with the server's dateSchema() which expects YYYY-MM-DD.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 const REGRESSION_toISO = (v: string | undefined): string | undefined =>
   v ? new Date(`${v}T00:00:00`).toISOString() : undefined;
 

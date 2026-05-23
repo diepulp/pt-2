@@ -5,14 +5,14 @@
  * Zod .loose() regression, and DTO projection drift guard.
  */
 
-import {
-  updateCasinoSettingsSchema,
-  updateAlertThresholdsSchema,
-} from '@/services/casino/schemas';
 import type {
   CasinoSettingsWithAlertsDTO,
   UpdateCasinoSettingsDTO,
 } from '@/services/casino/dtos';
+import {
+  updateCasinoSettingsSchema,
+  updateAlertThresholdsSchema,
+} from '@/services/casino/schemas';
 
 // --- Zod schema unit tests ---
 

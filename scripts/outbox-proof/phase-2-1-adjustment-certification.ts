@@ -117,19 +117,17 @@ async function sectionA(
 
     // Step 1: Ensure dedicated slip exists in casino_1 (idempotent via upsert)
     // status='archived' avoids ux_rating_slip_visit_table_active (WHERE status IN ('open','paused'))
-    const { error: slipErr } = await service
-      .from('rating_slip')
-      .upsert(
-        {
-          id: a2SlipId,
-          casino_id: PROOF.CASINO_1_ID,
-          visit_id: PROOF.VISIT_ID,
-          table_id: PROOF.TABLE_1_ID,
-          status: 'archived',
-          accrual_kind: 'compliance_only',
-        },
-        { onConflict: 'id' },
-      );
+    const { error: slipErr } = await service.from('rating_slip').upsert(
+      {
+        id: a2SlipId,
+        casino_id: PROOF.CASINO_1_ID,
+        visit_id: PROOF.VISIT_ID,
+        table_id: PROOF.TABLE_1_ID,
+        status: 'archived',
+        accrual_kind: 'compliance_only',
+      },
+      { onConflict: 'id' },
+    );
     assert(!slipErr, `A2 slip upsert: ${slipErr?.message}`);
 
     // Step 2: Create eligible original via auth RPC (sets RLS context; avoids MTL bridge context error)
@@ -334,19 +332,17 @@ async function sectionA(
 
     // Step 1: Ensure dedicated a5 slip exists in casino_1 (idempotent)
     // status='archived' avoids ux_rating_slip_visit_table_active (WHERE status IN ('open','paused'))
-    const { error: a5SlipErr } = await service
-      .from('rating_slip')
-      .upsert(
-        {
-          id: a5SlipId,
-          casino_id: PROOF.CASINO_1_ID,
-          visit_id: PROOF.VISIT_ID,
-          table_id: PROOF.TABLE_1_ID,
-          status: 'archived',
-          accrual_kind: 'compliance_only',
-        },
-        { onConflict: 'id' },
-      );
+    const { error: a5SlipErr } = await service.from('rating_slip').upsert(
+      {
+        id: a5SlipId,
+        casino_id: PROOF.CASINO_1_ID,
+        visit_id: PROOF.VISIT_ID,
+        table_id: PROOF.TABLE_1_ID,
+        status: 'archived',
+        accrual_kind: 'compliance_only',
+      },
+      { onConflict: 'id' },
+    );
     assert(!a5SlipErr, `A5 slip upsert: ${a5SlipErr?.message}`);
 
     // Step 2: Create a valid eligible original via RPC (legitimate creation path)
@@ -450,6 +446,7 @@ async function sectionB(
     aggregate_id: '00000000-b000-b000-b000-000000000099',
     fact_class: 'ledger',
     origin_label: 'actual',
+    gaming_day: '2026-01-15',
     payload: { amount: 100 } as unknown as Json,
   };
 
@@ -785,6 +782,7 @@ async function sectionC(
       table_id: PROOF.TABLE_1_ID,
       player_id: PROOF.PLAYER_ID,
       aggregate_id: testAggId,
+      gaming_day: '2026-01-15',
       payload: { test: 'c3' } as unknown as Json,
     };
 

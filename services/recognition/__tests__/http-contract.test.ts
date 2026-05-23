@@ -9,11 +9,10 @@
  * @see EXEC-051 WS5
  */
 
-import { createMockRequest } from '@/lib/testing/route-test-helpers';
-
-import { POST as lookupHandler } from '@/app/api/v1/players/lookup-company/route';
 import { POST as activateHandler } from '@/app/api/v1/players/activate-locally/route';
+import { POST as lookupHandler } from '@/app/api/v1/players/lookup-company/route';
 import { POST as redeemHandler } from '@/app/api/v1/players/redeem-loyalty/route';
+import { createMockRequest } from '@/lib/testing/route-test-helpers';
 
 // Mock Supabase client
 jest.mock('@/lib/supabase/server', () => ({

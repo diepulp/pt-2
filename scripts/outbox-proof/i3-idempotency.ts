@@ -1,3 +1,6 @@
+// @ts-nocheck — PRD-082 Phase 2.0 proof script. outbox_integration_proof_state was torn down in
+// 20260517141021_remove_prd082_harness_receipt_proof_state.sql (Phase 2.1 teardown). I3 invariant
+// coverage is superseded by class-a-projection.int.test.ts (WS4_TESTS, PRD-087).
 // scripts/outbox-proof/i3-idempotency.ts
 // PRD-082 I3 Idempotency: duplicate delivery returns 'duplicate'; proof-state written by SQL only.
 

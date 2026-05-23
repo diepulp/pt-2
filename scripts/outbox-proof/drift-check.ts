@@ -1,3 +1,5 @@
+// @ts-nocheck — PRD-082 Phase 2.0 proof script. outbox_integration_proof_state was torn down in
+// 20260517141021_remove_prd082_harness_receipt_proof_state.sql (Phase 2.1 teardown).
 // scripts/outbox-proof/drift-check.ts
 // PRD-082 Runtime drift detection.
 // Blocking classes: RELAY_AUTH_BROKEN | SERVICE_ROLE_RPC_ACCESS_BROKEN | RLS_BOUNDARY_BROKEN
