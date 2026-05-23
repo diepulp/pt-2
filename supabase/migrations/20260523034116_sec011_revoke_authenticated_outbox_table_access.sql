@@ -1,4 +1,10 @@
 -- Migration: SEC-011 — Revoke authenticated direct table access on outbox transport surfaces
+-- Description: Privilege-layer denial for ADR-054 R3 outbox transport surfaces.
+-- Reference: ADR-054
+-- VERIFIED_SAFE: No SELECT/INSERT/UPDATE/DELETE policies remain for authenticated
+--   after this migration. Intentional security hardening — no re-grant needed.
+--   RLS stays enabled as defence-in-depth. service_role access unaffected.
+-- RLS_REVIEW_COMPLETE
 --
 -- ADR-054 R3 mandates that finance_outbox and processed_messages are
 -- service_role-only surfaces. The relay worker and the cleanup cron are the
