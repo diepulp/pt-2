@@ -15,9 +15,23 @@ DO $$
 DECLARE
   -- Internal-only functions that should NOT be callable by authenticated role.
   -- Each entry must have a comment explaining why it is excluded.
-  v_exclusions text[] := ARRAY[]::text[]; -- No exclusions currently. All rpc_* functions are client-callable.
-  -- To exclude a function, add it here:
-  -- v_exclusions text[] := ARRAY['rpc_internal_helper'];  -- Only called by service_role
+  -- Wave 2 outbox relay / lifecycle infrastructure (service_role-only — ADR-054 R3).
+  -- These RPCs are intentionally not callable by authenticated users. The relay worker
+  -- and cron jobs invoke them with service_role credentials. Any non-outbox rpc_* added
+  -- here must include a justification comment and be reviewed in security-gates PR.
+  v_exclusions text[] := ARRAY[
+    'rpc_claim_outbox_batch',
+    'rpc_commit_consumer_receipt',
+    'rpc_acknowledge_outbox_delivery',
+    'rpc_get_outbox_relay_health',
+    'rpc_get_outbox_event_page',
+    'rpc_claim_class_a_outbox_batch',
+    'rpc_process_class_a_projection',
+    'rpc_claim_operational_outbox_batch',
+    'rpc_process_operational_projection',
+    'rpc_cleanup_outbox_processed',
+    'rpc_close_gaming_day'
+  ];
 
   v_missing text := '';
   v_missing_count int := 0;
