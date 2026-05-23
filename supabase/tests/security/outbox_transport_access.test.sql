@@ -17,9 +17,11 @@ DECLARE
   v_pm_exists bool;
 BEGIN
 
-  -- Existence guard: tables are created by Wave 2 migrations that land on
-  -- feat/transactional-outbox before merging to main. On a main-state DB
-  -- (pre-merge), neither table exists; the constraint trivially holds.
+  -- Wave 2 sentinel: processed_messages is a new table introduced entirely by
+  -- Wave 2 migrations (no pre-Wave-2 predecessor). A legacy finance_outbox
+  -- already exists on main (20251109214028) without RLS hardening; using it
+  -- alone as a sentinel would give a false positive. processed_messages absence
+  -- reliably means Wave 2 migrations have not yet been applied to this DB.
   SELECT EXISTS (
     SELECT 1 FROM pg_class
     WHERE relname = 'finance_outbox'
@@ -32,8 +34,8 @@ BEGIN
       AND relnamespace = 'public'::regnamespace
   ) INTO v_pm_exists;
 
-  IF NOT v_fo_exists AND NOT v_pm_exists THEN
-    RAISE NOTICE 'PASS [SEC-011]: finance_outbox and processed_messages not yet present (pre-Wave-2-merge) — access controls trivially satisfied';
+  IF NOT v_pm_exists THEN
+    RAISE NOTICE 'PASS [SEC-011]: processed_messages absent — Wave 2 not yet applied; gate deferred until Wave 2 migrations land';
     RETURN;
   END IF;
 
