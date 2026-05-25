@@ -261,7 +261,6 @@ export function PanelContainer({
             activeSlips={activeSlips}
             isLoading={isLoading}
             casinoId={casinoId}
-            gamingDay={gamingDay?.date}
             onSeatClick={onSeatClick}
             onNewSlip={onNewSlip}
             onActivateRequest={onActivateRequest}
@@ -308,7 +307,6 @@ export function PanelContainer({
             activeSlips={activeSlips}
             isLoading={isLoading}
             casinoId={casinoId}
-            gamingDay={gamingDay?.date}
             onSeatClick={onSeatClick}
             onNewSlip={onNewSlip}
             onActivateRequest={onActivateRequest}
