@@ -25,6 +25,19 @@ DECLARE
   -- ── p_casino_id Allowlist (EMPTY — all removed by PRD-043 + PRD-044) ──
   v_casino_id_allowlist text[] := ARRAY[]::text[];
 
+  -- ── Service-role-only relay RPC exclusions (ADR-054 R3) ──────────────────
+  -- These RPCs accept p_casino_id as a legitimate operational routing parameter,
+  -- not as a spoofable identity claim. They are callable only by the relay worker
+  -- via service_role (EXECUTE revoked from PUBLIC and authenticated per SEC-010).
+  -- p_casino_id here scopes the DB operation, not derives caller identity — the
+  -- ADR-024 / ADR-040 spoofability concern does not apply.
+  v_service_role_exclusions text[] := ARRAY[
+    'rpc_close_gaming_day',          -- service_role_only_rpc: ADR-054 R3
+    'rpc_commit_consumer_receipt',   -- service_role_only_rpc: ADR-054 R3
+    'rpc_get_outbox_event_page',     -- service_role_only_rpc: ADR-054 R3
+    'rpc_get_outbox_relay_health'    -- service_role_only_rpc: ADR-054 R3
+  ];
+
   -- ── Category B Allowlist (ADR-040 §6) ──
   -- Format: {param_name, owning_rpc, category, rationale, validation_rule}
   v_category_b_allowlist text[][] := ARRAY[
@@ -85,6 +98,13 @@ BEGIN
       AND 'p_casino_id' = ANY(p.proargnames)
     ORDER BY p.proname
   LOOP
+    -- Skip service_role-only relay RPCs (ADR-054 R3): p_casino_id is an
+    -- operational routing param here, not a spoofable identity claim.
+    -- Same exclusion set as SEC-006 and SEC-010.
+    IF rec.proname = ANY(v_service_role_exclusions) THEN
+      CONTINUE;
+    END IF;
+
     IF rec.proname = ANY(v_casino_id_allowlist) THEN
       -- Known deferred — notice only
       v_casino_warnings := v_casino_warnings || format(E'  - %s (allowlisted)\n', rec.proname);
