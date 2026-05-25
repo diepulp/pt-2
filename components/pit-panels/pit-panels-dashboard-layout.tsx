@@ -29,7 +29,7 @@ export function PitPanelsDashboardLayout({
 }: PitPanelsDashboardLayoutProps) {
   const isMobile = useIsMobile();
   const panel3Ref = React.useRef<ImperativePanelHandle>(null);
-  const [isPanel3Collapsed, setIsPanel3Collapsed] = React.useState(false);
+  const [isPanel3Collapsed, setIsPanel3Collapsed] = React.useState(true);
 
   const togglePanel3 = React.useCallback(() => {
     const panel = panel3Ref.current;
@@ -73,7 +73,7 @@ export function PitPanelsDashboardLayout({
           <ResizableHandle withHandle />
           <ResizablePanel
             ref={panel3Ref}
-            defaultSize={50}
+            defaultSize={0}
             minSize={20}
             collapsible
             collapsedSize={0}
