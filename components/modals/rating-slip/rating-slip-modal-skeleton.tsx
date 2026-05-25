@@ -128,7 +128,7 @@ export function RatingSlipModalSkeleton({
           {/* FormSectionCashIn Skeleton */}
           <div>
             {/* Total Cash In display box */}
-            <div className="mb-3 p-3 bg-muted rounded-lg">
+            <div className="mb-3 rounded-lg border-2 border-border/50 bg-card/30 p-3">
               <div className="flex justify-between items-center">
                 <AnimatedSkeleton className="h-4 w-24 rounded" delay={225} />
                 <AnimatedSkeleton className="h-5 w-20 rounded" delay={240} />
@@ -184,7 +184,7 @@ export function RatingSlipModalSkeleton({
           </div>
 
           {/* Financial Summary Card Skeleton */}
-          <div className="p-4 bg-card border border-border rounded-lg">
+          <div className="rounded-lg border-2 border-border/50 bg-card/30 p-4">
             <AnimatedSkeleton className="h-4 w-36 mb-3 rounded" delay={785} />
             <div className="space-y-2">
               {/* Cash In row */}
@@ -206,7 +206,7 @@ export function RatingSlipModalSkeleton({
           </div>
 
           {/* Loyalty Points Card Skeleton */}
-          <div className="p-4 bg-card border border-border rounded-lg">
+          <div className="rounded-lg border-2 border-border/50 bg-card/30 p-4">
             {/* Current balance row */}
             <div className="flex justify-between items-center">
               <AnimatedSkeleton className="h-4 w-36 rounded" delay={900} />

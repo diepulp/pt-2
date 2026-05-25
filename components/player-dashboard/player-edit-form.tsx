@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, MapPin, User } from 'lucide-react';
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { dateSchema } from '@/lib/validation';
 import type {
@@ -52,6 +53,26 @@ interface PlayerEditFormProps {
   ) => Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
+}
+
+function SectionHeader({
+  icon: Icon,
+  label,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className="h-3.5 w-3.5 text-accent" />
+      <h4
+        className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+        style={{ fontFamily: 'monospace' }}
+      >
+        {label}
+      </h4>
+    </div>
+  );
 }
 
 export function PlayerEditForm({
@@ -103,12 +124,10 @@ export function PlayerEditForm({
   });
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Personal Information Section */}
-      <fieldset className="space-y-4">
-        <legend className="text-sm font-semibold text-foreground border-b border-border/40 pb-2 mb-4 w-full">
-          Personal Information
-        </legend>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Personal Information */}
+      <div className="space-y-3">
+        <SectionHeader icon={User} label="Personal Information" />
         <div className="grid grid-cols-3 gap-4">
           <FormField
             id="first_name"
@@ -118,6 +137,7 @@ export function PlayerEditForm({
           >
             <Input
               id="first_name"
+              className="font-mono"
               {...form.register('first_name')}
               aria-invalid={!!form.formState.errors.first_name}
             />
@@ -125,9 +145,14 @@ export function PlayerEditForm({
           <FormField
             id="middle_name"
             label="Middle Name"
+            optional
             error={form.formState.errors.middle_name?.message}
           >
-            <Input id="middle_name" {...form.register('middle_name')} />
+            <Input
+              id="middle_name"
+              className="font-mono"
+              {...form.register('middle_name')}
+            />
           </FormField>
           <FormField
             id="last_name"
@@ -137,6 +162,7 @@ export function PlayerEditForm({
           >
             <Input
               id="last_name"
+              className="font-mono"
               {...form.register('last_name')}
               aria-invalid={!!form.formState.errors.last_name}
             />
@@ -146,32 +172,36 @@ export function PlayerEditForm({
           <FormField
             id="birth_date"
             label="Birth Date"
+            optional
             error={form.formState.errors.birth_date?.message}
           >
             <Input
               id="birth_date"
               type="date"
+              className="font-mono tabular-nums"
               {...form.register('birth_date')}
               aria-invalid={!!form.formState.errors.birth_date}
             />
           </FormField>
         </div>
-      </fieldset>
+      </div>
 
-      {/* Contact Information Section */}
-      <fieldset className="space-y-4">
-        <legend className="text-sm font-semibold text-foreground border-b border-border/40 pb-2 mb-4 w-full">
-          Contact Information
-        </legend>
+      <Separator />
+
+      {/* Contact Information */}
+      <div className="space-y-3">
+        <SectionHeader icon={Mail} label="Contact Information" />
         <div className="grid grid-cols-2 gap-4">
           <FormField
             id="email"
             label="Email"
+            optional
             error={form.formState.errors.email?.message}
           >
             <Input
               id="email"
               type="email"
+              className="font-mono"
               {...form.register('email')}
               aria-invalid={!!form.formState.errors.email}
             />
@@ -179,63 +209,84 @@ export function PlayerEditForm({
           <FormField
             id="phone_number"
             label="Phone Number"
+            optional
             error={form.formState.errors.phone_number?.message}
           >
             <Input
               id="phone_number"
               type="tel"
+              className="font-mono tabular-nums"
               {...form.register('phone_number')}
               aria-invalid={!!form.formState.errors.phone_number}
             />
           </FormField>
         </div>
-      </fieldset>
+      </div>
 
-      {/* Address Section */}
-      <fieldset className="space-y-4">
-        <legend className="text-sm font-semibold text-foreground border-b border-border/40 pb-2 mb-4 w-full">
-          Address
-        </legend>
+      <Separator />
+
+      {/* Address */}
+      <div className="space-y-3">
+        <SectionHeader icon={MapPin} label="Address" />
         <FormField
           id="address_street"
           label="Street"
+          optional
           error={form.formState.errors.address_street?.message}
         >
-          <Input id="address_street" {...form.register('address_street')} />
+          <Input
+            id="address_street"
+            className="font-mono"
+            {...form.register('address_street')}
+          />
         </FormField>
         <div className="grid grid-cols-3 gap-4">
           <FormField
             id="address_city"
             label="City"
+            optional
             error={form.formState.errors.address_city?.message}
           >
-            <Input id="address_city" {...form.register('address_city')} />
+            <Input
+              id="address_city"
+              className="font-mono"
+              {...form.register('address_city')}
+            />
           </FormField>
           <FormField
             id="address_state"
             label="State"
+            optional
             error={form.formState.errors.address_state?.message}
           >
-            <Input id="address_state" {...form.register('address_state')} />
+            <Input
+              id="address_state"
+              className="font-mono"
+              {...form.register('address_state')}
+            />
           </FormField>
           <FormField
             id="address_postal_code"
             label="Postal Code"
+            optional
             error={form.formState.errors.address_postal_code?.message}
           >
             <Input
               id="address_postal_code"
+              className="font-mono tabular-nums"
               {...form.register('address_postal_code')}
             />
           </FormField>
         </div>
-      </fieldset>
+      </div>
 
       {/* Form Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-border/40">
+      <div className="flex justify-end gap-2 pt-4 border-t border-border/40">
         <Button
           type="button"
           variant="outline"
+          size="sm"
+          className="h-8 text-xs font-semibold uppercase tracking-wider"
           onClick={onCancel}
           disabled={isSubmitting}
         >
@@ -243,10 +294,12 @@ export function PlayerEditForm({
         </Button>
         <Button
           type="submit"
+          size="sm"
+          className="h-8 gap-1.5 text-xs font-semibold uppercase tracking-wider"
           disabled={isSubmitting || !form.formState.isDirty}
         >
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save Changes
+          {isSubmitting && <Loader2 className="h-3 w-3 animate-spin" />}
+          {isSubmitting ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </form>
@@ -257,20 +310,34 @@ interface FormFieldProps {
   id: string;
   label: string;
   required?: boolean;
+  optional?: boolean;
   error?: string;
   children: React.ReactNode;
 }
 
-function FormField({ id, label, required, error, children }: FormFieldProps) {
+function FormField({
+  id,
+  label,
+  required,
+  optional,
+  error,
+  children,
+}: FormFieldProps) {
   return (
     <div className="space-y-1.5">
       <Label
         htmlFor={id}
         className={cn(
+          'text-sm text-muted-foreground',
           required && "after:content-['*'] after:ml-0.5 after:text-destructive",
         )}
       >
         {label}
+        {optional && (
+          <span className="ml-1 text-xs text-muted-foreground/50">
+            optional
+          </span>
+        )}
       </Label>
       {children}
       {error && <p className="text-xs text-destructive">{error}</p>}

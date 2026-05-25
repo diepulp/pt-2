@@ -5,6 +5,7 @@ import React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAverageBetField } from '@/hooks/ui/use-rating-slip-modal';
 
 import { IncrementButtonGroup } from './increment-button-group';
@@ -70,10 +71,15 @@ export const FormSectionAverageBet = React.memo(
     return (
       <div>
         <div className="flex justify-between items-center">
-          <label htmlFor="averageBet" className="text-sm font-medium">
+          <Label htmlFor="averageBet" className="text-sm text-muted-foreground">
             Average Bet
-          </label>
-          <Button onClick={handleReset} variant="outline" size="sm">
+          </Label>
+          <Button
+            onClick={handleReset}
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs font-semibold uppercase tracking-wider"
+          >
             Reset
           </Button>
         </div>
@@ -86,7 +92,7 @@ export const FormSectionAverageBet = React.memo(
             type="number"
             value={value}
             onChange={handleChange}
-            className="h-12 text-lg text-center"
+            className="h-12 text-lg text-center font-mono tabular-nums"
           />
           <Button
             onClick={() => handleIncrement(1)}

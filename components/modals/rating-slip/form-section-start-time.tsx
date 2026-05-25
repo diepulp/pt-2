@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useStartTimeField } from '@/hooks/ui';
 import { cn } from '@/lib/utils';
 
@@ -92,10 +93,15 @@ export const FormSectionStartTime = React.memo(function FormSectionStartTime() {
   return (
     <div>
       <div className="flex justify-between items-center">
-        <label htmlFor="startTime" className="text-sm font-medium">
+        <Label htmlFor="startTime" className="text-sm text-muted-foreground">
           Start Time
-        </label>
-        <Button onClick={handleReset} variant="outline" size="sm">
+        </Label>
+        <Button
+          onClick={handleReset}
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs font-semibold uppercase tracking-wider"
+        >
           Reset
         </Button>
       </div>
@@ -107,7 +113,7 @@ export const FormSectionStartTime = React.memo(function FormSectionStartTime() {
           onChange={handleChange}
           max={maxDateTime}
           className={cn(
-            'h-12 text-lg text-center w-full',
+            'h-12 text-lg text-center w-full font-mono tabular-nums',
             validationError &&
               'border-destructive focus-visible:ring-destructive',
           )}

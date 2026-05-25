@@ -431,7 +431,10 @@ export function PanelContainer({
                       <p className="text-xs font-mono text-muted-foreground">
                         Review Section A
                       </p>
-                      <h3 className="text-sm font-semibold text-foreground">
+                      <h3
+                        className="text-sm font-bold uppercase tracking-widest text-foreground"
+                        style={{ fontFamily: 'monospace' }}
+                      >
                         Under Construction
                       </h3>
                     </div>
@@ -452,7 +455,10 @@ export function PanelContainer({
                       <p className="text-xs font-mono text-muted-foreground">
                         Review Section B
                       </p>
-                      <h3 className="text-sm font-semibold text-foreground">
+                      <h3
+                        className="text-sm font-bold uppercase tracking-widest text-foreground"
+                        style={{ fontFamily: 'monospace' }}
+                      >
                         Under Construction
                       </h3>
                     </div>
@@ -484,7 +490,10 @@ export function PanelContainer({
           {/* Collapse Toggle Header */}
           <div className="flex items-center justify-between p-2.5 border-b border-border/40 h-11">
             {!isCollapsed && (
-              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <span
+                className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                style={{ fontFamily: 'monospace' }}
+              >
                 Table Ops
               </span>
             )}

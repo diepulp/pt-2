@@ -1,5 +1,6 @@
 'use client';
 
+import { UserPen } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -113,9 +114,15 @@ export function PlayerEditModal({
   if (!player || isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Player Profile</DialogTitle>
+            <DialogTitle
+              className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              <UserPen className="h-4 w-4 text-accent shrink-0" />
+              Edit Player Profile
+            </DialogTitle>
             <DialogDescription>Loading player data...</DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-center py-12">
@@ -130,7 +137,13 @@ export function PlayerEditModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Player Profile</DialogTitle>
+          <DialogTitle
+            className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            <UserPen className="h-4 w-4 text-accent shrink-0" />
+            Edit Player Profile
+          </DialogTitle>
           <DialogDescription>
             Update personal information, contact details, and address for{' '}
             {player.first_name} {player.last_name}.

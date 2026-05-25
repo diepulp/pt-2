@@ -6,6 +6,7 @@ import React from 'react';
 import { BuyInThresholdIndicator } from '@/components/rating-slip/buy-in-threshold-indicator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useNewBuyInField } from '@/hooks/ui/use-rating-slip-modal';
 
 import { IncrementButtonGroup } from './increment-button-group';
@@ -110,7 +111,7 @@ export const FormSectionCashIn = React.memo(function FormSectionCashIn({
     <div>
       {/* Display existing total cash-in with adjustment breakdown */}
       {totalCashIn !== undefined && (
-        <div className="mb-3 p-3 bg-muted rounded-lg space-y-2">
+        <div className="mb-3 rounded-lg border-2 border-border/50 bg-card/30 p-3 space-y-2">
           {/* Header row with total and adjust button */}
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Total Cash In</span>
@@ -162,10 +163,15 @@ export const FormSectionCashIn = React.memo(function FormSectionCashIn({
 
       {/* New buy-in input (editable) */}
       <div className="flex justify-between items-center">
-        <label htmlFor="newBuyIn" className="text-sm font-medium">
+        <Label htmlFor="newBuyIn" className="text-sm text-muted-foreground">
           New Buy-In
-        </label>
-        <Button onClick={handleReset} variant="outline" size="sm">
+        </Label>
+        <Button
+          onClick={handleReset}
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs font-semibold uppercase tracking-wider"
+        >
           Reset
         </Button>
       </div>
@@ -178,7 +184,7 @@ export const FormSectionCashIn = React.memo(function FormSectionCashIn({
           type="number"
           value={value}
           onChange={handleChange}
-          className="h-12 text-lg text-center"
+          className="h-12 text-lg text-center font-mono tabular-nums"
         />
         <Button
           onClick={() => handleIncrement(1)}

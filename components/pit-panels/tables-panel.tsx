@@ -133,7 +133,10 @@ export function TablesPanel({
               <LayoutGrid className="h-4 w-4 text-accent" />
             </div>
             <div>
-              <h2 className="text-base font-semibold tracking-tight">
+              <h2
+                className="text-sm font-bold uppercase tracking-widest"
+                style={{ fontFamily: 'monospace' }}
+              >
                 Table Layout
               </h2>
               <p className="text-xs text-muted-foreground">Loading...</p>
@@ -151,8 +154,11 @@ export function TablesPanel({
   if (!selectedTable) {
     return (
       <div className="flex flex-col h-full items-center justify-center p-8">
-        <div className="text-sm font-medium text-muted-foreground">
-          Select a table to view layout
+        <div
+          className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Select a Table
         </div>
       </div>
     );
@@ -168,7 +174,10 @@ export function TablesPanel({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold tracking-tight">
+              <h2
+                className="text-sm font-bold uppercase tracking-widest"
+                style={{ fontFamily: 'monospace' }}
+              >
                 {tableName}
               </h2>
               {/* Session status widget — positioned next to table name */}
@@ -234,7 +243,7 @@ export function TablesPanel({
         </div>
 
         {/* Table Layout - Fills remaining space */}
-        <div className="flex-1 relative overflow-hidden rounded-lg border border-border/40 bg-card/30 backdrop-blur-sm flex flex-col min-h-0">
+        <div className="flex-1 relative overflow-hidden rounded-lg border-2 border-border/40 bg-card/30 backdrop-blur-sm flex flex-col min-h-0">
           {/* Section Header - Compact, responsive */}
 
           {/* Table Terminal - Centered, responsive padding */}

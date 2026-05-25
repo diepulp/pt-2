@@ -5,6 +5,7 @@ import React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useChipsTakenField } from '@/hooks/ui/use-rating-slip-modal';
 
 import { IncrementButtonGroup } from './increment-button-group';
@@ -55,9 +56,9 @@ export const FormSectionChipsTaken = React.memo(
     return (
       <div>
         <div className="flex justify-between items-center">
-          <label htmlFor="chipsTaken" className="text-sm font-medium">
+          <Label htmlFor="chipsTaken" className="text-sm text-muted-foreground">
             Chips Taken
-          </label>
+          </Label>
         </div>
         <div className="flex items-center space-x-2 mt-1">
           <Button onClick={handleDecrement} variant="outline" size="icon">
@@ -68,7 +69,7 @@ export const FormSectionChipsTaken = React.memo(
             type="number"
             value={value}
             onChange={handleChange}
-            className="h-12 text-lg text-center"
+            className="h-12 text-lg text-center font-mono tabular-nums"
             placeholder="Enter chips taken"
           />
           <Button

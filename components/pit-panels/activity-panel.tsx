@@ -208,8 +208,13 @@ export function ActivityPanel({ onSlipClick }: ActivityPanelProps) {
               <Activity className="h-5 w-5 text-accent" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">Activity</h2>
-              <p className="text-sm text-muted-foreground">
+              <h2
+                className="text-lg font-bold uppercase tracking-widest"
+                style={{ fontFamily: 'monospace' }}
+              >
+                Activity
+              </h2>
+              <p className="text-xs text-muted-foreground">
                 Loading players...
               </p>
             </div>
@@ -237,8 +242,13 @@ export function ActivityPanel({ onSlipClick }: ActivityPanelProps) {
               <Activity className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">Activity</h2>
-              <p className="text-sm text-destructive">
+              <h2
+                className="text-lg font-bold uppercase tracking-widest"
+                style={{ fontFamily: 'monospace' }}
+              >
+                Activity
+              </h2>
+              <p className="text-xs text-destructive">
                 {error?.message ?? 'Failed to load players'}
               </p>
             </div>
@@ -257,8 +267,13 @@ export function ActivityPanel({ onSlipClick }: ActivityPanelProps) {
             <Activity className="h-5 w-5 text-accent" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold tracking-tight">Activity</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2
+              className="text-lg font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Activity
+            </h2>
+            <p className="text-xs text-muted-foreground">
               {sortedPlayers.length} active player
               {sortedPlayers.length !== 1 ? 's' : ''} across all tables
             </p>
@@ -327,31 +342,59 @@ export function ActivityPanel({ onSlipClick }: ActivityPanelProps) {
             <TableHeader>
               <TableRow className="hover:bg-transparent border-border/40">
                 {/* Name - Always visible */}
-                <TableHead className="font-semibold">Name</TableHead>
+                <TableHead
+                  className="text-xs font-bold uppercase tracking-widest"
+                  style={{ fontFamily: 'monospace' }}
+                >
+                  Name
+                </TableHead>
                 {/* Birthday - Always visible */}
-                <TableHead className="font-semibold">Birthday</TableHead>
+                <TableHead
+                  className="text-xs font-bold uppercase tracking-widest"
+                  style={{ fontFamily: 'monospace' }}
+                >
+                  Birthday
+                </TableHead>
                 {/* Table/Pit - Hidden on mobile */}
-                <TableHead className="font-semibold hidden md:table-cell">
+                <TableHead
+                  className="text-xs font-bold uppercase tracking-widest hidden md:table-cell"
+                  style={{ fontFamily: 'monospace' }}
+                >
                   Table / Pit
                 </TableHead>
                 {/* Seat - Hidden on tablet and mobile */}
-                <TableHead className="font-semibold hidden lg:table-cell">
+                <TableHead
+                  className="text-xs font-bold uppercase tracking-widest hidden lg:table-cell"
+                  style={{ fontFamily: 'monospace' }}
+                >
                   Seat
                 </TableHead>
                 {/* Duration - Hidden on mobile */}
-                <TableHead className="font-semibold hidden md:table-cell">
+                <TableHead
+                  className="text-xs font-bold uppercase tracking-widest hidden md:table-cell"
+                  style={{ fontFamily: 'monospace' }}
+                >
                   Duration
                 </TableHead>
                 {/* Status - Hidden on tablet and mobile */}
-                <TableHead className="font-semibold hidden lg:table-cell">
+                <TableHead
+                  className="text-xs font-bold uppercase tracking-widest hidden lg:table-cell"
+                  style={{ fontFamily: 'monospace' }}
+                >
                   Status
                 </TableHead>
                 {/* Tier - Hidden on tablet and mobile */}
-                <TableHead className="font-semibold hidden lg:table-cell">
+                <TableHead
+                  className="text-xs font-bold uppercase tracking-widest hidden lg:table-cell"
+                  style={{ fontFamily: 'monospace' }}
+                >
                   Tier
                 </TableHead>
                 {/* Avg Bet - Hidden on tablet and mobile */}
-                <TableHead className="font-semibold hidden lg:table-cell text-right">
+                <TableHead
+                  className="text-xs font-bold uppercase tracking-widest hidden lg:table-cell text-right"
+                  style={{ fontFamily: 'monospace' }}
+                >
                   Avg Bet
                 </TableHead>
               </TableRow>
@@ -458,7 +501,10 @@ export function ActivityPanel({ onSlipClick }: ActivityPanelProps) {
             <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted/50 border border-border/50 mb-4">
               <Clock className="h-8 w-8 text-muted-foreground/50" />
             </div>
-            <p className="text-sm font-medium text-muted-foreground">
+            <p
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
               {activitySearchQuery
                 ? 'No players match your search'
                 : 'No active players'}

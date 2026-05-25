@@ -5,6 +5,7 @@ import React, { useMemo } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -13,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useMovePlayerFields } from '@/hooks/ui';
+import { cn } from '@/lib/utils';
 
 // Placeholder types - will be replaced with actual service types
 interface RatingSlipTableDto {
@@ -116,9 +118,12 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
   return (
     <div>
       <div className="flex justify-between items-center">
-        <label htmlFor="movePlayerTable" className="text-sm font-medium">
+        <Label
+          htmlFor="movePlayerTable"
+          className="text-sm text-muted-foreground"
+        >
           Move Player
-        </label>
+        </Label>
         {tableId && currentTable && (
           <span className="text-xs text-muted-foreground">
             Currently at: {currentTableName}
@@ -127,7 +132,7 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
       </div>
       <div className="grid grid-cols-2 gap-2 mt-1">
         <Select value={tableId || ''} onValueChange={handleTableChange}>
-          <SelectTrigger id="movePlayerTable">
+          <SelectTrigger id="movePlayerTable" className="font-mono">
             <SelectValue placeholder="Select table">
               {currentTable
                 ? `${currentTable.name || 'Unnamed Table'} (${currentTable.seats_available} seats)`
@@ -156,10 +161,13 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
             placeholder={seatPlaceholder}
             value={seatNumber}
             onChange={handleSeatChange}
-            className={seatError ? 'border-red-500' : ''}
+            className={cn(
+              'font-mono tabular-nums',
+              seatError ? 'border-destructive' : '',
+            )}
           />
           {seatError && (
-            <div className="flex items-center gap-1 text-red-500 text-xs">
+            <div className="flex items-center gap-1 text-destructive text-xs">
               <AlertCircle className="h-3 w-3" />
               {seatError}
             </div>
@@ -168,7 +176,8 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
       </div>
       <Button
         type="button"
-        className="w-full mt-2"
+        size="sm"
+        className="w-full mt-2 h-8 text-xs font-semibold uppercase tracking-wider"
         onClick={onMovePlayer}
         disabled={isDisabled}
       >

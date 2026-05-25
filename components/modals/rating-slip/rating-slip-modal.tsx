@@ -495,15 +495,28 @@ export function RatingSlipModal({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Error Loading Rating Slip</DialogTitle>
+            <DialogTitle
+              className="text-sm font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Error Loading Rating Slip
+            </DialogTitle>
             <DialogDescription className="sr-only">
               An error occurred while loading the rating slip data.
             </DialogDescription>
           </DialogHeader>
-          <div className="p-4 bg-red-950/80 text-red-200 border border-red-800 rounded-lg font-medium">
-            {getErrorMessage(fetchError)}
+          <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+            <p className="text-xs text-destructive">
+              {getErrorMessage(fetchError)}
+            </p>
           </div>
-          <Button onClick={onClose}>Close</Button>
+          <Button
+            size="sm"
+            className="h-8 text-xs font-semibold uppercase tracking-wider"
+            onClick={onClose}
+          >
+            Close
+          </Button>
         </DialogContent>
       </Dialog>
     );
@@ -515,15 +528,26 @@ export function RatingSlipModal({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>No Data Available</DialogTitle>
+            <DialogTitle
+              className="text-sm font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              No Data Available
+            </DialogTitle>
             <DialogDescription className="sr-only">
               Rating slip data could not be loaded.
             </DialogDescription>
           </DialogHeader>
-          <p className="text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Rating slip data is not available.
           </p>
-          <Button onClick={onClose}>Close</Button>
+          <Button
+            size="sm"
+            className="h-8 text-xs font-semibold uppercase tracking-wider"
+            onClick={onClose}
+          >
+            Close
+          </Button>
         </DialogContent>
       </Dialog>
     );
@@ -607,8 +631,11 @@ export function RatingSlipModal({
             </div>
           )}
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-3">
-              <span>Rating Slip - {playerName}</span>
+            <DialogTitle
+              className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest"
+              style={{ fontFamily: 'monospace' }}
+            >
+              <span>Rating Slip — {playerName}</span>
               {modalData?.player?.cardNumber && (
                 <span className="text-sm text-muted-foreground">
                   (Card: {modalData.player.cardNumber})
@@ -649,15 +676,19 @@ export function RatingSlipModal({
             className="flex-1 overflow-y-auto space-y-6 pr-2"
           >
             {error && (
-              <div className="p-3 bg-red-950/80 text-red-200 border border-red-800 rounded-lg text-sm font-medium">
-                {error}
+              <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+                <p className="min-w-0 break-words text-xs text-destructive">
+                  {error}
+                </p>
               </div>
             )}
 
             {/* Client-side validation error (shown separately from server errors) */}
             {validationError && !error && (
-              <div className="p-3 bg-yellow-950/80 text-yellow-200 border border-yellow-800 rounded-lg text-sm font-medium">
-                {validationError}
+              <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2.5">
+                <p className="min-w-0 break-words text-xs text-amber-600 dark:text-amber-400">
+                  {validationError}
+                </p>
               </div>
             )}
 
@@ -710,28 +741,38 @@ export function RatingSlipModal({
             {/* Financial Summary (if available from service layer) */}
             {/* Uses computed values for reactive binding with Chips Taken input */}
             {modalData && (
-              <div className="p-4 bg-card border border-border rounded-lg">
-                <h3 className="text-sm font-semibold mb-3">
+              <div className="rounded-lg border-2 border-border/50 bg-card/30 p-4">
+                <h3
+                  className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3"
+                  style={{ fontFamily: 'monospace' }}
+                >
                   Financial Summary
                 </h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Cash In:</span>
-                    <span className="font-mono">${totalCashIn.toFixed(2)}</span>
+                    <span className="font-mono tabular-nums">
+                      ${totalCashIn.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Chips Out:</span>
-                    <span className="font-mono">
+                    <span className="font-mono tabular-nums">
                       ${computedChipsOut.toFixed(2)}
                     </span>
                   </div>
-                  <div className="flex justify-between pt-2 border-t">
-                    <span className="font-semibold">Net Position:</span>
+                  <div className="flex justify-between pt-2 border-t border-border/50">
                     <span
-                      className={`font-mono font-semibold ${
+                      className="font-semibold text-xs uppercase tracking-wider"
+                      style={{ fontFamily: 'monospace' }}
+                    >
+                      Net Position:
+                    </span>
+                    <span
+                      className={`font-mono tabular-nums font-semibold ${
                         computedNetPosition >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-destructive'
                       }`}
                     >
                       ${computedNetPosition.toFixed(2)}
@@ -742,13 +783,16 @@ export function RatingSlipModal({
             )}
 
             {/* Loyalty Points Display */}
-            <div className="p-4 bg-card border border-border rounded-lg">
+            <div className="rounded-lg border-2 border-border/50 bg-card/30 p-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">
-                  Current Points Balance
+                <span
+                  className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                  style={{ fontFamily: 'monospace' }}
+                >
+                  Points Balance
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xl font-bold text-primary">
+                  <span className="text-xl font-bold text-foreground font-mono tabular-nums">
                     {currentBalance.toLocaleString()}
                   </span>
                   <Button
@@ -782,7 +826,10 @@ export function RatingSlipModal({
                 modalData?.slip.status === 'paused') && (
                 <div className="mt-3 pt-3 border-t border-border">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
+                    <span
+                      className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                      style={{ fontFamily: 'monospace' }}
+                    >
                       Session Reward Estimate
                       {isPaused && (
                         <span className="ml-2 text-amber-400 text-xs">
@@ -791,7 +838,7 @@ export function RatingSlipModal({
                       )}
                     </span>
                     <span
-                      className={`text-lg font-semibold ${isPaused ? 'text-amber-400' : 'text-green-600'}`}
+                      className={`text-lg font-semibold font-mono tabular-nums ${isPaused ? 'text-amber-400' : 'text-green-600 dark:text-green-400'}`}
                     >
                       {suggestedPoints != null
                         ? `+${suggestedPoints.toLocaleString()} pts`
@@ -808,9 +855,9 @@ export function RatingSlipModal({
 
               {/* Player Tier (if available) */}
               {modalData?.loyalty?.tier && (
-                <div className="mt-2 text-xs text-muted-foreground">
+                <div className="mt-2 text-xs text-muted-foreground font-mono">
                   Tier:{' '}
-                  <span className="uppercase font-semibold">
+                  <span className="uppercase font-bold tracking-wider">
                     {modalData.loyalty.tier}
                   </span>
                 </div>
@@ -831,7 +878,8 @@ export function RatingSlipModal({
           <div className="flex gap-2 flex-shrink-0 pt-4 border-t border-border">
             <Button
               type="button"
-              className="flex-1"
+              size="sm"
+              className="flex-1 h-8 text-xs font-semibold uppercase tracking-wider"
               onClick={handleSave}
               disabled={
                 isPending ||
@@ -860,7 +908,8 @@ export function RatingSlipModal({
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1 border-amber-500/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 hover:border-amber-400"
+                size="sm"
+                className="flex-1 h-8 text-xs font-semibold uppercase tracking-wider border-amber-500/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 hover:border-amber-400"
                 onClick={handlePauseSession}
                 disabled={isPauseResumeLoading || isPending || isSavePending}
                 aria-label="Pause session - stops loyalty accrual and session timer"
@@ -879,7 +928,8 @@ export function RatingSlipModal({
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 hover:border-emerald-400"
+                size="sm"
+                className="flex-1 h-8 text-xs font-semibold uppercase tracking-wider border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 hover:border-emerald-400"
                 onClick={handleResumeSession}
                 disabled={isPauseResumeLoading || isPending || isSavePending}
                 aria-label="Resume session - restarts loyalty accrual and session timer"
@@ -898,7 +948,8 @@ export function RatingSlipModal({
             <Button
               type="button"
               variant="destructive"
-              className="flex-1"
+              size="sm"
+              className="flex-1 h-8 text-xs font-semibold uppercase tracking-wider"
               onClick={handleCloseSession}
               disabled={isPending || isSavePending || !!error}
             >

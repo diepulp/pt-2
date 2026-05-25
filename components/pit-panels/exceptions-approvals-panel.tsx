@@ -106,7 +106,10 @@ export function ExceptionsApprovalsPanel({
       <div className="flex items-center gap-3 border-b border-border/40 px-4 py-3">
         <div className="h-5 w-1 rounded-full bg-accent" />
         <div className="flex-1">
-          <h3 className="text-sm font-semibold tracking-tight text-foreground">
+          <h3
+            className="text-sm font-bold uppercase tracking-widest text-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
             Exceptions & Approvals
           </h3>
           <p className="text-[10px] font-mono text-muted-foreground/70">
