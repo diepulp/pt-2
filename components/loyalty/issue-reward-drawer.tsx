@@ -13,6 +13,7 @@
 
 'use client';
 
+import { Gift } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -149,15 +150,23 @@ function DrawerContent({
       : 0);
 
   return (
-    <>
-      <SheetHeader>
-        <SheetTitle>Issue Reward</SheetTitle>
-        <SheetDescription>
+    <div className="flex h-full flex-col">
+      <SheetHeader className="border-b border-border/50 px-6 py-4">
+        <div className="flex items-center gap-2">
+          <Gift className="h-4 w-4 text-accent" />
+          <SheetTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Issue Reward
+          </SheetTitle>
+        </div>
+        <SheetDescription className="text-xs text-muted-foreground">
           Select a reward to issue to {playerName}
         </SheetDescription>
       </SheetHeader>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className="flex-1 overflow-y-auto px-6 py-5">
         {step === 'select' && <RewardSelector onSelect={handleSelectReward} />}
 
         {step === 'confirm' &&
@@ -202,7 +211,7 @@ function DrawerContent({
           />
         )}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -235,7 +244,10 @@ export function IssueRewardDrawer({
 }: IssueRewardDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col p-0 sm:max-w-md"
+      >
         {/* Key-based reset: remount DrawerContent on each open */}
         <DrawerContent
           key={open ? 'open' : 'closed'}

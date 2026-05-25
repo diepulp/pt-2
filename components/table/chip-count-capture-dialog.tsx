@@ -135,27 +135,35 @@ export function ChipCountCaptureDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[560px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Calculator className="size-5 text-accent" />
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 sm:max-w-[560px]">
+        <DialogHeader className="pb-4">
+          <DialogTitle
+            className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            <Calculator className="size-4 text-accent" />
             Chip Count
           </DialogTitle>
-          <DialogDescription>
-            Record the chip inventory for this table. Enter the quantity for
-            each denomination.
+          <DialogDescription className="text-sm">
+            Record chip inventory for this table. Enter quantity per
+            denomination.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="flex-1 space-y-5 overflow-y-auto pr-1">
           {/* Snapshot Type Selector */}
-          <div className="space-y-2">
-            <Label htmlFor="snapshot-type">Snapshot Type</Label>
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="snapshot-type"
+              className="text-sm text-muted-foreground"
+            >
+              Snapshot Type
+            </Label>
             <Select
               value={snapshotType}
               onValueChange={(v) => setSnapshotType(v as SnapshotType)}
             >
-              <SelectTrigger id="snapshot-type">
+              <SelectTrigger id="snapshot-type" className="font-mono">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
@@ -167,18 +175,18 @@ export function ChipCountCaptureDialog({
           </div>
 
           {/* Denomination Grid */}
-          <div className="space-y-3">
-            <Label>Chip Counts</Label>
-            <div className="grid gap-3">
+          <div className="space-y-2">
+            <Label className="text-sm text-muted-foreground">Chip Counts</Label>
+            <div className="grid gap-2">
               {STANDARD_DENOMINATIONS.map((denom) => (
                 <div
                   key={denom}
-                  className="flex items-center gap-3 rounded-lg border p-3"
+                  className="flex items-center gap-3 rounded-lg border-2 border-border/50 p-2.5"
                 >
                   {/* Chip Badge */}
                   <div
                     className={cn(
-                      'flex h-10 w-16 items-center justify-center rounded-full border-2 font-bold',
+                      'flex h-9 w-14 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold',
                       CHIP_COLORS[denom],
                     )}
                   >
@@ -191,7 +199,7 @@ export function ChipCountCaptureDialog({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-10 shrink-0 p-0 text-xs font-semibold"
                       onClick={() => handleQuickIncrement(denom, -10)}
                       disabled={logMutation.isPending}
                     >
@@ -204,7 +212,7 @@ export function ChipCountCaptureDialog({
                       onChange={(e) =>
                         handleQuantityChange(denom, e.target.value)
                       }
-                      className="w-24 text-center"
+                      className="w-20 text-center font-mono tabular-nums"
                       placeholder="0"
                       disabled={logMutation.isPending}
                     />
@@ -212,7 +220,7 @@ export function ChipCountCaptureDialog({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-10 shrink-0 p-0 text-xs font-semibold"
                       onClick={() => handleQuickIncrement(denom, 10)}
                       disabled={logMutation.isPending}
                     >
@@ -221,7 +229,10 @@ export function ChipCountCaptureDialog({
                   </div>
 
                   {/* Value Display */}
-                  <div className="w-24 text-right text-sm text-muted-foreground">
+                  <div
+                    className="w-20 shrink-0 text-right text-sm tabular-nums text-muted-foreground"
+                    style={{ fontFamily: 'monospace' }}
+                  >
                     ${((chipset[String(denom)] ?? 0) * denom).toLocaleString()}
                   </div>
                 </div>
@@ -230,31 +241,53 @@ export function ChipCountCaptureDialog({
           </div>
 
           {/* Total Display */}
-          <div className="flex items-center justify-between rounded-lg bg-accent/10 p-4">
+          <div className="flex items-center justify-between rounded-lg border-2 border-accent/30 bg-accent/5 p-3">
             <div className="flex items-center gap-2">
-              <Package className="size-5 text-accent" />
-              <span className="font-semibold">Total Bankroll</span>
+              <Package className="size-4 text-accent" />
+              <span
+                className="text-xs font-bold uppercase tracking-widest text-accent"
+                style={{ fontFamily: 'monospace' }}
+              >
+                Total Bankroll
+              </span>
             </div>
-            <span className="text-2xl font-bold text-accent">
+            <span
+              className="text-xl font-bold tabular-nums text-accent"
+              style={{ fontFamily: 'monospace' }}
+            >
               ${total.toLocaleString()}
             </span>
           </div>
 
           {/* Verified By (optional) */}
-          <div className="space-y-2">
-            <Label htmlFor="verified-by">Verified By (optional)</Label>
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="verified-by"
+              className="text-sm text-muted-foreground"
+            >
+              Verified By
+              <span className="ml-1 text-xs text-muted-foreground/50">
+                optional
+              </span>
+            </Label>
             <Input
               id="verified-by"
               placeholder="Name of verifying staff member"
               value={verifiedBy}
               onChange={(e) => setVerifiedBy(e.target.value)}
               disabled={logMutation.isPending}
+              className="font-mono"
             />
           </div>
 
           {/* Notes (optional) */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes (optional)</Label>
+          <div className="space-y-1.5 pb-1">
+            <Label htmlFor="notes" className="text-sm text-muted-foreground">
+              Notes
+              <span className="ml-1 text-xs text-muted-foreground/50">
+                optional
+              </span>
+            </Label>
             <Textarea
               id="notes"
               placeholder="Add any notes about this chip count..."
@@ -263,25 +296,31 @@ export function ChipCountCaptureDialog({
               rows={2}
               maxLength={1000}
               disabled={logMutation.isPending}
+              className="font-mono"
             />
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 border-t border-border/50 pt-4 sm:gap-0">
           <Button
+            type="button"
             variant="outline"
+            size="sm"
+            className="h-8 text-xs font-semibold uppercase tracking-wider"
             onClick={() => onOpenChange(false)}
             disabled={logMutation.isPending}
           >
             Cancel
           </Button>
           <Button
+            size="sm"
+            className="h-8 gap-1.5 text-xs font-semibold uppercase tracking-wider"
             onClick={handleSubmit}
             disabled={logMutation.isPending || total === 0}
           >
             {logMutation.isPending ? (
               <>
-                <Loader2 className="mr-2 size-4 animate-spin" />
+                <Loader2 className="size-3 animate-spin" />
                 Saving...
               </>
             ) : (
