@@ -4,6 +4,8 @@ import {
   AlertTriangle,
   Bell,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock,
   DollarSign,
   Flag,
@@ -44,6 +46,8 @@ function formatDollars(cents: number): string {
 
 interface ExceptionsApprovalsPanelProps {
   casinoId: string;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 /**
@@ -58,6 +62,8 @@ interface ExceptionsApprovalsPanelProps {
  */
 export function ExceptionsApprovalsPanel({
   casinoId,
+  isCollapsed = false,
+  onToggleCollapse,
 }: ExceptionsApprovalsPanelProps) {
   const [activeTab, setActiveTab] = React.useState('alerts');
   const { alerts, approvals, flags, isLoading } = useExceptionsData(casinoId);
@@ -108,6 +114,19 @@ export function ExceptionsApprovalsPanel({
           </p>
         </div>
         {alerts.length > 0 && <StatusPulse />}
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/50 transition-colors hover:bg-muted/40 hover:text-foreground"
+            title={isCollapsed ? 'Expand panel' : 'Collapse panel'}
+          >
+            {isCollapsed ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
+            )}
+          </button>
+        )}
       </div>
 
       {/* Tabs */}

@@ -2,6 +2,7 @@
 
 import { Activity, CalendarClock, ClipboardList, Users } from 'lucide-react';
 import * as React from 'react';
+import type { ImperativePanelHandle } from 'react-resizable-panels';
 
 import { Badge } from '@/components/ui/badge';
 import {
@@ -27,6 +28,18 @@ export function PitPanelsDashboardLayout({
   casinoId,
 }: PitPanelsDashboardLayoutProps) {
   const isMobile = useIsMobile();
+  const panel3Ref = React.useRef<ImperativePanelHandle>(null);
+  const [isPanel3Collapsed, setIsPanel3Collapsed] = React.useState(false);
+
+  const togglePanel3 = React.useCallback(() => {
+    const panel = panel3Ref.current;
+    if (!panel) return;
+    if (panel.isCollapsed()) {
+      panel.expand();
+    } else {
+      panel.collapse();
+    }
+  }, []);
 
   if (isMobile) {
     return (
@@ -58,9 +71,21 @@ export function PitPanelsDashboardLayout({
             <ShiftOpsPanel />
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={50} minSize={25}>
+          <ResizablePanel
+            ref={panel3Ref}
+            defaultSize={50}
+            minSize={20}
+            collapsible
+            collapsedSize={0}
+            onCollapse={() => setIsPanel3Collapsed(true)}
+            onExpand={() => setIsPanel3Collapsed(false)}
+          >
             <div className="h-full border-t border-border/40">
-              <ExceptionsApprovalsPanel casinoId={casinoId} />
+              <ExceptionsApprovalsPanel
+                casinoId={casinoId}
+                isCollapsed={isPanel3Collapsed}
+                onToggleCollapse={togglePanel3}
+              />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
