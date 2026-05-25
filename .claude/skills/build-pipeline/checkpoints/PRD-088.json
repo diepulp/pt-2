@@ -1,0 +1,167 @@
+{
+  "prd_id": "PRD-088",
+  "exec_spec_id": "EXEC-088",
+  "exec_spec_path": "docs/21-exec-spec/EXEC-088-wave2-phase-2.4-operational-telemetry-projection.md",
+  "status": "complete",
+  "created_at": "2026-05-21T08:22:35Z",
+  "gov010_check": "waived:wave-2-phase-2.4-continuation-governing-adrs-in-affects-field",
+  "validation": {
+    "validate_exec_spec": "passed_with_warnings",
+    "warnings": ["SCHEMA GATE: Spec has schema changes but no explicit schema-verification gate (advisory)"],
+    "temporal_integrity": "passed",
+    "stale_refs": []
+  },
+  "workstreams": {
+    "WS1_DB": {
+      "status": "complete",
+      "executor": "backend-service-builder",
+      "completed_at": "2026-05-21T09:15:00Z",
+      "artifacts": [
+        "supabase/migrations/20260521015409_create_shift_operational_projection.sql",
+        "supabase/migrations/20260521022656_create_rpc_claim_operational_outbox_batch.sql",
+        "supabase/migrations/20260521022703_create_rpc_process_operational_projection.sql",
+        "supabase/migrations/20260521022708_create_idx_finance_outbox_operational_backlog.sql"
+      ],
+      "gate": "schema-validation",
+      "gate_result": "passed"
+    },
+    "WS2_CONSUMER": {
+      "status": "complete",
+      "executor": "backend-service-builder",
+      "completed_at": "2026-05-21T10:30:00Z",
+      "artifacts": [
+        "services/player-financial/outbox-operational-consumer.ts",
+        "services/player-financial/dtos.ts (OperationalConsumerResultDTO, OutboxOperationalBacklogDTO)",
+        "app/api/internal/outbox-relay/route.ts",
+        "app/api/internal/outbox-observability/route.ts (operationalBacklog breakdown)"
+      ],
+      "gate": "type-check",
+      "gate_result": "passed",
+      "gate_evidence": {
+        "type_check": "exit 0",
+        "lint": "exit 0",
+        "notes": [
+          "rpc_process_operational_projection uses p_message_id (not p_event_id) — confirmed from migration",
+          "Operational branch: no rpc_acknowledge_outbox_delivery (processed_at stamped atomically by RPC, DEC-EXEC-3)",
+          "Relay response restructured: { classA: {processed, failed}, operational: {processed, duplicate, errors} }",
+          "Observability route adds 3-way operational backlog breakdown: claimable (<5 attempts) + deadLetter (>=5 attempts)",
+          "Eslint-disable comments added for standalone DTO types (not derivable from Database types)"
+        ]
+      }
+    },
+    "WS3_COMPLETENESS": {
+      "status": "complete",
+      "executor": "api-builder",
+      "completed_at": "2026-05-21T10:30:00Z",
+      "artifacts": [
+        "services/player-financial/crud.ts (getShiftOperationalCompleteness)",
+        "services/player-financial/dtos.ts (OperationalProjectionResponseDTO)",
+        "hooks/table-context/use-buyin-telemetry.ts (shiftWindow→gamingDay, table_buyin_telemetry removed)",
+        "components/table/grind-buyin-panel.tsx (gamingDay prop, undo path removed)",
+        "app/api/v1/table-context/operational-projection/route.ts",
+        "docs/25-api-data/api-surface.openapi.yaml (GET /table-context/operational-projection added)"
+      ],
+      "gate": "type-check",
+      "gate_result": "passed",
+      "gate_evidence": {
+        "type_check": "exit 0",
+        "lint": "exit 0"
+      }
+    },
+    "WS4_PANEL": {
+      "status": "complete",
+      "executor": "frontend-design-pt-2",
+      "completed_at": "2026-05-21T11:15:00Z",
+      "artifacts": [
+        "components/pit-panels/tables-panel.tsx (gamingDay?: string prop, GrindBuyinPanel mount)",
+        "components/pit-panels/panel-container.tsx (gamingDay?.date passed to both TablesPanel usages)"
+      ],
+      "gate": "type-check",
+      "gate_result": "passed",
+      "gate_evidence": {
+        "type_check": "exit 0",
+        "lint": "exit 0",
+        "prettier": "exit 0",
+        "notes": [
+          "GrindBuyinPanel rendered only within selectedTable non-null guard block (conditional on gamingDay truthy)",
+          "gamingDay threaded from PanelContainer.gamingDay?.date → TablesPanel.gamingDay → GrindBuyinPanel.gamingDay",
+          "No new Zustand/global state added — uses PanelContainer's existing gamingDay prop",
+          "Both renderActivePanel() TablesPanel branches updated (case 'tables' and default)"
+        ]
+      }
+    },
+    "WS5_TESTS": {
+      "status": "complete",
+      "executor": "qa-specialist",
+      "completed_at": "2026-05-21T12:00:00Z",
+      "artifacts": [
+        "services/player-financial/__tests__/outbox-operational-consumer.test.ts (NEW)",
+        "services/player-financial/__tests__/operational-authority-degradation.test.ts (NEW)",
+        "services/player-financial/__tests__/shift-operational-completeness.test.ts (NEW)",
+        "services/player-financial/__tests__/outbox-relay.test.ts (UPDATED — classA/operational response shape)",
+        "app/api/internal/outbox-observability/__tests__/route.test.ts (UPDATED — 3-way backlog breakdown)",
+        "app/api/v1/table-context/operational-projection/__tests__/route.test.ts (NEW)"
+      ],
+      "gate": "type-check",
+      "gate_result": "passed",
+      "gate_evidence": {
+        "type_check": "exit 0",
+        "tests": "58 passed, 0 failed across 6 suites",
+        "notes": [
+          "ADR-054 R4 authority degradation: all 5 completeness steps return type='estimated'",
+          "DEC-EXEC-3: no rpc_acknowledge_outbox_delivery call for operational branch",
+          "DEC-EXEC-4: casinoId from rlsContext only (VALID_PARAMS uses RFC 4122 compliant UUID a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11)",
+          "Observability: .lt('delivery_attempts', 5) claimable / .gte('delivery_attempts', 5) deadLetter assertions",
+          "UUID fix: 11111111-1111-1111-1111-111111111111 fails Zod RFC 4122 (variant byte must be 8-b); replaced with valid UUID"
+        ]
+      }
+    },
+    "WS6_GOVERNANCE": {
+      "status": "complete",
+      "executor": "lead-architect",
+      "completed_at": "2026-05-21T12:30:00Z",
+      "artifacts": [
+        "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md (Phase 2.4 marked COMPLETE, deliverables updated, PWB-003 closed, §8 updated)",
+        "docs/issues/gaps/financial-data-distribution-standard/wave-2/phase-2.3a/CORE-OPERATIONAL-LOOP.md (Category B producer status updated, Layer 5 live, Phase 6 cert row updated)"
+      ],
+      "gate": "type-check",
+      "gate_result": "passed",
+      "gate_evidence": {
+        "type_check": "exit 0",
+        "notes": [
+          "WAVE-2-ROLLOUT-MAP.md: status header advanced to Phase 2.4 COMPLETE / cursor at Phase 2.5",
+          "Phase 2.4 heading updated to ✅ COMPLETE 2026-05-21 with PRD/EXEC references",
+          "All 14 deliverable checkboxes marked [x] with migration IDs and file paths",
+          "Exit gate section updated with ✅ per criterion",
+          "PWB-003 row in §10 updated to CLOSED with delivery date and artifact",
+          "Promotion rule updated to reflect PWB-003 delivered (not promoted)",
+          "§8 criterion 4 updated to reflect Phase 2.4 live status",
+          "CORE-OPERATIONAL-LOOP.md: Category B renamed to 'Mounted component' with Phase 2.4 delivery note",
+          "Layer 5 in isolation protocol updated to LIVE (Phase 2.3 + Phase 2.4)",
+          "Phase 5 Operational Trust Gate: Producer 6 row updated to reflect UI workflow now available",
+          "Footer trust gate rationale updated to reflect both projection consumers live and Category B resolved"
+        ]
+      }
+    }
+  },
+  "execution_phases": {
+    "phase_1": { "workstreams": ["WS1_DB"], "status": "complete", "completed_at": "2026-05-21T09:15:00Z" },
+    "phase_2": { "workstreams": ["WS2_CONSUMER", "WS3_COMPLETENESS"], "parallel": true, "status": "complete", "completed_at": "2026-05-21T10:30:00Z" },
+    "phase_3": { "workstreams": ["WS4_PANEL"], "status": "complete", "completed_at": "2026-05-21T11:15:00Z" },
+    "phase_4": { "workstreams": ["WS5_TESTS"], "status": "complete", "completed_at": "2026-05-21T12:00:00Z" },
+    "phase_5": { "workstreams": ["WS6_GOVERNANCE"], "status": "complete", "completed_at": "2026-05-21T12:30:00Z" }
+  },
+  "decisions": {
+    "DEC-EXEC-1": "Operational events use amount_cents in JSONB payload (not amount)",
+    "DEC-EXEC-2": "useGrindBuyinTotal hook interface changes from shiftWindow to gamingDay",
+    "DEC-EXEC-3": "No separate acknowledge RPC for operational branch; processed_at stamped atomically",
+    "DEC-EXEC-4": "New GET /api/v1/table-context/operational-projection route required (service_role-only table)"
+  },
+  "last_updated": "2026-05-21T12:30:00Z",
+  "completed_at": "2026-05-21T12:30:00Z",
+  "session_context": {
+    "all_phases_complete": true,
+    "migration_high_water_mark": "20260521022708",
+    "next_phase": "Phase 2.5 — Observability + Sign-Off (separate PRD required)"
+  }
+}

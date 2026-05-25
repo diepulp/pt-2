@@ -1,0 +1,536 @@
+{
+  "prd_id": "PRD-089",
+  "prd_path": "docs/10-prd/PRD-089-wave2-phase-2.5-observability-and-signoff-v0.md",
+  "exec_spec_id": "EXEC-089",
+  "exec_spec_path": "docs/21-exec-spec/EXEC-089-wave2-phase-2.5-observability-and-signoff.md",
+  "status": "complete",
+  "approval_gate": {
+    "status": "approved",
+    "approved_at": "2026-05-21T00:00:00Z",
+    "e2e_mandate_decision": "waived",
+    "e2e_mandate_waiver_reason": "internal-cron-infrastructure-no-user-journey",
+    "approver": "user (interactive gate)"
+  },
+  "created_at": "2026-05-21T00:00:00Z",
+  "updated_at": "2026-05-21T16:05:00Z",
+  "gov010_check": "waived:wave-2-phase-2.5-signoff-governing-adrs-in-affects-field",
+  "complexity_prescreen": "full",
+  "complexity_override": null,
+  "fib_h_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-H-TRANSACTIONAL-OUTBOX.md",
+  "fib_s_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-S-TRANSACTIONAL-OUTBOX.json",
+  "fib_s_loaded": false,
+  "fib_s_loaded_reason": "PRD-089 frontmatter does not declare structured_ref; pipeline runs in PRD-only mode per intake-traceability-protocol.md",
+  "write_path_classification": "detected",
+  "e2e_mandate_waiver": "internal-cron-infrastructure-no-user-journey",
+  "stage": "phase-2-complete-awaiting-phase-4-devils-advocate",
+  "orchestrator_decisions": [
+    {
+      "id": "WS1-P1-LAG-SQL-DEVIATION",
+      "decided_at": "2026-05-21T14:30:00Z",
+      "decision": "accept_ts_subtraction_deviation",
+      "rationale": "DB-clock invariant preserved: both operands are persisted Postgres timestamps from finance_outbox (created_at by producer trigger, processed_at by rpc_process_*_projection, both via now()). TS arithmetic acceptable as long as no app-server wall clock participates. WS2 scope not expanded.",
+      "constraints": [
+        "fetch only event_id, created_at, processed_at for processedEventIds",
+        "include only successfully processed event_ids",
+        "exclude duplicates, skipped, failed, claim-error, auth-fail outcomes",
+        "no Date.now adjacent to lagSamplesMs assignment",
+        "no app-server current-time subtraction",
+        "no WS2 dependency"
+      ],
+      "acceptance_evidence": "WS1 outbox-relay-log-emission.test.ts 'exclusion by construction' + lag-aggregates.test.ts (30 new tests pass). Code review confirmed no Date.now() in lag-sample production path.",
+      "phase_4_review_disposition": "devils-advocate may revisit at Phase 4; recorded as accepted by orchestrator"
+    }
+  ],
+  "validation": {
+    "validate_exec_spec": "passed_with_warnings",
+    "warnings": ["SCHEMA GATE: Spec has schema changes but no explicit schema-verification gate (advisory; same posture as PRD-088)"],
+    "temporal_integrity": "pending",
+    "stale_refs": []
+  },
+  "audit_patches_applied": [
+    {
+      "id": "EXEC-089-P0-PHASE-24-EVIDENCE-GATE",
+      "severity": "P0",
+      "applied_at": "2026-05-21T00:00:00Z",
+      "targets": ["execution_phases", "WS3_SIGNOFF", "WS4_GOVERNANCE"],
+      "evidence_artifacts_verified": {
+        "prd_088_file": "docs/10-prd/PRD-088-wave2-phase-2.4-operational-telemetry-projection-v0.md",
+        "exec_088_file": "docs/21-exec-spec/EXEC-088-wave2-phase-2.4-operational-telemetry-projection.md",
+        "checkpoint_088_status": "complete",
+        "commit_hash": "931f5ed9",
+        "git_log_match": "feat(outbox): PRD-088 Phase 2.4 — operational telemetry projection complete"
+      }
+    },
+    {"id": "EXEC-089-P1-TEST-GATE-ORDERING", "severity": "P1", "applied_at": "2026-05-21T00:00:00Z", "targets": ["execution_phases"]},
+    {"id": "EXEC-089-P1-LAG-SAMPLE-CLOCK-CONTRACT", "severity": "P1", "applied_at": "2026-05-21T00:00:00Z", "targets": ["WS1_LOG"]},
+    {"id": "EXEC-089-P1-BACKLOG-CLAIMABILITY-DEFINITION", "severity": "P1", "applied_at": "2026-05-21T00:00:00Z", "targets": ["WS1_LOG"]},
+    {"id": "EXEC-089-P1-RETENTION-REPLAY-BOUNDARY-GATE", "severity": "P1", "applied_at": "2026-05-21T00:00:00Z", "targets": ["WS3_SIGNOFF", "WS2_RETENTION"]},
+    {"id": "EXEC-089-P2-EXPLAIN-INDEX-BRITTLENESS", "severity": "P2", "applied_at": "2026-05-21T00:00:00Z", "targets": ["WS2_RETENTION"]}
+  ],
+  "audit_severity_summary": {"P0": 1, "P1": 4, "P2": 1, "total": 6, "all_applied": true},
+  "workstreams": {
+    "WS1_LOG": {
+      "status": "complete",
+      "executor": "backend-service-builder",
+      "dispatched_at": "2026-05-21T04:45:00Z",
+      "completed_at": "2026-05-21T05:05:00Z",
+      "files_written": [
+        "services/player-financial/dtos.ts (amended — added OperationalConsumerResultDTO.lagSamplesMs, ClassARelayBranchResult, OutboxBacklogSize, LagAggregates, OutboxRelayCycleLog discriminated union)",
+        "services/player-financial/outbox-consumer.ts (amended — added collectLagSamplesMs, collectOutboxBacklog, aggregateLagSamples helpers; all observability-soft try/catch)",
+        "services/player-financial/outbox-operational-consumer.ts (amended — OperationalConsumerResult.lagSamplesMs; tracks processed event_ids; calls collectLagSamplesMs after loop)",
+        "app/api/internal/outbox-relay/route.ts (rewritten — emits one structured outbox_relay_cycle log per cycle, FR-1+FR-2 variants; GET export sharing runRelayCycle with POST; HTTP body strips lagSamplesMs to preserve prior contract)",
+        "services/player-financial/__tests__/outbox-relay-log-emission.test.ts (NEW — 17 tests: FR-1/FR-2 log shapes, predicate parity capture, exclusion-by-construction, GET parity, HTTP shape stability)",
+        "services/player-financial/__tests__/lag-aggregates.test.ts (NEW — 13 tests: aggregator percentile math + exclusion-rule invariant documentation)"
+      ],
+      "scope_expansion": [
+        {
+          "file": "services/player-financial/__tests__/outbox-relay.test.ts",
+          "reason": "not in EXEC-SPEC outputs list; modified to (a) preserve real helpers via jest.requireActual instead of full-module mock, (b) add .from() chain mock for new query path, (c) add lagSamplesMs: [] to operational consumer mock returns. Required to keep 13 existing relay tests passing without regression."
+        }
+      ],
+      "audit_patch_evidence": {
+        "P1-LAG-SAMPLE-CLOCK-CONTRACT": {
+          "implementation_location": "services/player-financial/outbox-consumer.ts collectLagSamplesMs (~lines 80-115)",
+          "approach": "Fetch (event_id, created_at, processed_at) for processed event_id set via supabase-js .from('finance_outbox').select(...).in(...); subtract Date.parse(processed_at) - Date.parse(created_at) in TS. Both timestamps DB-clock stamped (created_at by producer trigger, processed_at by rpc_process_*_projection — both via Postgres now()).",
+          "no_dateNow_in_lag_path": true,
+          "literal_sql_deviation": {
+            "audit_patch_prescription": "EXTRACT(EPOCH FROM (processed_at - created_at)) * 1000 (DB-side)",
+            "implementation": "Date.parse subtraction in TS (TS-side, but operating on two DB-clock-stamped strings)",
+            "rationale": "supabase-js cannot express the SQL expression in .select(); adding an RPC was out of scope for WS1 (gate is type-check, not schema-validation). Semantic equivalence holds — both timestamps originate from Postgres now(); no app-server clock participates.",
+            "orchestrator_decision_needed": "Accept the semantic-equivalence deviation OR direct WS2 to add an rpc_get_outbox_lag_samples alongside the cleanup migration. Recommendation: accept (no production correctness impact; devils-advocate may revisit at Phase 4)."
+          },
+          "exclusion_by_construction": "Duplicate / skipped / failed / claim-error / auth-fail outcomes are never pushed to classAProcessedEventIds (Class A) or processedEventIds (operational); they never appear in the .in(event_id, ...) lag query. Verified by 'exclusion by construction' test in outbox-relay-log-emission.test.ts."
+        },
+        "P1-BACKLOG-CLAIMABILITY-DEFINITION": {
+          "ledger_predicate_parity": "MATCH — log-line uses fact_class='ledger' AND processed_at IS NULL, matching rpc_claim_class_a_outbox_batch verbatim.",
+          "operational_predicate_parity": "DRIFT — rpc_claim_operational_outbox_batch (20260521022656) includes event_type IN ('grind.observed','fill.recorded','credit.recorded') filter that the EXEC-SPEC canonical predicate table did not enumerate. Per audit-patch resolution rule ('log-line predicate follows the RPC source of truth'), both operational.claimable and operational.dead_letter log-line predicates now include the same event_type whitelist. Implementation: OPERATIONAL_EVENT_TYPES constant in outbox-consumer.ts; applied in collectOutboxBacklog Promise.all queries.",
+          "drift_tests": [
+            "outbox-relay-log-emission.test.ts > 'operational.claimable predicate includes event_type whitelist + delivery_attempts < 5'",
+            "outbox-relay-log-emission.test.ts > 'operational.dead_letter predicate uses delivery_attempts >= 5 + same event_type whitelist'"
+          ],
+          "exec_spec_table_update_recommended": "Update EXEC-089 §'Backlog count predicate contract' to acknowledge the event_type whitelist requirement (non-blocking; implementation is correct per the audit-patch drift-resolution rule)."
+        }
+      },
+      "gate_evidence": {
+        "type_check": {"command": "npm run type-check", "exit_code": 0, "result": "passed"},
+        "lint_scoped": {
+          "command": "npx eslint --max-warnings=0 (WS1 files only)",
+          "exit_code": 0,
+          "result": "passed",
+          "note": "Full repo lint via 'npm run lint' has pre-existing warnings in unrelated files (out of WS1 scope); WS1-touched files are clean."
+        },
+        "tests": {
+          "command": "npx jest services/player-financial/__tests__/",
+          "exit_code": 0,
+          "result": "passed",
+          "total": 194,
+          "passed": 171,
+          "failed": 0,
+          "skipped": 23,
+          "skipped_reason": "integration tests gated by RUN_INTEGRATION_TESTS=true; not run in WS1 verification",
+          "new_tests": 30
+        }
+      }
+    },
+    "WS2_RETENTION": {
+      "status": "complete",
+      "executor": "backend-service-builder",
+      "dispatched_at": "2026-05-21T14:30:00Z",
+      "completed_at": "2026-05-21T15:00:00Z",
+      "files_written": [
+        "supabase/migrations/20260521142441_create_rpc_cleanup_outbox_processed.sql (NEW — rpc_cleanup_outbox_processed SECURITY DEFINER + idx_finance_outbox_processed_retention partial index)",
+        "app/api/internal/outbox-cleanup/route.ts (NEW — GET-only cron route with CRON_SECRET auth + structured outbox_cleanup_cycle log)",
+        "vercel.json (amended — added daily cron 0 7 * * * for /api/internal/outbox-cleanup)",
+        "app/api/internal/outbox-cleanup/__tests__/route.test.ts (NEW — 11 unit tests: auth, success, error, POST-absence, log shape)",
+        "__tests__/integration/outbox-cleanup.int.test.ts (NEW — 10 integration tests + 1 advisory planner-evidence test gated by RUN_PLANNER_EVIDENCE_TESTS)"
+      ],
+      "scope_expansion": [
+        {
+          "file": "services/player-financial/__tests__/financial-transactions-route-boundary.test.ts",
+          "operational_scope": "lint --fix attempted but reverted; the late-import-after-mocks pattern at line 119 is intentional test setup (route handler imports must follow mock declarations to avoid mock-stripping). Pre-existing warning matches WS1's recorded lint waiver.",
+          "reason": "deliberately not modified — would break test mock pattern"
+        },
+        {
+          "file": "services/player-financial/__tests__/operational-authority-degradation.test.ts",
+          "reason": "auto-fixed import order via eslint --fix; single import-order warning resolved cleanly without test changes"
+        }
+      ],
+      "migration_timestamp": "20260521142441",
+      "migration_naming_compliance": {
+        "format": "YYYYMMDDHHMMSS_descriptive_name.sql — compliant",
+        "timestamp_source": "date +%Y%m%d%H%M%S generated 2026-05-21 14:24:41 UTC — not fabricated",
+        "sorts_after_existing": true,
+        "previous_max_migration": "20260521022708_create_idx_finance_outbox_operational_backlog.sql",
+        "descriptive_name": "create_rpc_cleanup_outbox_processed (35 chars, under 50; snake_case; verb prefix 'create_')"
+      },
+      "audit_patch_evidence": {
+        "P2-EXPLAIN-INDEX-BRITTLENESS": {
+          "implementation_location": "__tests__/integration/outbox-cleanup.int.test.ts (lines ~232-272)",
+          "approach": "Split into three assertions: (a) deterministic index-exists via pg_indexes lookup; (b) deterministic predicate-alignment via indexdef string match for (processed_at, event_id) column tuple + WHERE processed_at IS NOT NULL predicate; (c) advisory planner-evidence test seeding 10k aged + 1k recent rows behind RUN_PLANNER_EVIDENCE_TESTS env gate.",
+          "deterministic_assertions_pass": true,
+          "planner_evidence_test_skipped_by_default": true
+        }
+      },
+      "gate_evidence": {
+        "schema_validation": {
+          "command": "npx supabase migration up --local && npm run db:types-local",
+          "exit_codes": [0, 0],
+          "result": "passed",
+          "evidence": "Migration applied cleanly; rpc_cleanup_outbox_processed present in types/database.types.ts at line 4906"
+        },
+        "type_check": {"command": "npm run type-check", "exit_code": 0, "result": "passed"},
+        "lint_scoped": {
+          "command": "npx eslint --max-warnings=0 app/api/internal/outbox-cleanup/ __tests__/integration/outbox-cleanup.int.test.ts",
+          "exit_code": 0,
+          "result": "passed",
+          "note": "2 prettier rules auto-fixed in route.test.ts during execution; final lint clean. Player-financial dir lint has 2 pre-existing intentional warnings (late-import-after-mocks pattern); not WS2 outputs."
+        },
+        "unit_tests": {
+          "command": "npx jest --silent --testPathPatterns='outbox-cleanup'",
+          "exit_code": 0,
+          "result": "passed",
+          "total": 22,
+          "passed": 11,
+          "skipped": 11,
+          "skipped_reason": "integration tests gated by RUN_INTEGRATION_TESTS=true",
+          "new_tests": 11
+        },
+        "integration_tests": {
+          "command": "RUN_INTEGRATION_TESTS=true (with local Supabase env override) npx jest --silent --testPathPatterns='outbox-cleanup'",
+          "exit_code": 0,
+          "result": "passed",
+          "total": 22,
+          "passed": 21,
+          "skipped": 1,
+          "skipped_reason": "planner-evidence test behind RUN_PLANNER_EVIDENCE_TESTS env gate",
+          "new_tests": 10
+        },
+        "ws1_regression": {
+          "command": "npx jest --silent --testPathPatterns='services/player-financial/__tests__'",
+          "exit_code": 0,
+          "result": "passed",
+          "total": 194,
+          "passed": 171,
+          "skipped": 23,
+          "failed": 0,
+          "note": "No regressions to WS1's outbox-relay-log-emission.test.ts or lag-aggregates.test.ts"
+        }
+      }
+    },
+    "WS3_SIGNOFF": {
+      "status": "complete",
+      "executor": "lead-architect",
+      "dispatched_at": "2026-05-21T15:05:00Z",
+      "completed_at": "2026-05-21T15:20:00Z",
+      "files_written": [
+        "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-2-SIGN-OFF.md (NEW — 338 lines, 8 prescribed sections per PRD §6.3)"
+      ],
+      "scope_expansion": [],
+      "section_compliance": {
+        "section_1_header_summary": "line 26",
+        "section_2_phase_summary": "line 36 — paragraphs for 2.0, PRD-082, 2.1, 2.2, 2.3a, 2.3a investigation, 2.3, 2.4, 2.5; each with PRD / EXEC / commit / migration citations",
+        "section_3_invariant_proof_record": "line 108 — per-producer I1 table (5 producers); I2 baseline; I3/I4 consumer re-verifications for Class A (Phase 2.3) and operational (Phase 2.4); I5 inheritance",
+        "section_4_dec1_resolution": "line 154 — what DEC-1 was, Phase 2.3 resolution, affected DTOs/routes, mixed-class remaining caveat",
+        "section_5_prod_anchor_std_ratification": "line 189 — ratification statement; governance scope; future amendment path",
+        "section_6_post_wave_2_backlog_reconciliation": "line 216 — three separate H2/H3 subsections + three separate tables: §6.1 Unresolved (PWB-001/PWB-002/W2-OBS-CASHOUT-PRODUCER-001) / §6.2 Closed-in-Phase-2.4 (PWB-003 with commit 931f5ed9 evidence) / §6.3 Deferred infrastructure",
+        "section_7_signoff_language_and_certification": "line 250 — GR-1 verbatim phrase + L1-L4 Principle 9 four-level certification table per producer + reading guide for downstream artifacts",
+        "section_8_handoff": "line 292 — §8.1 queued items / §8.2 replay-boundary triple assertion / §8.3 closure statement"
+      },
+      "governance_constraint_verification": {
+        "GR-1_canonical_phrase_verbatim": {
+          "rule": "Wave 2 transport and projection infrastructure complete; workflow-level producer coverage gaps documented and queued",
+          "occurrences": 3,
+          "locations": [
+            "line 28 (§1 opening line)",
+            "line 254 (§7.1 callout blockquote)",
+            "line 334 (§8.3 closure statement)"
+          ],
+          "bare_phrase_check": "Wave 2 complete without qualifier — not present"
+        },
+        "GR-2_three_category_backlog_structure": {
+          "rule": "Three separate tables (not undifferentiated), PWB-003 categorized as CLOSED with PRD-088 / commit 931f5ed9 citation",
+          "verified": true,
+          "evidence": "§6.1, §6.2, §6.3 each have their own H3 subsection and table"
+        },
+        "GR-3_principle_9_four_level_distinction": {
+          "rule": "Per-producer L1/L2/L3/L4 mapping; levels not collapsible",
+          "verified": true,
+          "evidence": "§7.2 table with explicit reading guide; §7.3 aggregate certification statement"
+        },
+        "GR-4_adr_052_through_056_frozen_not_edited": {
+          "verified": true,
+          "evidence": "frontmatter field adrs_referenced_not_edited: [ADR-052, ADR-053, ADR-054, ADR-055, ADR-056]; no edits to those ADR files"
+        },
+        "GR-5_replay_authority_subsection": {
+          "rule": "Triple assertion (boundary stated / authoring-store reseed / FIB-ADR amendment requirement)",
+          "verified": true,
+          "evidence": "§8.2.1 / §8.2.2 / §8.2.3 — see audit_patch_evidence below"
+        }
+      },
+      "audit_patch_evidence": {
+        "P1-RETENTION-REPLAY-BOUNDARY-GATE": {
+          "assertion_1_boundary_stated": {
+            "location": "line 310 (§8.2.1 — verbatim blockquote)",
+            "verbatim_sentence_present": true,
+            "sentence": "Replay from finance_outbox is bounded to the retained 7-day processed-row window; rows older than this window are unrecoverable from outbox history and require authoring-store reseed."
+          },
+          "assertion_2_authoring_store_reseed": {
+            "location": "lines 318-322 + 324 (§8.2.2)",
+            "stores_enumerated": [
+              "player_financial_transaction",
+              "pit_cash_observation",
+              "table_buyin_telemetry",
+              "table_fills",
+              "table_credits"
+            ],
+            "propagation_infrastructure_disclaimer": "line 324 — 'finance_outbox is propagation infrastructure, **not a replay log**'"
+          },
+          "assertion_3_fib_adr_amendment_requirement": {
+            "location": "lines 326-330 (§8.2.3 — dedicated subsection)",
+            "requirement_stated_explicitly": true,
+            "language": "Any post-Wave-2 work requiring unbounded outbox-history replay requires a new FIB or a superseding ADR before scope reopens"
+          },
+          "cross_link_with_ws2_retention_interval": "7-day interval matches rpc_cleanup_outbox_processed predicate 'processed_at < now() - INTERVAL 7 days' in migration 20260521142441"
+        }
+      },
+      "containment_guardrails_respected": {
+        "no_slack_pagerduty_prometheus_grafana_opentelemetry_pg_cron_external_dashboards": "verified by grep — zero matches",
+        "no_new_producers_event_types_or_replay_mechanisms_invented_beyond_fib_h_adr_052_056": "verified — only existing 5 producers + 1 absence (cashout) cited; only existing 2 projection consumers cited; only existing 3 deferred infrastructure upgrades cited"
+      },
+      "gate_evidence": {
+        "lint": {
+          "scope": "WAVE-2-SIGN-OFF.md is a .md file — outside ESLint scope (which lints *.ts/*.tsx/*.js/*.jsx only)",
+          "result": "passed (no ESLint-scoped files touched by WS3)"
+        },
+        "section_presence_grep": {
+          "command": "grep -nE '^# [1-8]\\.' WAVE-2-SIGN-OFF.md",
+          "result": "passed — all 8 sections present in prescribed order (lines 26, 36, 108, 154, 189, 216, 250, 292)"
+        },
+        "gr1_verbatim_grep": {
+          "command": "grep -n 'Wave 2 transport and projection infrastructure complete...' WAVE-2-SIGN-OFF.md",
+          "result": "passed — 3 occurrences (lines 28, 254, 334)"
+        },
+        "replay_boundary_verbatim_grep": {
+          "command": "grep -n 'Replay from .finance_outbox. is bounded to the retained 7-day...' WAVE-2-SIGN-OFF.md",
+          "result": "passed — 1 occurrence (line 310)"
+        },
+        "containment_grep": {
+          "command": "grep -nE 'Slack|PagerDuty|Prometheus|Grafana|OpenTelemetry|pg_cron|external dashboard' WAVE-2-SIGN-OFF.md",
+          "result": "passed — zero matches"
+        }
+      }
+    },
+    "WS4_GOVERNANCE": {
+      "status": "complete",
+      "executor": "lead-architect",
+      "dispatched_at": "2026-05-21T15:20:00Z",
+      "completed_at": "2026-05-21T15:30:00Z",
+      "files_written": [
+        "docs/issues/gaps/financial-data-distribution-standard/wave-2/PRODUCER-ANCHOR-RESOLUTION-STANDARD.yaml (amended — status: ratified, ratified_by: WAVE-2-SIGN-OFF.md, ratified_date: 2026-05-21)",
+        "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-TRACKER.json (amended — meta.last_updated; cursor.phase_status / phase_label / next_action / next_action_prd; Phase 2.3 commit hash ba17a4d0; Phase 2.5 entry fully populated with PRD-089/EXEC-089 paths + 4 WS deliverables + 6 audit-patch records + dev-env finding)",
+        "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-PROGRESS-TRACKER.md (amended — header Last updated / Current position; §1 table 3 rows updated for Phase 2.3 / 2.4 / 2.5; §7 Phase 2.3 detail rewritten to ✅ COMPLETE with Gate A/B migrations; §7 Phase 2.4 detail block added; §7 Phase 2.5 detail block rewritten for IN PROGRESS state; §9 Dormant Workstreams PWB-003 row added)",
+        "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json (amended — meta.last_updated; cursor.active_phase 2.3 → 2.5; cursor.phase_status; cursor.phase_label; cursor.next_action; cursor.next_action_prd; cursor.last_closed_* advanced to 2.4 / 2026-05-21 / EXEC-088 / 931f5ed9)"
+      ],
+      "scope_expansion": [
+        {
+          "file": "WAVE-2-TRACKER.json Phase 2.3 entry",
+          "field": "commit",
+          "change": "null → \"ba17a4d0\"",
+          "reason": "cross-document consistency requires Phase 2.3 closure commit ba17a4d0 to appear in all 4 documents (sign-off doc, WAVE-2-TRACKER, WAVE-2-PROGRESS-TRACKER, ROLLOUT-TRACKER). The JSON had commit: null before this edit; added field is the actual git commit hash from git log (\"feat(outbox): PRD-087 Phase 2.3 — Class A lifecycle completeness projection\")",
+          "not_a_deviation_from_exec_089_outputs_list": true
+        }
+      ],
+      "cross_document_consistency_check": {
+        "fact_1_phase_2_3_closure_ba17a4d0": "PASS — present in all 4 docs",
+        "fact_2_phase_2_4_closure_931f5ed9": "PASS — present in all 4 docs",
+        "fact_3_phase_2_5_in_progress_prd_089": "PASS — present in all 4 docs",
+        "fact_4_prod_anchor_std_001_ratified": "PASS — YAML status: ratified + ratified_by + ratified_date; sign-off doc §5 ratification statement; tracker JSONs narrate ratification",
+        "fact_5_pwb_003_closed": "PASS — never appears as unresolved/pending/queued; consistently reported as CLOSED with Phase 2.4 / PRD-088 / commit 931f5ed9 citation across sign-off §6.2, WAVE-2-PROGRESS-TRACKER §1 table + §9 dormant + §7 Phase 2.4 detail, WAVE-2-TRACKER Phase 2.4 pwb_003_closed object + Phase 2.5 deliverables narrative",
+        "fact_6_pwb_001_pwb_002_w2_obs_cashout_unresolved": "PASS — all three identified in sign-off §6.1, WAVE-2-PROGRESS-TRACKER §7 Phase 2.5, WAVE-2-TRACKER Phase 2.5 deliverables, ROLLOUT-TRACKER cursor.next_action_prd",
+        "fact_7_7_day_retention_migration_20260521142441": "PASS — sign-off §8.2 references; WAVE-2-TRACKER Phase 2.5 deliverables; WAVE-2-PROGRESS-TRACKER §7 Phase 2.5; ROLLOUT-TRACKER cursor.phase_label"
+      },
+      "syntactic_validation": {
+        "PRODUCER-ANCHOR-RESOLUTION-STANDARD.yaml": "valid YAML (yaml.safe_load OK)",
+        "WAVE-2-TRACKER.json": "valid JSON (json.load OK)",
+        "ROLLOUT-TRACKER.json": "valid JSON (json.load OK)",
+        "WAVE-2-PROGRESS-TRACKER.md": "structure preserved (header, §1 table, §7 phase blocks, §9 dormant); 213 lines changed"
+      },
+      "containment_guardrails_respected": {
+        "no_slack_pagerduty_prometheus_grafana_opentelemetry_pg_cron_external_dashboards": "verified — zero new mentions",
+        "no_new_fields_producers_event_types_or_gap_ids_invented": "verified — all gap IDs (PWB-001/002/003, W2-OBS-CASHOUT-PRODUCER-001, W2-OBS-ANCHOR-COVERAGE-001) traceable to WAVE-2-ROLLOUT-MAP.md §10 / CORE-OPERATIONAL-LOOP.md",
+        "adr_052_through_056_referenced_not_edited": "verified — frontmatter adrs_referenced_not_edited preserved; no ADR file modified",
+        "principles_non_goals_governance_rules_open_decisions_preserved": "verified — only cursor + phase-state fields updated; principle blocks untouched"
+      },
+      "gate_evidence": {
+        "lint_full_repo": {
+          "command": "npm run lint -- --max-warnings=0",
+          "exit_code": 123,
+          "interpretation": "Full-repo lint fails on pre-existing waiver-class warnings in analyze_rls_performance.js (18 warnings — root-level diagnostic script) and several app/ test files. These warnings predate PRD-089 and are documented in Phase 1 checkpoint as 'Full repo lint via npm run lint has pre-existing warnings in unrelated files (out of WS1 scope); WS1-touched files are clean.' Same posture applies to Phase 2."
+        },
+        "lint_scoped_ws1_ws2_outputs": {
+          "command": "npx eslint --max-warnings=0 [WS1+WS2 output files]",
+          "exit_code": 0,
+          "result": "passed",
+          "files_verified": [
+            "app/api/internal/outbox-relay/route.ts",
+            "app/api/internal/outbox-cleanup/route.ts",
+            "app/api/internal/outbox-cleanup/__tests__/route.test.ts",
+            "services/player-financial/dtos.ts",
+            "services/player-financial/outbox-consumer.ts",
+            "services/player-financial/outbox-operational-consumer.ts",
+            "services/player-financial/__tests__/outbox-relay-log-emission.test.ts",
+            "services/player-financial/__tests__/lag-aggregates.test.ts",
+            "__tests__/integration/outbox-cleanup.int.test.ts"
+          ]
+        },
+        "lint_scope_ws3_ws4_outputs": {
+          "result": "n/a — WS3 output is WAVE-2-SIGN-OFF.md (markdown); WS4 outputs are 1 YAML + 2 JSON + 1 markdown. None are ESLint-scoped (*.ts/*.tsx/*.js/*.jsx)."
+        },
+        "phase_2_lint_gate_disposition": "PASS — WS3+WS4 introduced zero new lint warnings; WS1+WS2 outputs are scoped-clean at --max-warnings=0; full-repo lint posture is unchanged from Phase 1's recorded waiver."
+      }
+    }
+  },
+  "pending_workstreams": [],
+  "completed_workstreams": ["WS1_LOG", "WS2_RETENTION", "WS3_SIGNOFF", "WS4_GOVERNANCE"],
+  "dormant_workstreams": [],
+  "current_phase": 2,
+  "phase_1_gate_status": {
+    "type_check": "passed (WS1 + WS2 combined; npm run type-check exit 0)",
+    "schema_validation": "passed (migration 20260521142441_create_rpc_cleanup_outbox_processed.sql applied via npx supabase migration up --local; npm run db:types-local regenerated types with rpc_cleanup_outbox_processed at types/database.types.ts:4906)",
+    "lint": "passed (WS2 outputs clean at max-warnings=0; 2 pre-existing import/order warnings in services/player-financial/__tests__/financial-transactions-route-boundary.test.ts are intentional late-import-after-mocks pattern, matching WS1's recorded lint waiver)",
+    "test_pass": "passed (WS2 unit: 11/11; WS2 integration: 21/22 + 1 skip planner-evidence env-gated; WS1 regression: 171/171; no regressions across player-financial suite)"
+  },
+  "phase_24_evidence_gate": {
+    "audit_patch_id": "EXEC-089-P0-PHASE-24-EVIDENCE-GATE",
+    "verified_at": "2026-05-21T15:00:00Z",
+    "verdict": "PASS — all five evidence items confirmed",
+    "evidence": {
+      "prd_088_file": "docs/10-prd/PRD-088-wave2-phase-2.4-operational-telemetry-projection-v0.md — present",
+      "exec_088_file": "docs/21-exec-spec/EXEC-088-wave2-phase-2.4-operational-telemetry-projection.md — present",
+      "prd_088_checkpoint_status": ".claude/skills/build-pipeline/checkpoints/PRD-088.json status==complete with 6/6 workstreams complete (5 with explicit gate_evidence; WS1_DB completed before gate_evidence pattern)",
+      "commit_hash": "931f5ed9 — git log oneline match: 'feat(outbox): PRD-088 Phase 2.4 — operational telemetry projection complete'",
+      "residual_gap_classification": "PRD-088 narrative explicitly defers PWB-001 (anchor resolution), PWB-002 (fill/credit workflows), W2-OBS-CASHOUT-PRODUCER-001 (cashout producer); PWB-003 (operational projection consumer) closed in Phase 2.4"
+    }
+  },
+  "next_action": "PRD-089 complete. Wave 2 closed. Awaiting user-driven commit + merge.",
+  "phase_4_dod_gate": {
+    "executed_at": "2026-05-21T15:50:00Z",
+    "reviewer": "Skill(devils-advocate)",
+    "target": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-2-SIGN-OFF.md",
+    "verdict": "SHIP",
+    "p0_findings": 0,
+    "p1_findings": 0,
+    "p2_findings": 0,
+    "p3_findings": 3,
+    "p3_notes": [
+      "§7.3 wording precision: 'Three workflow-level gaps remain at L4' reads imprecisely vs §7.2 table where only cashout is certified at L4. Non-blocking; documentation polish.",
+      "Operational event_type whitelist invariant: services/player-financial/outbox-consumer.ts:49 hardcodes 3 operational event_types tracking rpc_claim_operational_outbox_batch. Future operational event_types must update both the claim RPC and collectOutboxBacklog. Non-blocking; future-proofing note.",
+      "§2 phase summary has 9 entries vs PRD §6.3 prescribed 8 (extra entry: Phase 2.3a Observability Investigation, commit de06ac0e). Substantively justified — provides upstream evidence for PWB-001/PWB-002 governance. Informational only."
+    ],
+    "orchestrator_decision_revisits": {
+      "WS1-P1-LAG-SQL-DEVIATION": "REAFFIRMED — devils-advocate independently verified the TS-side Date.parse subtraction preserves DB-clock invariant (both timestamps stamped by Postgres now(); no app-server clock participates; precision/timezone/parse-failure risks ruled out). Orchestrator acceptance holds. No reopen."
+    },
+    "routing": "no_amendment_required",
+    "evidence_files_reviewed": [
+      "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-2-SIGN-OFF.md",
+      "docs/10-prd/PRD-089-wave2-phase-2.5-observability-and-signoff-v0.md",
+      "docs/21-exec-spec/EXEC-089-wave2-phase-2.5-observability-and-signoff.md",
+      "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-H-TRANSACTIONAL-OUTBOX.md",
+      "services/player-financial/outbox-consumer.ts (collectLagSamplesMs verification)",
+      "docs/issues/gaps/financial-data-distribution-standard/wave-2/PRODUCER-ANCHOR-RESOLUTION-STANDARD.yaml (status:ratified confirmed)",
+      "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json (cross-document consistency)",
+      "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-TRACKER.json (cross-document consistency)"
+    ],
+    "stress_test_results": {
+      "GR-1_canonical_phrase_verbatim_3x": "PASS — lines 28, 254, 334",
+      "GR-2_three_category_backlog_structure": "PASS — §6.1/§6.2/§6.3 separate subsections + tables",
+      "GR-3_principle_9_four_level_certification": "PASS — §7.2 table with explicit reading guide; 6 producers mapped",
+      "GR-4_adrs_052_through_056_frozen": "PASS — git log main..HEAD shows only 8a1b8741 (Phase 2.0 wave-start freeze); zero edits during Phases 2.1-2.5",
+      "GR-5_replay_authority_triple_assertion": "PASS — §8.2.1/§8.2.2/§8.2.3 all present; 7-day window matches WS2 migration",
+      "containment_grep": "PASS — zero matches for Slack/PagerDuty/Prometheus/Grafana/OpenTelemetry/pg_cron/external-dashboard",
+      "anti_invention_producer_set": "PASS — 5 RPCs + cashout absence trace to FIB-H §D",
+      "dec_1_caveat_carried_forward": "PASS — §4.4 explicit mixed-class carry-forward with ADR-054 R4 citation",
+      "cross_document_consistency": "PASS — 5 facts sampled across 4 documents, all aligned",
+      "lag_sql_deviation_revisit": "ACCEPT — DB-clock invariant preserved",
+      "honesty_regression_test": "PASS — §6.1 and §7 do not promote partial→complete anywhere"
+    }
+  },
+  "merge_gate": {
+    "executed_at": "2026-05-21T15:55:00Z",
+    "command": "npm run test:verify",
+    "log_path": "/tmp/prd089-merge-gate.log",
+    "exit_status": "FAIL_ON_PRE_EXISTING_DEBT",
+    "prd_089_scope_tests": {
+      "unit": {
+        "command": "npx jest --silent --config jest.node.config.js --testPathPatterns='services/player-financial/__tests__/(outbox-relay-log-emission|lag-aggregates|outbox-cleanup)|app/api/internal/outbox-cleanup'",
+        "result": "PASS",
+        "total": 41,
+        "passed": 41,
+        "failed": 0
+      },
+      "integration": {
+        "command": "RUN_INTEGRATION_TESTS=true npx jest --silent --config jest.integration.config.js --testPathPatterns='outbox-cleanup'",
+        "result": "PASS",
+        "total": 11,
+        "passed": 10,
+        "skipped": 1,
+        "skipped_reason": "planner-evidence test behind RUN_PLANNER_EVIDENCE_TESTS env gate"
+      }
+    },
+    "pre_existing_test_debt": {
+      "unit_suites_failing": 7,
+      "unit_tests_failing": 24,
+      "integration_suites_failing": 17,
+      "integration_tests_failing": 99,
+      "branch_attribution_verified": true,
+      "evidence": "git log main..HEAD -- <failing-files> shows zero PRD-089 commits. Three files spot-checked: services/loyalty/__tests__/issuance-idempotency.int.test.ts (unchanged since main), services/rating-slip/__tests__/rating-slip-continuity.integration.test.ts (unchanged since main), services/player-financial/__tests__/class-a-projection.int.test.ts (last touched by ba17a4d0 — PRD-087 Phase 2.3, not PRD-089). The one branch-touched failing unit suite (tests/failure/i3-idempotency.test.ts) was modified by 8a1b8741 (Phase 2.0/PRD-081), and its assertion failure is due to PRD-087's consumer rewrite to rpc_process_class_a_projection — Phase 2.3 test debt, not PRD-089.",
+      "waiver_basis": "Test Remediation Arc Tier 2 backlog known pre-existing posture per MEMORY.md and prior Phase 2.3 (PRD-087) / Phase 2.4 (PRD-088) merge precedent"
+    },
+    "merge_gate_disposition": "WAIVED — PRD-089 scope clean; pre-existing test debt outside PRD-089 responsibility; merge proceeds per Tier 2 backlog convention"
+  },
+  "dev_env_finding_remediation": {
+    "remediation_applied_at": "2026-05-21T15:48:00Z",
+    "remediation_choice": "B — Load .env.local before .env (option B from operator AskUserQuestion)",
+    "files_changed": [
+      "jest.setup.js (jsdom config — added .env.local loader before .env)",
+      "jest.setup.node.ts (node config — added .env.local loader before .env; this file was missed in initial fix and discovered when integration tests still hit remote)"
+    ],
+    "verification": "RUN_INTEGRATION_TESTS=true npx jest --silent --config jest.integration.config.js --testPathPatterns='outbox-cleanup' → 10/10 PASS against local Supabase (was failing with PGRST204 schema-cache error against remote before fix)",
+    "blocking_for_prd_089": "NO — remediation complete"
+  },
+  "phase_2_gate_status": {
+    "lint": "passed (WS3+WS4 outputs are .md/.yaml/.json — outside ESLint scope; WS1+WS2 outputs scoped-clean at --max-warnings=0 verified by npx eslint --max-warnings=0 [9 files], exit 0; full-repo lint exits 123 on pre-existing waiver warnings in analyze_rls_performance.js + several app/ test files unchanged from Phase 1 posture)"
+  },
+  "session_state_for_resume": {
+    "saved_at": "2026-05-21T15:30:00Z",
+    "resume_instructions": "On /build PRD-089 --resume: pipeline should load this checkpoint and proceed to Phase 4 devils-advocate gate. The four workstreams + Phase 1 + Phase 2 gates are all complete. The remaining gate is the Phase 4 DoD review per PRD-089 §8: dispatch Skill(devils-advocate) against WAVE-2-SIGN-OFF.md; any P0 findings route back to WS3 (which is currently complete) for amendment. After clean review, the merge gate runs (npm run test:verify with RUN_INTEGRATION_TESTS=true env override) and the dev-env finding gets remediated.",
+    "remaining_gates": [
+      "Phase 4 DoD: devils-advocate review of WAVE-2-SIGN-OFF.md (no unresolved P0 findings)",
+      "Merge gate: npm run test:verify with RUN_INTEGRATION_TESTS=true (requires env-override fix per dev_env_finding_flagged_for_followup, or explicit local-env invocation)",
+      "Pre-merge: remediate jest.setup.js .env vs .env.local precedence (or document override requirement in QA-006/QA-001) — non-blocking for Phase 4 dispatch but blocking for merge"
+    ],
+    "files_modified_in_phase_2_for_review": [
+      "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-2-SIGN-OFF.md (NEW, 338 lines)",
+      "docs/issues/gaps/financial-data-distribution-standard/wave-2/PRODUCER-ANCHOR-RESOLUTION-STANDARD.yaml (status: ratified)",
+      "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-TRACKER.json",
+      "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-PROGRESS-TRACKER.md",
+      "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json",
+      ".claude/skills/build-pipeline/checkpoints/PRD-089.json (this file)"
+    ]
+  },
+  "artifacts": {
+    "prd_overview_summary": "Phase 2.5 = closing slice of Wave 2. Three deliverables: (1) structured relay-cycle + cleanup-cycle log lines for substrate observability, (2) cron-driven 7-day retention via SECURITY DEFINER RPC + partial index, (3) WAVE-2-SIGN-OFF.md ratifying PROD-ANCHOR-STD-001 and reconciling residual backlog. No new UI surfaces.",
+    "ws1_summary": "WS1_LOG delivered: relay route emits one structured outbox_relay_cycle log per cycle (FR-1 authenticated, FR-2 auth_fail); GET export for Vercel cron; DB-clock derived lag samples (P1 audit honored, with TS-subtraction deviation flagged); backlog predicates follow RPC source of truth including event_type whitelist drift (P1 audit honored); HTTP response backward-compatible; type-check + lint + tests all green; 30 new tests.",
+    "ws2_summary": "WS2_RETENTION delivered: migration 20260521142441_create_rpc_cleanup_outbox_processed.sql with rpc_cleanup_outbox_processed(p_max_rows INTEGER DEFAULT 1000) RETURNS INTEGER (SECURITY DEFINER, SET search_path='', service_role-only EXECUTE, CTE-based DELETE with FOR UPDATE SKIP LOCKED, p_max_rows validation NULL/<1/>1000, partial index idx_finance_outbox_processed_retention ON (processed_at, event_id) WHERE processed_at IS NOT NULL); GET /api/internal/outbox-cleanup with CRON_SECRET bearer auth and structured outbox_cleanup_cycle log lines (auth_fail / ok / error variants); vercel.json daily cron entry 0 7 * * *; 11 unit tests + 10 integration tests (3 age bands, p_max_rows cap, 4 invalid-cap variants, first-run cap, EXPLAIN split assertion deterministic index-exists + predicate-alignment) + 1 advisory planner-evidence test behind RUN_PLANNER_EVIDENCE_TESTS env gate; INV-ERR-DETAILS honored via safeErrorDetails."
+  },
+  "dev_env_finding_flagged_for_followup": {
+    "discovered_during": "WS2 integration test execution",
+    "severity": "non-blocking-for-prd-089",
+    "scope": "process / CI / test pipeline",
+    "finding": ".env (loaded by jest.setup.js with override:false) contains REMOTE Supabase URL/keys; .env.local contains the LOCAL URL/keys. RUN_INTEGRATION_TESTS=true npx jest plainly hits the remote instance which lacks unmerged migrations and fails ALL finance_outbox-touching integration tests (verified by running existing class-a-projection.int.test.ts against the plain invocation). To run against local DB, tests must be invoked with explicit local env vars (NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 + LOCAL anon/service keys).",
+    "recommended_remediation": "Either (a) flip jest.setup.js to prefer .env.local over .env in test runs, or (b) document the explicit-override requirement in QA-006/QA-001 integration test playbook, or (c) introduce .env.test that holds the local URL/keys and have jest.setup.js load it first.",
+    "blocking_for_prd_089": false,
+    "blocking_for_merge": true,
+    "rationale": "WS3/WS4 are documentation workstreams that do not run integration tests, so dispatch is not blocked. Pre-merge DoD (per PRD-089 §8) must include either fix or explicit documentation."
+  }
+}

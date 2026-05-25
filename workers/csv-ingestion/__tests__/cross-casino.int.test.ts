@@ -25,11 +25,11 @@ jest.mock('../src/repo', () => ({
   insertRows: jest.fn().mockResolvedValue(undefined),
 }));
 
+import type { Config } from '../src/config';
 import { ingestBatch } from '../src/ingest';
+import type { Logger } from '../src/logger';
 import * as repo from '../src/repo';
 import type { ClaimedBatch, RowInsert } from '../src/repo';
-import type { Config } from '../src/config';
-import type { Logger } from '../src/logger';
 
 // ---------------------------------------------------------------------------
 // Helpers

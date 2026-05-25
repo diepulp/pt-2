@@ -11,6 +11,7 @@
 
 import { ChevronRightIcon } from 'lucide-react';
 
+import { FinancialValue } from '@/components/financial';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -164,10 +165,28 @@ export function PitMetricsTable({
                     {formatCents(pit.win_loss_estimated_total_cents)}
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm tabular-nums">
-                    {formatCents(pit.fills_total_cents)}
+                    <FinancialValue
+                      variant="compact"
+                      label="Fills"
+                      value={{
+                        value: pit.fills_total_cents ?? 0,
+                        type: 'estimated',
+                        source: 'shift_metrics',
+                        completeness: { status: 'partial' },
+                      }}
+                    />
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm tabular-nums">
-                    {formatCents(pit.credits_total_cents)}
+                    <FinancialValue
+                      variant="compact"
+                      label="Credits"
+                      value={{
+                        value: pit.credits_total_cents ?? 0,
+                        type: 'estimated',
+                        source: 'shift_metrics',
+                        completeness: { status: 'partial' },
+                      }}
+                    />
                   </TableCell>
                   <TableCell className="text-center">
                     <CoverageBadge

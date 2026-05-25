@@ -1,0 +1,36 @@
+{
+  "id": "PRD-085",
+  "exec_spec": "EXEC-085",
+  "exec_spec_path": "docs/21-exec-spec/EXEC-085-wave2-phase2-2-fill-credit-producer-ext.md",
+  "prd_path": "docs/10-prd/PRD-085-wave2-phase-2.2-dependency-event-producer-expansion-v0.md",
+  "status": "complete",
+  "complexity_prescreen": "full",
+  "gov010_check": "waived:phase-2.2-continuation-upstream-documented",
+  "fib_s_loaded": true,
+  "fib_s_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-S-TRANSACTIONAL-OUTBOX.json",
+  "fib_h_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-H-TRANSACTIONAL-OUTBOX.md",
+  "write_path_classification": "none",
+  "current_phase": 1,
+  "created_at": "2026-05-18T13:47:15Z",
+  "updated_at": "2026-05-19T00:00:00Z",
+  "pending_workstreams": [],
+  "in_progress_workstreams": [],
+  "completed_workstreams": ["WS1_MIGRATION", "WS2_TESTS", "WS3_GOVERNANCE"],
+  "dormant_workstreams": [],
+  "artifacts": {
+    "exec_spec_validated": true,
+    "temporal_integrity": "clean",
+    "fib_s_traceability": "PASS",
+    "WS1_MIGRATION": "supabase/migrations/20260518134715_wave2_fill_credit_producer_ext.sql",
+    "WS2_TESTS": [
+      "tests/failure/i1-atomicity-fill.test.ts",
+      "tests/failure/i1-atomicity-credit.test.ts",
+      "services/table-context/__tests__/chip-custody.test.ts (IDEMPOTENCY_CONFLICT propagation)"
+    ],
+    "WS3_GOVERNANCE": [
+      "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-TRACKER.json",
+      "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-PROGRESS-TRACKER.md",
+      "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-TRACKER.json"
+    ]
+  }
+}

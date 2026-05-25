@@ -90,14 +90,43 @@ module.exports = {
         ],
         rationale: 'Internal-only fields not for external APIs',
       },
+      // Wave 2 outbox infrastructure table (ADR-054). Retry/error fields are
+      // internal delivery state — must never surface in consumer-facing DTOs.
+      finance_outbox: {
+        allowed: [
+          'event_id',
+          'event_type',
+          'casino_id',
+          'table_id',
+          'player_id',
+          'aggregate_id',
+          'created_at',
+          'processed_at',
+          'fact_class',
+          'origin_label',
+          'payload',
+        ],
+        forbidden: ['delivery_attempts', 'last_attempted_at', 'last_error'],
+        rationale:
+          'Operational retry/error fields must not leak into consumer-facing DTOs (ADR-054 Wave 2)',
+      },
     };
 
+    // Track single-hop type aliases that resolve to a Database table Row type.
+    // Populated as we encounter non-DTO TSTypeAliasDeclarations so that DTOs
+    // using an intermediate alias (e.g. `type XRow = Database[...]['Row']`)
+    // are covered by the same forbidden-column checks.
+    const aliasToTable = new Map();
+
     /**
-     * Extract table name from Database type expression
-     * Example: Database['public']['Tables']['player']['Row'] → 'player'
+     * Extract table name from a type node.
+     *
+     * Handles two shapes:
+     *   1. Direct: Database['public']['Tables']['player']['Row']
+     *   2. Alias:  FinancialOutboxRow  (where aliasToTable has the mapping)
      */
     function extractTableName(node) {
-      // Handle: Database['public']['Tables']['player']
+      // Shape 1: Database['public']['Tables']['tableName']['Row'] indexed access
       if (
         node.type === 'TSIndexedAccessType' &&
         node.objectType?.type === 'TSIndexedAccessType'
@@ -113,7 +142,6 @@ module.exports = {
             tablesAccess.indexType?.type === 'TSLiteralType' &&
             tablesAccess.indexType?.literal?.value === 'public'
           ) {
-            // Now get the table name
             if (
               node.indexType?.type === 'TSLiteralType' &&
               node.indexType?.literal?.value
@@ -122,6 +150,35 @@ module.exports = {
             }
           }
         }
+      }
+
+      // Shape 2: TSTypeReference whose name is a tracked alias (e.g. FinancialOutboxRow)
+      if (node.type === 'TSTypeReference' && node.typeName?.type === 'Identifier') {
+        return aliasToTable.get(node.typeName.name) ?? null;
+      }
+
+      return null;
+    }
+
+    /**
+     * Find the Pick<> node within a type annotation.
+     * Handles both plain `Pick<...>` and intersection `Pick<...> & { ... }`.
+     */
+    function findPickNode(typeAnnotation) {
+      if (!typeAnnotation) return null;
+      if (
+        typeAnnotation.type === 'TSTypeReference' &&
+        typeAnnotation.typeName?.name === 'Pick'
+      ) {
+        return typeAnnotation;
+      }
+      if (typeAnnotation.type === 'TSIntersectionType') {
+        return (
+          typeAnnotation.types?.find(
+            (t) =>
+              t.type === 'TSTypeReference' && t.typeName?.name === 'Pick',
+          ) ?? null
+        );
       }
       return null;
     }
@@ -161,25 +218,29 @@ module.exports = {
 
     return {
       // Detect: export type XxxDTO = Pick<Database[...]['table']['Row'], 'field1' | 'field2'>
+      // Also handles:
+      //   - Alias-based:  Pick<SomeRow, ...>  where SomeRow is a tracked alias
+      //   - Intersection: Pick<...> & { ... } (e.g. FinancialOutboxEventDTO)
       TSTypeAliasDeclaration(node) {
-        // Only check DTO type aliases
+        // Track non-DTO type aliases that resolve to a Database table Row type
+        // so that DTOs using them (Pick<XRow, ...>) are still caught.
         if (!node.id.name.endsWith('DTO')) {
+          const tableName = extractTableName(node.typeAnnotation);
+          if (tableName) {
+            aliasToTable.set(node.id.name, tableName);
+          }
           return;
         }
 
-        // Check if this is a Pick<> type
-        if (
-          node.typeAnnotation?.typeName?.name !== 'Pick' ||
-          !node.typeAnnotation?.typeParameters?.params
-        ) {
-          return;
-        }
+        // Locate the Pick<> node — handles plain Pick and intersection types
+        const pickNode = findPickNode(node.typeAnnotation);
+        if (!pickNode || !pickNode.typeParameters?.params) return;
 
-        const typeArgs = node.typeAnnotation.typeParameters.params;
+        const typeArgs = pickNode.typeParameters.params;
         if (typeArgs.length < 2) return;
 
-        const tableTypeNode = typeArgs[0]; // Database['public']['Tables']['player']['Row']
-        const fieldsNode = typeArgs[1]; // 'field1' | 'field2'
+        const tableTypeNode = typeArgs[0]; // Database[...]['Row'] or alias
+        const fieldsNode = typeArgs[1];    // 'field1' | 'field2'
 
         const tableName = extractTableName(tableTypeNode);
         if (!tableName || !SENSITIVE_TABLES[tableName]) {

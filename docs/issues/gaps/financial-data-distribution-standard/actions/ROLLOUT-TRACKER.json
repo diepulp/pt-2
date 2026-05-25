@@ -4,7 +4,7 @@
     "version": "1.2.0",
     "source_of_truth": "ROLLOUT-PROGRESS.md",
     "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/actions/ROLLOUT-ROADMAP.md",
-    "last_updated": "2026-05-06",
+    "last_updated": "2026-05-21",
     "exec_074_closed": "2026-04-30",
     "update_rule": "Update both this file and ROLLOUT-PROGRESS.md together when phase state changes. This file is the machine-readable projection of the .md; it does not own truth.",
     "reading_order": "cursor → direction (principles + non_goals) → phases → deferred_register → active_bridges. Read roadmap_ref for full narrative, §2.5 for execution protocol, §9 for skill routing."
@@ -48,23 +48,26 @@
   },
 
   "cursor": {
-    "wave": 1,
-    "active_phase": null,
-    "phase_status": "complete",
-    "phase_label": "Wave 1 COMPLETE. Pre-Wave-2 surface debt closed (PRD-080, EXEC-080, 2026-05-06). Wave 2 entry blocked on W2-PRE-1–W2-PRE-8 and Q1–Q4 resolution.",
+    "wave": 2,
+    "active_phase": "2.5",
+    "phase_status": "phase_2_3_complete_phase_2_4_complete_phase_2_5_in_progress",
+    "phase_label": "Wave 2 ACTIVE — Phase 2.5 IN PROGRESS. Phase 2.3 (PRD-087 / EXEC-087 — Lifecycle-Aware Completeness Projection; Gate A gaming_day envelope + Gate B visit_class_a_projection consumer; DEC-1 resolved) closed commit ba17a4d0 on 2026-05-19. Phase 2.4 (PRD-088 / EXEC-088 — Operational Telemetry Projection; shift_operational_projection + rpc_claim_operational_outbox_batch + rpc_process_operational_projection + dual-branch relay + GET /api/v1/table-context/operational-projection + GrindBuyinPanel mounted closing PWB-003) closed commit 931f5ed9 on 2026-05-21. Phase 2.5 (PRD-089 / EXEC-089 — Observability + Sign-Off) in progress: WS1_LOG (relay cycle log + lag samples) and WS2_RETENTION (rpc_cleanup_outbox_processed + idx_finance_outbox_processed_retention + GET /api/internal/outbox-cleanup + daily Vercel cron 0 7 * * *) implementation complete via migration 20260521142441; WS3_SIGNOFF authored WAVE-2-SIGN-OFF.md ratifying PROD-ANCHOR-STD-001; WS4_GOVERNANCE tracker reconciliation applied. Devils-advocate Phase 4 gate pending. See WAVE-2-PROGRESS-TRACKER.md §7 + WAVE-2-SIGN-OFF.md.",
     "blocker": null,
-    "next_action": "Pre-Wave-2 surface debt closed (EXEC-080). Check Wave 2 entry criteria: W2-PRE-1–W2-PRE-8 prerequisites + Q1–Q4 open questions → draft WAVE-2-ROADMAP.md → /prd-writer for Wave 2 Phase 2",
-    "next_action_prd": null,
-    "last_closed_phase": "pre_wave_2",
-    "last_closed_date": "2026-05-06",
-    "last_closed_exec": "EXEC-080",
-    "last_closed_commit": "20df161b6aadc3f236106bdc84dc96b415815d48",
+    "teardown_migration": "supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
+    "next_action": "Phase 2.5 closure: complete devils-advocate review of WAVE-2-SIGN-OFF.md (Phase 4 DoD gate per PRD-089 §8); on clean pass and lint gate green, merge PRD-089 branch; advance cursor.active_phase to post-Wave-2 backlog with PWB-001 (PROD-ANCHOR-STD-001-governed), PWB-002, and W2-OBS-CASHOUT-PRODUCER-001 each gated on its own PRD (per WAVE-2-ROLLOUT-MAP.md §10 + WAVE-2-SIGN-OFF.md §6.1).",
+    "next_action_prd": "PRD-089 (in progress); post-Wave-2: PWB-001 PRD (gated on this sign-off and PROD-ANCHOR-STD-001 ratification — both complete)",
+    "wave_2_progress_tracker_md": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-PROGRESS-TRACKER.md",
+    "wave_2_progress_tracker_json": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-TRACKER.json",
+    "last_closed_phase": "2.4",
+    "last_closed_date": "2026-05-21",
+    "last_closed_exec": "EXEC-088",
+    "last_closed_commit": "931f5ed9",
     "wave_1_status": "closed",
     "wave_1_closed_date": "2026-05-06",
     "wave_1_signoff_artifact": "docs/issues/gaps/financial-data-distribution-standard/actions/WAVE-1-PHASE-1.5-SIGNOFF.md",
     "wave_2_readiness": {
       "assessed_date": "2026-05-06",
-      "overall": "NOT_READY",
+      "overall": "ACTIVE",
       "criteria": [
         {
           "id": "W2-C1",
@@ -81,29 +84,31 @@
         {
           "id": "W2-C3",
           "criterion": "Q1–Q4 open questions resolved",
-          "status": "not_met",
-          "detail": "All 4 questions open. Resolution requires post-Wave-1 design review + external stakeholder discovery (Q3)."
+          "status": "met",
+          "resolved_date": "2026-05-06",
+          "detail": "All four resolved 2026-05-06. Q1: two-store model confirmed, PFT expansion rejected. Q2: separate tables confirmed, shared parent not chosen. Q3: deferred outside pilot scope. Q4: shared RPC-coupled insertion adopted, triggers rejected for pilot phase."
         },
         {
           "id": "W2-C4",
-          "criterion": "WAVE-2-ROADMAP.md drafted",
-          "status": "not_met",
-          "detail": "Not created. Blocked on Q1–Q4 resolution. Do not pre-plan Wave 2 phases before open questions resolve."
+          "criterion": "Feature pipeline initiated (replaces standalone WAVE-2-ROADMAP.md)",
+          "status": "met",
+          "detail": "FIB-H-W2-OUTBOX-001 authored 2026-05-10. Scaffold (SCAFFOLD-TRANSACTIONAL-OUTBOX.md) in place. /feature-pipeline orchestrates Wave 2 design through Phases 1–5. WAVE-2-ROADMAP.md as a standalone planning document is superseded; the feature-pipeline checkpoint (transactional-outbox.json) is the machine-readable state."
         },
         {
           "id": "W2-C5",
-          "criterion": "Failure harness verified against stubs",
-          "status": "not_met",
-          "detail": "FAILURE-SIMULATION-HARNESS.md is EXEC-READY but has not been run against a stub implementation. I1–I4 are Wave 2 invariants; I5 is complete."
+          "criterion": "Failure harness I1–I4 invariants frozen in Phase 4 ADR; execution verified in EXEC-SPEC DoD",
+          "status": "met",
+          "met_date": "2026-05-11",
+          "detail": "PRD-081 / EXEC-081 Phase 4 gate passed. tests/failure/ harness: I1-atomicity (5/5), I2-durability (4/4), I3-idempotency (5/5), I4-replayability (5/5) — 19/19 tests PASS against real implementation. ADR-054 + ADR-055 enumerate I1–I4 as durable ADR consequences. Commit 8a1b8741."
         }
       ],
       "unblocking_sequence": [
-        "1. Schedule post-Wave-1 design review — resolve Q1 (PFT schema vs separate authoring store) and Q2 (grind normalization)",
-        "2. External stakeholder discovery — resolve Q3 (reconciliation consumer contract)",
-        "3. Performance testing under literal-same-txn constraint — resolve Q4 (outbox emission strategy)",
-        "4. Draft WAVE-2-ROADMAP.md after Q1–Q4 resolved",
-        "5. Verify FAILURE-SIMULATION-HARNESS.md against stub implementation",
-        "6. Run /prd-writer for Wave 2 Phase 1"
+        "1. [RESOLVED 2026-05-06] Q1: two-store model confirmed. PFT expansion rejected (ADR-052 §4 pattern). Q2: separate tables confirmed. Shared parent not chosen ('I still would not unify now') — conditionally permitted by ADR set but behavioral convergence risk favors structural separation.",
+        "2. [RESOLVED 2026-05-06] Q3 deferred outside pilot scope. Wave 2 defines internal propagation only. Future externalization requires separate ADR + stakeholder discovery.",
+        "3. [RESOLVED 2026-05-06] Q4: shared RPC-coupled outbox insertion adopted for both Class A and Class B. Trigger-based insertion rejected for pilot. RPC performs deterministic outbox construction only — no projection writes, fan-out, or business logic.",
+        "4. [COMPLETE 2026-05-11] Feature pipeline delivered PRD-081 / EXEC-081. GAP-F1 closed. Exemplar pair proven. /feature-pipeline arc complete. WAVE-2-ROLLOUT-MAP.md is now the Wave 2 phase authority.",
+        "5. [COMPLETE 2026-05-11] I1–I4 harness proven against real implementation (19/19 tests pass). ADR-054 + ADR-055 enumerate invariants as durable consequences. Commit 8a1b8741.",
+        "6. [NEXT] Phase 2.1: PRD for rpc_create_financial_adjustment outbox emission. See WAVE-2-ROLLOUT-MAP.md §4 Phase 2.1."
       ]
     }
   },
@@ -514,24 +519,127 @@
       ]
     },
     {
-      "id": "2",
-      "label": "Dual-Layer + Outbox",
+      "id": "2.0",
+      "label": "Transactional Outbox Exemplar — GAP-F1 Closure",
       "wave": 2,
-      "status": "not_started",
-      "entry_gate": "Wave 1 sign-off + Q1–Q4 resolved",
-      "readiness_assessed": "2026-05-06",
-      "readiness_overall": "NOT_READY",
-      "readiness_blockers": [
-        "Q1–Q4 open questions unresolved (all 4) — no design review scheduled",
-        "WAVE-2-ROADMAP.md not drafted — blocked on Q1–Q4",
-        "Failure harness not verified against stubs — I1–I4 untested"
+      "status": "complete",
+      "prd": "PRD-081",
+      "prd_path": "docs/10-prd/PRD-081-transactional-outbox-gap-f1-closure-v0.md",
+      "exec_spec": "EXEC-081",
+      "exec_spec_path": "docs/21-exec-spec/EXEC-081-transactional-outbox-gap-f1-exemplar.md",
+      "exit_date": "2026-05-11",
+      "commit": "8a1b8741",
+      "entry_gate": "Wave 1 sign-off ✅ + Q1–Q4 resolved ✅ + W2-C5 (I1–I4 harness) ✅",
+      "scope_amendment": "Vertical collapse to exemplar pair only: rpc_create_financial_txn (Class A) + rpc_record_grind_observation (Class B). rpc_create_financial_adjustment, rpc_request_table_fill, rpc_request_table_credit deferred to Phases 2.1/2.2.",
+      "deliverables": [
+        "finance_outbox DDL (uuid_v7 primary key, all discriminator fields)",
+        "processed_messages DDL (idempotent consumer receipts)",
+        "rpc_claim_outbox_batch (FOR UPDATE SKIP LOCKED, service_role)",
+        "rpc_commit_consumer_receipt (returns 'processed'|'duplicate', service_role)",
+        "rpc_create_financial_txn amended — outbox emit in same transaction (Class A, ADR-054 D2)",
+        "rpc_record_grind_observation amended — outbox emit in same transaction (Class B, ADR-054 D2)",
+        "FinancialOutboxEventDTO (services/player-financial/dtos.ts)",
+        "runConsumer (services/player-financial/outbox-consumer.ts)",
+        "POST /api/internal/outbox-relay (Vercel cron, CRON_SECRET bearer auth)",
+        "tests/failure/ harness: I1–I4 (19/19 tests PASS)"
       ],
-      "roadmap_note": "WAVE-2-ROADMAP.md not yet created. Scope outline in ROLLOUT-PROGRESS.md §5.",
+      "invariants_proven": {
+        "I1_atomicity": "5/5 PASS",
+        "I2_durability": "4/4 PASS",
+        "I3_idempotency": "5/5 PASS",
+        "I4_replayability": "5/5 PASS"
+      },
+      "dormant_workstreams": [
+        "WS_PRODUCER_ADJUSTMENT (rpc_create_financial_adjustment → Phase 2.1)",
+        "WS_PRODUCER_FILL (rpc_request_table_fill → Phase 2.2)",
+        "WS_PRODUCER_CREDIT (rpc_request_table_credit → Phase 2.2)"
+      ],
+      "roadmap_ref": "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md",
       "wave_2_cicd_prerequisites": [
         "Staging Supabase project provisioned (schema migrations cannot go unverified when outbox and dual-layer stores are involved)",
         "Branch protection on main enabled",
         "deploy-staging.yml repaired and migration automation active",
         "Preview environment isolation (separate Supabase project per preview or branch)"
+      ]
+    },
+    {
+      "id": "2.1",
+      "label": "Producer Expansion A: Financial Adjustment",
+      "wave": 2,
+      "status": "complete",
+      "prd": "PRD-083",
+      "prd_path": "docs/10-prd/PRD-083-wave2-phase2-1-adjustment-producer-expansion-v0.md",
+      "exec_spec": "EXEC-083",
+      "exec_spec_path": "docs/21-exec-spec/EXEC-083-wave2-phase2-1-adjustment-producer.md",
+      "exit_date": "2026-05-17",
+      "commit": null,
+      "entry_gate": "Phase 2.0 exit ✅ + PRD-082 signoff ✅ + PRD-082 teardown migration ✅ (applied 2026-05-17) + Phase 2.1 PRD ✅",
+      "scope": "Wire rpc_create_financial_adjustment to emit adjustment.recorded finance_outbox rows atomically for ADR-057-eligible linked adjustments. fn_finance_outbox_emit SECURITY DEFINER helper introduced (Option A hardening). RPC signature remediated — stale p_casino_id overload dropped, canonical 7-param ADR-040 shape restored. TypeScript: casino_id removed from CreateFinancialAdjustmentInput.",
+      "workstreams_closed": [
+        "WS1_TEARDOWN",
+        "WS2_CATALOG",
+        "WS3_SIG",
+        "WS4_PRODUCER",
+        "WS5_TS",
+        "WS6_TESTS",
+        "WS7_TRACKER"
+      ],
+      "deliverables": [
+        "PRD-082 teardown migration — supabase/migrations/20260517141021_remove_prd082_harness_receipt_proof_state.sql",
+        "WS3 RPC signature remediation — supabase/migrations/20260517233745_wave2_adj_sig_restore.sql",
+        "WS4 producer extension + fn_finance_outbox_emit + Option A hardening — supabase/migrations/20260517234015_wave2_adj_producer_ext.sql",
+        "Event catalog: adjustment.recorded registered in INT-002",
+        "TypeScript: CreateFinancialAdjustmentInput casino_id removed from dtos.ts, http.ts, hooks",
+        "I1 atomicity proof: tests/failure/i1-atomicity-adjustment.test.ts T1-T7 PASS (7/7 unit)",
+        "Source-level proof: services/player-financial/__tests__/outbox-adjustment-producer.test.ts T15/T18 PASS"
+      ],
+      "invariants_proven": {
+        "I1_atomicity": "T1-T7 PASS (7/7 unit) — tests/failure/i1-atomicity-adjustment.test.ts"
+      },
+      "exit_gates_passed": [
+        "rpc_create_financial_adjustment atomically emits adjustment.recorded outbox row (I1 T1-T7 unit PASS)",
+        "adjustment.recorded registered in Wave 2 event catalog (INT-002)",
+        "No TypeScript finance_outbox INSERT path — single RPC call (source-level proof T18)",
+        "No p_casino_id in canonical 7-param signature (post-state assertion in migration)",
+        "Option A: authenticated INSERT denied; SECURITY DEFINER helper route preserved",
+        "type-check exit 0",
+        "lint exit 0",
+        "127 tests pass, 25 skipped (integration — RUN_INTEGRATION_TESTS=true required)"
+      ]
+    },
+    {
+      "id": "2.2",
+      "label": "Producer Expansion B: Dependency Events (Fills + Credits)",
+      "wave": 2,
+      "status": "complete",
+      "prd": "PRD-085",
+      "prd_path": "docs/10-prd/PRD-085-wave2-phase-2.2-dependency-event-producer-expansion-v0.md",
+      "exec_spec": "EXEC-085",
+      "exec_spec_path": "docs/21-exec-spec/EXEC-085-wave2-phase2-2-fill-credit-producer-ext.md",
+      "exit_date": "2026-05-19",
+      "commit": null,
+      "entry_gate": "Phase 2.1 exit ✅ (certified 2026-05-18)",
+      "scope": "Wire rpc_request_table_fill and rpc_request_table_credit to emit finance_outbox rows (fill.recorded / credit.recorded) atomically within existing transaction boundaries. Both ship simultaneously (ADR-055 intra-category parity). SECURITY DEFINER SET search_path='' rewrite with full idempotency hardening. rpc_create_financial_adjustment upgraded to SECURITY DEFINER before fn_finance_outbox_emit authenticated execute revoked.",
+      "workstreams_closed": ["WS1_MIGRATION", "WS2_TESTS", "WS3_GOVERNANCE"],
+      "deliverables": [
+        "Migration 20260518134715: rpc_create_financial_adjustment SECURITY DEFINER upgrade + fn_finance_outbox_emit REVOKE authenticated + rpc_request_table_fill SECURITY DEFINER rewrite with outbox emission + rpc_request_table_credit SECURITY DEFINER rewrite with outbox emission",
+        "TypeScript: IDEMPOTENCY_CONFLICT: mapping in chip-custody.ts requestTableFill / requestTableCredit",
+        "I1 fill atomicity proof: tests/failure/i1-atomicity-fill.test.ts T1-T12 unit PASS (10 mock + 12 integration stubs)",
+        "I1 credit atomicity proof: tests/failure/i1-atomicity-credit.test.ts T1-T12 unit PASS (10 mock + 12 integration stubs)",
+        "IDEMPOTENCY_CONFLICT: propagation tests in services/table-context/__tests__/chip-custody.test.ts (4 tests)"
+      ],
+      "invariants_proven": {
+        "I1_atomicity": "T1-T12 PASS (10 unit + 12 integration stubs each) — fill: tests/failure/i1-atomicity-fill.test.ts; credit: tests/failure/i1-atomicity-credit.test.ts"
+      },
+      "exit_gates_passed": [
+        "rpc_request_table_fill atomically emits fill.recorded outbox row (I1 T1-T12 unit PASS)",
+        "rpc_request_table_credit atomically emits credit.recorded outbox row (I1 T1-T12 unit PASS)",
+        "fact_class='operational' and origin_label='estimated' hardcoded in both RPCs",
+        "player_id=NULL unconditional in both RPCs",
+        "ADR-055 parity: both producers ship in same migration",
+        "IDEMPOTENCY_CONFLICT: prefix propagation verified in TypeScript layer",
+        "No supabase.from() fallback path (mock.calls.length=0 in all error paths)",
+        "147 tests pass, 49 skipped (integration — RUN_INTEGRATION_TESTS=true required)"
       ]
     }
   ],
@@ -704,10 +812,38 @@
   },
 
   "validation_matrix": {
-    "I1_atomicity": { "wave": 2, "status": "not_wave_1" },
-    "I2_durability": { "wave": 2, "status": "not_wave_1" },
-    "I3_idempotency": { "wave": 2, "status": "not_wave_1" },
-    "I4_replayability": { "wave": 2, "status": "not_wave_1" },
+    "I1_atomicity": {
+      "wave": 2,
+      "phase": "2.0",
+      "status": "complete",
+      "closed_date": "2026-05-11",
+      "closed_in": "EXEC-081",
+      "result": "5/5 PASS"
+    },
+    "I2_durability": {
+      "wave": 2,
+      "phase": "2.0",
+      "status": "complete",
+      "closed_date": "2026-05-11",
+      "closed_in": "EXEC-081",
+      "result": "4/4 PASS"
+    },
+    "I3_idempotency": {
+      "wave": 2,
+      "phase": "2.0",
+      "status": "complete",
+      "closed_date": "2026-05-11",
+      "closed_in": "EXEC-081",
+      "result": "5/5 PASS"
+    },
+    "I4_replayability": {
+      "wave": 2,
+      "phase": "2.0",
+      "status": "complete",
+      "closed_date": "2026-05-11",
+      "closed_in": "EXEC-081",
+      "result": "5/5 PASS"
+    },
     "I5_truthfulness": {
       "wave": 1,
       "phase": "1.4",
@@ -722,33 +858,46 @@
       "id": "Q1",
       "question": "PFT schema expand for table-only events, or Class B stays in a separate authoring store?",
       "gates": "Wave 2",
-      "status": "open",
-      "wave_2_blocks": true,
-      "resolution_path": "Post-Wave 1 design review + prod data input"
+      "status": "resolved",
+      "resolved_date": "2026-05-06",
+      "wave_2_blocks": false,
+      "resolution": "Two-store model confirmed for Wave 2. PFT expansion rejected — materially equivalent to ADR-052 §4 explicitly rejected pattern (PFT absorbs grind). Any future reconsideration requires a superseding ADR before any code. Class B remains in a separate authoring store."
     },
     {
       "id": "Q2",
       "question": "Grind normalized under shared parent with discriminator, or fully separate?",
       "gates": "Wave 2",
-      "status": "open",
-      "wave_2_blocks": true,
-      "resolution_path": "Same review as Q1"
+      "status": "resolved",
+      "resolved_date": "2026-05-06",
+      "wave_2_blocks": false,
+      "resolution": "Separate tables confirmed for Wave 2. Shared parent not chosen — 'I still would not unify now.' Shared parent is conditionally permitted by the ADR set (five-commitment checklist: physical partitioning + DB-enforced discriminator + service isolation + separate DTOs + projection rebuild isolation) but behavioral convergence risk makes structural separation the safer default. Decision is revisable in a future phase with explicit five-commitment sign-off."
     },
     {
       "id": "Q3",
       "question": "External reconciliation consumer contract?",
       "gates": "Wave 2",
-      "status": "open",
-      "wave_2_blocks": true,
-      "resolution_path": "External stakeholder discovery"
+      "status": "resolved_deferred",
+      "resolved_date": "2026-05-06",
+      "wave_2_blocks": false,
+      "resolution": "Explicitly deferred outside pilot scope. Wave 2 defines internal propagation guarantees only. No external consumer contract, reconciliation interface, or third-party event semantics are frozen in this phase. Outbox remains internal infrastructure. Future externalization requires a separate ADR + stakeholder discovery before any external consumer contract is defined."
     },
     {
       "id": "Q4",
       "question": "Outbox emission: trigger-based, shared RPC, or both?",
       "gates": "Wave 2",
-      "status": "open",
-      "wave_2_blocks": true,
-      "resolution_path": "Performance testing under literal-same-txn constraint (ADR-PROP D2)"
+      "status": "resolved",
+      "resolved_date": "2026-05-06",
+      "wave_2_blocks": false,
+      "resolution": "Shared RPC-coupled outbox insertion adopted for both Class A (PFT) and Class B (grind) authoring paths. Each authoring RPC inserts the authoring row and the corresponding finance_outbox row within the same literal database transaction (ADR-054 D2). Trigger-based outbox insertion rejected for the pilot phase.",
+      "rationale": [
+        "Preserves explicit transaction ownership",
+        "Avoids hidden propagation behavior",
+        "Improves rollback and debug visibility",
+        "Aligns with existing RPC-centric architecture",
+        "Simplifies parity enforcement under ADR-055",
+        "Reduces future trigger-creep risk"
+      ],
+      "constraint": "The RPC layer performs deterministic outbox construction only. No projection writes, fan-out, notifications, reconciliation, or business-side propagation logic permitted inside the RPC."
     }
   ],
 

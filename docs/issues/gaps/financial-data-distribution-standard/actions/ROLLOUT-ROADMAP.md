@@ -2,11 +2,11 @@
 
 ---
 
-status: Wave 1 Complete — Pre-Wave-2 Surface Debt Closed. Wave 2 NOT STARTED.
-date: 2026-05-06
+status: Wave 1 Complete — Pre-Wave-2 Surface Debt Closed. Wave 2 ACTIVE (feature-pipeline in progress).
+date: 2026-05-10
 wave_1_closed: 2026-05-06
 pre_wave_2_closed: 2026-05-06
-wave_2_status: not_started — blocked on Q1–Q4 resolution and WAVE-2-ROADMAP.md
+wave_2_status: ACTIVE — Q1–Q4 all resolved 2026-05-06. Feature pipeline initiated 2026-05-10 (FIB-H-W2-OUTBOX-001 authored; scaffold-approved gate pending). Standalone WAVE-2-ROADMAP.md superseded by /feature-pipeline for transactional-outbox. Phase 4 ADR must freeze I1–I4 harness invariants before PRD.
 scope: PT-2 pilot, from decision-freeze (2026-04-23) to production-hardened dual-layer outbox
 purpose: Execution plan from the current point through Wave 1 (surface contract) and Wave 2 (dual-layer outbox), with explicit gates and validation tie-ins.
 derived_from:
@@ -57,7 +57,7 @@ derived_from:
 | 1.4 Validation: Lint + Truth-Telling Tests | ✅ Complete | 2026-05-05 |
 | 1.5 Rollout & Sign-Off | ✅ Complete | 2026-05-06 |
 | Pre-Wave-2 Surface Debt Closure (PRD-080) | ✅ Complete | 2026-05-06 |
-| Wave 2 Dual-Layer + Outbox | 🔴 Not Started | Q1–Q4 open; WAVE-2-ROADMAP.md not drafted |
+| Wave 2 Dual-Layer + Outbox | 🟢 Active — feature-pipeline Phase 1 | Q1–Q4 all resolved 2026-05-06. FIB-H-W2-OUTBOX-001 authored 2026-05-10. Scaffold gate pending. /feature-pipeline replaces standalone WAVE-2-ROADMAP.md. |
 
 ---
 
@@ -432,9 +432,15 @@ Detailed plan deferred until Wave 1 exit gate passes. Scope outline below for co
 - Classification logic already proven in production → Wave 2 just changes *where* the classification is authored, not *what* it looks like
 - Lint rules catch any regression in envelope discipline while Wave 2 code lands
 
-## Wave 2 will need its own roadmap
+## Wave 2 roadmap — COMPLETE (2026-05-11)
 
-Open a `WAVE-2-ROADMAP.md` after Wave 1 sign-off. Do not pre-plan Wave 2 phases now — the open questions in §6 change what Wave 2 looks like.
+**`WAVE-2-ROLLOUT-MAP.md` is the authoritative Wave 2 phase plan.**
+
+```
+docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md
+```
+
+Phase 2.0 (PRD-081 / EXEC-081) is complete. Q1–Q4 all resolved 2026-05-06. GAP-F1 closed. I1–I4 proven (19/19 harness tests). Transport infrastructure is in place. Phases 2.1–2.5 cover producer expansion, consumer slices, and observability. See the map for entry gates, deliverables, and exit criteria per phase.
 
 ---
 
@@ -458,14 +464,14 @@ The harness file is EXEC-READY for Wave 2. Do not let it bit-rot during Wave 1 �
 
 From `ADR-FINANCIAL-FACT-MODEL §5`, these are deferred but must resolve before Wave 2 schema design begins. They do **not** gate Wave 1.
 
-| Question | Resolution path | Blocks |
-|----------|-----------------|--------|
-| Should PFT schema expand to support table-only events, or does Class B stay in a separate authoring store? | Post–Wave 1 design review; input from Wave 1 production data | Wave 2 schema migration |
-| Should grind remain fully separate, or partially normalized under a shared parent with a discriminator column? | Same review | Wave 2 schema migration |
-| What does the external reconciliation consumer contract look like? | External stakeholder discovery | Wave 2 outbox consumer design |
-| Should outbox emission use trigger-based insertion, shared RPC, or both? | Literal-same-transaction rule (ADR-PROP D2) constrains options; performance testing decides | Wave 2 authoring primitive |
+| Question | Status | Resolution path | Blocks |
+|----------|--------|-----------------|--------|
+| Q1 — PFT schema expand for table-only events, or Class B stays in a separate authoring store? | ✅ Resolved 2026-05-06 | Two-store model confirmed. PFT expansion rejected — ADR-052 §4 pattern. Future reconsideration requires superseding ADR. | ~~Wave 2 schema migration~~ — unblocked |
+| Q2 — Grind normalized under shared parent with discriminator, or fully separate? | ✅ Resolved 2026-05-06 | Separate tables confirmed. Shared parent conditionally permitted by ADR set but behavioral convergence risk favors structural separation. Revisable with explicit five-commitment sign-off. | ~~Wave 2 schema migration~~ — unblocked |
+| Q3 — External reconciliation consumer contract? | ✅ Resolved — deferred 2026-05-06 | Explicitly out of pilot scope. Wave 2 defines internal propagation only. ADR-053 D4 defines the integration point. Future externalization requires separate ADR + stakeholder discovery. | ~~Wave 2 outbox consumer design~~ — unblocked |
+| Q4 — Outbox emission: trigger-based, shared RPC, or both? | ✅ Resolved 2026-05-06 | Shared RPC-coupled insertion adopted for both Class A and Class B. Trigger-based insertion rejected for pilot. Each authoring RPC inserts its `finance_outbox` row within its own transaction boundary. RPC performs deterministic outbox construction only — no projection writes, fan-out, or business logic. | ~~Wave 2 authoring primitive~~ — unblocked |
 
-Track resolutions in a `WAVE-2-PREP-DECISIONS.md` accumulated during Wave 1.
+All four questions resolved. `WAVE-2-ROADMAP.md` is now unblocked pending only failure harness stub verification. Resolutions are tracked in `ROLLOUT-TRACKER.json → open_questions` and `PRE-WAVE-2-CONTEXT-BRIEF.md`.
 
 ---
 
@@ -532,11 +538,11 @@ Track resolutions in a `WAVE-2-PREP-DECISIONS.md` accumulated during Wave 1.
 |-----------|--------|-------|
 | Wave 1 complete | ✅ Met | Phases 1.0–1.5 closed 2026-04-23 — 2026-05-06. Sign-off: WAVE-1-PHASE-1.5-SIGNOFF.md |
 | Pre-Wave-2 surface debt closed | ✅ Met | PRD-080 / EXEC-080, 2026-05-06. 12 fields wrapped across 4 DTOs in 3 bounded contexts. |
-| §6 open questions (Q1–Q4) resolved | ❌ Open | All 4 unresolved. See §6. No design review scheduled. |
-| `WAVE-2-ROADMAP.md` drafted | ❌ Not created | Blocked on Q1–Q4 resolution. Do not pre-plan Wave 2 phases. |
-| Failure harness verified against stubs | ❌ Not confirmed | FAILURE-SIMULATION-HARNESS.md is EXEC-READY but has not been run against a stub implementation. |
+| §6 open questions (Q1–Q4) resolved | ✅ Met | All four resolved 2026-05-06. Q1: two-store model. Q2: separate tables. Q3: deferred outside pilot scope. Q4: see brief §Q4. |
+| Feature pipeline initiated (replaces standalone `WAVE-2-ROADMAP.md`) | ✅ Met | FIB-H-W2-OUTBOX-001 authored 2026-05-10. Scaffold (`SCAFFOLD-TRANSACTIONAL-OUTBOX.md`) in place. `/feature-pipeline` orchestrates Wave 2 design through Phases 1–5. Standalone roadmap document superseded. |
+| Failure harness I1–I4 invariants frozen in Phase 4 ADR | 🟡 In progress | Design-time scope: Phase 4 ADR must enumerate I1–I4 as durable ADR consequences. Build-pipeline scope: EXEC-SPEC DoD must require all 4 harness scenarios to pass. The prior criterion ("run against stubs before feature-pipeline") was mis-scoped — stub execution is EXEC-SPEC DoD, not feature-pipeline entry gate. |
 
-**Wave 2 readiness: NOT READY.** Three of five criteria unmet. Unblocking sequence: (1) schedule post-Wave-1 design review to resolve Q1–Q4, (2) external stakeholder discovery for Q3 (reconciliation consumer contract), (3) draft WAVE-2-ROADMAP.md, (4) verify failure harness against stub.
+**Wave 2 readiness: ACTIVE — feature-pipeline Phase 1 in progress.** Q1–Q4 cleared 2026-05-06. FIB-H authored 2026-05-10. Remaining: advance `/feature-pipeline` through scaffold-approved → RFC → SEC Note → ADR (freeze I1–I4) → PRD → `/build PRD-###`.
 
 ---
 

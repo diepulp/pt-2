@@ -32,6 +32,14 @@
 import type { Database } from '@/types/database.types';
 
 import {
+  toVisitDTO,
+  toVisitDTOOrNull,
+  toVisitDTOList,
+  toVisitWithPlayerDTO,
+  toVisitWithPlayerDTOList,
+  toActiveVisitDTO,
+} from '../mappers';
+import {
   startVisitSchema,
   closeVisitSchema,
   visitKindSchema,
@@ -45,14 +53,6 @@ import {
   recentSessionsQuerySchema,
   startFromPreviousSchema,
 } from '../schemas';
-import {
-  toVisitDTO,
-  toVisitDTOOrNull,
-  toVisitDTOList,
-  toVisitWithPlayerDTO,
-  toVisitWithPlayerDTOList,
-  toActiveVisitDTO,
-} from '../mappers';
 
 // ============================================================================
 // Type Aliases

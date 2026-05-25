@@ -391,6 +391,7 @@ export type Database = {
           event_id: string
           event_type: string
           fact_class: string
+          gaming_day: string
           last_attempted_at: string | null
           last_error: string | null
           origin_label: string
@@ -407,6 +408,7 @@ export type Database = {
           event_id: string
           event_type: string
           fact_class: string
+          gaming_day: string
           last_attempted_at?: string | null
           last_error?: string | null
           origin_label: string
@@ -423,6 +425,7 @@ export type Database = {
           event_id?: string
           event_type?: string
           fact_class?: string
+          gaming_day?: string
           last_attempted_at?: string | null
           last_error?: string | null
           origin_label?: string
@@ -836,6 +839,32 @@ export type Database = {
             columns: ["game_settings_id"]
             isOneToOne: false
             referencedRelation: "game_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gaming_day_lifecycle: {
+        Row: {
+          casino_id: string
+          closed_at: string
+          gaming_day: string
+        }
+        Insert: {
+          casino_id: string
+          closed_at?: string
+          gaming_day: string
+        }
+        Update: {
+          casino_id?: string
+          closed_at?: string
+          gaming_day?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gaming_day_lifecycle_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
             referencedColumns: ["id"]
           },
         ]
@@ -3055,6 +3084,54 @@ export type Database = {
           },
         ]
       }
+      shift_operational_projection: {
+        Row: {
+          casino_id: string
+          credit_total_cents: number
+          event_count: number
+          fill_total_cents: number
+          gaming_day: string
+          grind_volume_cents: number
+          table_id: string
+          updated_at: string
+        }
+        Insert: {
+          casino_id: string
+          credit_total_cents?: number
+          event_count?: number
+          fill_total_cents?: number
+          gaming_day: string
+          grind_volume_cents?: number
+          table_id: string
+          updated_at?: string
+        }
+        Update: {
+          casino_id?: string
+          credit_total_cents?: number
+          event_count?: number
+          fill_total_cents?: number
+          gaming_day?: string
+          grind_volume_cents?: number
+          table_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_operational_projection_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_operational_projection_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff: {
         Row: {
           casino_id: string
@@ -4279,6 +4356,54 @@ export type Database = {
           },
         ]
       }
+      visit_class_a_projection: {
+        Row: {
+          adjustment_net: number
+          casino_id: string
+          event_count: number
+          gaming_day: string
+          total_in: number
+          total_out: number
+          updated_at: string
+          visit_id: string
+        }
+        Insert: {
+          adjustment_net?: number
+          casino_id: string
+          event_count?: number
+          gaming_day: string
+          total_in?: number
+          total_out?: number
+          updated_at?: string
+          visit_id: string
+        }
+        Update: {
+          adjustment_net?: number
+          casino_id?: string
+          event_count?: number
+          gaming_day?: string
+          total_in?: number
+          total_out?: number
+          updated_at?: string
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_class_a_projection_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_class_a_projection_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       measurement_audit_event_correlation_v: {
@@ -4500,6 +4625,20 @@ export type Database = {
           suggested_theo: number
         }[]
       }
+      fn_finance_outbox_emit: {
+        Args: {
+          p_aggregate_id: string
+          p_event_id: string
+          p_event_type: string
+          p_fact_class: string
+          p_gaming_day: string
+          p_origin_label: string
+          p_payload: Json
+          p_player_id: string
+          p_table_id: string
+        }
+        Returns: undefined
+      }
       generate_uuid_v7: { Args: never; Returns: string }
       get_player_exclusion_status: {
         Args: { p_casino_id: string; p_player_id: string }
@@ -4569,6 +4708,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rpc_acknowledge_outbox_delivery: {
+        Args: {
+          p_error_detail?: string
+          p_event_id: string
+          p_success: boolean
+        }
+        Returns: undefined
       }
       rpc_activate_floor_layout: {
         Args: { p_layout_version_id: string; p_request_id: string }
@@ -4674,12 +4821,15 @@ export type Database = {
           staff_role: string
         }[]
       }
-      rpc_bootstrap_casino_pit_layout: { Args: never; Returns: Json }
+      rpc_bootstrap_casino_pit_layout: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       rpc_check_table_seat_availability: {
         Args: { p_seat_number: number; p_table_id: string }
         Returns: Json
       }
-      rpc_claim_outbox_batch: {
+      rpc_claim_class_a_outbox_batch: {
         Args: { p_batch_size?: number }
         Returns: {
           aggregate_id: string
@@ -4689,6 +4839,7 @@ export type Database = {
           event_id: string
           event_type: string
           fact_class: string
+          gaming_day: string
           last_attempted_at: string | null
           last_error: string | null
           origin_label: string
@@ -4704,8 +4855,68 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      rpc_claim_operational_outbox_batch: {
+        Args: { p_batch_size?: number }
+        Returns: {
+          aggregate_id: string
+          casino_id: string
+          created_at: string
+          delivery_attempts: number
+          event_id: string
+          event_type: string
+          fact_class: string
+          gaming_day: string
+          last_attempted_at: string | null
+          last_error: string | null
+          origin_label: string
+          payload: Json
+          player_id: string | null
+          processed_at: string | null
+          table_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "finance_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      rpc_claim_outbox_batch: {
+        Args: { p_batch_size?: number }
+        Returns: {
+          aggregate_id: string
+          casino_id: string
+          created_at: string
+          delivery_attempts: number
+          event_id: string
+          event_type: string
+          fact_class: string
+          gaming_day: string
+          last_attempted_at: string | null
+          last_error: string | null
+          origin_label: string
+          payload: Json
+          player_id: string | null
+          processed_at: string | null
+          table_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "finance_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      rpc_cleanup_outbox_processed: {
+        Args: { p_max_rows?: number }
+        Returns: number
+      }
       rpc_clear_pin_attempts: { Args: never; Returns: undefined }
       rpc_clear_slot_assignment: { Args: { p_slot_id: string }; Returns: Json }
+      rpc_close_gaming_day: {
+        Args: { p_casino_id: string; p_gaming_day: string }
+        Returns: undefined
+      }
       rpc_close_rating_slip: {
         Args: { p_average_bet?: number; p_rating_slip_id: string }
         Returns: {
@@ -5284,6 +5495,41 @@ export type Database = {
       }
       rpc_get_dashboard_stats: { Args: never; Returns: Json }
       rpc_get_dashboard_tables_with_counts: { Args: never; Returns: Json }
+      rpc_get_outbox_event_page: {
+        Args: {
+          p_casino_id: string
+          p_event_type?: string
+          p_limit?: number
+          p_search_id?: string
+          p_status?: string
+        }
+        Returns: {
+          aggregate_id: string
+          casino_id: string
+          created_at: string
+          delivery_attempts: number
+          event_id: string
+          event_type: string
+          fact_class: string
+          last_attempted_at: string
+          last_error: string
+          origin_label: string
+          payload: Json
+          player_id: string
+          processed_at: string
+          table_id: string
+        }[]
+      }
+      rpc_get_outbox_relay_health: {
+        Args: { p_casino_id: string }
+        Returns: {
+          oldest_pending_age_seconds: number
+          pending_count: number
+          poison_candidate_count: number
+          processed_count_24h: number
+          retry_row_count: number
+        }[]
+      }
       rpc_get_player_exclusion_status: {
         Args: { p_player_id: string }
         Returns: string
@@ -5880,6 +6126,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_process_class_a_projection: {
+        Args: { p_message_id: string }
+        Returns: string
+      }
+      rpc_process_operational_projection: {
+        Args: { p_message_id: string }
+        Returns: string
+      }
       rpc_promo_coupon_inventory: {
         Args: {
           p_promo_program_id?: string
@@ -5908,6 +6162,10 @@ export type Database = {
           new_balance: number
           old_balance: number
         }[]
+      }
+      rpc_record_grind_observation: {
+        Args: { p_amount_cents: number; p_table_id: string }
+        Returns: string
       }
       rpc_redeem: {
         Args: {

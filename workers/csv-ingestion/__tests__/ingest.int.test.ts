@@ -32,11 +32,11 @@ jest.mock('../src/repo', () => ({
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import type { Config } from '../src/config';
 import { ingestBatch } from '../src/ingest';
+import type { Logger } from '../src/logger';
 import * as repo from '../src/repo';
 import type { ClaimedBatch, RowInsert } from '../src/repo';
-import type { Config } from '../src/config';
-import type { Logger } from '../src/logger';
 
 // ---------------------------------------------------------------------------
 // Helpers

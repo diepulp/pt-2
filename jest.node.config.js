@@ -22,6 +22,7 @@ module.exports = {
     '<rootDir>/lib/**/__tests__/**/*.test.ts',
     '<rootDir>/workers/**/__tests__/**/*.test.ts',
     '<rootDir>/__tests__/**/*.test.ts',
+    '<rootDir>/tests/**/*.test.ts',
   ],
 
   // Exclude integration tests, component/hook tests, and e2e

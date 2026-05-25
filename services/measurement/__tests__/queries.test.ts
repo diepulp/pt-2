@@ -9,14 +9,16 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import type { Database } from '@/types/database.types';
+
+import type { WidgetError } from '../dtos';
 import {
   queryTheoDiscrepancy,
   queryAuditCorrelation,
   queryRatingCoverage,
   queryLoyaltyLiability,
 } from '../queries';
-import type { WidgetError } from '../dtos';
 
 // === Mock Helpers ===
 

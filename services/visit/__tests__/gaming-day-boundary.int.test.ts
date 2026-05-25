@@ -20,6 +20,7 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import { createModeCSession } from '@/lib/testing/create-mode-c-session';
+
 import type { Database } from '../../../types/database.types';
 
 // Test environment setup

@@ -10,10 +10,10 @@
  */
 
 // Import route modules to verify exports exist
-import * as batchesRoute from '@/app/api/v1/player-import/batches/route';
+import * as executeRoute from '@/app/api/v1/player-import/batches/[id]/execute/route';
 import * as batchDetailRoute from '@/app/api/v1/player-import/batches/[id]/route';
 import * as rowsRoute from '@/app/api/v1/player-import/batches/[id]/rows/route';
-import * as executeRoute from '@/app/api/v1/player-import/batches/[id]/execute/route';
+import * as batchesRoute from '@/app/api/v1/player-import/batches/route';
 
 // Import http.ts functions
 import * as http from '../http';

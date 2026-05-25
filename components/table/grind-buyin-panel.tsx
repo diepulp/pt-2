@@ -1,6 +1,6 @@
 'use client';
 
-import { DollarSign, Loader2, Undo2 } from 'lucide-react';
+import { DollarSign, Loader2 } from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
 
@@ -10,15 +10,14 @@ import {
   formatCentsToDollars,
   useGrindBuyinTotal,
   useLogGrindBuyin,
-  useUndoGrindBuyin,
 } from '@/hooks/table-context/use-buyin-telemetry';
 import { cn } from '@/lib/utils';
 
 interface GrindBuyinPanelProps {
   tableId: string;
   casinoId: string;
-  /** Shift window for totals */
-  shiftWindow: { startTs: string; endTs: string };
+  /** Gaming day (YYYY-MM-DD) for operational projection totals */
+  gamingDay: string;
 }
 
 // Quick-tap amounts matching US cash denominations (in cents)
@@ -36,33 +35,30 @@ const QUICK_TAP_AMOUNTS = [
  * Quick-tap interface for logging anonymous (grind) buy-ins.
  * Designed for fast pit boss input during high-volume periods.
  *
+ * Phase 2.4 (PRD-088): totals come from operational projection route,
+ * not table_buyin_telemetry directly. Undo path removed — no governed
+ * reversal event exists in Phase 2.4 (DEC-EXEC-2, EXEC-088 §3.2).
+ *
  * @see GAP-TABLE-ROLLOVER-UI WS5
  */
 export function GrindBuyinPanel({
   tableId,
   casinoId,
-  shiftWindow,
+  gamingDay,
 }: GrindBuyinPanelProps) {
-  // Custom amount state
   const [customAmount, setCustomAmount] = React.useState('');
-  const [lastLoggedAmount, setLastLoggedAmount] = React.useState<number | null>(
-    null,
-  );
 
-  // Queries and mutations
   const { data: grindTotal, isLoading: isLoadingTotal } = useGrindBuyinTotal(
     tableId,
     casinoId,
-    shiftWindow,
+    gamingDay,
   );
 
   const logMutation = useLogGrindBuyin(tableId, casinoId);
-  const undoMutation = useUndoGrindBuyin(tableId, casinoId);
 
   const handleQuickTap = async (cents: number) => {
     try {
       await logMutation.mutateAsync({ amountCents: cents });
-      setLastLoggedAmount(cents);
       toast.success('Buy-in logged', {
         description: formatCentsToDollars(cents),
       });
@@ -86,7 +82,6 @@ export function GrindBuyinPanel({
     const cents = Math.round(dollars * 100);
     try {
       await logMutation.mutateAsync({ amountCents: cents });
-      setLastLoggedAmount(cents);
       setCustomAmount('');
       toast.success('Buy-in logged', {
         description: formatCentsToDollars(cents),
@@ -99,24 +94,7 @@ export function GrindBuyinPanel({
     }
   };
 
-  const handleUndo = async () => {
-    if (!lastLoggedAmount) return;
-
-    try {
-      await undoMutation.mutateAsync(lastLoggedAmount);
-      toast.success('Undo successful', {
-        description: `Reversed ${formatCentsToDollars(lastLoggedAmount)}`,
-      });
-      setLastLoggedAmount(null);
-    } catch (error) {
-      toast.error('Failed to undo', {
-        description:
-          error instanceof Error ? error.message : 'An error occurred',
-      });
-    }
-  };
-
-  const isPending = logMutation.isPending || undoMutation.isPending;
+  const isPending = logMutation.isPending;
 
   return (
     <div className="space-y-4 rounded-lg border p-4">
@@ -201,24 +179,6 @@ export function GrindBuyinPanel({
           )}
         </Button>
       </div>
-
-      {/* Undo button (shown when there's a recent action to undo) */}
-      {lastLoggedAmount && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-muted-foreground"
-          onClick={handleUndo}
-          disabled={undoMutation.isPending}
-        >
-          {undoMutation.isPending ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Undo2 className="mr-2 h-4 w-4" />
-          )}
-          Undo last ({formatCentsToDollars(lastLoggedAmount)})
-        </Button>
-      )}
     </div>
   );
 }

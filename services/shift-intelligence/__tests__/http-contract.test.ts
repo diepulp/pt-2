@@ -9,8 +9,9 @@
  * @see PRD-055 WS4 (Tests)
  */
 
-import * as computeBaselinesRoute from '@/app/api/v1/shift-intelligence/compute-baselines/route';
 import * as anomalyAlertsRoute from '@/app/api/v1/shift-intelligence/anomaly-alerts/route';
+import * as computeBaselinesRoute from '@/app/api/v1/shift-intelligence/compute-baselines/route';
+
 import * as http from '../http';
 
 describe('ShiftIntelligence http.ts ↔ route.ts contract', () => {

@@ -28,17 +28,6 @@
 import type { Database, Json } from '@/types/database.types';
 
 import {
-  ratingSlipStatusSchema,
-  createRatingSlipSchema,
-  closeRatingSlipSchema,
-  updateAverageBetSchema,
-  ratingSlipListQuerySchema,
-  ratingSlipRouteParamsSchema,
-  activeSlipsQuerySchema,
-  closedTodayQuerySchema,
-  activePlayersCasinoWideQuerySchema,
-} from '../schemas';
-import {
   toRatingSlipDTO,
   toRatingSlipDTOOrNull,
   toRatingSlipDTOList,
@@ -55,6 +44,17 @@ import {
   toClosedSlipForGamingDayDTO,
   toClosedSlipForGamingDayDTOList,
 } from '../mappers';
+import {
+  ratingSlipStatusSchema,
+  createRatingSlipSchema,
+  closeRatingSlipSchema,
+  updateAverageBetSchema,
+  ratingSlipListQuerySchema,
+  ratingSlipRouteParamsSchema,
+  activeSlipsQuerySchema,
+  closedTodayQuerySchema,
+  activePlayersCasinoWideQuerySchema,
+} from '../schemas';
 
 // ============================================================================
 // Type Aliases

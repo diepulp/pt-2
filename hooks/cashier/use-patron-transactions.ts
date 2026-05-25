@@ -148,7 +148,6 @@ export function useVoidCashOut(gamingDay?: string) {
   return useMutation({
     mutationFn: (params: VoidCashOutParams) =>
       createFinancialAdjustment({
-        casino_id: params.casino_id,
         player_id: params.player_id,
         visit_id: params.visit_id,
         delta_amount: -params.amount_cents,

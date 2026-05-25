@@ -19,8 +19,8 @@ export interface RequireApprovedPilotSessionOpts {
 // With requireProvisioningAuth:true: additionally requires PILOT_ADMIN_EMAILS membership.
 //
 // Valid for registerCompanyAction and bootstrapAction (EXEC-SPEC §WS_GUARDS).
-// Uses withServerAction(skipAuth:true) on those actions — withAuth checks staff
-// binding which does not yet exist at registration/bootstrap time.
+// Those actions bypass the standard staff auth chain — no staff binding exists yet
+// at registration/bootstrap time.
 export async function requireApprovedPilotSession(
   supabase: SupabaseClient<Database>,
   opts?: RequireApprovedPilotSessionOpts,

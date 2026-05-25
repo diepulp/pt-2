@@ -15,8 +15,8 @@
  * @see services/player-import/schemas.ts (importPlayerV1Schema)
  */
 
-import { validateRow } from '../src/validate';
 import type { NormalizedRow, ImportPlayerV1Payload } from '../src/normalize';
+import { validateRow } from '../src/validate';
 
 // ---------------------------------------------------------------------------
 // Helpers

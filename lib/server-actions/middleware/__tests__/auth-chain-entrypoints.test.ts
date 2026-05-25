@@ -47,6 +47,28 @@ const AUTH_CHAIN_ALLOWLIST: Record<string, string> = {
   // Dev-only stubbed server actions — no auth, no RLS, no Supabase calls
   'app/dev/setup/_dev-actions.ts':
     'Dev wizard stubs — mock data only, no real DB or auth',
+  // Wave 2 outbox internal routes — CRON_SECRET bearer auth (ADR-054 R3).
+  // These are relay worker / cron endpoints; no user session exists at call time.
+  'app/api/internal/outbox-relay/route.ts':
+    'Internal cron relay — CRON_SECRET bearer auth, no user session',
+  'app/api/internal/outbox-observability/route.ts':
+    'Internal admin observability — session-based admin guard, no withAuth compositor',
+  'app/api/internal/outbox-cleanup/route.ts':
+    'Internal cron cleanup — CRON_SECRET bearer auth, no user session',
+  // Public / pre-auth routes that cannot use the staff auth chain
+  'app/api/health/route.ts': 'Public health check — no auth required',
+  'app/api/demo-request/route.ts':
+    'Public demo request form — unauthenticated submission',
+  // Auth-initiation server actions — no session exists yet
+  'app/actions/auth/sign-in-admin.ts':
+    'Auth initiation — no staff session at call time',
+  'app/actions/auth/send-magic-link.ts':
+    'Auth initiation — no staff session at call time',
+  'app/actions/auth/request-pilot-access.ts':
+    'Auth initiation — no staff session at call time',
+  // Pilot admin action — uses isPilotAdmin guard directly (pre-compositor pattern)
+  'app/actions/pilot/review-actions.ts':
+    'Pilot admin guard via isPilotAdmin — pre-compositor pattern (v0.2 migration)',
 };
 
 /** Patterns indicating the file uses the auth middleware chain */

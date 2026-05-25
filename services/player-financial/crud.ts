@@ -15,6 +15,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { DomainError } from '@/lib/errors/domain-errors';
 import { safeErrorDetails } from '@/lib/errors/safe-error-details';
 import { financialValueSchema } from '@/lib/financial/schema';
+// SERVICE_ROLE_EXEMPTION: visit_class_a_projection and gaming_day_lifecycle have
+// service_role-only RLS (zero authenticated SELECT policies). These tables are
+// internal projection stores with no authenticated read path — service-role is
+// the only safe access route. Used exclusively in getVisitClassACompleteness()
+// called from getVisitSummary() for completeness derivation (PRD-087 DEC-087-004).
+import { createServiceClient } from '@/lib/supabase/service';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -24,11 +30,9 @@ import type {
   VisitFinancialSummaryDTO,
 } from './dtos';
 import {
-  toFinancialTransactionDTO,
   toFinancialTransactionDTOFromRpc,
   toFinancialTransactionDTOList,
   toFinancialTransactionDTOOrNull,
-  toVisitFinancialSummaryDTO,
   toVisitFinancialSummaryDTOOrNull,
 } from './mappers';
 import {
@@ -189,6 +193,163 @@ export async function createTransaction(
     // eslint-disable-next-line custom-rules/no-dto-type-assertions -- catch block error typing
     throw mapDatabaseError(error as { code?: string; message: string });
   }
+}
+
+// === Class A Completeness Query ===
+
+/**
+ * Resolves lifecycle-aware completeness for a visit's Class A financial projection.
+ *
+ * Requires a service-role client — visit_class_a_projection and gaming_day_lifecycle
+ * have service_role-only RLS (no authenticated policies per Gate B).
+ *
+ * Logic (per EXEC-087 WS3 completeness derivation):
+ *   1. No projection row → 'unknown'
+ *   2. Projection exists, gaming_day open → 'partial'
+ *   3. Projection exists, gaming_day closed, backlog > 0 → 'partial'
+ *   4. Projection exists, gaming_day closed, backlog = 0 → 'complete'
+ */
+export async function getVisitClassACompleteness(
+  supabase: SupabaseClient<Database>,
+  visitId: string,
+  casinoId: string,
+): Promise<'complete' | 'partial' | 'unknown'> {
+  const { data: projection } = await supabase
+    .from('visit_class_a_projection')
+    .select('gaming_day')
+    .eq('visit_id', visitId)
+    .eq('casino_id', casinoId)
+    .order('gaming_day', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!projection) return 'unknown';
+
+  const gamingDay = projection.gaming_day;
+
+  const { data: lifecycle } = await supabase
+    .from('gaming_day_lifecycle')
+    .select('casino_id')
+    .eq('casino_id', casinoId)
+    .eq('gaming_day', gamingDay)
+    .maybeSingle();
+
+  if (!lifecycle) return 'partial';
+
+  const { count } = await supabase
+    .from('finance_outbox')
+    .select('*', { count: 'exact', head: true })
+    .eq('casino_id', casinoId)
+    .eq('gaming_day', gamingDay)
+    .eq('fact_class', 'ledger')
+    .is('processed_at', null);
+
+  return (count ?? 0) === 0 ? 'complete' : 'partial';
+}
+
+// === Operational Completeness Query (Phase 2.4) ===
+
+/**
+ * Resolves lifecycle-aware completeness for a shift's operational projection.
+ *
+ * Requires a service-role client — shift_operational_projection has service_role-only RLS
+ * (no authenticated policies — service_role is the only access route).
+ *
+ * Five-step completeness logic (per EXEC-088 WS3):
+ *   1. No projection row, no lifecycle row → 'unknown'
+ *   2. No projection row, lifecycle closed, table-scoped backlog = 0 → 'complete' with zero totals
+ *   3. Projection exists, no lifecycle row → 'partial'
+ *   4. Projection exists, lifecycle closed, table-scoped backlog > 0 → 'partial'
+ *   5. Projection exists, lifecycle closed, backlog = 0 → 'complete'
+ *
+ * Backlog check is TABLE-SCOPED: pending rows for other tables on the same gaming_day
+ * do not affect this table's completeness.
+ *
+ * type is always 'estimated' per ADR-054 R4 — no layer may upgrade this to 'actual'.
+ */
+// SERVICE_ROLE_EXEMPTION (same as getVisitClassACompleteness):
+// shift_operational_projection and gaming_day_lifecycle have service_role-only RLS.
+// createServiceClient() is created internally so callers in app/api/v1/ do not
+// need to import it (SEC-001 / PRD-HZ-001 hook enforcement).
+export async function getShiftOperationalCompleteness(
+  supabase: SupabaseClient<Database> | null,
+  casinoId: string,
+  gamingDay: string,
+  tableId: string,
+): Promise<{
+  status: 'complete' | 'partial' | 'unknown';
+  totalCents: number;
+  count: number;
+  type: 'estimated';
+}> {
+  const db = supabase ?? createServiceClient();
+  const { data: projection } = await db
+    .from('shift_operational_projection')
+    .select(
+      'grind_volume_cents, fill_total_cents, credit_total_cents, event_count',
+    )
+    .eq('casino_id', casinoId)
+    .eq('gaming_day', gamingDay)
+    .eq('table_id', tableId)
+    .maybeSingle();
+
+  const { data: lifecycle } = await db
+    .from('gaming_day_lifecycle')
+    .select('casino_id')
+    .eq('casino_id', casinoId)
+    .eq('gaming_day', gamingDay)
+    .maybeSingle();
+
+  // Step 1: no projection, no lifecycle
+  if (!projection && !lifecycle) {
+    return { status: 'unknown', totalCents: 0, count: 0, type: 'estimated' };
+  }
+
+  // Step 2 (and implicit partial for no-projection + lifecycle + backlog > 0)
+  if (!projection) {
+    const { count: backlogCount } = await db
+      .from('finance_outbox')
+      .select('*', { count: 'exact', head: true })
+      .eq('casino_id', casinoId)
+      .eq('gaming_day', gamingDay)
+      .eq('table_id', tableId)
+      .eq('fact_class', 'operational')
+      .in('event_type', ['grind.observed', 'fill.recorded', 'credit.recorded'])
+      .is('processed_at', null);
+
+    if ((backlogCount ?? 0) === 0) {
+      return { status: 'complete', totalCents: 0, count: 0, type: 'estimated' };
+    }
+    return { status: 'partial', totalCents: 0, count: 0, type: 'estimated' };
+  }
+
+  const totalCents =
+    (projection.grind_volume_cents ?? 0) +
+    (projection.fill_total_cents ?? 0) +
+    (projection.credit_total_cents ?? 0);
+  const count = projection.event_count ?? 0;
+
+  // Step 3: projection exists, no lifecycle (gaming day still open)
+  if (!lifecycle) {
+    return { status: 'partial', totalCents, count, type: 'estimated' };
+  }
+
+  // Steps 4 + 5: projection + lifecycle — check table-scoped backlog
+  const { count: backlogCount } = await db
+    .from('finance_outbox')
+    .select('*', { count: 'exact', head: true })
+    .eq('casino_id', casinoId)
+    .eq('gaming_day', gamingDay)
+    .eq('table_id', tableId)
+    .eq('fact_class', 'operational')
+    .in('event_type', ['grind.observed', 'fill.recorded', 'credit.recorded'])
+    .is('processed_at', null);
+
+  if ((backlogCount ?? 0) > 0) {
+    return { status: 'partial', totalCents, count, type: 'estimated' };
+  }
+
+  return { status: 'complete', totalCents, count, type: 'estimated' };
 }
 
 // === Read Operations ===
@@ -390,12 +551,11 @@ export async function getVisitSummary(
       .single();
 
     if (error) {
-      // PGRST116 means no transactions for this visit yet
+      // PGRST116 means no transactions for this visit yet — no projection data either
       if (error.code === 'PGRST116') {
-        // Return zero summary instead of throwing
         return {
           visit_id: visitId,
-          casino_id: '', // Will be populated by RLS context
+          casino_id: '',
           total_in: financialValueSchema.parse({
             value: 0,
             type: 'actual',
@@ -422,7 +582,18 @@ export async function getVisitSummary(
       throw mapDatabaseError(error);
     }
 
-    const summary = toVisitFinancialSummaryDTOOrNull(data);
+    const casinoId = data?.casino_id ?? '';
+    // Resolve Class A completeness via service client (visit_class_a_projection has service_role-only RLS).
+    // Falls back to 'unknown' if projection data is absent or query fails.
+    const completeness = casinoId
+      ? await getVisitClassACompleteness(
+          createServiceClient(),
+          visitId,
+          casinoId,
+        ).catch(() => 'unknown' as const)
+      : ('unknown' as const);
+
+    const summary = toVisitFinancialSummaryDTOOrNull(data, completeness);
     if (!summary) {
       throw new DomainError(
         'VISIT_NOT_FOUND',

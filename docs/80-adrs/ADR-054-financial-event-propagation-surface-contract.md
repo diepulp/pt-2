@@ -38,7 +38,7 @@ Outbox pattern mechanics (transactional atomicity, at-least-once delivery, idemp
 
 ## D1 — Outbox As Sole Propagation Path
 
-Every authored financial event — Ledger **or** Operational — MUST produce a corresponding row in `finance_outbox` within the **same database transaction** as the authoring write.
+Every authored financial event that satisfies the class-specific emission eligibility rule MUST produce a corresponding row in `finance_outbox` within the **same database transaction** as the authoring write. For Class A (Ledger), the obligation activates only for Wave-2-eligible rows whose `rating_slip_id` resolves to a same-casino `rating_slip.table_id`; non-table-scoped or ineligible Class A rows are authored as valid PFT rows but excluded from Wave 2 outbox emission. For Class B (Operational), no table-anchor precondition exists. *(Amended by ADR-057 D5.)*
 
 * no lost events
 * no phantom events
@@ -138,7 +138,7 @@ Each outbox row carries:
 | Field | Purpose |
 |-------|---------|
 | `event_id` (UUID) | unique identifier, for idempotency |
-| `event_type` | e.g. `buyin.recorded`, `grind.observed`, `cashout.recorded`, `adjustment.recorded` |
+| `event_type` | e.g. `buyin.recorded`, `grind.observed`, `adjustment.recorded`; `cashout.recorded` is reserved for a future table-anchored cashout producer and MUST NOT emit for current cage cashouts per ADR-057 |
 | `fact_class` | `ledger` \| `operational` (per ADR-052 D4). `observation` and `compliance` reserved for taxonomy; not authored in pilot. |
 | `origin_label` | `actual` \| `estimated` \| `observed` \| `compliance`. Pilot-authored values: `actual` (ledger) and `estimated` (operational). |
 | `table_id` | mandatory — table-first anchoring (D2 of fact-model ADR) |
@@ -321,7 +321,7 @@ A surface that cannot establish completeness MUST render `Unknown`, never silent
 | D3 — System does not compute financial truth | D7, §4.2 Authority, C4 (no upgrade) |
 | D5 — No reconciliation | D7, consumer-projection-only (D4) |
 | D1 — Dual-layer model | Event model carries `fact_class`, dual-author atomic outbox |
-| D2 — Table-first anchoring | `table_id` mandatory on every event |
+| D2 — Table-first anchoring | `table_id` mandatory on every `finance_outbox` row; Class A events without deterministic table resolution are excluded from Wave 2 emission and do not enter `finance_outbox` *(ADR-057 D5)* |
 | D4 — TBT reclassification | Grind authors directly to outbox with `origin_label = observed`; rated flows as ledger projection |
 
 ---

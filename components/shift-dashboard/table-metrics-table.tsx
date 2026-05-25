@@ -11,6 +11,7 @@
 
 import { AlertTriangleIcon, CheckCircleIcon, InfoIcon } from 'lucide-react';
 
+import { FinancialValue } from '@/components/financial';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -248,10 +249,28 @@ export function TableMetricsTable({
                       {formatCents(table.closing_bankroll_total_cents)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm tabular-nums">
-                      {formatCents(table.fills_total_cents)}
+                      <FinancialValue
+                        variant="compact"
+                        label="Fills"
+                        value={{
+                          value: table.fills_total_cents ?? 0,
+                          type: 'estimated',
+                          source: 'shift_metrics',
+                          completeness: { status: 'partial' },
+                        }}
+                      />
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm tabular-nums">
-                      {formatCents(table.credits_total_cents)}
+                      <FinancialValue
+                        variant="compact"
+                        label="Credits"
+                        value={{
+                          value: table.credits_total_cents ?? 0,
+                          type: 'estimated',
+                          source: 'shift_metrics',
+                          completeness: { status: 'partial' },
+                        }}
+                      />
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm tabular-nums">
                       {table.metric_grade === 'AUTHORITATIVE'

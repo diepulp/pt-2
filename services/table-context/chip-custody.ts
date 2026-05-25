@@ -92,7 +92,12 @@ export async function requestTableFill(
   });
 
   if (error) {
-    // Handle duplicate request (idempotent - return existing per SLAD idempotency)
+    // PRD-085 Wave 2 Phase 2.2: IDEMPOTENCY_CONFLICT from DB (P0001) must propagate
+    // distinctly — divergent replay is not the same as a generic fill rejection.
+    if (error.message?.startsWith('IDEMPOTENCY_CONFLICT:')) {
+      throw new DomainError('TABLE_FILL_REJECTED', error.message);
+    }
+    // Legacy 23505 fallback for compatibility with older DB posture
     if (error.code === '23505') {
       const { data: existing, error: lookupError } = await supabase
         .from('table_fill')
@@ -130,7 +135,12 @@ export async function requestTableCredit(
   });
 
   if (error) {
-    // Handle duplicate request (idempotent - return existing per SLAD idempotency)
+    // PRD-085 Wave 2 Phase 2.2: IDEMPOTENCY_CONFLICT from DB (P0001) must propagate
+    // distinctly — divergent replay is not the same as a generic credit rejection.
+    if (error.message?.startsWith('IDEMPOTENCY_CONFLICT:')) {
+      throw new DomainError('TABLE_CREDIT_REJECTED', error.message);
+    }
+    // Legacy 23505 fallback for compatibility with older DB posture
     if (error.code === '23505') {
       const { data: existing, error: lookupError } = await supabase
         .from('table_credit')

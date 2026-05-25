@@ -34,11 +34,12 @@ export default function RequestAccessPage() {
             'radial-gradient(ellipse 50% 50% at 50% 20%, hsl(189 94% 43% / 0.06), transparent)',
         }}
       />
-      <div className="relative flex min-h-dvh items-center justify-center px-5 py-8 sm:px-6">
-        <div className="w-full max-w-[600px]">
+
+      <div className="relative flex min-h-[70vh] items-center justify-center px-5 py-16 sm:px-6">
+        <div className="w-full max-w-[520px]">
           <Link
             href="/"
-            className="mb-8 flex flex-col items-center transition-opacity duration-300 hover:opacity-80"
+            className="flex flex-col items-start transition-opacity duration-300 hover:opacity-80"
           >
             <span
               className="text-lg tracking-wide text-[hsl(189_94%_43%)]/80"

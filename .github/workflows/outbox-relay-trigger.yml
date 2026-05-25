@@ -1,0 +1,42 @@
+name: Outbox Relay Trigger
+
+# Replacement for the Vercel-cron every-minute schedule (requires Pro plan).
+# Runs every 5 minutes from the default branch, POSTs to the relay endpoint
+# with the shared CRON_SECRET bearer token.
+#
+# Required GitHub secrets:
+#   APP_BASE_URL  — production base URL, e.g. https://your-app.vercel.app
+#   CRON_SECRET   — same value set in the Vercel environment variable
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  relay:
+    name: Trigger outbox relay cycle
+    runs-on: ubuntu-latest
+    # Only run against the production deployment — not on forks.
+    if: github.repository_owner == github.actor || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: POST /api/internal/outbox-relay
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          status=$(curl -s -o /tmp/relay-response.json -w "%{http_code}" \
+            --max-time 35 \
+            -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            "${APP_BASE_URL}/api/internal/outbox-relay")
+
+          echo "HTTP status: ${status}"
+          cat /tmp/relay-response.json
+
+          if [ "${status}" -lt 200 ] || [ "${status}" -ge 300 ]; then
+            echo "Relay cycle returned non-2xx status ${status}"
+            exit 1
+          fi

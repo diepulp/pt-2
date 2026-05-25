@@ -2,8 +2,8 @@
 # ==============================================================================
 # Service Layer Anti-Pattern Detection (Pattern-Aware)
 # ==============================================================================
-# Version: 2.6.0
-# Date: 2025-12-25
+# Version: 2.7.0
+# Date: 2026-05-18
 # References:
 #   - SLAD: docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md
 #   - SRM: docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md
@@ -295,6 +295,67 @@ if [ -n "$STAGED_SERVICE_FILES" ]; then
     echo "Ensure idempotency_key is included in insert."
     echo "Reference: SRM §1605-1609"
     echo ""
+  fi
+
+  # finance_outbox — outbox writes are RPC-only (ADR-054 R3)
+  # fn_finance_outbox_emit is the sole authorized insertion path (Phase 2.1).
+  # TypeScript must never write directly to finance_outbox; all writes go through
+  # fact-authoring RPCs that call fn_finance_outbox_emit within the same transaction.
+  # Test files are exempt — they may directly query/insert for assertion purposes.
+  OUTBOX_PROD_FILES=$(echo "$STAGED_SERVICE_FILES" | grep -v '__tests__/' | grep -v '\.test\.ts$' | grep -v '\.spec\.ts$' || true)
+  OUTBOX_VIOLATIONS=$(echo "$OUTBOX_PROD_FILES" | xargs grep -lE "\.from\(['\"]finance_outbox['\"]\)\.(insert|update|upsert|delete)" 2>/dev/null || true)
+
+  if [ -n "$OUTBOX_VIOLATIONS" ]; then
+    echo "❌ ANTI-PATTERN: Direct write to finance_outbox (ADR-054 R3 violation)"
+    echo ""
+    echo "Files with violations:"
+    echo "$OUTBOX_VIOLATIONS" | while read -r file; do
+      echo "  - $file"
+    done
+    echo ""
+    echo "finance_outbox must ONLY be written by fact-authoring RPCs that call"
+    echo "fn_finance_outbox_emit() within the same DB transaction (ADR-054 R3)."
+    echo "TypeScript has no direct write path to finance_outbox."
+    echo ""
+    echo "WHY: The transactional outbox invariant requires that every finance_outbox"
+    echo "row is committed atomically with the PFT/TBT fact row in the same BEGIN…COMMIT."
+    echo "A TypeScript-level insert is a separate transaction and breaks I1 atomicity."
+    echo ""
+    echo "Reference: ADR-054 R3, ADR-056, outbox-knowledge-base.md"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+
+  # processed_messages — idempotency table writes are RPC-only
+  # Only rpc_commit_consumer_receipt (SECURITY DEFINER, service_role) may write here.
+  # Test files are exempt — they may directly query/insert for assertion purposes.
+  PROCESSED_PROD_FILES=$(echo "$STAGED_SERVICE_FILES" | grep -v '__tests__/' | grep -v '\.test\.ts$' | grep -v '\.spec\.ts$' || true)
+  PROCESSED_VIOLATIONS=$(echo "$PROCESSED_PROD_FILES" | xargs grep -lE "\.from\(['\"]processed_messages['\"]\)\.(insert|update|upsert|delete)" 2>/dev/null || true)
+
+  if [ -n "$PROCESSED_VIOLATIONS" ]; then
+    echo "❌ ANTI-PATTERN: Direct write to processed_messages (consumer idempotency violation)"
+    echo ""
+    echo "Files with violations:"
+    echo "$PROCESSED_VIOLATIONS" | while read -r file; do
+      echo "  - $file"
+    done
+    echo ""
+    echo "processed_messages must ONLY be written by rpc_commit_consumer_receipt."
+    echo "TypeScript relay workers call rpc_commit_consumer_receipt via .rpc(), never"
+    echo "direct DML on processed_messages."
+    echo ""
+    echo "WHY: The idempotency boundary is enforced at the DB layer (ON CONFLICT DO NOTHING)."
+    echo "A TypeScript-level insert bypasses this guarantee and can produce duplicate effects."
+    echo ""
+    echo "  ❌ WRONG:"
+    echo "  await supabase.from('processed_messages').insert({ event_id, casino_id, ... })"
+    echo ""
+    echo "  ✅ CORRECT:"
+    echo "  await supabase.rpc('rpc_commit_consumer_receipt', { p_event_id, p_status })"
+    echo ""
+    echo "Reference: ADR-054 D5, outbox-knowledge-base.md §Consumer Idempotency"
+    echo ""
+    VIOLATIONS_FOUND=1
   fi
 fi
 
@@ -626,8 +687,8 @@ fi
 # ==============================================================================
 # Check 12: Deprecated exec_sql RPC BANNED (ADR-015)
 # ==============================================================================
-# The exec_sql() loop pattern fails with connection pooling. All context
-# injection must use set_rls_context() RPC for atomic SET LOCAL execution.
+# The exec_sql() loop pattern fails with connection pooling. Context injection
+# must use set_rls_context_from_staff() (ADR-024). set_rls_context() was DROPPED.
 STAGED_TS_FILES=$(git diff --cached --name-only | grep '\.ts$' | grep -v '/types/' | grep -v '__tests__' | grep -v '\.test\.ts$' || true)
 
 if [ -n "$STAGED_TS_FILES" ]; then
@@ -651,21 +712,21 @@ if [ -n "$STAGED_TS_FILES" ]; then
     echo ""
     echo "Files with violations:$EXEC_SQL_VIOLATIONS"
     echo ""
-    echo "Fix: Use set_rls_context() RPC instead:"
+    echo "Fix: RPCs self-inject context via set_rls_context_from_staff() (ADR-024)."
+    echo "TypeScript should call the RPC directly — context is derived inside the RPC."
     echo ""
     echo "  ❌ WRONG (DEPRECATED - fails with connection pooling):"
     echo "  for (const stmt of statements) {"
     echo "    await supabase.rpc('exec_sql', { sql: stmt });"
     echo "  }"
     echo ""
-    echo "  ✅ CORRECT (ADR-015 compliant):"
-    echo "  await supabase.rpc('set_rls_context', {"
-    echo "    p_actor_id: context.actorId,"
-    echo "    p_casino_id: context.casinoId,"
-    echo "    p_staff_role: context.staffRole,"
-    echo "  });"
+    echo "  ✅ CORRECT (ADR-024 — RPC derives context from JWT):"
+    echo "  await supabase.rpc('rpc_your_function', { p_param1, p_param2 });"
+    echo "  // The RPC calls PERFORM set_rls_context_from_staff() internally"
     echo ""
-    echo "Reference: ADR-015, SEC-001 (Pattern C)"
+    echo "  NOTE: set_rls_context() was DROPPED in SEC-007. Do NOT use it."
+    echo ""
+    echo "Reference: ADR-015, ADR-024, SEC-001 (Pattern C)"
     echo ""
     VIOLATIONS_FOUND=1
   fi
@@ -865,6 +926,9 @@ if [ -n "$STAGED_TS_FILES" ]; then
     # Skip allowed files
     if echo "$file" | grep -q "lib/supabase/service\.ts$"; then continue; fi
     if echo "$file" | grep -q "lib/server-actions/middleware/auth\.ts$"; then continue; fi
+    # Internal infrastructure routes are CRON_SECRET-authenticated (not user-facing).
+    # Service-role is required for relay polling across all casinos (ADR-056 D3).
+    if echo "$file" | grep -q "app/api/internal/"; then continue; fi
 
     # Skip files with documented exemption — add '# SERVICE_ROLE_EXEMPTION: <reason>' to the file
     # Use this ONLY when the table design intentionally has no RLS SELECT policy for any role
@@ -928,9 +992,9 @@ if [ $VIOLATIONS_FOUND -eq 1 ]; then
   echo "  Pattern B (Player, Visit, Casino, FloorLayout): interface BANNED, use type + Pick/Omit"
   echo "  Pattern C (RatingSlip): Hybrid - per-DTO basis (still requires dtos.ts)"
   echo ""
-  echo "RLS Pattern Quick Reference (ADR-015):"
-  echo "  ✅ Use: injectRLSContext() from lib/supabase/rls-context.ts"
-  echo "  ✅ Use: set_rls_context() RPC (atomic transaction wrapper)"
+  echo "RLS Pattern Quick Reference (ADR-015 / ADR-024):"
+  echo "  ✅ Use: RPC self-injection — RPCs call set_rls_context_from_staff() internally"
+  echo "  ❌ Ban: set_rls_context() — DROPPED in SEC-007, does not exist"
   echo "  ❌ Ban: exec_sql() loop pattern (connection pooling fails)"
   echo "  ❌ Ban: Direct SET LOCAL strings in service code"
   echo ""

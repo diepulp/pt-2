@@ -18,11 +18,11 @@ import {
   createMockRequest,
   createMockRouteParams,
 } from '@/lib/testing/route-test-helpers';
-import type { FinancialValue } from '@/types/financial';
 import type {
   FinancialAnomalyAlertDTO,
   RatioAnomalyAlertDTO,
 } from '@/services/shift-intelligence/dtos';
+import type { FinancialValue } from '@/types/financial';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 

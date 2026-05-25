@@ -1,7 +1,8 @@
 import { render, screen, within } from '@testing-library/react';
 
-import { FinancialValue } from '../FinancialValue';
 import type { FinancialValue as FinancialValueType } from '@/types/financial';
+
+import { FinancialValue } from '../FinancialValue';
 
 function makeValue(
   overrides: Partial<FinancialValueType> = {},

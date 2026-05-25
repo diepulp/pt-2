@@ -15,6 +15,7 @@
  */
 
 import type { Pool, QueryResult } from 'pg';
+
 import {
   claimBatch,
   reapStaleBatches,

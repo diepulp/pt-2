@@ -8,11 +8,20 @@
 // Signal to jest.setup.js that a runtime-correct config is active
 process.env.JEST_CONFIG_OVERRIDE = '1';
 
-// Load environment variables (same .env file as Playwright and Next.js)
+// Load environment variables — .env.local first (developer's local Supabase),
+// then .env as fallback. Matches the convention in use across the repo:
+//   .env.local → local Supabase (http://127.0.0.1:54321)
+//   .env       → remote/shared baseline
+// override:false on both means existing process.env wins; explicit invocations
+// like `SUPABASE_URL=... npm test` still override.
 const path = require('path');
 
 const dotenv = require('dotenv');
 
+dotenv.config({
+  path: path.resolve(process.cwd(), '.env.local'),
+  override: false,
+});
 dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: false });
 
 // Fallback Supabase env vars

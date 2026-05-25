@@ -33,5 +33,11 @@
     }
   ],
   "redirects": [],
-  "rewrites": []
+  "rewrites": [],
+  "crons": [
+    {
+      "path": "/api/internal/outbox-cleanup",
+      "schedule": "0 7 * * *"
+    }
+  ]
 }

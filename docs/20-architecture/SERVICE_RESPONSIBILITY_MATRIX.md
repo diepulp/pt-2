@@ -1,9 +1,9 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.25.0
+nsversion: 4.26.0
 status: CANONICAL
-effective: 2026-05-22
+effective: 2026-05-23
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
 source_of_truth:
   - database schema (supabase/migrations/)
@@ -22,14 +22,19 @@ source_of_truth:
   - docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md
   - docs/80-adrs/ADR-039-measurement-layer.md
   - docs/80-adrs/ADR-042-player-exclusion-architecture.md
+  - docs/80-adrs/ADR-052-financial-fact-model-dual-layer.md
+  - docs/80-adrs/ADR-053-financial-system-scope-boundary.md
+  - docs/80-adrs/ADR-054-financial-event-propagation-surface-contract.md
+  - docs/80-adrs/ADR-055-cross-class-authoring-parity.md
+  - docs/80-adrs/ADR-056-relay-worker-execution-environment.md
   - docs/archive/player-enrollment-specs/ADR-022_Player_Identity_Enrollment_ARCH_v7.md
   - docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md
 ---
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.25.0 (FloorLayoutService — PRD-068 Pit Bootstrap onboarding materialization)
-> **Date**: 2026-05-22
+> **Version**: 4.26.0 (Financial transactional outbox registry)
+> **Date**: 2026-05-23
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -55,9 +60,10 @@ source_of_truth:
 
 ## Change Log
 
+- **4.26.0 (2026-05-23)** – **Financial Transactional Outbox Registry**: Registered stable Wave 2 ownership boundaries for Finance projection infrastructure. PlayerFinancialService owns `finance_outbox`, `processed_messages`, `visit_class_a_projection`, and `shift_operational_projection` as Projection Input transport, consumer idempotency, and projection artifact stores governed by ADR-052 through ADR-056. CasinoService owns `gaming_day_lifecycle` as the foundational temporal close signal consumed by projection completeness logic. Authoring operational tables (`table_fill`, `table_credit`, `table_buyin_telemetry`) remain owned by TableContextService; Finance owns only relay/projection side effects.
 - **4.25.0 (2026-05-22)** – **FloorLayoutService PRD-068 Pit Bootstrap (Onboarding Materialization)**: Added `FloorLayoutService.bootstrapCasinoPitLayout()` method and `rpc_bootstrap_casino_pit_layout` SECURITY DEFINER RPC (ADR-024 INV-8, zero-param, context from JWT via `set_rls_context_from_staff`). Idempotent onboarding materialization: creates default floor_layout, active floor_layout_version, floor_layout_activation (fixed `activation_request_id='prd068_pit_bootstrap_v1'`), one floor_pit per distinct `gaming_table.pit` value, and one floor_table_slot per pit-bearing gaming_table. Two partial unique indexes added: `ux_floor_layout_activation_active_per_casino` on `floor_layout_activation(casino_id) WHERE deactivated_at IS NULL` (RULE-7 concurrent-bootstrap fence) and `ux_floor_pit_layout_version_label_lower` on `floor_pit(layout_version_id, lower(label))` (RULE-2 defense). Invoked from `app/(onboarding)/setup/_actions.ts completeSetupAction` after `rpc_complete_casino_setup` succeeds. **Onboarding remains a trigger host — no `services/onboarding/` directory exists and none should be created.** See `docs/10-prd/PRD-068-pit-bootstrap-onboarding-materialization-v0.md`, `docs/21-exec-spec/EXEC-068-pit-bootstrap-onboarding-materialization.md`, and migration `supabase/migrations/20260422183640_prd068_bootstrap_casino_pit_layout_rpc.sql`.
 - **4.24.0 (2026-05-12)** – **PilotContainmentService (PRD-083 Pilot Authentication Containment Gate)**: Registered `PilotContainmentService` as new `Pilot Access Governance` bounded context. New tables: `pilot_access_requests` (public INSERT, service_role SELECT/UPDATE), `approved_email_allowlist` (service_role only — never read by authenticated client). Both tables enforce canonical email via CHECK constraint and finite status values. Server actions: `sendMagicLinkAction`, `requestPilotAccessAction`, `approvePilotAccessAction`, `rejectPilotAccessAction`, `revokePilotAccessAction`. Service: `services/pilot/` with `createPilotContainmentService` factory. Admin authority via `PILOT_ADMIN_EMAILS` env var (server-only). Containment primitive — must not absorb IAM, billing, CRM, or RBAC (FIB-S RULE-9). See `docs/10-prd/PRD-083-pilot-auth-containment-v0.md` and `docs/21-exec-spec/EXEC-083-pilot-auth-containment.md`.
-- **4.23.0 (2026-04-06)** – **EmailService (PRD-062 Pilot SMTP & Email Wiring)**: Registered `EmailService` as pilot-scoped utility service (Operational context). New table: `email_send_attempt` (append-only send log). RLS: Pattern C hybrid SELECT + INSERT only (no UPDATE/DELETE). No RPCs — writes via authenticated Supabase client after `set_rls_context_from_staff()` in server actions. 3 server actions: `sendShiftReportAction`, `retryShiftReportAction`, `dismissFailedAttemptAction`. Infrastructure adapter: `lib/email/` with provider-agnostic interface, Resend implementation. Service: `services/email/` with `createEmailService` factory. See `docs/10-prd/PRD-062-pilot-smtp-email-wiring-v0.md` and `docs/21-exec-spec/EXEC-062-pilot-smtp-email-wiring.md`.
+- **4.23.0 (2026-04-06)** – **EmailService (PRD-062 Pilot SMTP & Email Wiring)**: Registered `EmailService` as pilot-scoped utility service (Operational context). New table: `email_send_attempt` (append-only send log). RLS: Pattern C hybrid SELECT + INSERT only (no UPDATE/DELETE). No RPCs — writes via authenticated Supabase client after `set_rls_context_from_staff()` in server actions. 3 server actions: `sendShiftReportAction`, `retryShiftReportAction`, `dismissFailedAttemptAction`. Infrastructure adapter: `lib/email/` with provider-agnostic interface, Resend implementation. Service: `services/email/` with `createEmailService` factory. See `docs/10-prd/_archive/PRD-062-pilot-smtp-email-wiring-v0.md` and `docs/21-exec-spec/_archive/EXEC-062-pilot-smtp-email-wiring.md`.
 - **4.22.0 (2026-03-25)** – **ShiftIntelligenceService Alert Maturity (PRD-056)**: Added `shift_alert`, `alert_acknowledgment` to Owns. 2 new RPCs: `rpc_persist_anomaly_alerts` (SECURITY DEFINER), `rpc_acknowledge_alert` (SECURITY DEFINER). 1 new RPC: `rpc_get_alert_quality` (SECURITY INVOKER). 3 new API routes: `POST /api/v1/shift-intelligence/persist-alerts`, `POST /api/v1/shift-intelligence/acknowledge-alert`, `GET /api/v1/shift-intelligence/alerts`. ALTER `table_metric_baseline` add `last_error`. Pattern C RLS + DELETE denial on new tables. RPC-only mutation posture.
 - **4.21.0 (2026-03-23)** – **ShiftIntelligenceService**: Registered `ShiftIntelligenceService` (Operational context) for shift anomaly detection. New table: `table_metric_baseline`. 2 new RPCs: `rpc_compute_rolling_baseline` (SECURITY DEFINER, ADR-024), `rpc_get_anomaly_alerts` (SECURITY INVOKER). 2 API routes: `POST /api/shift-intelligence/compute-baselines`, `GET /api/shift-intelligence/anomaly-alerts`. Dependencies: TableContextService (source metric RPCs), CasinoService (casino_settings), TemporalAuthority (compute_gaming_day). Cross-context reads only; writes confined to owned `table_metric_baseline`.
 - **4.20.0 (2026-03-19)** – **PRD-052 Loyalty Operator Issuance**: Added `reward_catalog`, `reward_price_points`, `reward_entitlement_tier`, `reward_limits`, `reward_eligibility`, `loyalty_earn_config` to LoyaltyService `Owns:` row. Registered `Player360DashboardService` as read-only aggregation service (follows `PlayerTimelineService` precedent). New service methods: `LoyaltyService.issueComp()`, `PromoService.issueEntitlement()`. New DTOs: `IssueCompParams`, `CompIssuanceResult`, `IssueEntitlementParams`, `EntitlementIssuanceResult`, `FulfillmentPayload` (frozen Vector C contract). New Zod schema: `issueRewardSchema`. See `docs/10-prd/PRD-052-loyalty-operator-issuance-v0.md` and `docs/21-exec-spec/EXEC-052-loyalty-operator-issuance.md`.
@@ -118,7 +124,7 @@ Approved JSON blobs (all others require first-class columns):
 
 | Domain           | Service                 | Owns Tables                                                                                                                | Bounded Context                                             |
 | ---------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| **Foundational** | CasinoService           | casino, casino_settings, company, staff, game_settings, audit_log, report, **player_casino**, _staff_pin_attempts_ ⁴       | Root temporal authority, global policy, & player enrollment |
+| **Foundational** | CasinoService           | casino, casino_settings, company, staff, game_settings, audit_log, report, **player_casino**, gaming_day_lifecycle ¹¹, _staff_pin_attempts_ ⁴ | Root temporal authority, global policy, & player enrollment |
 | **Identity**     | PlayerService           | player, **player_exclusion** ⁶, _player_identity_ ², _player_note_ ³, _player_tag_ ³                                       | Identity management & collaboration artifacts               |
 | **Analytics**    | PlayerTimelineService ³ | (read-only view across all services)                                                                                       | Unified player interaction timeline                         |
 | **Operational**  | TableContextService     | gaming_table, gaming_table_settings, dealer_rotation, table_inventory_snapshot, table_fill, table_credit, table_drop_event, table_session, table_opening_attestation, table_rundown_report, shift_checkpoint | Table lifecycle & operational telemetry                     |
@@ -127,14 +133,14 @@ Approved JSON blobs (all others require first-class columns):
 | **Operational**  | ShiftIntelligenceService | table_metric_baseline, shift_alert, alert_acknowledgment                                                                  | Shift anomaly detection, rolling baselines & alert maturity |
 | **Telemetry**    | RatingSlipService       | rating_slip, rating_slip_pause, pit_cash_observation                                                                       | Gameplay measurement                                        |
 | **Reward**       | LoyaltyService          | player_loyalty, loyalty_ledger, loyalty_outbox, promo_program, promo_coupon, reward_catalog, reward_price_points, reward_entitlement_tier, reward_limits, reward_eligibility, loyalty_earn_config | Reward policy & assignment                                  |
-| **Finance**      | PlayerFinancialService  | player_financial_transaction                                                                                               | Financial ledger (SoT) ¹                                    |
+| **Finance**      | PlayerFinancialService  | player_financial_transaction, finance_outbox ¹, processed_messages ¹², visit_class_a_projection ¹³, shift_operational_projection ¹⁰ | Financial ledger (SoT) + Wave 2 transport/projection infrastructure |
 | **Compliance**   | MTLService              | mtl_entry, mtl_audit_note                                                                                                  | AML/CTR compliance                                          |
 | **Onboarding**   | PlayerImportService     | import_batch, import_row                                                                                                   | CSV player import & staging ⁵                               |
 | **Analytics**    | Player360DashboardService ⁷ | (read-only aggregation across LoyaltyService + PromoService)                                                          | Player 360 dashboard data aggregation                       |
 | **Operational**  | EmailService ⁸          | email_send_attempt                                                                                                         | Pilot email delivery & send attempt logging                 |
 | **Access Governance** | PilotContainmentService ⁹ | pilot_access_requests, approved_email_allowlist                                                                       | Pilot access governance — allowlist-gated magic-link auth   |
 
-> ¹ `finance_outbox` is **post-MVP** (ADR-016 planned for payment gateway integration). MVP uses synchronous processing only.
+> ¹ `finance_outbox` is Wave 2 Projection Input transport infrastructure governed by ADR-052 through ADR-056. It stores immutable semantic envelopes for finance-owned propagation; it is not an external payment/event-bus boundary. The prior ADR-016 post-MVP placeholder is superseded.
 > ² `player_identity` is **planned (MVP)** per ADR-022 v7.1. `player_tax_identity` and scanner integration (`player_identity_scan`) are **deferred post-MVP**.
 > ³ `player_note`, `player_tag`, and `PlayerTimelineService` are **planned (MVP)** per ADR-029. These enable the Player 360° Dashboard CRM timeline.
 > ⁴ `staff_pin_attempts` is **planned (MVP)** per GAP-SIGN-OUT. Operational rate-limit state for staff PIN verification. Follows `audit_log` precedent: cross-cutting operational data owned by foundational context. Both FKs reference CasinoService tables (`staff`, `casino`).
@@ -143,12 +149,16 @@ Approved JSON blobs (all others require first-class columns):
 > ⁷ `Player360DashboardService` is a read-only aggregation service (follows `PlayerTimelineService` precedent). Owns no tables; reads from LoyaltyService (`loyalty_ledger`, `promo_coupon`) for reward history display. See PRD-052.
 > ⁸ `EmailService` is a pilot-scoped utility service. Owns `email_send_attempt` (append-only send log). May be absorbed into a broader operational context if email scope grows post-pilot. See PRD-062.
 > ⁹ `PilotContainmentService` is a pilot containment primitive. Owns `pilot_access_requests` and `approved_email_allowlist`. All allowlist reads are server-only (service_role) — never exposed to client-side queries. Admin operations guarded by `PILOT_ADMIN_EMAILS` env var. Scope is strictly containment; expansion requires a separate FIB (FIB-S RULE-9). See PRD-083.
+> ¹⁰ `shift_operational_projection` is a Wave 2 projection store populated from `finance_outbox` operational events (`grind.observed`, `fill.recorded`, `credit.recorded`). It is not an authoring table and is service-role-only. TableContextService remains source-of-truth owner for operational authoring tables; PlayerFinancialService owns the outbox consumer projection boundary.
+> ¹¹ `gaming_day_lifecycle` is a foundational temporal close-signal store. Finance projections may consume it for completeness derivation, but PlayerFinancialService does not own the gaming-day lifecycle authority.
+> ¹² `processed_messages` is the Wave 2 consumer idempotency store for `finance_outbox`. It is service-role-only and records relay receipt atomicity; it is not domain authoring state.
+> ¹³ `visit_class_a_projection` is a Wave 2 projection artifact derived from Class A ledger Projection Inputs. It is rebuildable projection state and does not supersede `player_financial_transaction` as source of truth.
 
 ---
 
 ## CasinoService (Foundational Context)
 
-**Owns**: `casino`, `casino_settings`, `company`, `staff`, `game_settings`, `audit_log`, `report`, `player_casino`
+**Owns**: `casino`, `casino_settings`, `company`, `staff`, `game_settings`, `audit_log`, `report`, `player_casino`, `gaming_day_lifecycle` ¹¹
 
 **Planned (MVP)** per GAP-SIGN-OUT: `staff_pin_attempts`
 
@@ -173,11 +183,14 @@ Approved JSON blobs (all others require first-class columns):
 | `staff_pin_attempts` ⁴ | `staff_id`                       | NOT NULL, FK to staff     | Staff reference                           |
 | `staff_pin_attempts` ⁴ | `window_start`                   | NOT NULL                  | 15-min bucketed window (computed by RPC)  |
 | `staff_pin_attempts` ⁴ | —                                | UNIQUE                    | (`casino_id`, `staff_id`, `window_start`) |
+| `gaming_day_lifecycle` ¹¹ | `(casino_id, gaming_day)`      | PRIMARY KEY               | One close signal per casino gaming day    |
+| `gaming_day_lifecycle` ¹¹ | `closed_at`                    | NOT NULL                  | Permanent close timestamp for projection completeness |
 
 ### Contracts
 
 - **Audit**: `audit_log` for cross-domain event logging (canonical shape: `{ts, actor_id, casino_id, domain, action, dto_before, dto_after, correlation_id}`)
 - **Auth**: `staff.user_id` column enables RLS via `auth.uid()` (dealers stay NULL)
+- **Temporal close signal**: `gaming_day_lifecycle` records closed gaming days; consuming services may read the signal for completeness, but may not redefine gaming-day lifecycle ownership.
 
 ### Cross-Context Consumption
 
@@ -687,11 +700,9 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 
 ## PlayerFinancialService (Finance Context) ✅ IMPLEMENTED
 
-**Owns**: `player_financial_transaction`
+**Owns**: `player_financial_transaction`, `finance_outbox` ¹, `processed_messages` ¹², `visit_class_a_projection` ¹³, `shift_operational_projection` ¹⁰
 
-**Planned (post-MVP)**: `finance_outbox` — ADR-016 for payment gateway integration
-
-**Bounded Context**: "What monetary transactions occurred?"
+**Bounded Context**: "Which monetary authority facts exist, and how do finance-owned Projection Inputs and projection artifacts propagate to internal surfaces?"
 
 **Implementation Status** (PRD-009, 2025-12-11):
 
@@ -727,6 +738,20 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 | `player_financial_transaction` | `created_by`             | NOT NULL, FK        | Staff who created transaction                       |
 | `player_financial_transaction` | `notes`                  | NULLABLE            | Optional transaction notes                          |
 | `player_financial_transaction` | `related_transaction_id` | NULLABLE, FK        | Self-reference for voids/adjustments                |
+| `finance_outbox`              | `event_id`               | PRIMARY KEY         | UUIDv7 generated by authoring boundary; relay/replay ordering authority |
+| `finance_outbox`              | `fact_class`             | CHECK               | `ledger` or `operational` per ADR-052 classification |
+| `finance_outbox`              | `origin_label`           | CHECK, immutable    | `actual`, `estimated`, `observed`, or `compliance`; no downstream upgrade |
+| `finance_outbox`              | `table_id`               | NOT NULL, FK        | Table anchor required for all Wave 2 Projection Inputs |
+| `finance_outbox`              | `player_id`              | NULLABLE            | Present only where required by the producing fact class |
+| `finance_outbox`              | relay lifecycle columns  | UPDATE-only by relay | `processed_at`, `delivery_attempts`, `last_attempted_at`, `last_error` |
+| `processed_messages`          | `message_id`             | PRIMARY KEY         | Matches `finance_outbox.event_id`; global single-consumer idempotency |
+| `processed_messages`          | `casino_id`              | NOT NULL, FK        | Casino-scoped receipt; service-role-only access     |
+| `visit_class_a_projection`    | `(casino_id, visit_id, gaming_day)` | PRIMARY KEY | One Class A projection artifact row per visit per gaming day |
+| `visit_class_a_projection`    | amount columns           | BIGINT NOT NULL DEFAULT 0 | Integer cents only; no floating-point accumulation |
+| `shift_operational_projection` | `(casino_id, gaming_day, table_id)` | PRIMARY KEY | One operational projection row per table per gaming day |
+| `shift_operational_projection` | `casino_id`              | NOT NULL, FK        | Casino scoping; service-role-only access            |
+| `shift_operational_projection` | `table_id`               | NOT NULL, FK        | Table anchor for operational projection             |
+| `shift_operational_projection` | amount columns           | BIGINT NOT NULL DEFAULT 0 | Integer cents only; no floating-point accumulation |
 
 ### Contracts
 
@@ -735,8 +760,11 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 - **Trigger**: `trg_fin_gaming_day` populates `gaming_day` (callers MUST omit)
 - **Immutability**: Append-only ledger; no deletes
 - **View**: `visit_financial_summary` - Aggregated totals per visit (total_in, total_out, net_amount)
-- **MVP Egress**: Synchronous only; no external side effects. MTLService integration via triggers.
-- **Outbox (post-MVP)**: `finance_outbox` for payment gateway integration (ADR-016 planned)
+- **Internal propagation**: Synchronous ledger writes remain authoritative; Wave 2 internal propagation uses `finance_outbox` Projection Inputs. MTLService integration via triggers.
+- **Outbox**: `finance_outbox` stores immutable semantic envelopes governed by ADR-052 through ADR-056. Consumers must treat `origin_label` as immutable and must not collapse ledger and operational facts into a generic financial-event class.
+- **Consumer idempotency**: `processed_messages` is the relay receipt store. Consumer side effects and receipt insertion must share the same durable boundary.
+- **Projection artifacts**: `visit_class_a_projection` and `shift_operational_projection` are rebuildable projection stores. Consumers may write only projection artifacts and `processed_messages`, not authoring tables.
+- **Scope boundary**: Finance projections do not create authoritative totals, reconciliation ledgers, or customer-visible balance authority; `player_financial_transaction` remains the monetary source of truth.
 
 ### DTOs (Pattern A - Manual)
 
@@ -747,7 +775,7 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 | `VisitFinancialSummaryDTO` | Aggregated visit totals            | `services/player-financial/dtos.ts` |
 | `ListFinancialTxnFilters`  | Query filters for list operations  | `services/player-financial/dtos.ts` |
 
-**Full Schema**: `supabase/migrations/20251211015115_prd009_player_financial_service.sql`
+**Full Schema**: `supabase/migrations/` (search: `player_financial_transaction`, `finance_outbox`, `processed_messages`, `visit_class_a_projection`, `shift_operational_projection`)
 **RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#playerfinancialservice`
 
 ---
@@ -913,8 +941,8 @@ These are the only cross-context writes, performed within a SECURITY DEFINER RPC
 | **Owns** | `email_send_attempt` |
 | **Pattern** | B (HTTP boundary via server actions) |
 | **Status** | ✅ IMPLEMENTED (PRD-062, pilot scope) |
-| **PRD** | `docs/10-prd/PRD-062-pilot-smtp-email-wiring-v0.md` |
-| **EXEC** | `docs/21-exec-spec/EXEC-062-pilot-smtp-email-wiring.md` |
+| **PRD** | `docs/10-prd/_archive/PRD-062-pilot-smtp-email-wiring-v0.md` |
+| **EXEC** | `docs/21-exec-spec/_archive/EXEC-062-pilot-smtp-email-wiring.md` |
 
 ### Service Methods
 
@@ -1144,6 +1172,7 @@ create type import_row_status as enum ('staged','created','linked','skipped','co
 | LoyaltyService      | RatingSlipService  | `rating_slip_id` FK, telemetry DTOs                          |
 | LoyaltyService      | VisitService       | Visit DTOs, `visit_kind` check                               |
 | FinanceService      | VisitService       | `visit_id` FK (**required for MVP**)                         |
+| FinanceService      | RatingSlipService  | Narrow ADR-057 producer eligibility lookup: same-casino `rating_slip_id` → `rating_slip.table_id` only |
 | MTLService          | FinanceService     | Reconciliation via triggers                                  |
 | TableContextService | RatingSlipService  | Published query/DTO `hasOpenSlipsForTable` (open-slip guard) |
 | TableContextService | FloorLayoutService | `floor_layout.activated` events                              |

@@ -417,9 +417,24 @@ describe('RPC Contract - FinancialSectionDTO', () => {
     const result = await getModalDataViaRPC(supabase, SLIP_ID, CASINO_ID);
 
     const expectedFinancial: FinancialSectionDTO = {
-      totalCashIn: 100000,
-      totalCashOut: 75000,
-      netPosition: 25000,
+      totalCashIn: {
+        value: 100000,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      },
+      totalCashOut: {
+        value: 75000,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      },
+      netPosition: {
+        value: 25000,
+        type: 'actual',
+        source: 'PFT',
+        completeness: { status: 'unknown' },
+      },
     };
 
     expect(result.financial).toEqual(expectedFinancial);
@@ -430,9 +445,9 @@ describe('RPC Contract - FinancialSectionDTO', () => {
 
     const result = await getModalDataViaRPC(supabase, SLIP_ID, CASINO_ID);
 
-    expect(typeof result.financial.totalCashIn).toBe('number');
-    expect(typeof result.financial.totalCashOut).toBe('number');
-    expect(typeof result.financial.netPosition).toBe('number');
+    expect(typeof result.financial.totalCashIn.value).toBe('number');
+    expect(typeof result.financial.totalCashOut.value).toBe('number');
+    expect(typeof result.financial.netPosition.value).toBe('number');
   });
 
   it('handles zero financial values', async () => {
@@ -448,9 +463,9 @@ describe('RPC Contract - FinancialSectionDTO', () => {
 
     const result = await getModalDataViaRPC(supabase, SLIP_ID, CASINO_ID);
 
-    expect(result.financial.totalCashIn).toBe(0);
-    expect(result.financial.totalCashOut).toBe(0);
-    expect(result.financial.netPosition).toBe(0);
+    expect(result.financial.totalCashIn.value).toBe(0);
+    expect(result.financial.totalCashOut.value).toBe(0);
+    expect(result.financial.netPosition.value).toBe(0);
   });
 
   it('handles negative netPosition (player winning)', async () => {
@@ -466,7 +481,7 @@ describe('RPC Contract - FinancialSectionDTO', () => {
 
     const result = await getModalDataViaRPC(supabase, SLIP_ID, CASINO_ID);
 
-    expect(result.financial.netPosition).toBe(-50000);
+    expect(result.financial.netPosition.value).toBe(-50000);
   });
 
   it('validates netPosition calculation (totalCashIn - totalCashOut)', async () => {
@@ -475,8 +490,8 @@ describe('RPC Contract - FinancialSectionDTO', () => {
     const result = await getModalDataViaRPC(supabase, SLIP_ID, CASINO_ID);
 
     const expectedNet =
-      result.financial.totalCashIn - result.financial.totalCashOut;
-    expect(result.financial.netPosition).toBe(expectedNet);
+      result.financial.totalCashIn.value - result.financial.totalCashOut.value;
+    expect(result.financial.netPosition.value).toBe(expectedNet);
   });
 });
 

@@ -1,0 +1,717 @@
+{
+  "artifact": {
+    "type": "feature_intake_structured",
+    "version": "1.0.0",
+    "source_of_truth": "docs/issues/gaps/financial-data-distribution-standard/actions/fibs/wave-2/FIB-H-TRANSACTIONAL-OUTBOX.md",
+    "structured_schema_reference": "docs/60-release/zachman_interpolated_feature_intake_recommendation.md",
+    "status": "draft",
+    "feature_id": "FIB-S-W2-OUTBOX-001",
+    "feature_name": "Transactional Outbox (GAP-F1 Closure)",
+    "priority": "P0",
+    "decision_horizon": "pilot",
+    "owner": "Vladimir Ivanov",
+    "opened_on": "2026-05-09",
+    "last_revised": "2026-05-10",
+    "related_human_intake_id": "FIB-H-W2-OUTBOX-001",
+    "related_wedge": "Wave 2 — first infrastructure slice"
+  },
+  "intent": {
+    "operator_problem": "Financial authoring stores have no guaranteed delivery path to downstream projection consumers, leaving visit-level financial aggregate completeness at unknown and forcing consumers toward direct authoring-store polling or stale data.",
+    "pilot_fit": "Wave 1 established authority and completeness envelopes, but lifecycle-aware complete/partial signals require durable event propagation first. This is the minimal infrastructure slice that unblocks Wave 2 projection consumers.",
+    "success_outcomes": [
+      "OUT-1: Class A authoring writes and finance_outbox rows commit in the same database transaction with no partial state window.",
+      "OUT-2: Class B authoring writes and finance_outbox rows commit with parity to Class A under ADR-055.",
+      "OUT-3: Committed finance_outbox rows survive relay worker crash or restart and are delivered on a later poll cycle.",
+      "OUT-4: Duplicate delivery of the same event_id produces exactly one consumer side effect.",
+      "OUT-5: Projection consumers can rebuild from finance_outbox history to an equivalent live projection state under the same ordered event history.",
+      "OUT-6: Every finance_outbox row carries fact_class, origin_label, table_id, aggregate_id, and event_id without payload inference.",
+      "OUT-7: origin_label remains immutable from authoring boundary to consumer.",
+      "OUT-8: event_type values are centrally governed through the Wave 2 event catalog before producer or consumer use."
+    ],
+    "explicit_exclusions": [
+      "No external consumer contract, public event bus, third-party event semantics, or reconciliation interface.",
+      "No event sourcing; outbox history is propagation infrastructure, not authoritative state reconstruction.",
+      "No authoritative totals, financial settlement, Total Drop, shift-end settlement, or final money position.",
+      "No CDC, WAL replication, Debezium, pg_logical, or post-pilot stream infrastructure.",
+      "No schema changes to player_financial_transaction.",
+      "No UI changes, components, panels, or routes.",
+      "No compliance domain scope; mtl_entry and MTLService remain parallel and isolated.",
+      "No reconciliation logic on fills and credits.",
+      "No player_id on Class B rows; table_buyin_telemetry and matching outbox rows use player_id = null.",
+      "No shared-parent table unification of Class A and Class B authoring stores.",
+      "No new projection surfaces; shift telemetry, session summaries, and pit dashboards are downstream slices.",
+      "No trigger-based outbox insertion for the pilot."
+    ],
+    "adjacent_rejected": [
+      {
+        "idea": "Trigger-based outbox insertion",
+        "why_considered": "Triggers fire inside the database transaction boundary and could satisfy atomicity with less RPC change.",
+        "why_rejected_now": "Rejected for pilot because hidden propagation behavior reduces rollback/debug visibility, creates trigger-creep risk, and conflicts with RPC-centric architecture."
+      },
+      {
+        "idea": "Lifecycle-aware completeness projection",
+        "why_considered": "This is the direct operator value unlocked by the outbox.",
+        "why_rejected_now": "Projection consumers are consequences of the transport layer and belong to the next slice."
+      },
+      {
+        "idea": "CDC/WAL relay",
+        "why_considered": "Change streams reduce polling lag and read the database log directly.",
+        "why_rejected_now": "Adds non-trivial post-pilot infrastructure and violates YAGNI for the Wave 2 pilot."
+      },
+      {
+        "idea": "External reconciliation consumer contract",
+        "why_considered": "An internal event relay can look like a natural integration point for external stakeholders.",
+        "why_rejected_now": "Externalization requires separate ADR and stakeholder discovery; this FIB is internal-only."
+      },
+      {
+        "idea": "pg_notify push relay",
+        "why_considered": "Push delivery appears to remove poll interval lag.",
+        "why_rejected_now": "Requires persistent PostgreSQL connection behavior incompatible with the current serverless model and still needs polling for recovery."
+      },
+      {
+        "idea": "Shared-parent table for Class A and Class B authoring stores",
+        "why_considered": "A unified store could simplify the relay worker poll target.",
+        "why_rejected_now": "Q2 resolved that behavioral convergence risk outweighs pilot-scale structural benefit."
+      }
+    ]
+  },
+  "zachman": {
+    "what": {
+      "entities": [
+        {
+          "name": "finance_outbox",
+          "kind": "event",
+          "description": "Internal Projection Input event log written atomically with Class A, Class B, and Dependency Event authoring RPCs.",
+          "stateful": true,
+          "system_of_record": "Supabase PostgreSQL",
+          "fields_hint": [
+            "event_id",
+            "event_type",
+            "fact_class",
+            "origin_label",
+            "casino_id",
+            "table_id",
+            "player_id",
+            "aggregate_id",
+            "payload",
+            "created_at",
+            "processed_at"
+          ]
+        },
+        {
+          "name": "processed_messages",
+          "kind": "record",
+          "description": "Consumer idempotency record for single internal consumer path assumed by Wave 2.",
+          "stateful": true,
+          "system_of_record": "Supabase PostgreSQL",
+          "fields_hint": ["message_id", "processed_at"]
+        },
+        {
+          "name": "table_buyin_telemetry",
+          "kind": "record",
+          "description": "Class B operational authoring store for table-level buy-in/grind observations; player_id absent by construction.",
+          "stateful": true,
+          "system_of_record": "Supabase PostgreSQL",
+          "fields_hint": [
+            "id",
+            "casino_id",
+            "table_id",
+            "event_type",
+            "amount_cents",
+            "created_at"
+          ]
+        },
+        {
+          "name": "FinancialOutboxEventDTO",
+          "kind": "artifact",
+          "description": "Canonical event envelope consumed by relay worker and downstream projection consumers.",
+          "stateful": false,
+          "system_of_record": "services/player-financial DTO contract",
+          "fields_hint": [
+            "event_id",
+            "event_type",
+            "fact_class",
+            "origin_label",
+            "table_id",
+            "player_id",
+            "aggregate_id",
+            "payload",
+            "created_at",
+            "processed_at"
+          ]
+        },
+        {
+          "name": "Wave 2 event catalog",
+          "kind": "artifact",
+          "description": "Central registry that must explicitly declare every allowed event_type before producer RPCs or consumers use it.",
+          "stateful": false,
+          "system_of_record": "downstream Wave 2 event catalog artifact",
+          "fields_hint": [
+            "event_type",
+            "producer",
+            "fact_class",
+            "origin_label",
+            "payload_contract",
+            "consumer_notes"
+          ]
+        }
+      ]
+    },
+    "how": {
+      "capabilities": [
+        {
+          "id": "CAP-1",
+          "name": "atomic-producer-insertion",
+          "verb": "create",
+          "description": "Insert the authoring row and matching finance_outbox row within one database transaction for every in-scope producer path.",
+          "served_outcomes": ["OUT-1", "OUT-2", "OUT-6", "OUT-7"],
+          "loop_steps": ["STEP-1", "STEP-2"]
+        },
+        {
+          "id": "CAP-2",
+          "name": "polling-relay-delivery",
+          "verb": "read",
+          "description": "Poll undelivered finance_outbox rows, claim rows safely under concurrency, and deliver events with at-least-once semantics.",
+          "served_outcomes": ["OUT-3"],
+          "loop_steps": ["STEP-3", "STEP-4", "STEP-7", "STEP-8"]
+        },
+        {
+          "id": "CAP-3",
+          "name": "consumer-idempotency",
+          "verb": "create",
+          "description": "Use processed_messages to ensure duplicate delivery of an event_id produces no duplicate side effect.",
+          "served_outcomes": ["OUT-4"],
+          "loop_steps": ["STEP-5", "STEP-6", "STEP-8"]
+        },
+        {
+          "id": "CAP-4",
+          "name": "ordered-replay",
+          "verb": "read",
+          "description": "Allow projection consumers to replay finance_outbox history in ordered event sequence and rebuild equivalent projection state.",
+          "served_outcomes": ["OUT-5"],
+          "loop_steps": ["STEP-9"]
+        },
+        {
+          "id": "CAP-5",
+          "name": "event-type-governance",
+          "verb": "update",
+          "description": "Register every event_type in the Wave 2 event catalog before using it in producer RPCs or consumers.",
+          "served_outcomes": ["OUT-8"],
+          "loop_steps": ["STEP-1", "STEP-4"]
+        }
+      ]
+    },
+    "where": {
+      "primary_surface": "Internal infrastructure",
+      "surfaces": [
+        {
+          "name": "authoring RPC transaction boundary",
+          "kind": "rpc"
+        },
+        {
+          "name": "internal relay worker",
+          "kind": "job"
+        },
+        {
+          "name": "projection consumer service boundary",
+          "kind": "job"
+        },
+        {
+          "name": "failure simulation harness",
+          "kind": "artifact"
+        },
+        {
+          "name": "Wave 2 event catalog",
+          "kind": "artifact"
+        }
+      ],
+      "touchpoints": {
+        "inbound": [
+          {
+            "name": "rpc_create_financial_txn",
+            "type": "api_call"
+          },
+          {
+            "name": "rpc_create_financial_adjustment",
+            "type": "api_call"
+          },
+          {
+            "name": "rpc_record_grind_observation",
+            "type": "api_call"
+          },
+          {
+            "name": "rpc_request_table_fill",
+            "type": "api_call"
+          },
+          {
+            "name": "rpc_request_table_credit",
+            "type": "api_call"
+          },
+          {
+            "name": "authenticated relay invocation",
+            "type": "event"
+          }
+        ],
+        "outbound": [
+          {
+            "name": "FinancialOutboxEventDTO delivery",
+            "type": "event"
+          },
+          {
+            "name": "projection rebuild history",
+            "type": "event"
+          }
+        ]
+      },
+      "bounded_contexts": [
+        "PlayerFinancialService",
+        "TableContextService",
+        "Projection consumers downstream of this FIB"
+      ]
+    },
+    "who": {
+      "primary_actor": "System",
+      "actors": [
+        {
+          "role": "authoring_rpc",
+          "permissions": [
+            "insert owned authoring row",
+            "insert corresponding finance_outbox row in the same transaction"
+          ],
+          "restrictions": [
+            "must not perform projection writes",
+            "must not fan out notifications",
+            "must not perform reconciliation steps",
+            "must not introduce unregistered event_type values"
+          ]
+        },
+        {
+          "role": "internal_relay_worker",
+          "permissions": [
+            "read undelivered finance_outbox rows",
+            "deliver FinancialOutboxEventDTO events to registered internal consumers",
+            "mark delivered outbox rows as processed"
+          ],
+          "restrictions": [
+            "internal-only",
+            "authenticated invocation required",
+            "at-least-once semantics only",
+            "exact runtime topology and tuning deferred to PRD / EXEC-SPEC"
+          ]
+        },
+        {
+          "role": "projection_consumer",
+          "permissions": [
+            "receive FinancialOutboxEventDTO",
+            "insert processed_messages idempotency record",
+            "apply projection side effect in the same transaction as idempotency record"
+          ],
+          "restrictions": [
+            "single internal consumer path assumed for Wave 2",
+            "must not upgrade origin_label from estimated to actual",
+            "must not infer contract fields from payload content"
+          ]
+        },
+        {
+          "role": "downstream_spec_author",
+          "permissions": [
+            "choose implementation topology",
+            "choose batching strategy",
+            "choose lock primitive",
+            "choose timeout tuning",
+            "define harness internals"
+          ],
+          "restrictions": [
+            "must preserve FIB-H transport semantics",
+            "must not add operator-visible outcomes without FIB amendment",
+            "must not add external consumer contracts without FIB amendment"
+          ]
+        }
+      ],
+      "ownership": {
+        "business_owner": "Vladimir Ivanov",
+        "domain_owner": "PlayerFinancialService and TableContextService per FEATURE_BOUNDARY.md"
+      }
+    },
+    "when": {
+      "trigger_events": [
+        {
+          "name": "class_a_financial_transaction_authored",
+          "source": "system",
+          "preconditions": [
+            "rpc_create_financial_txn is invoked through the owning authoring path",
+            "authoring row can be inserted",
+            "event_type is registered in the Wave 2 event catalog"
+          ]
+        },
+        {
+          "name": "class_a_financial_adjustment_authored",
+          "source": "system",
+          "preconditions": [
+            "rpc_create_financial_adjustment is invoked through the owning authoring path",
+            "authoring row can be inserted",
+            "event_type is registered in the Wave 2 event catalog"
+          ]
+        },
+        {
+          "name": "class_b_grind_observation_authored",
+          "source": "system",
+          "preconditions": [
+            "rpc_record_grind_observation is invoked through the owning authoring path",
+            "table_buyin_telemetry row can be inserted",
+            "player_id is absent/null by construction",
+            "event_type is registered in the Wave 2 event catalog"
+          ]
+        },
+        {
+          "name": "dependency_event_fill_or_credit_requested",
+          "source": "system",
+          "preconditions": [
+            "rpc_request_table_fill or rpc_request_table_credit is invoked through the owning path",
+            "fact_class is operational",
+            "origin_label is estimated",
+            "player_id is null",
+            "event_type is registered in the Wave 2 event catalog"
+          ]
+        },
+        {
+          "name": "relay_poll_cycle_invoked",
+          "source": "system",
+          "preconditions": [
+            "relay invocation is authenticated",
+            "finance_outbox contains zero or more unprocessed rows"
+          ]
+        },
+        {
+          "name": "projection_rebuild_requested",
+          "source": "system",
+          "preconditions": [
+            "consumer can read finance_outbox history",
+            "consumer rebuild logic uses the same ordered event history"
+          ]
+        }
+      ],
+      "lifecycle_events": [
+        "authoring_transaction_started",
+        "authoring_row_inserted",
+        "finance_outbox_row_inserted",
+        "authoring_transaction_committed",
+        "authoring_transaction_rolled_back",
+        "outbox_row_polled",
+        "outbox_event_delivered",
+        "processed_message_recorded",
+        "projection_side_effect_applied",
+        "outbox_row_marked_processed",
+        "outbox_row_redelivered_after_worker_failure",
+        "projection_rebuilt_from_history"
+      ],
+      "timing_constraints": [
+        "Outbox row insertion occurs before the authoring transaction commits.",
+        "Authoring row and outbox row become durable and visible together.",
+        "Relay delivery is polling-based and at-least-once.",
+        "Per-entity event history uses ordered replay semantics.",
+        "Exact batch size, timeout, lock primitive, and runtime topology are downstream PRD / EXEC-SPEC scope."
+      ]
+    },
+    "why": {
+      "business_rules": [
+        {
+          "id": "RULE-1",
+          "statement": "Every in-scope authoring write must produce a corresponding finance_outbox row in the same database transaction.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-2",
+          "statement": "Class A and Class B producer wiring must land simultaneously; asymmetric rollout violates ADR-055 parity.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-3",
+          "statement": "Relay delivery is internal-only, authenticated, polling-based, at-least-once, and concurrency-safe.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-4",
+          "statement": "Consumers must use processed_messages idempotency before applying side effects.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-5",
+          "statement": "origin_label is provenance and must not be upgraded by consumers.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-6",
+          "statement": "Fills and credits are Dependency Events with fact_class operational, origin_label estimated, and player_id null.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-7",
+          "statement": "New event_type values must be registered in the Wave 2 event catalog before producer RPC or consumer use.",
+          "severity": "hard"
+        },
+        {
+          "id": "RULE-8",
+          "statement": "Runtime topology, batching strategy, lock primitive, route location, timeout tuning, and harness internals are not frozen by this FIB unless required for semantic correctness.",
+          "severity": "hard"
+        }
+      ],
+      "invariants": [
+        "I1: Atomicity — authoring row and finance_outbox row commit or roll back together.",
+        "I2: Durability — committed outbox rows survive relay worker crash and are delivered later.",
+        "I3: Idempotency — duplicate event_id delivery produces one consumer side effect.",
+        "I4: Replayability — ordered outbox history can rebuild equivalent projection state under the same event history.",
+        "All new tables carry casino_id where required by SRM contract policy.",
+        "No producer or consumer may introduce arbitrary ad-hoc event_type values.",
+        "No implementation may turn the outbox into a financial settlement or reconciliation mechanism."
+      ],
+      "decision_notes": [
+        "FIB-H is the human scope authority; FIB-S is the machine-legible structured companion per the Zachman-interpolated recommendation.",
+        "The structured schema uses What / How / Where / Who / When / Why as a completeness grid, not a full Zachman process.",
+        "Unknown implementation details must remain unknown and cannot be invented by downstream artifacts.",
+        "This FIB freezes transport semantics and infrastructure boundaries only."
+      ]
+    }
+  },
+  "containment": {
+    "loop": [
+      {
+        "id": "STEP-1",
+        "actor": "authoring_rpc",
+        "action": "execute Class A, Class B, or Dependency Event authoring write",
+        "system_response": "insert both authoring row and corresponding finance_outbox row before committing the database transaction"
+      },
+      {
+        "id": "STEP-2",
+        "actor": "database_transaction",
+        "action": "commit or roll back authoring transaction",
+        "system_response": "make both rows durable and visible together, or roll back all partial state"
+      },
+      {
+        "id": "STEP-3",
+        "actor": "internal_relay_worker",
+        "action": "poll undelivered finance_outbox rows",
+        "system_response": "retrieve unprocessed events in ordered polling model using concurrency-safe row claiming"
+      },
+      {
+        "id": "STEP-4",
+        "actor": "internal_relay_worker",
+        "action": "deliver event to registered internal consumer",
+        "system_response": "send full FinancialOutboxEventDTO envelope including fact_class, origin_label, event_id, and payload"
+      },
+      {
+        "id": "STEP-5",
+        "actor": "projection_consumer",
+        "action": "check processed_messages for incoming event_id",
+        "system_response": "discard duplicate event without side effect when already processed"
+      },
+      {
+        "id": "STEP-6",
+        "actor": "projection_consumer",
+        "action": "record new processed message and apply projection side effect",
+        "system_response": "commit idempotency record and projection change atomically"
+      },
+      {
+        "id": "STEP-7",
+        "actor": "internal_relay_worker",
+        "action": "receive delivery confirmation",
+        "system_response": "mark the outbox row processed"
+      },
+      {
+        "id": "STEP-8",
+        "actor": "internal_relay_worker",
+        "action": "crash or restart before marking processed",
+        "system_response": "leave row unprocessed so it is redelivered; consumer idempotency prevents duplicate side effect"
+      },
+      {
+        "id": "STEP-9",
+        "actor": "projection_consumer",
+        "action": "replay finance_outbox history",
+        "system_response": "rebuild projection state equivalent to live projection state under the same ordered event history"
+      }
+    ],
+    "frozen": true,
+    "expansion_requires_amendment": true
+  },
+  "dependencies": {
+    "required_existing": [
+      "ADR-052 — financial fact model dual layer",
+      "ADR-053 — financial authority and provenance labeling",
+      "ADR-054 — financial event propagation surface contract",
+      "ADR-055 — cross-class authoring parity",
+      "docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-UBIQUITOUS-LANGUAGE-CLARIFICATION.md",
+      "docs/issues/gaps/financial-data-distribution-standard/wave-2/outbox-knowledge-base.md",
+      "docs/issues/gaps/financial-data-distribution-standard/actions/FAILURE-SIMULATION-HARNESS.md",
+      "docs/20-architecture/specs/transactional-outbox/FEATURE_BOUNDARY.md",
+      "docs/01-scaffolds/SCAFFOLD-TRANSACTIONAL-OUTBOX.md",
+      "Wave 1 surface contract from EXEC-080",
+      "docs/60-release/zachman_interpolated_feature_intake_recommendation.md"
+    ],
+    "missing_dependencies": [
+      "Downstream Wave 2 event catalog artifact for centrally governed event_type values",
+      "Downstream PRD / EXEC-SPEC choice of runtime topology, batching strategy, lock primitive, route location, timeout tuning, and harness internals"
+    ],
+    "assumptions": [
+      "Wave 2 assumes a single internal consumer path for processed_messages.",
+      "Multi-consumer fan-out is out of scope and may require future schema evolution.",
+      "Relay worker execution remains internal-only and authenticated.",
+      "FIB-H status remains draft until human sign-off is recorded.",
+      "No downstream artifact may add entities, capabilities, actors, touchpoints, or operator outcomes absent from FIB-H/FIB-S without amendment."
+    ]
+  },
+  "traceability": {
+    "outcomes": [
+      {
+        "id": "OUT-1",
+        "statement": "Class A authoring writes and finance_outbox rows commit in the same transaction."
+      },
+      {
+        "id": "OUT-2",
+        "statement": "Class B authoring writes and finance_outbox rows commit with Class A parity."
+      },
+      {
+        "id": "OUT-3",
+        "statement": "Committed finance_outbox rows survive worker failure and are delivered later."
+      },
+      {
+        "id": "OUT-4",
+        "statement": "Duplicate event_id delivery produces exactly one consumer side effect."
+      },
+      {
+        "id": "OUT-5",
+        "statement": "Projection consumers can rebuild equivalent projection state from ordered history."
+      },
+      {
+        "id": "OUT-6",
+        "statement": "Outbox rows expose required envelope fields without payload inference."
+      },
+      {
+        "id": "OUT-7",
+        "statement": "origin_label is immutable from authoring boundary to consumer."
+      },
+      {
+        "id": "OUT-8",
+        "statement": "event_type values are centrally governed before use."
+      }
+    ],
+    "capability_to_outcome": [
+      {
+        "capability": "CAP-1",
+        "outcomes": ["OUT-1", "OUT-2", "OUT-6", "OUT-7"]
+      },
+      {
+        "capability": "CAP-2",
+        "outcomes": ["OUT-3"]
+      },
+      {
+        "capability": "CAP-3",
+        "outcomes": ["OUT-4"]
+      },
+      {
+        "capability": "CAP-4",
+        "outcomes": ["OUT-5"]
+      },
+      {
+        "capability": "CAP-5",
+        "outcomes": ["OUT-8"]
+      }
+    ],
+    "rule_to_loop_step": [
+      {
+        "rule_id": "RULE-1",
+        "loop_steps": ["STEP-1", "STEP-2"]
+      },
+      {
+        "rule_id": "RULE-2",
+        "loop_steps": ["STEP-1", "STEP-2"]
+      },
+      {
+        "rule_id": "RULE-3",
+        "loop_steps": ["STEP-3", "STEP-4", "STEP-7", "STEP-8"]
+      },
+      {
+        "rule_id": "RULE-4",
+        "loop_steps": ["STEP-5", "STEP-6", "STEP-8"]
+      },
+      {
+        "rule_id": "RULE-5",
+        "loop_steps": ["STEP-1", "STEP-4", "STEP-6", "STEP-9"]
+      },
+      {
+        "rule_id": "RULE-6",
+        "loop_steps": ["STEP-1", "STEP-4"]
+      },
+      {
+        "rule_id": "RULE-7",
+        "loop_steps": ["STEP-1", "STEP-4"]
+      },
+      {
+        "rule_id": "RULE-8",
+        "loop_steps": ["STEP-3", "STEP-7", "STEP-8"]
+      }
+    ],
+    "loop_step_to_capability": [
+      {
+        "loop_step": "STEP-1",
+        "capabilities": ["CAP-1", "CAP-5"]
+      },
+      {
+        "loop_step": "STEP-2",
+        "capabilities": ["CAP-1"]
+      },
+      {
+        "loop_step": "STEP-3",
+        "capabilities": ["CAP-2"]
+      },
+      {
+        "loop_step": "STEP-4",
+        "capabilities": ["CAP-2", "CAP-5"]
+      },
+      {
+        "loop_step": "STEP-5",
+        "capabilities": ["CAP-3"]
+      },
+      {
+        "loop_step": "STEP-6",
+        "capabilities": ["CAP-3"]
+      },
+      {
+        "loop_step": "STEP-7",
+        "capabilities": ["CAP-2"]
+      },
+      {
+        "loop_step": "STEP-8",
+        "capabilities": ["CAP-2", "CAP-3"]
+      },
+      {
+        "loop_step": "STEP-9",
+        "capabilities": ["CAP-4"]
+      }
+    ]
+  },
+  "governance": {
+    "scope_authority": {
+      "artifact": "FIB-H-TRANSACTIONAL-OUTBOX.md",
+      "version": "Draft v1",
+      "frozen": false,
+      "human_signoff": "Vladimir Ivanov / pending"
+    },
+    "machine_completeness_authority": {
+      "artifact": "FIB-S-TRANSACTIONAL-OUTBOX.json",
+      "schema_basis": "docs/60-release/zachman_interpolated_feature_intake_recommendation.md",
+      "zachman_usage": "coverage_lens_only"
+    },
+    "open_questions_allowed_at_scaffold": [],
+    "downstream_expansion_allowed_without_amendment": false,
+    "amendment_required_if_downstream_proposes": [
+      "new operator-visible outcome not described in FIB-H §F or this FIB-S outcomes list",
+      "external consumer contract or public event API",
+      "new top-level surface, channel, or automation path",
+      "new actor or workflow not represented in the containment loop",
+      "projection surface work inside this transport FIB",
+      "schema changes to player_financial_transaction",
+      "authority reclassification for fills or credits",
+      "ad-hoc event_type values not registered in the Wave 2 event catalog"
+    ]
+  }
+}

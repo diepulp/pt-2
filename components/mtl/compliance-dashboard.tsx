@@ -209,7 +209,6 @@ export function ComplianceDashboard({
 
     try {
       await createAdjustment.mutateAsync({
-        casino_id: casinoId,
         player_id: selectedPatron.uuid,
         visit_id: adjustmentTarget.visit_id,
         delta_amount: data.deltaAmount * 100, // Convert to cents

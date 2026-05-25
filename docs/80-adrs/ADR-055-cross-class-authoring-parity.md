@@ -26,7 +26,7 @@ The frozen set establishes two authoring stores feeding a single outbox:
 
 `ADR-054`:
 
-* D1 — every authored event emits an outbox row
+* D1 (as amended by ADR-057) — every table-anchored authored event emits an outbox row; Class A emission is scoped to Wave-2-eligible `rating_slip_id`-resolved rows; Class B has no table-anchor precondition
 * D2 — authoring write + outbox write are atomic
 * D5 — `origin_label` is immutable in transit
 
@@ -119,6 +119,8 @@ Explicitly:
 * No "Class A has strong ordering; Class B is eventual."
 
 A divergence here produces exactly the class of semantic drift the fact-model ADR rejected. The parity invariant exists to prevent that drift from being introduced by timing rather than by design.
+
+> **Note (ADR-057 D6):** P4 governs asymmetry introduced by *implementation timing*. The Class A table-anchoring scope restriction (ADR-057 D2) is not a timing asymmetry — cage operations and unlinked adjustments structurally lack a table anchor by business semantics, not by rollout sequencing. P4 does not prohibit architecture-driven scope boundaries established by a superseding ADR.
 
 ---
 
