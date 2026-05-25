@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import React from 'react';
 
+import { CasinoNameBadge } from '@/components/shared/casino-name-badge';
 import { GamingDayIndicator } from '@/components/shared/gaming-day-indicator';
 import {
   Breadcrumb,
@@ -102,6 +103,7 @@ export function Header() {
         </BreadcrumbList>
       </Breadcrumb>
       <div className="ml-auto flex items-center gap-2">
+        <CasinoNameBadge />
         <ThemeSwitcher />
         <GamingDayIndicator />
       </div>
