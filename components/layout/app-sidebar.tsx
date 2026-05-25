@@ -1,5 +1,6 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import {
   Activity,
   Banknote,
@@ -27,6 +28,18 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { getCasinos } from '@/services/casino/http';
+import { casinoKeys } from '@/services/casino/keys';
+
+function getCasinoInitials(name: string): string {
+  const words = name.trim().split(/\s+/);
+  if (words.length === 1) return name.slice(0, 2).toUpperCase();
+  return words
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+}
 
 /**
  * Navigation structure organized by semantic groups:
@@ -149,6 +162,14 @@ const NAVBAR_HEIGHT = '4rem'; // 64px (h-16)
  * - Grouped navigation with collapsible tree structure
  */
 export function AppSidebar() {
+  const { data: casinoData, isLoading: casinoLoading } = useQuery({
+    queryKey: casinoKeys.list({}),
+    queryFn: () => getCasinos(),
+    staleTime: Infinity,
+  });
+  const casinoName = casinoData?.items[0]?.name;
+  const casinoInitials = casinoName ? getCasinoInitials(casinoName) : null;
+
   const [isOpen, setIsOpen] = React.useState(false);
   const closeTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const isChildMenuOpenRef = React.useRef(false);
@@ -218,17 +239,24 @@ export function AppSidebar() {
         >
           {/* Collapsed content - icon-only view */}
           <div className="flex flex-col h-full">
-            <div className="p-2">
+            <div className="flex justify-center p-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary border border-sidebar-primary/20 cursor-default">
-                    <span className="text-[10px] font-bold tracking-tight">
-                      d3lt
-                    </span>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent/50">
+                    {casinoLoading ? (
+                      <span className="h-3 w-3 animate-pulse rounded bg-muted-foreground/30" />
+                    ) : (
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground"
+                        style={{ fontFamily: 'monospace' }}
+                      >
+                        {casinoInitials ?? '—'}
+                      </span>
+                    )}
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={8}>
-                  d3lt
+                  {casinoName ?? 'Loading…'}
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -298,21 +326,18 @@ export function AppSidebar() {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        {/* Header */}
-        <div className="p-2">
-          <div className="flex items-center gap-3 px-2 py-1.5">
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary border border-sidebar-primary/20">
-              <span className="text-[10px] font-bold tracking-tight">d3lt</span>
-            </div>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold text-sidebar-foreground">
-                d3lt
-              </span>
-              <span className="truncate text-xs text-muted-foreground">
-                Pit Station
-              </span>
-            </div>
-          </div>
+        {/* Header - Casino Name */}
+        <div className="border-b border-sidebar-border/50 px-4 py-3">
+          {casinoLoading ? (
+            <div className="h-4 w-32 animate-pulse rounded bg-muted/50" />
+          ) : (
+            <h2
+              className="truncate text-sm font-bold uppercase tracking-widest text-sidebar-foreground"
+              style={{ fontFamily: 'monospace' }}
+            >
+              {casinoName ?? '—'}
+            </h2>
+          )}
         </div>
 
         {/* Main Navigation - Grouped with collapsible trees */}
