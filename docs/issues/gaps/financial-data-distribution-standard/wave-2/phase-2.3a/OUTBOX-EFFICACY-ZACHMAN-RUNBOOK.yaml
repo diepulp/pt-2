@@ -1,0 +1,924 @@
+meta:
+  artifact_type: outbox_efficacy_zachman_runbook
+  version: "1.0.0"
+  status: operational
+  purpose: >
+    Machine-readable operational runbook for validating transactional outbox efficacy
+    through the Phase 2.3a observability surface. Structured by the Zachman
+    interrogatives (What / How / Where / Who / When / Why) to encode observable
+    entities, validation workflows, surface topology, actor authority, timing
+    thresholds, and operational meaning in a single inspectable artifact.
+    This runbook is diagnostic and operational — not a canonical architecture document.
+  usage_modes:
+    - producer_certification
+    - relay_health_validation
+    - layer_isolation_debugging
+    - semantic_envelope_verification
+    - pilot_demo_validation
+    - post_deploy_smoke_check
+    - projection_debugging
+  non_goals:
+    - relay_mutation_or_repair
+    - dead_letter_routing
+    - event_replay_orchestration
+    - projection_rebuild
+    - real_time_alerting
+    - cross_casino_observability
+  governing_references:
+    surface_url: /admin/outbox-observability
+    api_route: /api/internal/outbox-observability
+    scope_authority: FIB-H-W2-OUTBOX-OBS-001
+    precis: docs/issues/gaps/financial-data-distribution-standard/implementation-precis/PRD-086-precis.md
+    adrs:
+      - id: ADR-024
+        concern: authoritative context derivation — casino_id from staff row only
+      - id: ADR-052
+        concern: financial fact model — fact_class and origin_label attribution rules
+      - id: ADR-054
+        concern: financial event propagation and surface contract — origin_label immutability (D5)
+      - id: ADR-056
+        concern: outbox write-path governance — SECURITY DEFINER enforcement
+  containment_invariant: >
+    This surface performs no DML against finance_outbox, processed_messages, or any
+    other table. Any downstream proposal to add a write action, replay control, repair
+    button, retry button, or dead-letter routing requires a new FIB intake and explicit
+    amendment to FIB-H-W2-OUTBOX-OBS-001.
+
+# =============================================================================
+# WHAT — Observable entities, their fields, and what those fields prove
+# =============================================================================
+what:
+  description: >
+    Semantic entities exposed by the observability surface. These are the
+    truth-bearing units the runbook operates on. Each field entry encodes
+    what the value proves about the system and what absence or corruption implies.
+
+  entities:
+
+    - name: OutboxRelayHealthDTO
+      source_rpc: rpc_get_outbox_relay_health
+      source_table: finance_outbox
+      category: aggregate_health_summary
+      mutable: false
+      authoritative: true
+      fields:
+        - name: pending_count
+          type: BIGINT
+          sql_derivation: "COUNT(*) FILTER (WHERE processed_at IS NULL)"
+          proves: relay has not yet claimed and committed these rows
+          healthy_value: low and trending toward zero over time
+          warning_signal: persistently non-zero after a relay cycle window
+
+        - name: oldest_pending_age_seconds
+          type: DOUBLE PRECISION
+          sql_derivation: "EXTRACT(EPOCH FROM (NOW() - MIN(created_at) FILTER (WHERE processed_at IS NULL)))"
+          proves: how long the oldest unprocessed row has been waiting
+          null_means: no pending rows exist — healthy idle state
+          healthy_value: null or under 30s
+          warning_signal: over 120s — relay is not cycling or is stalled
+
+        - name: retry_row_count
+          type: BIGINT
+          sql_derivation: "COUNT(*) FILTER (WHERE delivery_attempts >= 1 AND processed_at IS NULL)"
+          proves: relay reached these rows but the consumer threw; rows are being retried
+          healthy_value: 0
+          warning_signal: any non-zero value; growing count means relay is retrying without success
+
+        - name: poison_candidate_count
+          type: BIGINT
+          sql_derivation: "COUNT(*) FILTER (WHERE delivery_attempts >= 3 AND processed_at IS NULL)"
+          proves: relay has attempted delivery three or more times; consumer is consistently failing
+          healthy_value: 0
+          warning_signal: >
+            any non-zero value — amber accent applied in UI. These rows are operationally stuck.
+            Resolution requires fixing the consumer, not the outbox row.
+          heuristic_note: >
+            The threshold of 3 is a display parameter for pilot operational visibility.
+            It has no routing consequence and does not move rows to a dead-letter store.
+            It is not a relay or consumer contract boundary (DEC-086-005).
+
+        - name: processed_count_24h
+          type: BIGINT
+          sql_derivation: "COUNT(*) FILTER (WHERE processed_at IS NOT NULL AND processed_at > NOW() - INTERVAL '24 hours')"
+          proves: relay delivered this many events successfully in the last 24 hours
+          healthy_value: proportional to workflow activity volume
+          warning_signal: 0 when workflows have been executed — relay may be down or no events are being authored
+
+    - name: OutboxAdminEventDTO
+      source_rpc: rpc_get_outbox_event_page
+      source_table: finance_outbox
+      category: individual_event_envelope
+      mutable: false
+      authoritative: true
+      max_rows_per_page: 100
+      ordering: created_at DESC
+      note: >
+        Does NOT extend FinancialOutboxEventDTO — the consumer DTO is frozen by ADR-054.
+        OutboxAdminEventDTO includes relay lifecycle fields (delivery_attempts,
+        last_attempted_at, last_error) that are deliberately absent from the consumer
+        shape. Both share the same DB row origin but evolve independently (DEC-086-003).
+      fields:
+        - name: event_id
+          type: UUID
+          ordering_key: UUIDv7 — lexicographically ordered by creation time
+          proves: a unique authored financial fact was written to the outbox
+          search_supported: true
+
+        - name: event_type
+          type: TEXT
+          valid_values:
+            - buyin.recorded
+            - cashout.recorded
+            - adjustment.recorded
+            - grind.observed
+            - fill.recorded
+            - credit.recorded
+          proves: which financial workflow authored this event
+          corruption_signal: any value outside valid_values — producer authoring error
+
+        - name: fact_class
+          type: TEXT
+          valid_values:
+            - ledger      # financial transaction — cash or chip movement
+            - operational # structural observation — not a financial exchange
+          authority: ADR-052 attribution rules
+          immutable: true
+          proves: the authority category of the authored fact
+          adr054_d5: >
+            rendered exactly as stored — no conditional color progression or visual upgrade
+            between values is permitted at the display layer
+
+        - name: origin_label
+          type: TEXT
+          valid_values:
+            - actual      # confirmed cash or chip movement
+            - estimated   # rated play value (not confirmed cash)
+            - observed    # grind observation (structural, not financial)
+            - compliance  # regulatory or compliance-triggered event
+          authority: ADR-052 attribution rules
+          immutable: true
+          proves: the provenance of the authored fact
+          adr054_d5: >
+            rendered with uniform neutral badge across all four values — no visual
+            upgrade logic from 'estimated' toward 'actual'. Label is a provenance
+            annotation, not a quality score.
+          corruption_signal: any value outside valid_values — producer authoring error
+
+        - name: player_id
+          type: UUID nullable
+          null_meaning: event is table-level, not player-attributed (fills, credits)
+          proves: which player this financial event is attributed to
+          search_supported: false
+
+        - name: table_id
+          type: UUID
+          proves: which table this event is anchored to
+          search_supported: true
+
+        - name: aggregate_id
+          type: UUID
+          proves: which visit or shift aggregate this event belongs to
+          search_supported: true
+
+        - name: casino_id
+          type: UUID
+          proves: casino scope — always matches the authenticated admin's staff.casino_id
+          note: never readable from request input — derived from confirmed staff row (ADR-024)
+
+        - name: payload
+          type: JSONB
+          proves: the complete authored financial fact as written by the producer RPC
+          truncation_at_ui: 2000 chars in the row-expand pre block
+          note: rendered as-stored; no synthetic reconstruction or upgrade permitted
+
+        - name: processed_at
+          type: TIMESTAMPTZ nullable
+          null_meaning: relay has not yet claimed and committed this row (pending)
+          set_by: rpc_acknowledge_outbox_delivery(p_success=true)
+          proves: relay successfully delivered this event to the consumer
+          idempotency_note: WHERE processed_at IS NULL guard prevents double-processing
+
+        - name: delivery_attempts
+          type: INTEGER
+          set_by: rpc_claim_outbox_batch on each claim cycle
+          proves: how many relay delivery cycles have touched this row
+          thresholds:
+            0: not yet claimed
+            1_to_2: relay is retrying — consumer has thrown at least once
+            gte_3: poison candidate — consumer is consistently failing; amber badge shown
+
+        - name: last_attempted_at
+          type: TIMESTAMPTZ nullable
+          set_by: rpc_claim_outbox_batch
+          proves: when the relay last attempted to deliver this row
+          null_meaning: row has never been claimed by the relay
+
+        - name: last_error
+          type: VARCHAR(2000) nullable
+          set_by: rpc_acknowledge_outbox_delivery(p_success=false, p_error_detail=...)
+          proves: the most recent consumer exception message for this row
+          null_meaning: no delivery failure recorded; either succeeded or never attempted
+          truncation: LEFT(..., 2000) applied at write time by the RPC
+
+# =============================================================================
+# HOW — Validation workflows and decision procedures
+# =============================================================================
+how:
+  description: >
+    Operational workflows for validating outbox efficacy. Each workflow names
+    the trigger condition, the ordered steps, the expected outcome, and the
+    failure branch. These are the executable procedures — not conceptual guidance.
+
+  workflows:
+
+    - name: core_validation_loop
+      trigger: any real workflow action performed (buy-in, cashout, adjustment, fill, credit, grind observation)
+      primary_actor: technical_admin
+      steps:
+        - step: 1
+          action: perform the workflow action in the application
+          resulting_state: finance_outbox row authored by producer RPC
+        - step: 2
+          action: open /admin/outbox-observability and click Refresh
+          resulting_state: surface data refreshed (bypasses 30s staleTime)
+        - step: 3
+          action: verify event row exists in the event table
+          check: row with correct event_type is visible
+          failure_branch: no_row_authored
+        - step: 4
+          action: verify semantic envelope (see semantic_envelope_verification workflow)
+          check: event_type, fact_class, origin_label, player_id, table_id, aggregate_id all correct
+          failure_branch: bad_envelope
+        - step: 5
+          action: wait up to 60s then click Refresh; verify processed_at is set
+          check: processed_at shows relative time (not "pending" badge)
+          failure_branch: relay_not_processing
+        - step: 6
+          action: verify delivery_attempts = 0 (or low if relay retried and succeeded)
+          check: no poison badge visible on the row
+          failure_branch: relay_retrying
+        - step: 7
+          action: record efficacy outcome
+          outcomes:
+            - label: HEALTHY
+              condition: row exists, envelope correct, processed_at set, delivery_attempts = 0
+            - label: STALLED
+              condition: row exists, processed_at not set after 2+ minutes
+            - label: FAILED
+              condition: row exists, delivery_attempts >= 3, processed_at null
+
+    - name: producer_certification
+      trigger: new producer, projection, lifecycle signal, completeness transition, or telemetry source introduced
+      primary_actor: technical_admin
+      checklist:
+        - field: event_type
+          verify: matches expected value for the workflow
+        - field: fact_class
+          verify: matches ADR-052 attribution — ledger for financial transactions, operational for structural observations
+        - field: origin_label
+          verify: matches ADR-052 provenance — actual / estimated / observed / compliance as appropriate
+        - field: player_id
+          verify: correct player UUID set; null only for table-level events (fills, credits)
+        - field: table_id
+          verify: correct table UUID set
+        - field: aggregate_id
+          verify: correct visit or shift UUID
+        - field: processed_at
+          verify: set after relay cycle (within 60s under normal conditions)
+        - field: delivery_attempts
+          verify: 0 for clean first-pass delivery
+        - field: poison_badge
+          verify: absent
+        - field: payload
+          verify: amounts, chip values, or observation data match the workflow input
+
+    - name: layer_isolation_debugging
+      trigger: projection shows completeness.status = partial, or dashboard appears stale
+      primary_actor: technical_admin
+      description: >
+        Collapse the failure search space to a single layer by verifying each
+        layer in sequence. Stop at the first layer that does not pass.
+      layers:
+        - layer: 1
+          name: producer
+          question: Does the event row exist in the event table?
+          pass: row visible in surface
+          fail_diagnosis: producer RPC did not write to finance_outbox
+          fail_investigation:
+            - was the workflow action actually saved (form submitted, DB record created)?
+            - does the authoring RPC include the finance_outbox INSERT?
+            - did a transaction rollback occur?
+          do_not_assume: relay failure — no row means no event was authored
+
+        - layer: 2
+          name: transport
+          question: Is processed_at set?
+          pass: processed_at shows a relative time
+          fail_if_pending_under_30s: normal — relay may not have cycled yet
+          fail_if_pending_over_120s:
+            diagnosis: relay is not claiming this row
+            check_health_metric: oldest_pending_age_seconds
+            possible_causes:
+              - relay worker process is down
+              - claim cycle is stalled
+              - finance_outbox is not being polled
+
+        - layer: 3
+          name: semantic_envelope
+          question: Are event_type, fact_class, and origin_label correct?
+          pass: all three match expected values per ADR-052
+          fail_diagnosis: producer authored a bad envelope
+          fail_investigation:
+            - check the authoring RPC for the event type in question
+            - verify fact_class and origin_label arguments match ADR-052 attribution rules
+            - check payload for corroborating evidence of wrong attribution
+
+        - layer: 4
+          name: relay
+          question: Is delivery_attempts > 0?
+          pass: delivery_attempts = 0 or processed_at is set
+          fail_if_retrying:
+            diagnosis: relay is reaching the row but the consumer is throwing
+            action: expand the row and read last_error
+          fail_if_poison:
+            diagnosis: consumer or idempotency issue; relay has given up retrying
+            action: expand the row and read last_error; fix the consumer
+
+        - layer: 5
+          name: consumer
+          question: All layers above pass but projection state is still wrong?
+          pass: not applicable — this is the residual layer
+          diagnosis: failure is isolated to the projection or consumer logic
+          implication: transport is confirmed healthy; the consumer's write path or idempotency check is the root cause
+
+    - name: semantic_envelope_verification
+      trigger: any producer certification or post-deploy smoke check
+      primary_actor: technical_admin
+      steps:
+        - action: expand the event row in the UI (click to expand)
+        - action: verify event_id is a UUIDv7 (validate format and that it is newer than the previous row's event_id)
+        - action: verify event_type against expected workflow mapping
+        - action: verify fact_class — ledger or operational — against ADR-052 table
+        - action: verify origin_label — actual / estimated / observed / compliance — against ADR-052 table
+        - action: verify casino_id matches the pilot casino (never from request input)
+        - action: verify table_id matches the table where the workflow was performed
+        - action: verify player_id is correct or null for non-player-scoped events
+        - action: verify aggregate_id matches the visit UUID or shift UUID
+        - action: expand payload and verify amounts, chip colors, or observation values match workflow input
+      constraint: >
+        origin_label and fact_class are rendered exactly as stored. If a label appears
+        wrong, the authoring producer is the source — not the display layer (ADR-054 D5).
+
+    - name: replay_ordering_validation
+      trigger: proving replay determinism for a repeated workflow (e.g., two consecutive fills)
+      primary_actor: technical_admin
+      steps:
+        - action: perform the same workflow action twice on the same table
+        - action: filter by event_type matching the workflow; optionally search by table_id
+        - action: verify two distinct rows exist with different event_id values
+        - action: verify event_id ordering is lexicographically correct (UUIDv7 sort order = creation order)
+        - action: verify both rows reach processed_at within a relay cycle
+        - action: verify delivery_attempts is low on both rows
+        - action: if a projection consumer exists, verify each event_id appears at most once in the projection receipt store
+      pass_condition: two rows, correct UUIDv7 order, both processed, no duplicate delivery
+
+    - name: poison_candidate_investigation
+      trigger: poison_candidate_count > 0 on the relay health card (amber badge)
+      primary_actor: technical_admin
+      steps:
+        - action: set status filter to "Poison Candidate"
+        - action: click Refresh
+        - action: for each poison row, expand and read last_error
+        - action: identify the root cause category
+      root_cause_categories:
+        - category: consumer_exception
+          description: consumer-side code threw during processing
+          examples:
+            - idempotency check failed (row already processed in projection)
+            - schema mismatch between event payload and consumer expectation
+            - constraint violation in the consumer's write path
+        - category: consumer_not_deployed
+          description: no consumer exists yet for this event type
+          examples:
+            - Phase 2.3 projection consumers not yet deployed
+            - feature branch consumer code not yet live
+        - category: transient_infrastructure
+          description: temporary database or network failure during delivery
+          examples:
+            - connection timeout during consumer write
+            - lock contention
+      resolution_principle: >
+        Fix the consumer, not the outbox row. No mutation action exists on this surface.
+        Repair, replay, and dead-letter routing require a new PRD and FIB amendment.
+
+# =============================================================================
+# WHERE — Surface topology and data flow boundaries
+# =============================================================================
+where:
+  description: >
+    All surfaces, storage boundaries, RPCs, and propagation paths that make up
+    the observability topology. Includes explicit forbidden write paths.
+
+  authoring_stores:
+    - name: finance_outbox
+      owned_by: player_financial_bounded_context
+      category: Category_A_table
+      write_path: SECURITY DEFINER RPCs only (ADR-056)
+      forbidden_writes_from:
+        - authenticated role
+        - application layer (direct PostgREST DML)
+        - this observability surface
+      relay_lifecycle_columns:
+        - delivery_attempts    # set by rpc_claim_outbox_batch on each claim cycle
+        - last_attempted_at    # set by rpc_claim_outbox_batch on each claim cycle
+        - last_error           # set by rpc_acknowledge_outbox_delivery(p_success=false)
+        - processed_at         # set by rpc_acknowledge_outbox_delivery(p_success=true)
+
+    - name: processed_messages
+      owned_by: relay_transport_layer
+      purpose: consumer idempotency receipt store
+      note: not directly readable via the observability surface; relay health is inferred from finance_outbox fields
+
+  read_rpcs:
+    - name: rpc_get_outbox_relay_health
+      migration: 20260519010436_wave2_outbox_admin_read_rpcs.sql
+      signature: "rpc_get_outbox_relay_health(p_casino_id UUID)"
+      access: service_role only — anon/authenticated/public revoked
+      security_definer: true
+      search_path: "''"
+      dml: none
+      returns: single health summary row (five aggregates over finance_outbox)
+      pre_state_assertion: >
+        migration raises EXCEPTION if finance_outbox.delivery_attempts or
+        finance_outbox.last_error are absent — prevents forward application against stale schema
+
+    - name: rpc_get_outbox_event_page
+      migration: 20260519010436_wave2_outbox_admin_read_rpcs.sql
+      signature: "rpc_get_outbox_event_page(p_casino_id UUID, p_event_type TEXT, p_status TEXT, p_search_id UUID, p_limit INTEGER)"
+      access: service_role only — anon/authenticated/public revoked
+      security_definer: true
+      search_path: "''"
+      dml: none
+      server_side_limit_cap: "GREATEST(1, LEAST(COALESCE(p_limit, 100), 100))"
+      sql_level_status_guard: >
+        raises invalid_parameter_value if p_status is not in
+        (all, pending, processed, failing, poison) — second line of defence
+        after API-layer 400 validation
+      ordering: "created_at DESC"
+      status_filter_semantics:
+        pending: "processed_at IS NULL AND delivery_attempts < 3"
+        processed: "processed_at IS NOT NULL"
+        failing: "processed_at IS NULL AND delivery_attempts >= 1 AND delivery_attempts < 3"
+        poison: "processed_at IS NULL AND delivery_attempts >= 3"
+        note: failing and poison are disjoint — a row cannot satisfy both predicates simultaneously
+      search_filter: "p_search_id matches event_id OR aggregate_id OR table_id via OR predicate"
+
+  relay_write_rpcs:
+    - name: rpc_claim_outbox_batch
+      purpose: relay claim cycle — marks rows as in-flight, increments delivery_attempts and sets last_attempted_at
+      access: service_role only
+      note: observed indirectly via delivery_attempts and last_attempted_at on event rows
+
+    - name: rpc_acknowledge_outbox_delivery
+      purpose: terminal delivery-state write — sets processed_at on success or last_error on failure
+      migration: 20260518014252_wave2_rpc_acknowledge_outbox_delivery.sql
+      access: service_role only — relay worker only
+      idempotency: WHERE processed_at IS NULL guard on both branches
+      success_path: "SET processed_at = NOW(), last_error = NULL"
+      failure_path: "SET last_error = LEFT(COALESCE(p_error_detail, 'unknown error'), 2000)"
+      note: observed indirectly via processed_at and last_error on event rows
+
+  surfaces:
+    - name: admin_observability_page
+      type: ui
+      url: /admin/outbox-observability
+      route_file: app/(dashboard)/admin/outbox-observability/page.tsx
+      component_file: app/(dashboard)/admin/outbox-observability/OutboxObservabilityClient.tsx
+      auth_requirement: active admin staff role
+      data_freshness: 30s staleTime via TanStack Query; manual Refresh button available
+      renders:
+        - entity: OutboxRelayHealthDTO
+          authority_visible: true
+          completeness_visible: false
+        - entity: OutboxAdminEventDTO
+          authority_visible: true
+          completeness_visible: false
+      forbidden_actions:
+        - replay
+        - retry
+        - repair
+        - mutate
+        - dead_letter_route
+
+    - name: internal_api_route
+      type: api
+      url: /api/internal/outbox-observability
+      method: GET only
+      route_file: app/api/internal/outbox-observability/route.ts
+      auth_pattern: two_client
+      auth_detail:
+        session_client: "createClient() — auth.getUser() + staff table lookup (role=admin, status=active)"
+        service_client: "createServiceClient() — constructed only after authorization succeeds"
+        casino_id_source: "staff row (never from query params) — ADR-024 authoritative context derivation"
+      query_params:
+        event_type:
+          type: string
+          valid_values: [buyin.recorded, cashout.recorded, adjustment.recorded, grind.observed, fill.recorded, credit.recorded]
+          default: all types
+        status:
+          type: string
+          valid_values: [all, pending, processed, failing, poison]
+          default: all
+          validation: Set constant — 400 if unrecognized
+        search_id:
+          type: UUID
+          validation: UUID regex — 400 if present and malformed
+      response_shape:
+        health: OutboxRelayHealthDTO or null
+        events: OutboxAdminEventDTO[]
+      error_codes:
+        400: invalid status value or malformed search_id
+        401: no authenticated session
+        403: not an active admin staff member
+        500: RPC failure — safeErrorDetails(error) returned
+
+  propagation_paths:
+    - source: producer_rpc
+      destination: finance_outbox
+      transport: PostgreSQL INSERT within SECURITY DEFINER function
+      preserves_authority: true
+      preserves_identity: true
+      replay_supported: true
+
+    - source: finance_outbox
+      destination: processed_messages (via consumer)
+      transport: relay_claim_commit_cycle (rpc_claim_outbox_batch + rpc_acknowledge_outbox_delivery)
+      preserves_authority: true
+      preserves_identity: true
+      at_least_once: true
+      observable_via: processed_at and delivery_attempts on the outbox row
+
+    - source: finance_outbox
+      destination: admin_observability_page
+      transport: rpc_get_outbox_relay_health + rpc_get_outbox_event_page via service_role
+      read_only: true
+      no_dml: true
+
+# =============================================================================
+# WHO — Actors and their operational authority
+# =============================================================================
+who:
+  description: >
+    Human and system actors involved in the outbox lifecycle, and the scope
+    of what each actor can observe or affect. The observability surface grants
+    no write authority to any human actor.
+
+  actors:
+
+    - actor: technical_admin
+      operational_role: primary surface user
+      auth_requirement: active staff row with role = 'admin'
+      casino_id_derivation: from confirmed staff row — never from request input
+      can_observe:
+        - relay health aggregate (all five metrics)
+        - individual event envelopes (full semantic envelope + relay lifecycle fields)
+        - poison candidates (identified by amber badge)
+        - last_error on any failing or poison row
+      cannot:
+        - replay any event
+        - retry any event
+        - mutate any outbox row
+        - access events outside their confirmed casino_id scope
+      owns:
+        - review
+        - field_validation_outcome_recording
+
+    - actor: product_owner
+      operational_role: pilot demo validation and field confidence review
+      auth_requirement: same as technical_admin (admin role required)
+      primary_use: >
+        During pilot demos: perform a workflow, open the surface, show event emitted,
+        relay processed, attribution preserved, chronology visible. Demonstrates
+        causal coherence to stakeholders.
+
+    - actor: relay_worker
+      operational_role: system actor — claims and commits outbox rows
+      human: false
+      rpcs_called:
+        - rpc_claim_outbox_batch
+        - rpc_acknowledge_outbox_delivery
+      access: service_role only
+      observable_effects:
+        - delivery_attempts incremented on each claim cycle
+        - last_attempted_at updated on each claim cycle
+        - processed_at set on successful delivery
+        - last_error set on delivery failure
+
+    - actor: producer_rpc
+      operational_role: system actor — authors financial facts into finance_outbox
+      human: false
+      access: SECURITY DEFINER — no direct table write from application layer
+      observable_effects:
+        - event rows authored with correct semantic envelope
+        - fact_class and origin_label set at authoring time (immutable after write)
+
+  bounded_context_owners:
+    - context: player_financial
+      owning_service: services/player-financial/
+      authority_owner: producer_rpcs
+      projection_owner: Phase 2.3+ consumer projections (deferred)
+      observability_contract: OutboxAdminEventDTO, OutboxRelayHealthDTO
+
+# =============================================================================
+# WHEN — Timing constraints, thresholds, and trigger conditions
+# =============================================================================
+when:
+  description: >
+    Timing semantics, operational thresholds, and trigger conditions that govern
+    when to run each validation and how to interpret timing-sensitive fields.
+
+  surface_timing:
+    stale_time_ms: 30000
+    note: >
+      The surface is not a real-time dashboard. Use the Refresh button to force
+      an immediate fetch when running timed validation after a workflow action.
+
+  relay_timing_thresholds:
+    - metric: oldest_pending_age_seconds
+      healthy: null (no pending rows) or under 30s
+      watch: 30s–120s — relay is slow but moving
+      warning: over 120s — relay is stalled; investigate claim cycle
+      critical: over 300s — relay process is likely down
+
+    - metric: delivery_attempts
+      threshold_0: row not yet claimed
+      threshold_1_to_2: relay is retrying — consumer threw at least once
+      threshold_gte_3: poison candidate — consumer consistently failing; amber badge shown
+
+  trigger_conditions:
+    - trigger: after_any_workflow_action
+      run: core_validation_loop
+      latency_expectation: event row visible immediately; processed_at set within one relay cycle (~30s)
+
+    - trigger: new_producer_introduced
+      run: producer_certification checklist
+      timing: immediately after the first real workflow action with the new producer
+
+    - trigger: projection_shows_partial_completeness
+      run: layer_isolation_debugging
+      timing: immediately; do not assume relay failure without layer-by-layer verification
+
+    - trigger: poison_candidate_count_gt_0
+      run: poison_candidate_investigation
+      timing: immediately; each amber badge represents a stuck row that will not self-heal
+
+    - trigger: post_deploy_smoke_check
+      run: core_validation_loop for each producer event type
+      timing: within 15 minutes of deployment
+
+    - trigger: pilot_demo
+      run: core_validation_loop
+      timing: run one workflow action live; show the event row and relay progression in real time
+
+  lifecycle_windows:
+    - window: relay_claim_cycle
+      description: relay polls finance_outbox for unprocessed rows, claims a batch, and delivers to consumer
+      observable_via: delivery_attempts incrementing on the row
+
+    - window: relay_commit_cycle
+      description: after consumer processing, relay calls rpc_acknowledge_outbox_delivery
+      observable_via: processed_at becoming non-null on the row
+
+    - window: poison_stabilization
+      description: a row is operationally stuck once delivery_attempts >= 3 AND processed_at IS NULL
+      resolution: requires consumer fix — the row will not self-heal without external intervention
+
+  ordering_constraints:
+    - aggregate: finance_outbox
+      ordering_key: event_id (UUIDv7 — lexicographically sortable by creation time)
+      deterministic: true
+      replay_note: >
+        UUIDv7 ordering guarantees that replay consumers can reconstruct event sequence
+        from event_id sort order without relying on created_at wall clock precision
+
+# =============================================================================
+# WHY — Operational meaning, efficacy criteria, and diagnostic purpose
+# =============================================================================
+why:
+  description: >
+    Operational meaning of each observable signal. What it proves, what its
+    absence implies, what its corruption reveals, and what the operator should
+    conclude from it.
+
+  efficacy_criteria:
+    description: >
+      The transactional outbox is operationally efficacious when all of the
+      following are true simultaneously.
+    criteria:
+      - id: E1
+        statement: every workflow action produces an authored event row
+        observable_via: row appears in event table after workflow action
+        failure_means: producer RPC is not writing to finance_outbox
+
+      - id: E2
+        statement: every authored event row reaches processed_at within a relay cycle
+        observable_via: processed_at is set on all rows; pending_count drains to 0
+        failure_means: relay is not cycling, or consumer is consistently failing
+
+      - id: E3
+        statement: every authored event carries the correct semantic envelope
+        observable_via: event_type, fact_class, origin_label, player_id, table_id, aggregate_id all match the workflow
+        failure_means: producer authored a bad envelope — semantic drift has occurred
+
+      - id: E4
+        statement: relay delivers with zero or minimal retries under normal conditions
+        observable_via: delivery_attempts = 0 on most processed rows; retry_row_count = 0 in health card
+        failure_means: consumer has instability or transient infrastructure issues
+
+      - id: E5
+        statement: no poison candidates accumulate
+        observable_via: poison_candidate_count = 0 in health card
+        failure_means: a consumer is consistently failing; consumer fix required
+
+      - id: E6
+        statement: processed_count_24h is proportional to workflow activity
+        observable_via: processed_count_24h reflects expected event volume
+        failure_means: relay may be down, or producers have stopped authoring events
+
+  operational_meaning:
+
+    - concept: processed_at IS NULL (pending badge)
+      operator_interpretation: this event has not been delivered to the consumer yet
+      system_intent: relay has not yet claimed and committed this row
+      misuse_risk: >
+        Do not treat a pending row as a producer failure. The row exists and is authored
+        correctly — relay delivery is the next step.
+      overclaim_risk: >
+        Do not assume a projection consumer has been notified just because the row exists.
+        Only processed_at confirms delivery.
+
+    - concept: delivery_attempts >= 1, processed_at IS NULL (failing)
+      operator_interpretation: relay is retrying this event — consumer threw at least once
+      system_intent: at-least-once delivery design; relay will retry on the next cycle
+      misuse_risk: >
+        Do not treat one or two delivery_attempts as a permanent failure. Relay retries
+        are expected for transient consumer issues.
+      overclaim_risk: >
+        Do not dismiss delivery_attempts > 0 as normal if the count is growing with each
+        Refresh — that means the consumer is not recovering.
+
+    - concept: delivery_attempts >= 3, processed_at IS NULL (poison candidate)
+      operator_interpretation: relay has consistently failed to deliver this event; consumer investigation required
+      system_intent: >
+        A display heuristic for operational visibility. The relay will continue retrying
+        beyond 3 attempts — this label is not a relay stop condition.
+      misuse_risk: >
+        Do not attempt to manually repair or delete the row from the surface. Resolution
+        requires fixing the consumer. Repair requires a separate reliability slice.
+      overclaim_risk: >
+        Do not conclude the outbox is broken. A poison row means one consumer path is
+        broken — the producer and transport layers may both be healthy.
+
+    - concept: origin_label immutability (ADR-054 D5)
+      operator_interpretation: the label shown is exactly what the producer authored — it is not inferred or upgraded
+      system_intent: >
+        Provenance annotations are immutable after write. The display layer has no
+        upgrade logic. 'estimated' does not become 'actual' as the system progresses.
+      misuse_risk: >
+        Do not interpret a uniform badge appearance as meaning all label values are
+        equivalent in business terms. The uniform display is an anti-upgrade-inference
+        measure, not a claim that origin_labels are interchangeable.
+      forbidden_behavior: conditional color progression from 'estimated' toward 'actual' at any layer
+
+    - concept: casino_id from staff row
+      operator_interpretation: the events shown are scoped to the authenticated admin's casino
+      system_intent: ADR-024 authoritative context derivation — context is never user-supplied
+      misuse_risk: >
+        Never attempt to pass a casino_id in the query params to scope to a different casino.
+        The route ignores query param casino_id and uses the confirmed staff row value.
+
+    - concept: no write actions on the surface
+      operator_interpretation: this surface cannot fix anything — it can only reveal the problem
+      system_intent: >
+        Observability is architecturally distinct from event operations infrastructure.
+        The separation between "see it" and "fix it" is preserved by design.
+      forbidden_expansions:
+        - replay button
+        - retry button
+        - repair action
+        - dead-letter routing control
+        - any write action against finance_outbox or processed_messages
+
+  trust_boundaries:
+    - boundary: producer_authoring_correctness
+      false_authority_risk: >
+        The observability surface shows what the producer wrote — it cannot validate
+        whether the producer wrote the correct financial fact. A row with correct labels
+        but wrong payload amounts is not detectable by the surface alone.
+      reconciliation_risk: >
+        Payload correctness requires cross-referencing with the source workflow record
+        (e.g., the buyin row, adjustment row, or fill row that triggered the producer).
+
+    - boundary: consumer_projection_truth
+      false_authority_risk: >
+        processed_at on the outbox row confirms relay delivery — it does not confirm
+        that the downstream projection consumed it correctly. A consumer could
+        acknowledge delivery and then fail to write to the projection store.
+      reconciliation_risk: >
+        Layer 5 of the layer isolation debugging workflow addresses this: if all relay
+        layers are clean but the projection is wrong, the consumer logic is the source.
+
+    - boundary: relay_liveness
+      false_authority_risk: >
+        pending_count = 0 confirms no rows are awaiting relay, but it does not confirm
+        the relay process is alive. A relay that is down with no pending rows looks
+        identical to a relay that is healthy with no pending rows.
+      reconciliation_risk: >
+        Use processed_count_24h as a proxy for liveness — 0 processed events when
+        workflows have been executed indicates the relay is likely not running.
+
+  semantic_constraints:
+    - rule: no_synthetic_reconstruction
+      rationale: ADR-054 D5 — origin_label and fact_class are immutable after authoring
+      forbidden_behaviors:
+        - inferring origin_label from payload content
+        - upgrading origin_label at the display or API layer
+        - reconstructing fill.recorded or credit.recorded facts from projection state
+
+    - rule: no_cross_context_mutation
+      rationale: finance_outbox is a Category A table owned by player_financial bounded context
+      forbidden_behaviors:
+        - direct PostgREST DML against finance_outbox from application code
+        - writes from the observability route or UI
+
+    - rule: no_expansion_without_fib_amendment
+      rationale: FIB-H-W2-OUTBOX-OBS-001 §K governs expansion triggers
+      forbidden_behaviors:
+        - adding write actions to the observability surface
+        - adding replay or repair workflows
+        - adding external notification channels
+        - adding public event APIs
+        - adding new event semantics not authored by governed producer RPCs
+
+# =============================================================================
+# Diagnostics — Efficacy signal registry
+# =============================================================================
+diagnostics:
+
+  relay_health_audit:
+    signal_matrix:
+      - signal: pending_count = 0 AND oldest_pending_age_seconds = null
+        interpretation: relay is fully caught up; no events awaiting delivery
+        efficacy_status: HEALTHY
+
+      - signal: pending_count > 0 AND oldest_pending_age_seconds < 30
+        interpretation: relay is active but has not yet cycled through recent events
+        efficacy_status: WATCH
+
+      - signal: pending_count > 0 AND oldest_pending_age_seconds > 120
+        interpretation: relay is not cycling — oldest row has been waiting over 2 minutes
+        efficacy_status: STALLED
+        action: investigate relay worker process and claim cycle
+
+      - signal: retry_row_count > 0
+        interpretation: one or more rows are being retried — consumer threw at least once
+        efficacy_status: DEGRADED
+        action: filter by status=failing; expand rows; read last_error
+
+      - signal: poison_candidate_count > 0
+        interpretation: one or more rows are stuck with >= 3 failed delivery attempts
+        efficacy_status: FAILED
+        action: filter by status=poison; expand rows; fix consumer
+
+      - signal: processed_count_24h = 0 AND workflows have been executed
+        interpretation: relay may be down; no events were delivered in the last 24 hours
+        efficacy_status: FAILED
+        action: verify relay worker process; verify rpc_claim_outbox_batch is being called
+
+  producer_correctness_audit:
+    findings_template:
+      - check: row_exists_after_workflow
+        status: [pass, fail]
+      - check: event_type_correct
+        status: [pass, fail]
+      - check: fact_class_matches_adr052
+        status: [pass, fail]
+      - check: origin_label_matches_adr052
+        status: [pass, fail]
+      - check: player_id_correct_or_null
+        status: [pass, fail]
+      - check: table_id_correct
+        status: [pass, fail]
+      - check: aggregate_id_correct
+        status: [pass, fail]
+      - check: payload_values_match_workflow
+        status: [pass, fail]
+      - check: processed_at_set_after_relay_cycle
+        status: [pass, fail]
+      - check: delivery_attempts_zero_on_first_pass
+        status: [pass, fail]
+      - check: poison_badge_absent
+        status: [pass, fail]
+    outcome:
+      all_pass: producer is certified for this event type
+      any_fail: producer has a defect — identify the failing layer via layer_isolation_debugging

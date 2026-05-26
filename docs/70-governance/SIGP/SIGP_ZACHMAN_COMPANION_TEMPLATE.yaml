@@ -1,0 +1,353 @@
+meta:
+  artifact_type: semantic_integrity_zachman_companion
+  version: "0.1.0"
+  status: template
+  purpose: >
+    Machine-readable semantic topology snapshot used during
+    Semantic Integrity Governance Protocol (SIGP) execution.
+    This artifact is diagnostic, not canonical architecture truth.
+  usage_mode:
+    - semantic drift detection
+    - split-brain reconnaissance
+    - bounded-context coherence review
+    - projection dependency analysis
+    - authority/lifecycle diagnostics
+  non_goals:
+    - exhaustive enterprise modeling
+    - implementation specification
+    - UML replacement
+    - runtime infrastructure topology
+    - permanent system encyclopedia
+  governance:
+    companion_protocol: SEMANTIC_INTEGRITY_GOVERNANCE_PROTOCOL.md
+    lifecycle:
+      - created during semantic review
+      - amended during canonicalization
+      - retired when fracture stabilizes
+    containment_rule: >
+      Only map semantically unstable or actively reviewed domains.
+      Do not model the entire system unless explicitly justified.
+
+review_context:
+  review_id: SIGP-XXXX
+  review_date: YYYY-MM-DD
+  reviewer:
+    name:
+    role:
+  trigger:
+    type:
+      - propagation_change
+      - projection_expansion
+      - split_brain_detection
+      - vocabulary_drift
+      - lifecycle_conflict
+      - authority_ambiguity
+    description:
+  disposition:
+    status:
+      - clearance
+      - risk_registered
+      - canonicalization_required
+      - blocked
+    severity:
+      - S0
+      - S1
+      - S2
+      - S3
+      - S4
+      - S5
+
+scope:
+  bounded_contexts:
+    - name:
+      status:
+        - stable
+        - unstable
+        - fractured
+        - transitional
+      notes:
+  excluded_contexts: []
+  related_artifacts:
+    adrs: []
+    prds: []
+    exec_specs: []
+    fibs: []
+    rollout_maps: []
+    risk_register_entries: []
+
+zachman:
+  what:
+    description: >
+      Semantic entities, facts, records, and truth-bearing concepts.
+    entities:
+      - name:
+        category:
+          - authority_fact
+          - telemetry_fact
+          - dependency_event
+          - projection_artifact
+          - surface_value
+          - lifecycle_signal
+        canonical_owner:
+        authoritative:
+          true
+        mutable:
+          false
+        append_only:
+          false
+        correction_model:
+          - mutate
+          - supersede
+          - append_adjustment
+        source_of_truth:
+        competing_sources: []
+        consumers: []
+        known_fractures: []
+
+  how:
+    description: >
+      Operational workflows, transformations, propagation paths,
+      replay paths, and lifecycle transitions.
+    workflows:
+      - name:
+        primary_actor:
+        trigger:
+        steps:
+          - step:
+            action:
+            resulting_state:
+        propagation:
+          emits:
+            - event_type:
+              category:
+              immutable:
+                true
+          consumes: []
+        replayable:
+          true
+        deterministic:
+          true
+        known_fractures: []
+
+  where:
+    description: >
+      Surface boundaries, storage boundaries, rendering boundaries,
+      and propagation boundaries.
+    boundaries:
+      authoring_stores:
+        - name:
+          owned_by:
+          forbidden_writes_from: []
+      projections:
+        - name:
+          derived_from: []
+          rebuildable:
+            true
+          lifecycle_window:
+      surfaces:
+        - name:
+          type:
+            - ui
+            - api
+            - export
+            - report
+            - dashboard
+          renders:
+            - entity:
+              authority_visible:
+                true
+              completeness_visible:
+                true
+          known_risks: []
+      propagation_paths:
+        - source:
+          destination:
+          transport:
+          preserves_authority:
+            true
+          preserves_identity:
+            true
+          replay_supported:
+            true
+
+  who:
+    description: >
+      Actors, ownership boundaries, operational authority,
+      and bounded-context responsibility.
+    actors:
+      - actor:
+        operational_role:
+        owns:
+          - lifecycle
+          - authority
+          - review
+          - approval
+          - projection
+        touches_contexts: []
+        inferred_by_system:
+          false
+    bounded_context_owners:
+      - context:
+        owning_service:
+        lifecycle_owner:
+        authority_owner:
+        projection_owner:
+        competing_owners: []
+
+  when:
+    description: >
+      Lifecycle windows, timing assumptions, replay ordering,
+      completeness windows, and temporal semantics.
+    lifecycle:
+      states:
+        - name:
+          entered_by:
+          exited_by:
+          canonical_owner:
+      transitions:
+        - from:
+          to:
+          authoritative_trigger:
+          replay_sensitive:
+            true
+      completeness_windows:
+        - surface:
+          complete_when:
+          partial_when:
+          unknown_when:
+      ordering_constraints:
+        - aggregate:
+          ordering_key:
+          deterministic:
+            true
+
+  why:
+    description: >
+      Operational meaning, business rationale, semantic intent,
+      and user interpretation risk.
+    operational_meaning:
+      - concept:
+        operator_interpretation:
+        system_intent:
+        misuse_risk:
+        overclaim_risk:
+        known_misreadings: []
+    trust_boundaries:
+      - boundary:
+        false_authority_risk:
+        reconciliation_risk:
+        compliance_risk:
+        projection_risk:
+    semantic_constraints:
+      - rule:
+        rationale:
+        forbidden_behaviors: []
+
+diagnostics:
+  authority_audit:
+    status:
+      - clear
+      - risk
+      - fractured
+    findings: []
+
+  aggregate_ownership_audit:
+    status:
+      - clear
+      - risk
+      - fractured
+    findings: []
+
+  propagation_integrity_audit:
+    status:
+      - clear
+      - risk
+      - fractured
+    findings: []
+
+  surface_truthfulness_audit:
+    status:
+      - clear
+      - risk
+      - fractured
+    findings: []
+
+  vocabulary_integrity_audit:
+    status:
+      - clear
+      - risk
+      - fractured
+    findings: []
+
+  projection_dependency_audit:
+    status:
+      - clear
+      - risk
+      - fractured
+    findings: []
+
+  operational_reality_audit:
+    status:
+      - clear
+      - risk
+      - fractured
+    findings: []
+
+split_brain_detection:
+  active_conflicts:
+    - id:
+      fracture_type:
+      severity:
+      concept:
+      context_a:
+        owner:
+        interpretation:
+      context_b:
+        owner:
+        interpretation:
+      downstream_risk:
+      current_containment:
+      required_resolution:
+      successor_artifact:
+
+semantic_risk_register_projection:
+  unresolved_risks:
+    - risk_id:
+      short_name:
+      severity:
+      fracture_type:
+      propagation_scope:
+      blocked_work:
+      allowed_work:
+      resolution_trigger:
+
+containment:
+  forbidden_expansions:
+    - introducing_new_authority_without_review
+    - consumer_reinterpretation_of_origin
+    - unlabeled_mixed_authority_surfaces
+    - lifecycle_reconstruction_in_ui
+    - duplicate_aggregate_ownership
+    - overloaded_vocabulary_without_glossary
+  temporary_allowances:
+    - allowance:
+      expires_when:
+      containment_rule:
+
+review_outcome:
+  summary:
+  required_actions:
+    immediate: []
+    deferred: []
+  downstream_artifacts_required:
+    - adr
+    - prd
+    - exec
+    - fib_amendment
+    - ul_note
+    - migration_guard
+    - replay_test
+    - surface_contract_patch
+  signoff:
+    reviewer:
+    date:

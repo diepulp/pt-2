@@ -1,0 +1,777 @@
+meta:
+  artifact_type: semantic_integrity_zachman_companion
+  version: "0.1.0"
+  status: active
+  purpose: >
+    Semantic topology snapshot for SIGP-001 — Post-Wave-2 Financial Surface Truth Review.
+    Covers the fractured domains only: Rating Slip financial rendering, Shift Dashboard
+    completeness path, Operational Projection consumption, and Fills/Credits dual-path divergence.
+  review_id: SIGP-001
+  companion_doc: SIGP-001-post-wave-2-financial-surface-truth.md
+
+review_context:
+  review_id: SIGP-001
+  review_date: "2026-05-23"
+  reviewer:
+    name: Vladimir Ivanov
+    role: Lead Architect
+  trigger:
+    type:
+      - split_brain_detection
+      - authority_ambiguity
+      - projection_expansion
+    description: >
+      Post-Wave-2 operational truth audit revealed that the outbox transport spine
+      is sound but the render boundary discards authority/completeness envelopes on
+      5 surfaces, and the shift dashboard never crossed into the Phase 2.4 projection layer.
+  disposition:
+    status: risk_registered
+    severity: S4  # highest finding (SR-001, SR-003)
+
+scope:
+  bounded_contexts:
+    - name: Financial Surface Rendering
+      status: fractured
+      notes: >
+        FinancialValue envelope discarded at render boundary on Rating Slip Modal,
+        GrindBuyinPanel, Shift Dashboard family, BankSummary, RundownReportCard.
+
+    - name: Operational Projection
+      status: transitional
+      notes: >
+        Phase 2.4 projection store (shift_operational_projection) is structurally sound.
+        Only partially consumed — GrindBuyinPanel consumes it; shift dashboard does not.
+
+    - name: Shift Dashboard
+      status: fractured
+      notes: >
+        rpc_shift_table_metrics reads directly from authoring tables. No projection
+        path. Completeness fabricated as non-null sentinel.
+
+    - name: Inventory / Pit Terminal
+      status: unstable
+      notes: >
+        BankSummary and RundownReportCard missing FinancialValue.
+        RundownSummaryPanel is clean reference. 'actual' authority type misapplied
+        to inventory snapshots.
+
+    - name: Rating Slip
+      status: fractured
+      notes: >
+        FinancialValue never adopted. computedNetPosition silently blends PFT
+        authority value with unsaved form input.
+
+  excluded_contexts:
+    - Visit Financial Summary (clean — getVisitClassACompleteness wired, FinancialValue correct)
+    - Outbox transport (clean — structurally sound, idempotency proven)
+
+  related_artifacts:
+    adrs:
+      - ADR-052  # Wave 2 UL — authority taxonomy
+      - ADR-054  # FinancialValue surface rendering contract
+      - ADR-056  # Outbox transport + projection consumer contract
+    prds:
+      - PRD-088  # Phase 2.4 operational telemetry projection
+      - PRD-089  # Phase 2.5 observability + sign-off
+    exec_specs: []
+    fibs: []
+    rollout_maps: []
+    risk_register_entries:
+      - SR-001  # Rating Slip Modal
+      - SR-002  # GrindBuyinPanel
+      - SR-003  # Shift Dashboard
+      - SR-004  # Telemetry Rail
+      - SR-005  # BankSummary
+      - SR-006  # RundownReportCard
+      - SR-007  # Fills/credits dual path
+      - SR-008  # Inventory snapshots 'actual'
+
+zachman:
+  what:
+    description: >
+      Semantic entities, facts, and truth-bearing concepts in the reviewed domains.
+    entities:
+      - name: Class A PFT Financial Fact
+        category: authority_fact
+        canonical_owner: table_pft (primary financial transaction store)
+        authoritative: true
+        mutable: false
+        append_only: true
+        correction_model: supersede
+        source_of_truth: table_pft
+        competing_sources:
+          - visit_financial_summary view (derived, not authoritative)
+        consumers:
+          - rating-slip-modal.tsx (via rpc_get_rating_slip_modal_data)
+          - GET /api/v1/visits/[visitId]/financial-summary
+        known_fractures:
+          - SR-001: envelope discarded at rating-slip-modal render boundary
+
+      - name: Shift Operational Projection Total
+        category: projection_artifact
+        canonical_owner: shift_operational_projection
+        authoritative: false
+        mutable: false
+        append_only: false
+        correction_model: rebuild_from_events
+        source_of_truth: finance_outbox
+        competing_sources:
+          - table_fill / table_credit / table_buyin_telemetry (direct authoring reads — used by shift dashboard)
+        consumers:
+          - GrindBuyinPanel via /api/v1/table-context/operational-projection
+          - shift dashboard (NOT consuming — fracture SR-003)
+        known_fractures:
+          - SR-002: GrindBuyinPanel discards the type:'estimated' envelope at render
+          - SR-003: shift dashboard bypasses projection entirely
+
+      - name: Fill / Credit Event
+        category: authority_fact
+        canonical_owner: table_fill / table_credit
+        authoritative: true
+        mutable: false
+        append_only: true
+        correction_model: supersede
+        source_of_truth: table_fill / table_credit
+        competing_sources:
+          - table_session.fills_total_cents (trigger-maintained denorm — Path A)
+          - shift_operational_projection via finance_outbox (Path B)
+        consumers:
+          - rpc_compute_table_rundown (Path A)
+          - rpc_process_operational_projection (Path B)
+        known_fractures:
+          - SR-007: two parallel read paths for the same events; divergence has no reconciliation signal
+
+      - name: Inventory Snapshot (Chip Count)
+        category: dependency_event
+        canonical_owner: table_inventory_snapshot
+        authoritative: false
+        mutable: false
+        append_only: true
+        correction_model: append_adjustment
+        source_of_truth: table_inventory_snapshot
+        competing_sources: []
+        consumers:
+          - RundownSummaryPanel via rpc_compute_table_rundown
+          - BankSummary via useInventorySnapshots
+        known_fractures:
+          - SR-008: labeled type:'actual' in RundownSummaryPanel — should be type:'observed'
+          - SR-005: BankSummary renders with no FinancialValue envelope at all
+
+      - name: Shift Completeness Signal
+        category: lifecycle_signal
+        canonical_owner: gaming_day_lifecycle (not yet wired to shift dashboard)
+        authoritative: true
+        mutable: false
+        append_only: false
+        correction_model: mutate
+        source_of_truth: gaming_day_lifecycle
+        competing_sources:
+          - null-guard sentinel (fabricated — used by shift dashboard components as 'complete')
+        consumers:
+          - hero-win-loss-compact.tsx (fabricated)
+          - secondary-kpi-stack.tsx (fabricated)
+          - analytics-panel.tsx (fabricated)
+        known_fractures:
+          - SR-003: completeness signal is null-guard, not lifecycle-derived
+
+      - name: computedNetPosition (Rating Slip Preview)
+        category: surface_value
+        canonical_owner: rating-slip-modal.tsx (UI-side computation)
+        authoritative: false
+        mutable: true
+        append_only: false
+        correction_model: mutate
+        source_of_truth: N/A — UI composite
+        competing_sources:
+          - totalCashOut.value from PFT DTO (authority fact)
+        consumers:
+          - rating-slip-modal.tsx Financial Summary section
+        known_fractures:
+          - SR-001: undisclosed composite — PFT authority value + pendingChipsTaken unsaved form input
+
+  how:
+    description: >
+      Workflows, propagation paths, and projection mechanics for the fractured surfaces.
+    workflows:
+      - name: Rating Slip Financial Summary Render
+        primary_actor: Pit Boss
+        trigger: rating slip modal opens
+        steps:
+          - step: 1
+            action: rpc_get_rating_slip_modal_data called — returns DTOs with FinancialValue envelopes
+            resulting_state: envelope available in component
+          - step: 2
+            action: component destructures DTO and renders toFixed() strings
+            resulting_state: envelope discarded; operator sees raw dollars
+          - step: 3
+            action: computedNetPosition adds pendingChipsTaken to authoritative cashOut
+            resulting_state: preview composite displayed without disclosure
+        propagation:
+          emits: []
+          consumes:
+            - rpc_get_rating_slip_modal_data → PFT
+        replayable: false
+        deterministic: false  # form input makes it non-deterministic
+        known_fractures:
+          - SR-001: FinancialValue not used; composite not disclosed
+
+      - name: Shift Dashboard KPI Aggregation
+        primary_actor: Floor Supervisor
+        trigger: shift dashboard loads
+        steps:
+          - step: 1
+            action: rpc_shift_casino_metrics → rpc_shift_table_metrics called
+            resulting_state: Win/Loss, Fills, Credits, Est.Drop fetched from table_fill / table_credit / table_buyin_telemetry
+          - step: 2
+            action: components hardcode completeness as (value == null ? 'unknown' : 'complete')
+            resulting_state: operator sees 'complete' on open-shift data
+        propagation:
+          emits: []
+          consumes:
+            - table_fill (direct authoring read)
+            - table_credit (direct authoring read)
+            - table_buyin_telemetry (direct authoring read)
+        replayable: true
+        deterministic: true
+        known_fractures:
+          - SR-003: shift_operational_projection not in data path; completeness fabricated
+
+      - name: Fills/Credits Dual-Path Read
+        primary_actor: system (two separate surface reads)
+        trigger: any surface requesting fills or credits for a session/shift
+        steps:
+          - step: 1A
+            action: rpc_compute_table_rundown reads table_session.fills_total_cents (trigger denorm)
+            resulting_state: rundown formula value
+          - step: 1B
+            action: rpc_process_operational_projection reads finance_outbox fill.recorded events
+            resulting_state: projection store value
+          - step: 2
+            action: both values rendered on separate surfaces with no reconciliation
+            resulting_state: potential divergence invisible to operator
+        propagation:
+          emits: []
+          consumes:
+            - table_fill / table_credit (via trigger denorm — Path A)
+            - finance_outbox fill.recorded / credit.recorded (via projection — Path B)
+        replayable: true  # Path B only
+        deterministic: true  # each path deterministic independently
+        known_fractures:
+          - SR-007: no reconciliation signal when paths diverge
+
+  where:
+    description: >
+      Surface boundaries, storage boundaries, and projection boundaries for fractured domains.
+    boundaries:
+      authoring_stores:
+        - name: table_fill / table_credit
+          owned_by: Financial Data Distribution
+          forbidden_writes_from:
+            - projection consumers
+            - UI components
+        - name: table_inventory_snapshot
+          owned_by: Inventory / Pit Terminal
+          forbidden_writes_from:
+            - PFT domain
+            - outbox consumers
+        - name: table_pft
+          owned_by: Financial Data Distribution (Class A authority)
+          forbidden_writes_from:
+            - all consumers
+
+      projections:
+        - name: shift_operational_projection
+          derived_from:
+            - finance_outbox (fill.recorded, credit.recorded, buyin events)
+          rebuildable: true
+          lifecycle_window: gaming_day / shift boundary
+
+        - name: table_session.fills_total_cents / credits_total_cents
+          derived_from:
+            - table_fill (trigger-maintained)
+            - table_credit (trigger-maintained)
+          rebuildable: false  # trigger-only; no outbox replay path
+          lifecycle_window: table_session lifetime
+
+      surfaces:
+        - name: Rating Slip Modal — Financial Summary
+          type: ui
+          renders:
+            - entity: Class A PFT Financial Fact
+              authority_visible: false  # FRACTURE SR-001
+              completeness_visible: false  # FRACTURE SR-001
+          known_risks:
+            - SR-001: raw toFixed() rendering, no FinancialValue
+            - SR-001: undisclosed computedNetPosition composite
+
+        - name: GrindBuyinPanel
+          type: ui
+          renders:
+            - entity: Shift Operational Projection Total
+              authority_visible: false  # FRACTURE SR-002
+              completeness_visible: false  # FRACTURE SR-002
+          known_risks:
+            - SR-002: envelope discarded; label scope mismatch (includes fills/credits)
+
+        - name: Shift Dashboard (hero-win-loss-compact, secondary-kpi-stack, analytics-panel)
+          type: ui
+          renders:
+            - entity: Shift Operational Projection Total
+              authority_visible: true  # type:'estimated' correct in SQL
+              completeness_visible: false  # FRACTURE SR-003 — fabricated 'complete'
+          known_risks:
+            - SR-003: completeness fabricated as non-null sentinel
+            - SR-003: rpc_shift_table_metrics not reading from shift_operational_projection
+
+        - name: RundownSummaryPanel
+          type: ui
+          renders:
+            - entity: Inventory Snapshot (Chip Count)
+              authority_visible: true  # 'actual' label present (wrong type but visible)
+              completeness_visible: true  # isDropPosted lifecycle gate
+          known_risks:
+            - SR-008: type:'actual' overclaims authority for Dependency Event
+
+        - name: GET /api/v1/visits/[visitId]/financial-summary
+          type: api
+          renders:
+            - entity: Class A PFT Financial Fact
+              authority_visible: true
+              completeness_visible: true  # lifecycle-aware via getVisitClassACompleteness
+          known_risks: []  # CLEAN
+
+      propagation_paths:
+        - source: table_fill / table_credit
+          destination: shift_operational_projection
+          transport: finance_outbox (fill.recorded / credit.recorded)
+          preserves_authority: true
+          preserves_identity: true
+          replay_supported: true
+
+        - source: table_fill / table_credit
+          destination: table_session.fills_total_cents / credits_total_cents
+          transport: PostgreSQL trigger (synchronous denorm)
+          preserves_authority: true
+          preserves_identity: true
+          replay_supported: false  # trigger-only; SR-007 risk
+
+  who:
+    description: >
+      Actors, ownership boundaries, and bounded-context responsibility.
+    actors:
+      - actor: Pit Boss
+        operational_role: Enters chip transactions, reads rating slip net position, monitors bankroll
+        owns:
+          - review
+        touches_contexts:
+          - Rating Slip
+          - Inventory / Pit Terminal
+        inferred_by_system: false
+
+      - actor: Floor Supervisor
+        operational_role: Monitors shift KPIs, reads shift win/loss, makes operational decisions
+        owns:
+          - review
+        touches_contexts:
+          - Shift Dashboard
+          - Operational Projection
+        inferred_by_system: false
+
+    bounded_context_owners:
+      - context: Financial Surface Rendering
+        owning_service: components layer (cross-cutting)
+        lifecycle_owner: N/A — render contract only
+        authority_owner: N/A — consumes authority from upstream DTOs
+        projection_owner: N/A
+        competing_owners: []
+
+      - context: Shift Dashboard Aggregation
+        owning_service: services/measurement
+        lifecycle_owner: gaming_day_lifecycle (not currently wired — SR-003)
+        authority_owner: table_fill / table_credit / table_buyin_telemetry
+        projection_owner: shift_operational_projection (not currently consumed)
+        competing_owners:
+          - shift_operational_projection (Phase 2.4 — GrindBuyinPanel reads this)
+          - rpc_shift_table_metrics (shift dashboard reads direct authoring stores)
+
+      - context: Inventory / Pit Terminal
+        owning_service: services/floor-layout (tentative)
+        lifecycle_owner: table_inventory_snapshot (append-only chip counts)
+        authority_owner: table_inventory_snapshot (physical observation)
+        projection_owner: rpc_compute_table_rundown
+        competing_owners: []
+
+  when:
+    description: >
+      Lifecycle windows, completeness windows, and timing constraints for fractured domains.
+    lifecycle:
+      states:
+        - name: gaming_day_open
+          entered_by: gaming_day_lifecycle creation
+          exited_by: gaming_day close event
+          canonical_owner: gaming_day_lifecycle table
+
+        - name: shift_active
+          entered_by: shift start (implicit — no explicit lifecycle owner found)
+          exited_by: shift close / gaming_day close
+          canonical_owner: gaming_day_lifecycle (inferred)
+
+        - name: rating_slip_open
+          entered_by: rating slip modal open
+          exited_by: rating slip submission / close
+          canonical_owner: rating_slip aggregate
+
+      completeness_windows:
+        - surface: Shift Dashboard Win/Loss
+          complete_when: gaming_day_lifecycle.is_closed = true  # INTENDED — not yet wired
+          partial_when: gaming_day is open, transactions are in progress
+          unknown_when: gaming_day_lifecycle data unavailable
+
+        - surface: Shift Dashboard Fills / Credits / Est.Drop
+          complete_when: gaming_day_lifecycle.is_closed = true  # INTENDED — not yet wired
+          partial_when: gaming_day is open
+          unknown_when: gaming_day_lifecycle data unavailable
+
+        - surface: Rating Slip Financial Summary
+          complete_when: rating slip is closed / visit is closed  # per FinancialValue contract
+          partial_when: visit open, transactions in progress
+          unknown_when: DTOs carry completeness:{status:'unknown'} — correct
+
+        - surface: RundownSummaryPanel Opening / Closing
+          complete_when: isDropPosted = true  # current implementation — correct lifecycle gate
+          partial_when: isDropPosted = false
+          unknown_when: null opening_total_cents
+
+      ordering_constraints:
+        - aggregate: shift_operational_projection
+          ordering_key: finance_outbox.created_at + event sequence
+          deterministic: true
+
+        - aggregate: table_session.fills_total_cents
+          ordering_key: PostgreSQL trigger execution order
+          deterministic: true  # but not replay-safe
+
+  why:
+    description: >
+      Operational meaning, trust boundaries, and semantic constraints.
+    operational_meaning:
+      - concept: Shift Win/Loss labeled 'complete'
+        operator_interpretation: >
+          The shift financials are final or near-final; the number can be relied on
+          for operational decisions about the current gaming day.
+        system_intent: >
+          The value is non-null (no lifecycle gate involved).
+        misuse_risk: >
+          Operators making operational decisions (staffing, chip drops, table limits)
+          based on a 'complete' signal on an open shift are working from a false
+          confidence signal.
+        overclaim_risk: HIGH
+        known_misreadings:
+          - SR-003: 'complete' completeness asserted while gaming day is open
+
+      - concept: Rating Slip Net Position
+        operator_interpretation: >
+          The net position as recorded in the PFT — the authoritative financial
+          balance for this player session.
+        system_intent: >
+          computedNetPosition includes pendingChipsTaken * 100 from an unsaved form
+          field — it is a live preview composite.
+        misuse_risk: >
+          Operator reads the displayed Net Position as a PFT fact, uses it to
+          resolve a dispute or make a credit decision, unaware the number includes
+          an unsaved chip entry.
+        overclaim_risk: HIGH
+        known_misreadings:
+          - SR-001: preview composite displayed without disclosure
+
+      - concept: Inventory Snapshot labeled 'actual'
+        operator_interpretation: >
+          This chip count has been verified against the PFT ledger — it has
+          ledger-class authority.
+        system_intent: >
+          Physical chip count taken by a pit boss — a Dependency Event, not a
+          PFT ledger fact.
+        misuse_risk: >
+          Operator expects zero discrepancy between the labeled 'actual' chip count
+          and the PFT. When a discrepancy exists, the 'actual' label implies a
+          data integrity problem rather than a normal authority-class difference.
+        overclaim_risk: LOW-MEDIUM
+        known_misreadings:
+          - SR-008: 'actual' implies PFT-class authority for a physical observation
+
+    trust_boundaries:
+      - boundary: Shift Dashboard completeness claims
+        false_authority_risk: HIGH — 'complete' claimed before lifecycle closes
+        reconciliation_risk: MEDIUM — operators may reconcile against a partial number
+        compliance_risk: LOW — shift dashboard is operational, not compliance-class
+        projection_risk: HIGH — full shift dashboard is pre-Phase-2.4
+
+      - boundary: Rating Slip Financial Summary
+        false_authority_risk: HIGH — authority envelope absent; composite undisclosed
+        reconciliation_risk: HIGH — disputes may be resolved against wrong numbers
+        compliance_risk: MEDIUM — rating slip is a player activity record
+        projection_risk: LOW — reads PFT directly; not a projection surface
+
+      - boundary: Fills/Credits dual-path
+        false_authority_risk: LOW — both paths derive from same source
+        reconciliation_risk: HIGH — divergence produces different numbers on different screens
+        compliance_risk: LOW — not a compliance-class surface
+        projection_risk: MEDIUM — outbox delivery failure is the divergence trigger
+
+    semantic_constraints:
+      - rule: FinancialValue must be used for every operator-visible financial value
+        rationale: ADR-054 surface rendering contract
+        forbidden_behaviors:
+          - toFixed() on financial values in operator-facing components
+          - toLocaleString() on financial values in operator-facing components
+          - hardcoded completeness status on any financial surface
+
+      - rule: completeness must derive from a lifecycle gate, not a null-guard
+        rationale: 'complete' means lifecycle window closed + all expected inputs arrived
+        forbidden_behaviors:
+          - status = value == null ? 'unknown' : 'complete'
+          - status = 'complete' unconditionally
+
+      - rule: type:'actual' is reserved for Class A PFT ledger facts
+        rationale: ADR-052 Wave 2 UL authority taxonomy
+        forbidden_behaviors:
+          - type:'actual' on inventory snapshots
+          - type:'actual' on manual pit entries
+          - type:'actual' on trigger-maintained denorm columns
+
+      - rule: composite surface values must disclose their composition
+        rationale: operators must not mistake preview values for authority facts
+        forbidden_behaviors:
+          - combining authoritative DTO values with unsaved form inputs without labeling
+          - displaying a composite under a section labeled with an authority source
+
+diagnostics:
+  authority_audit:
+    status: risk
+    findings:
+      - SR-001: Rating Slip Modal — envelope discarded; composite undisclosed
+      - SR-002: GrindBuyinPanel — type:'estimated' envelope discarded
+      - SR-003: Shift Dashboard — authority type correct, completeness fabricated
+      - SR-005: BankSummary — no envelope
+      - SR-006: RundownReportCard — no envelope
+      - SR-008: RundownSummaryPanel — type:'actual' overclaims for inventory snapshots
+
+  aggregate_ownership_audit:
+    status: risk
+    findings:
+      - SR-007: fills/credits dual-path — no canonical authority declared between paths A and B
+
+  propagation_integrity_audit:
+    status: clear
+    findings:
+      - outbox transport spine structurally sound
+      - event identity stable, idempotency proven (i3/i4)
+      - propagation gaps are at the consumption boundary, not the transport layer
+
+  surface_truthfulness_audit:
+    status: fractured
+    findings:
+      - SR-001: Rating Slip Modal Financial Summary — raw strings, no envelope, composite undisclosed
+      - SR-002: GrindBuyinPanel — estimated authority invisible, completeness invisible
+      - SR-003: Shift Dashboard — 'complete' fabricated for open shifts
+      - SR-004: Telemetry Rail — 'complete' hardcoded for in-progress observations
+      - SR-005: BankSummary — no authority signal
+      - SR-006: RundownReportCard — no authority signal; inconsistent with sibling
+
+  vocabulary_integrity_audit:
+    status: risk
+    findings:
+      - SR-008: 'actual' applied to inventory snapshots; 'observed' not in UL taxonomy
+      - SR-003: 'complete' used as non-null sentinel across shift dashboard family
+
+  projection_dependency_audit:
+    status: risk
+    findings:
+      - SR-003: rpc_shift_table_metrics never crossed to shift_operational_projection
+      - SR-002: GrindBuyinPanel projection is correct; surface render discards it
+      - SR-007: fills/credits have two parallel projection paths with no declared canonical
+
+  operational_reality_audit:
+    status: risk
+    findings:
+      - SR-003: floor supervisors read 'complete' on live open-shift KPIs
+      - SR-001: pit bosses see Net Position that may include unsaved chip entry without disclosure
+      - SR-008: 'actual' label on chip counts implies PFT-class reconcilability
+
+split_brain_detection:
+  active_conflicts:
+    - id: SB-001
+      fracture_type: Aggregate Split-Brain
+      severity: S3
+      concept: Fills and Credits aggregate totals
+      context_a:
+        owner: rpc_compute_table_rundown / RundownSummaryPanel
+        interpretation: >
+          table_session.fills_total_cents — trigger-maintained denorm, synchronous
+          with the authoring store. Reflects all commits at query time.
+      context_b:
+        owner: rpc_process_operational_projection / GrindBuyinPanel
+        interpretation: >
+          finance_outbox fill.recorded / credit.recorded events, replayed into
+          shift_operational_projection. May lag or diverge on delivery failure.
+      downstream_risk: >
+        Rundown formula and GrindBuyinPanel operational total show different numbers
+        for identical fills/credits with no reconciliation signal on either surface.
+      current_containment: >
+        Not a current bug. Divergence requires outbox delivery failure.
+        Phase 2.5 observability layer is intended to surface failures.
+      required_resolution: >
+        Declare canonical fills/credits read path for new surfaces.
+        Deprecate or reconcile the trigger denorm path once projection is stable.
+      successor_artifact: ADR on canonical fills/credits path post-Phase-2
+
+    - id: SB-002
+      fracture_type: Projection Drift
+      severity: S4
+      concept: Shift financial KPI source authority
+      context_a:
+        owner: shift dashboard (hero-win-loss-compact, secondary-kpi-stack, analytics-panel)
+        interpretation: >
+          Direct authoring store reads (table_fill, table_credit, table_buyin_telemetry)
+          via rpc_shift_table_metrics. Pre-Phase-2.4 data path. Completeness fabricated.
+      context_b:
+        owner: GrindBuyinPanel
+        interpretation: >
+          shift_operational_projection via /api/v1/table-context/operational-projection.
+          Phase 2.4 data path. Completeness lifecycle-aware. Envelope discarded at render.
+      downstream_risk: >
+        Two separate shift financial surfaces present values from different data paths
+        with no disclosed relationship. Completeness signals contradict each other
+        (fabricated 'complete' vs. lifecycle-aware).
+      current_containment: >
+        GrindBuyinPanel labeled "Grind Buy-ins" — not directly compared to shift Win/Loss
+        by most operators. But both surfaces appear on the same dashboard.
+      required_resolution: >
+        CD-002: Wire lifecycle completeness gate to rpc_shift_table_metrics.
+        Decision: whether to migrate shift dashboard to shift_operational_projection
+        or retain dual-path with explicit lifecycle gate on the authoring-store path.
+      successor_artifact: CD-002 implementation; potential rpc_shift_table_metrics amendment
+
+semantic_risk_register_projection:
+  unresolved_risks:
+    - risk_id: SR-001
+      short_name: Rating Slip Modal — no envelope + undisclosed composite
+      severity: S4
+      fracture_type: Surface Misrepresentation, Authority Ambiguity
+      propagation_scope: Rating Slip bounded context (contained)
+      blocked_work: new financial line renders in rating-slip-modal.tsx or form-section-cash-in.tsx using toFixed/toLocaleString
+      allowed_work: RLS, auth, non-financial UI changes to rating slip
+      resolution_trigger: CD-001 implementation
+
+    - risk_id: SR-002
+      short_name: GrindBuyinPanel — projection envelope discarded
+      severity: S3
+      fracture_type: Surface Misrepresentation, Projection Drift
+      propagation_scope: GrindBuyinPanel component (contained)
+      blocked_work: using GrindBuyinPanel as pattern reference for new projection consumers
+      allowed_work: any other surface reading from shift_operational_projection (with FinancialValue)
+      resolution_trigger: GrindBuyinPanel feature work or next dashboard sprint
+
+    - risk_id: SR-003
+      short_name: Shift Dashboard — fabricated 'complete' completeness
+      severity: S4
+      fracture_type: Projection Drift, Surface Misrepresentation
+      propagation_scope: shift dashboard family (3 components)
+      blocked_work: new shift dashboard surfaces inheriting rpc_shift_table_metrics completeness without lifecycle gate
+      allowed_work: shift dashboard visual changes that do not touch completeness logic
+      resolution_trigger: CD-002 implementation
+
+    - risk_id: SR-004
+      short_name: Telemetry Rail — hardcoded 'complete'
+      severity: S3
+      fracture_type: Surface Misrepresentation
+      propagation_scope: telemetry-rail-panel.tsx (contained)
+      blocked_work: new pit cash observation surfaces hardcoding complete
+      allowed_work: telemetry rail visual changes
+      resolution_trigger: UL note on Observed fact completeness semantics
+
+    - risk_id: SR-005
+      short_name: BankSummary — no authority envelope
+      severity: S3
+      fracture_type: Surface Misrepresentation
+      propagation_scope: bank-summary.tsx (contained)
+      blocked_work: new inventory domain financial surfaces without FinancialValue
+      allowed_work: inventory panel layout changes
+      resolution_trigger: inventory domain surface expansion or SR-008 vocabulary resolution
+
+    - risk_id: SR-006
+      short_name: RundownReportCard — inconsistent with RundownSummaryPanel
+      severity: S2
+      fracture_type: Surface Misrepresentation
+      propagation_scope: rundown-report-card.tsx (contained)
+      blocked_work: new RundownReportCard financial lines without FinancialValue
+      allowed_work: RundownReportCard layout changes
+      resolution_trigger: any RundownReportCard update
+
+    - risk_id: SR-007
+      short_name: Fills/credits dual-path divergence
+      severity: S3
+      fracture_type: Aggregate Split-Brain, Propagation Ambiguity
+      propagation_scope: rundown formula + GrindBuyinPanel (two surfaces)
+      blocked_work: new surfaces depending on both Path A and Path B for same session scope
+      allowed_work: new surfaces that explicitly declare one path
+      resolution_trigger: observed divergence in production; Phase 3 outbox expansion planning
+
+    - risk_id: SR-008
+      short_name: Inventory snapshots labeled 'actual'
+      severity: S2
+      fracture_type: Authority Ambiguity, Vocabulary Overload
+      propagation_scope: RundownSummaryPanel (contained)
+      blocked_work: new inventory snapshot surfaces using type:'actual'
+      allowed_work: RundownSummaryPanel feature work not touching authority labels
+      resolution_trigger: UL taxonomy update or ADR-052 amendment
+
+containment:
+  forbidden_expansions:
+    - introducing_new_authority_without_review
+    - consumer_reinterpretation_of_origin
+    - unlabeled_mixed_authority_surfaces
+    - lifecycle_reconstruction_in_ui
+    - duplicate_aggregate_ownership
+    - overloaded_vocabulary_without_glossary
+  temporary_allowances:
+    - allowance: >
+        Shift dashboard may continue reading from rpc_shift_table_metrics (authoring store)
+        while CD-002 lifecycle gate is being implemented.
+      expires_when: CD-002 lifecycle gate wired and tested
+      containment_rule: No new surfaces may inherit the fabricated 'complete' pattern from this path.
+
+    - allowance: >
+        BankSummary and RundownReportCard may continue rendering without FinancialValue
+        pending SR-008 vocabulary resolution (type:'observed' not yet in UL).
+      expires_when: UL note or ADR-052 amendment adds 'observed' authority type
+      containment_rule: No new inventory financial surfaces may omit FinancialValue.
+
+review_outcome:
+  summary: >
+    Outbox transport spine is structurally sound. The S4 fractures are concentrated at
+    the render boundary (rating slip modal never adopted FinancialValue) and the
+    completeness signal (shift dashboard fabricates 'complete' without a lifecycle gate).
+    Two Canonicalization Directives (CD-001, CD-002) are required before those surfaces
+    may be extended. Five Risk Register entries are open with containment rules.
+    Reference implementation exists: RundownSummaryPanel.
+  required_actions:
+    immediate:
+      - CD-001: FinancialValue migration on rating-slip-modal.tsx + form-section-cash-in.tsx + composite disclosure
+      - CD-002: lifecycle completeness gate on rpc_shift_table_metrics data path + DTO + 3 dashboard components
+    deferred:
+      - SR-002: GrindBuyinPanel component migration (next feature work)
+      - SR-004: Telemetry Rail completeness gate (pending UL note on Observed completeness)
+      - SR-005: BankSummary FinancialValue adoption (pending SR-008)
+      - SR-006: RundownReportCard migration (next rundown update)
+      - SR-007: Canonical fills/credits path declaration (Phase 3 planning)
+      - SR-008: ADR-052 amendment / UL note for 'observed' authority type
+  downstream_artifacts_required:
+    - surface_contract_patch  # CD-001 rating slip
+    - migration_guard         # CD-002 completeness gate on rpc_shift_table_metrics
+    - adr                     # SR-007 canonical fills/credits path; SR-008 UL taxonomy
+    - ul_note                 # SR-008 'observed' type; SR-004 Observed completeness semantics
+    - replay_test             # SR-007 divergence detection
+  signoff:
+    reviewer: Vladimir Ivanov
+    date: "2026-05-23"

@@ -1,0 +1,224 @@
+finding_id: W2-OBS-CASHOUT-PRODUCER-001
+title: cashout.recorded is cataloged and projection-aware but has no active producer path
+category: layer_1_producer_implementation_gap
+status: confirmed
+opened: 2026-05-21
+
+parallel_to:
+  - W2-OBS-ANCHOR-COVERAGE-001
+not_child_of:
+  - W2-OBS-ANCHOR-COVERAGE-001
+distinction: >
+  W2-OBS-ANCHOR-COVERAGE-001 concerns workflows that fail to resolve a required
+  anchor before calling an otherwise capable producer RPC. This gap concerns an
+  event type that has no producer path whatsoever — the RPC exists and is correct
+  but never emits this event type. The failure mode is not a missing argument;
+  it is a missing branch.
+
+# ============================================================================
+# The Catalog Lie
+# ============================================================================
+catalog_claim:
+  source: docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md
+  line: 144
+  text: "Class A: rpc_create_financial_txn → buyin.recorded / cashout.recorded"
+  implication: >
+    The rollout map presents cashout.recorded as an established output of
+    rpc_create_financial_txn, implying it was part of the Phase 2.0 exemplar
+    certification. This is false.
+
+catalog_reality:
+  producer_rpc: rpc_create_financial_txn
+  actual_emission: buyin.recorded (hardcoded — no direction branch)
+  cashout_emission: never
+  evidence:
+    - migration: 20260517234015_wave2_adj_producer_ext.sql
+      line: 299
+      text: "'buyin.recorded'"
+      note: Hardcoded string literal. No CASE on p_direction. No cashout.recorded path.
+    - migration: 20260519184708_create_rpc_process_class_a_projection.sql
+      line: 19
+      comment: "cashout.recorded: not yet a distinct outbox producer; handled defensively below"
+      line_149: "-- cashout.recorded: total_out += amount (future; not yet an active producer)"
+      note: The projection consumer knows this. The rollout map does not.
+    - proof_script: scripts/outbox-proof/i5-cashout-non-emission.ts
+      assertion: Cage cashout (direction='out', source='cage') emits ZERO finance_outbox rows.
+      result: PASS
+      note: >
+        I5 passing is cited as evidence of correct behavior; the rollout map uses this
+        alongside the "buyin.recorded / cashout.recorded" claim. These are in direct
+        conflict. I5 proves cashout does not emit — which is the gap.
+
+# ============================================================================
+# Three-Fact Proof
+# ============================================================================
+evidence:
+  fact_1_close_session_path:
+    description: The pit cashout (session close) path never reaches finance_outbox.
+    chain: >
+      RatingSlipModal "Close Session"
+        → useCloseWithFinancial (hooks/rating-slip-modal/use-close-with-financial.ts)
+          → createPitCashObservation → rpc_create_pit_cash_observation
+          → closeRatingSlip
+    rpc: rpc_create_pit_cash_observation
+    writes_to: pit_cash_observation only
+    writes_to_finance_outbox: false
+    note: >
+      chips-taken is an operational observation, not a ledger fact. Even if it were
+      wired to emit, conflating pit_cash_observation with cashout.recorded would
+      violate the fact_class contract (operational vs ledger).
+
+  fact_2_rpc_direction_blindness:
+    description: rpc_create_financial_txn hardcodes 'buyin.recorded' with no direction check.
+    rpc: rpc_create_financial_txn
+    relevant_guard: >
+      IF p_rating_slip_id IS NULL THEN
+        RETURN v_row;   -- early exit for any unanchored transaction (buy-in or cashout)
+      END IF;
+    emission_call: >
+      PERFORM public.fn_finance_outbox_emit(
+        public.generate_uuid_v7(),
+        'buyin.recorded',   -- hardcoded; no CASE WHEN v_row.direction = 'out'
+        'ledger', 'actual',
+        v_table_id, v_row.player_id, v_row.id,
+        jsonb_build_object('amount', v_row.amount, 'tender_type', v_row.tender_type)
+      );
+    consequence: >
+      A direction='out' transaction with a rating_slip_id would emit 'buyin.recorded'
+      (semantic mislabeling), not 'cashout.recorded'. A direction='out' transaction
+      without a rating_slip_id returns early with no emission. Neither path produces
+      cashout.recorded.
+    cage_cashout_path: >
+      Cashier cashouts (direction='out', source='cage') carry no rating_slip_id and
+      return early. This is correct and intentional per I5.
+
+  fact_3_projection_comment:
+    description: >
+      The Phase 2.3 projection consumer was authored with full knowledge that
+      cashout.recorded has no active producer. The consumer handles it defensively
+      with a reserved slot and a comment marking it as "future."
+    migration: 20260519184708_create_rpc_process_class_a_projection.sql
+    comments:
+      - "cashout.recorded: not yet a distinct outbox producer; handled defensively below"
+      - "cashout.recorded: total_out += amount (future; not yet an active producer)"
+    implication: >
+      The projection was authored correctly. The rollout map was not updated to reflect
+      that cashout.recorded remains unimplemented. The gap is a documentation-to-reality
+      drift that accrued silently.
+
+# ============================================================================
+# Operational Loop Misclassification
+# ============================================================================
+operational_loop_misclassification:
+  source: docs/issues/gaps/financial-data-distribution-standard/wave-2/phase-2.3a/CORE-OPERATIONAL-LOOP.md
+  claimed_category: "C — Application UI (Standard operator workflow via rating slip modal)"
+  claimed_certification_outcome: HEALTHY
+  actual_category: "D — Known Layer 1 gap (no active producer path)"
+  actual_certification_outcome: LAYER_1_FAILURE
+  correction_required: >
+    CORE-OPERATIONAL-LOOP.md Phase 1 producer table must move cashout.recorded from
+    Category C to Category D, matching the treatment of adjustment.recorded. The
+    Phase 5 trust gate must add cashout.recorded as a formally diagnosed gap
+    alongside adjustment.recorded.
+  contrast_with_adjustment:
+    adjustment: "Category D documented; silence is the known failure mode; trust gate adjusted."
+    cashout: "Incorrectly Category C; silence is the actual failure mode; trust gate not yet adjusted."
+
+# ============================================================================
+# Impact
+# ============================================================================
+impact:
+  transport: functional
+  relay: functional
+  observability: functional
+  producer_rpc: functional (emits buyin.recorded correctly)
+  cashout_producer_coverage: absent
+  projection_input: >
+    visit_class_a_projection.total_out will remain 0 for all gaming days until
+    a cashout.recorded producer is wired. Phase 2.3 consumer has a reserved slot
+    but no events to consume.
+  completeness_signal: >
+    DEC-1 resolution (Phase 2.3) cannot produce accurate total_out or net_amount
+    for any visit as long as cashout.recorded is unimplemented. A projection with
+    total_out = 0 and total_in > 0 will misrepresent the session financial state.
+  catalog_integrity: violated (rollout map line 144 implies cashout.recorded ships with Phase 2.0)
+  operational_loop: misclassified (Category C instead of Category D)
+
+# ============================================================================
+# Remediation Path
+# ============================================================================
+remediation:
+  producer_fix:
+    location: supabase/migrations/
+    rpc: rpc_create_financial_txn
+    change: >
+      Add a direction branch to the outbox emission call. When v_row.direction = 'out'
+      and a valid table anchor is resolved, emit 'cashout.recorded' instead of
+      'buyin.recorded'. The ADR-057 eligibility guard (rating_slip_id IS NOT NULL,
+      same-casino table resolution) applies equally to both directions.
+    patch_shape: >
+      PERFORM public.fn_finance_outbox_emit(
+        public.generate_uuid_v7(),
+        CASE WHEN v_row.direction = 'out' THEN 'cashout.recorded' ELSE 'buyin.recorded' END,
+        'ledger',
+        'actual',
+        v_table_id,
+        v_row.player_id,
+        v_row.id,
+        jsonb_build_object('amount', v_row.amount, 'tender_type', v_row.tender_type)
+      );
+    semantic_contract:
+      event_type: cashout.recorded
+      fact_class: ledger
+      origin_label: actual
+      player_id: NOT NULL (pit cashouts are player-attributed)
+      table_id: required (from rating_slip anchor)
+      aggregate_id: PFT row id (direction='out')
+    prerequisite: >
+      The cashout workflow through the rating-slip path must be confirmed to pass
+      a rating_slip_id. The cage cashout path (direction='out', source='cage',
+      no rating_slip_id) correctly returns early — no change needed there.
+    not_in_scope:
+      - rpc_create_pit_cash_observation (operational observation, not a ledger fact)
+      - cage cashout path (intentionally no outbox emission — I5 correct by design)
+
+  documentation_fixes:
+    - file: docs/issues/gaps/financial-data-distribution-standard/wave-2/WAVE-2-ROLLOUT-MAP.md
+      change: >
+        Line 144: change "buyin.recorded / cashout.recorded" to "buyin.recorded" only,
+        or add a note that cashout.recorded was cataloged but not implemented in Phase 2.0.
+        Add cashout.recorded as a named row in the Known Residual Gaps table (§4 Phase 2.5).
+    - file: docs/issues/gaps/financial-data-distribution-standard/wave-2/phase-2.3a/CORE-OPERATIONAL-LOOP.md
+      change: >
+        Move cashout.recorded from Category C to Category D in the Phase 1 producer table.
+        Update Phase 5 trust gate to formally record cashout.recorded as a diagnosed gap
+        alongside adjustment.recorded.
+
+  governing_standard: PROD-ANCHOR-STD-001 governs anchor resolution for the fix.
+    The direction branch is a producer-side fix; the anchor requirement (rating_slip_id
+    IS NOT NULL, same-casino table resolution) is identical to the buyin.recorded path
+    and requires no new standard.
+
+# ============================================================================
+# Do Not
+# ============================================================================
+do_not:
+  - treat Wave 2 as having a working cashout.recorded producer based on rollout map line 144
+  - use pit_cash_observation as a proxy for cashout.recorded — it is an operational
+    observation (fact_class='operational'), not a ledger fact (fact_class='ledger')
+  - claim Phase 2.3 completeness projection produces accurate total_out before this is wired
+  - close Phase 2.5 sign-off without naming this gap explicitly in the residual gaps table
+  - treat I5 PASS as evidence that cashout.recorded is implemented — I5 proves the cage
+    cashout correctly emits nothing; it says nothing about the pit cashout ledger path
+  - conflate "cashout.recorded reserved in projection consumer" with "cashout.recorded active"
+
+# ============================================================================
+# Verdict
+# ============================================================================
+verdict: >
+  The system says cashout.recorded exists. The runtime says it does not.
+  The projection consumer has a reserved slot for it. The rollout map implies
+  it shipped in Phase 2.0. The proof script proves it was never wired.
+  This is a catalog-to-implementation gap, not an anchor discipline failure.
+  The fix is one CASE expression in rpc_create_financial_txn and three
+  documentation corrections. Neither is architecturally novel.

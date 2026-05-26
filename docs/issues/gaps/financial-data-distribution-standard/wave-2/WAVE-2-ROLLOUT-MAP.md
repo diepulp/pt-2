@@ -533,6 +533,8 @@ Do not invoke these skills directly for any Phase ≥ 2.1. Each phase runs `/prd
 
 **Note on workflow-level coverage (Principle 9):** Wave 2 transport completion is defined at RPC-level certification plus consumer/projection proof. Workflow-level producer coverage is tracked separately under Principle 9. Confirmed workflow gaps (`adjustment.recorded` anchor, fill/credit operator UI) do not block transport completion, but they do block any claim of full operational producer coverage. The Wave 2 sign-off must label the final state as "transport complete with known workflow coverage gaps" unless those gaps are closed before sign-off. Closing them requires post-Wave-2 work governed by PROD-ANCHOR-STD-001 and future UI PRDs.
 
+**Note on surface truth posture (SIGP-001):** Post-Wave-2 semantic review SIGP-001 (2026-05-23) identified two S4 findings against projection-consuming surfaces: SR-001 (Rating Slip Modal — no authority envelope, undisclosed composite Net Position) and SR-003 (Shift Dashboard — fabricated `complete` completeness with no lifecycle gate). Canonicalization Directives CD-001 and CD-002 were issued. Neither finding blocks transport or projection infrastructure sign-off — the outbox substrate is sound. However, if CD-001 or CD-002 remain open at the time the Phase 2.5 sign-off artifact is authored, the sign-off must carry the additional qualifier "known surface truth gaps registered (SIGP-001)." Resolving both directives before sign-off removes that qualifier.
+
 ### Ready to start post-Wave-2 work when
 
 | Criterion | Notes |
@@ -554,17 +556,28 @@ Items confirmed during Phase 2.3a observability investigation that are out of sc
 | PWB-001 | `adjustment.recorded` anchor resolution — refactor rating-slip modal and MTL compliance dashboard to resolve `original_txn_id` at service boundary; move `createFinancialAdjustment` behind API route | W2-OBS-ANCHOR-COVERAGE-001 / LAYER-1-FAILURE.md | PROD-ANCHOR-STD-001 (`proposed_for_wave_2_5_signoff`) | Not started |
 | PWB-002 | Fill/credit operator UI — no operator-facing surface exists for `rpc_request_table_fill` / `rpc_request_table_credit`; current API routes are hardware-integration-only; outbox rows cannot be produced by real operator workflows | CORE-OPERATIONAL-LOOP.md Category A | Phase 2.5 sign-off gap table | Not started — hardware integration scope; separate PRD required |
 | PWB-003 | `GrindBuyinPanel` mounting — ✅ CLOSED in Phase 2.4 (PRD-088, 2026-05-21). `GrindBuyinPanel` mounted in `TablesPanel` via `panel-container.tsx`; `gamingDay` threaded from `PanelContainer` → `TablesPanel` → `GrindBuyinPanel` (DEC-EXEC-2) | CORE-OPERATIONAL-LOOP.md Category B | Phase 2.4 deliverables (CLOSED) | Delivered in Phase 2.4 |
-| PWB-004 | `GrindBuyinPanel` operator surface completion — panel was mounted in Phase 2.4 as a producer proof-of-concept (PWB-003 closed), then **removed from `TablesPanel` on 2026-05-24** pending proper operator surface design. Three gaps blocked continued exposure: (1) no reversal/correction event — EXEC-088 §3.2 explicitly deferred the governed reversal RPC and any undo UI; (2) write path bypasses the service layer — `useLogGrindBuyin` calls `rpc_log_table_buyin_telemetry` directly from `createBrowserComponentClient` rather than through an API route + service; (3) GAP-TABLE-ROLLOVER-UI WS5 stub unresolved. Component (`components/table/grind-buyin-panel.tsx`) and hook (`hooks/table-context/use-buyin-telemetry.ts`) are **preserved** and not deleted — they are the starting point for this PRD. | `components/table/grind-buyin-panel.tsx`; `hooks/table-context/use-buyin-telemetry.ts`; GAP-TABLE-ROLLOVER-UI WS5; EXEC-088 §3.2 | Requires dedicated PRD | Panel removed 2026-05-24; component + hook preserved |
 
-**Promotion rule:** PWB-003 was delivered in Phase 2.4 (2026-05-21). Does not graduate to post-Wave-2 backlog. Phase 2.5 sign-off must record its closure. PWB-004 is the post-Wave-2 continuation item — surface completion, not mounting.
+**Promotion rule:** PWB-003 was delivered in Phase 2.4 (2026-05-21). Does not graduate to post-Wave-2 backlog. Phase 2.5 sign-off must record its closure.
 
-**Sign-off language for known workflow coverage gaps:**
+**Sign-off language for known gaps:**
 
+**Workflow coverage:**
 - `adjustment.recorded` — RPC-capable but not workflow-certified until rating-slip and rated MTL adjustment surfaces resolve `original_txn_id` per PROD-ANCHOR-STD-001.
 - `fill.recorded` / `credit.recorded` — RPC/API-certified but not operator-workflow-certified until an operator-facing trigger surface exists.
-- `grind.observed` — workflow-certified at mount level (PWB-003 closed); operator surface incomplete — no correction/reversal path, write bypasses service layer, rollover UI gap (WS5) unresolved. Full operator UX deferred to PWB-004.
 
-Canonical sign-off phrase: **"Wave 2 transport and projection infrastructure complete; workflow-level producer coverage gaps documented and queued."** The sign-off must not use "Wave 2 complete" without this qualifier.
+**Surface truth (conditional on SIGP-001 status at sign-off time):**
+- If CD-001 is open: Rating Slip Modal renders financial values without authority envelope and contains an undisclosed composite Net Position.
+- If CD-002 is open: Shift Dashboard fabricates `complete` completeness with no lifecycle gate; surfaces are pre-Phase-2.4 in data path.
+
+**Canonical sign-off phrase:**
+
+If both CD-001 and CD-002 are resolved before sign-off:
+> **"Wave 2 transport and projection infrastructure complete; workflow-level producer coverage gaps documented and queued."**
+
+If either CD-001 or CD-002 remains open at sign-off:
+> **"Wave 2 transport and projection infrastructure complete; workflow-level producer coverage gaps documented and queued; known surface truth gaps registered (SIGP-001 SR-001/SR-003)."**
+
+The sign-off must not use "Wave 2 complete" without the applicable qualifiers. The SIGP-001 qualifier may be dropped retroactively once CD-001 and CD-002 are implemented — a sign-off addendum or PR description is sufficient; no full re-sign-off is required.
 
 **PROD-ANCHOR-STD-001 lifecycle:**
 - Phase 2.5: ratified as accepted governance standard in WAVE-2-SIGN-OFF.md

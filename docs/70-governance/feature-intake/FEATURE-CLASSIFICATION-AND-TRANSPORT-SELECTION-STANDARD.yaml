@@ -1,0 +1,954 @@
+artifact:
+  type: feature_classification_transport_standard
+  version: "1.0.0"
+  status: proposed
+  source_document: docs/70-governance/FEATURE-CLASSIFICATION-AND-TRANSPORT-SELECTION-STANDARD.md
+  date: "2026-05-21"
+  owner: Architecture / Product Governance
+  related_authorities:
+    - id: ADR-040
+      name: Identity Provenance Rule
+    - id: ADR-041
+      name: Surface Governance Standard
+    - id: ADR-050
+      name: Financial Surface Freshness Contract
+    - id: ADR-052
+      name: Financial Fact Model Dual-Layer
+    - id: ADR-053
+      name: Financial System Scope Boundary
+    - id: ADR-054
+      name: Financial Event Propagation and Surface Contract
+    - id: ADR-055
+      name: Cross-Class Authoring Parity
+    - id: ADR-056
+      name: Relay Worker Execution Environment
+    - id: ADR-057
+      name: Class A Table Anchoring and Outbox Idempotency Clarification
+    - id: ADR-058
+      name: Feature Classification and Transport Selection
+      role: adopting_adr
+    - name: Feature Intake Brief workflow
+    - name: Producer Anchor Resolution Standard
+    - name: Wave 2 Transactional Outbox Rollout Map
+
+# ─────────────────────────────────────────────────────────────────
+# ZACHMAN: WHAT — domain nouns, classification taxonomy, mechanisms
+# ─────────────────────────────────────────────────────────────────
+what:
+  classification_taxonomy:
+    - id: CLS-001
+      name: ui_interaction
+      label: UI Interaction Feature
+      definition: >
+        Changes only presentation, layout, filtering, navigation, local state,
+        or interaction behavior.
+      examples:
+        - Expanding or collapsing dashboard cards
+        - Reordering table columns
+        - Adding client-side filters over already-loaded data
+        - Improving modal layout
+        - Adjusting visual hierarchy or button placement
+      default_transports:
+        - component_state
+        - url_route_params
+        - existing_query_hooks
+        - existing_bff_api_read_endpoints
+      forbidden:
+        - new_domain_tables
+        - new_producer_rpcs
+        - browser_to_rpc_mutation_paths
+        - outbox_events
+        - projection_stores
+        - new_financial_authority_claims
+      admission_test: >
+        If the feature can be removed without changing stored domain state,
+        replay behavior, or downstream projections, it is probably a UI
+        Interaction Feature.
+      transport_matrix:
+        outbox_required: false
+        bff_api_required: maybe_existing
+        rpc_required: false
+        projection_store: false
+
+    - id: CLS-002
+      name: read_composition
+      label: Read Composition Feature
+      definition: >
+        Assembles existing data from one or more domains into a coherent
+        surface model. Does not create, correct, or propagate domain facts.
+      examples:
+        - Loading rating slip modal data from player, visit, slip, and financial sources
+        - Returning admin review state for pilot evaluators
+        - Showing whether an evaluator is runtime-bound
+        - Exposing adjustment eligibility and latest eligible transaction metadata
+      default_transport_chain:
+        - ui
+        - bff_api_route
+        - service_read_layer
+        - existing_stores_rpc_reads
+        - dto
+      required_properties:
+        - bff_api_boundary_owns_composition
+        - ui_receives_surface_shaped_dto
+        - domain_anchor_resolution_read_only_only
+        - ui_must_not_stitch_bounded_contexts_directly_when_composition_has_semantic_meaning
+      forbidden:
+        - authoring_new_facts
+        - mutating_authoritative_stores
+        - emitting_outbox_rows
+        - treating_composed_read_model_as_source_of_record
+      admission_test: >
+        If the UI needs one coherent answer that depends on multiple backend
+        concepts, this is a Read Composition Feature and belongs behind a
+        BFF/API boundary.
+      transport_matrix:
+        outbox_required: false
+        bff_api_required: true
+        rpc_required: false
+        projection_store: false
+
+    - id: CLS-003
+      name: authoring
+      label: Authoring Feature
+      definition: >
+        Creates, corrects, or appends a domain fact. The fact may be
+        authoritative, operational, compliance-related, administrative, or
+        configuration-related.
+      examples:
+        - Recording a buy-in
+        - Recording a grind observation
+        - Creating a financial adjustment
+        - Approving a pilot evaluator
+        - Binding a user to runtime membership
+        - Closing a gaming day
+        - Updating casino settings
+      default_transport_chain:
+        - ui
+        - bff_api_route
+        - service_boundary
+        - rpc_transaction_boundary
+        - authoring_table
+      required_properties:
+        - browser_may_request_intent_only
+        - service_bff_resolves_or_validates_anchors
+        - rpc_owns_write_transaction
+        - eligibility_and_casino_scoping_enforced_before_or_inside_authoring_boundary
+        - ui_must_not_carry_resolved_ledger_identity_unless_user_chosen_and_server_validated
+      forbidden:
+        - ui_directly_calling_producer_rpcs_when_anchor_resolution_or_eligibility_matters
+        - api_routes_performing_ad_hoc_cross_domain_sql_writes
+        - mutating_multiple_authoritative_stores_without_declared_transaction_discipline
+        - treating_write_as_logically_atomic_when_not_physically_atomic
+      admission_test: >
+        If the feature changes what the system knows to be true, this is an
+        Authoring Feature.
+      transport_matrix:
+        outbox_required: maybe
+        bff_api_required: true
+        rpc_required: true
+        projection_store: false
+
+    - id: CLS-004
+      name: projection_input
+      label: Projection Input Feature
+      definition: >
+        Authors a fact or operational dependency that downstream projections,
+        replay, completeness, freshness, dashboards, or derived state must
+        consume.
+      subcategories:
+        - Authority Facts
+        - Telemetry Facts
+        - Dependency Events
+      examples:
+        - buyin.recorded
+        - cashout.recorded
+        - adjustment.recorded
+        - grind.observed
+        - fill.recorded
+        - credit.recorded
+      default_transport_chain:
+        - ui
+        - bff_api_route
+        - service_boundary
+        - rpc
+        - authoring_row_plus_finance_outbox_row_same_transaction
+        - relay
+        - idempotent_consumer
+        - projection
+      required_properties:
+        - authoring_row_and_outbox_row_commit_or_rollback_together
+        - outbox_emission_in_same_db_transaction_as_authoring_write
+        - event_category_is_explicit
+        - fact_class_and_origin_label_never_inferred_downstream
+        - idempotency_key_generated_at_authoring_boundary
+        - consumers_must_tolerate_at_least_once_delivery
+        - event_must_be_registered_before_producer_rollout
+      forbidden:
+        - writing_authoring_row_now_outbox_row_later
+        - emitting_events_from_ui
+        - emitting_events_from_projections
+        - background_job_eventual_outbox
+        - consumer_side_authority_upgrades
+        - treating_outbox_as_event_sourcing
+        - treating_outbox_as_generic_platform_bus
+      admission_test: >
+        If the feature creates a fact that another surface, projection, replay
+        path, or completeness signal depends on, it is a Projection Input
+        Feature and requires transactional outbox propagation.
+      transport_matrix:
+        outbox_required: true
+        bff_api_required: true
+        rpc_required: true
+        projection_store: false
+
+    - id: CLS-005
+      name: projection_consumer
+      label: Projection Consumer Feature
+      definition: >
+        Derives read models, summaries, dashboard state, completeness state,
+        freshness state, or replayable projection state from outbox events.
+      examples:
+        - Visit-level Class A financial completeness projection
+        - Shift operational telemetry projection
+        - Dashboard cache derived from grind.observed, fill.recorded, and credit.recorded
+        - Replayable operational summary
+      default_transport_chain:
+        - finance_outbox
+        - relay_claim_rpc
+        - idempotent_consumer
+        - processed_messages
+        - projection_store
+        - bff_api
+        - ui
+      required_properties:
+        - processed_messages_written_before_or_atomically_with_projection_side_effects
+        - duplicate_delivery_produces_one_projection_side_effect
+        - replay_produces_equivalent_derived_state
+        - consumers_preserve_origin_label_unchanged
+        - consumers_read_fact_class_and_origin_label_do_not_infer_authority_from_payload
+        - consumers_write_only_projection_stores_and_receipt_state
+      forbidden:
+        - writing_back_to_pft
+        - writing_back_to_grind_authoring_stores
+        - writing_to_compliance_authoring_stores_as_financial_settlement
+        - reclassifying_events
+        - performing_reconciliation
+        - producing_authoritative_totals
+        - repairing_missing_producer_data_by_inventing_projection_inputs
+      admission_test: >
+        If the feature is derived, rebuildable, and downstream of the outbox,
+        it is a Projection Consumer Feature.
+      transport_matrix:
+        outbox_required: consumes
+        bff_api_required: maybe_for_read
+        rpc_required: claim_receipt_rpcs_only
+        projection_store: true
+
+    - id: CLS-006
+      name: surface_value
+      label: Surface Value Feature
+      definition: >
+        Exposes a financial or financial-adjacent value to a user, API
+        response, report, export, or operator-facing read model.
+      examples:
+        - Session total buy-in
+        - Net position
+        - Estimated shift activity
+        - Cash accountability display
+        - MTL threshold amount
+        - Visit financial summary
+        - Shift telemetry metric
+      default_transport_chain:
+        - projection_read_source
+        - service_mapper
+        - dto_envelope
+        - bff_api
+        - visible_ui_api_rendered_output
+      required_properties:
+        - every_financial_value_must_declare_source
+        - every_financial_value_must_declare_authority
+        - every_financial_value_must_declare_completeness
+        - authority_must_come_from_originating_classification_not_upgraded
+        - completeness_must_be_visible_when_partial_or_unknown
+      forbidden:
+        - bare_financial_numbers
+        - hidden_authority_labels
+        - user_visible_totals_implying_settlement_or_reconciliation_authority
+        - ui_recomputation_against_authoring_stores_to_hide_projection_lag
+        - compliance_values_merged_into_financial_authority_aggregates
+        - mixed_authority_values_displayed_without_degradation
+      admission_test: >
+        If a user can read the value and infer operational or financial meaning
+        from it, it is a Surface Value Feature.
+      transport_matrix:
+        outbox_required: false
+        bff_api_required: true
+        rpc_required: false
+        projection_store: reads_projection_source
+
+    - id: CLS-007
+      name: external_integration
+      label: External Integration Feature
+      definition: >
+        Sends data to or receives data from systems outside PT-2.
+      examples:
+        - External reconciliation system
+        - Third-party accounting integration
+        - Public event API
+        - Webhooks
+        - Email or Slack notifications
+        - Hardware integration beyond existing table-context APIs
+        - Casino vendor import/export workflow
+      default_transport: null
+      default_transport_note: >
+        No default transport exists. External integrations require explicit
+        intake and architecture review.
+      required_properties:
+        - separate_fib
+        - adr_if_authority_custody_settlement_public_contract_replay_delivery_or_security_affected
+        - explicit_failure_model
+        - explicit_data_ownership_model
+        - explicit_tenant_casino_scoping
+        - explicit_retention_and_observability_posture
+      forbidden:
+        - smuggling_external_integrations_into_internal_outbox_work
+        - treating_finance_outbox_as_public_event_contract
+        - letting_third_party_needs_change_internal_event_semantics_without_adr
+        - using_internal_projection_events_as_public_api_guarantees
+      admission_test: >
+        If a system outside PT-2 consumes or produces the data, this is an
+        External Integration Feature.
+      transport_matrix:
+        outbox_required: maybe_after_adr
+        bff_api_required: true
+        rpc_required: maybe
+        projection_store: maybe
+
+  transport_mechanisms:
+    - id: TM-01
+      name: component_state
+      kind: ui
+    - id: TM-02
+      name: url_route_params
+      kind: ui
+    - id: TM-03
+      name: existing_query_hooks
+      kind: ui
+    - id: TM-04
+      name: bff_api_route
+      kind: api_boundary
+    - id: TM-05
+      name: service_layer_orchestration
+      kind: service_boundary
+    - id: TM-06
+      name: supabase_rpc
+      kind: database_boundary
+    - id: TM-07
+      name: transactional_outbox_propagation
+      kind: propagation_mechanism
+    - id: TM-08
+      name: idempotent_consumer
+      kind: processing_boundary
+    - id: TM-09
+      name: projection_store
+      kind: derived_state_store
+    - id: TM-10
+      name: dto_surface_rendering_envelope
+      kind: output_contract
+
+# ─────────────────────────────────────────────────────────────────
+# ZACHMAN: HOW — behaviors, decision logic, transport selection
+# ─────────────────────────────────────────────────────────────────
+how:
+  core_principle:
+    rule: >
+      Classify the feature first. Select the narrowest valid transport second.
+      Do not let the implementation path redefine the feature.
+    anti_pattern:
+      wrong_starting_question: "What component, API route, RPC, or table do we need?"
+      correct_starting_question: "What kind of system change is this?"
+
+  transport_selection_matrix:
+    - classification: ui_interaction
+      default_mechanism: local_state_or_existing_query
+      outbox: false
+      bff_api: maybe_existing
+      rpc: false
+      projection_store: false
+    - classification: read_composition
+      default_mechanism: bff_api_dto
+      outbox: false
+      bff_api: true
+      rpc: read_only_if_needed
+      projection_store: false
+    - classification: authoring
+      default_mechanism: bff_api_to_service_to_rpc
+      outbox: maybe
+      bff_api: true
+      rpc: true
+      projection_store: false
+    - classification: projection_input
+      default_mechanism: rpc_plus_transactional_outbox
+      outbox: true
+      bff_api: true
+      rpc: true
+      projection_store: false
+    - classification: projection_consumer
+      default_mechanism: outbox_consumer_to_projection
+      outbox: consumes
+      bff_api: maybe_for_read
+      rpc: claim_receipt_rpcs
+      projection_store: true
+    - classification: surface_value
+      default_mechanism: dto_envelope_plus_visible_rendering
+      outbox: false
+      bff_api: true
+      rpc: false
+      projection_store: reads_projection_source
+    - classification: external_integration
+      default_mechanism: separate_design
+      outbox: maybe_after_adr
+      bff_api: true
+      rpc: maybe
+      projection_store: maybe
+
+  decision_tree:
+    - step: 1
+      question: "Is there a frozen feature intent and containment loop?"
+      branch_no:
+        action: stop
+        instruction: "Write or amend FIB."
+      branch_yes:
+        action: continue
+    - step: 2
+      question: "Does the feature only change local UI behavior or presentation?"
+      branch_yes:
+        classification: ui_interaction
+      branch_no:
+        action: continue
+    - step: 3
+      question: "Does the feature compose existing backend data without mutation?"
+      branch_yes:
+        classification: read_composition
+        transport: bff_api
+      branch_no:
+        action: continue
+    - step: 4
+      question: "Does the feature create, correct, or append a domain fact?"
+      branch_yes:
+        classification: authoring
+        transport: bff_api_to_service_to_rpc
+      branch_no:
+        action: continue
+    - step: 5
+      question: >
+        Does the authored fact affect projections, replay, dashboards,
+        completeness, freshness, or downstream derived state?
+      branch_yes:
+        classification: projection_input
+        additional_requirement: emit_transactional_outbox_row_in_same_transaction
+      branch_no:
+        outcome: rpc_authoring_only
+    - step: 6
+      question: "Does the feature derive rebuildable state from existing events?"
+      branch_yes:
+        classification: projection_consumer
+        transport: outbox_consumer_plus_projection_store
+      branch_no:
+        action: continue
+    - step: 7
+      question: >
+        Does the feature expose financial or financial-adjacent values at a
+        system boundary?
+      branch_yes:
+        classification: surface_value
+        requirement: source_authority_completeness_required
+      branch_no:
+        action: continue
+    - step: 8
+      question: "Does the feature communicate with external systems?"
+      branch_yes:
+        classification: external_integration
+        requirement: separate_fib_and_likely_adr_required
+      branch_no:
+        outcome: classify_as_support_tooling_admin_and_document_why_no_domain_transport_applies
+
+  minimalism_rule:
+    statement: "Select the weakest mechanism that preserves the invariant."
+    temptations:
+      - temptation: "Let's add an event for this UI interaction"
+        correct_response: "No. UI state is enough."
+      - temptation: "Let's let the browser call the RPC directly"
+        correct_response: >
+          Only if no anchor, eligibility, or semantic resolution is required.
+      - temptation: "Let's add outbox because this might matter later"
+        correct_response: >
+          No. Outbox is for real Projection Inputs, not future vibes.
+      - temptation: "Let's make a projection for one card"
+        correct_response: >
+          Only if derived state must be replayable, shared, or lifecycle-aware.
+      - temptation: "Let's expose this internal event to partners"
+        correct_response: "Separate FIB and ADR."
+      - temptation: "Let's compute the total from raw stores in the UI"
+        correct_response: >
+          No. Render projection state and completeness honestly.
+
+# ─────────────────────────────────────────────────────────────────
+# ZACHMAN: WHERE — surfaces, boundaries, bounded contexts
+# ─────────────────────────────────────────────────────────────────
+where:
+  boundaries:
+    - id: BND-01
+      name: ui
+      kind: surface
+      description: Renders intent and reads DTOs; never resolves domain authority.
+    - id: BND-02
+      name: bff_api_route
+      kind: api_boundary
+      description: Owns composition and anchor resolution; UI-facing contract.
+    - id: BND-03
+      name: service_layer
+      kind: service_boundary
+      description: >
+        Resolves eligibility, validates anchors, orchestrates RPC calls.
+    - id: BND-04
+      name: rpc_authoring_boundary
+      kind: database_boundary
+      description: >
+        Owns the write transaction; authoring row and outbox row commit
+        atomically here.
+    - id: BND-05
+      name: finance_outbox
+      kind: propagation_mechanism
+      description: >
+        Internal propagation infrastructure only. Not a public event API,
+        pub/sub framework, or event-sourcing ledger.
+    - id: BND-06
+      name: relay
+      kind: delivery_mechanism
+      description: Claims and delivers outbox rows to consumers.
+    - id: BND-07
+      name: idempotent_consumer
+      kind: processing_boundary
+      description: >
+        Processes events at-least-once with idempotency guarantees via
+        processed_messages.
+    - id: BND-08
+      name: processed_messages
+      kind: idempotency_store
+      description: >
+        Receipt state written atomically with projection side effects.
+    - id: BND-09
+      name: projection_store
+      kind: derived_state_store
+      description: Rebuildable, replayable derived state; read by BFF/API.
+    - id: BND-10
+      name: dto_envelope
+      kind: output_contract
+      description: >
+        Surface-shaped output that must declare source, authority, and
+        completeness for financial values.
+
+  transactional_constraint:
+    rule: >
+      Authoring row and outbox row must share one literal PostgreSQL database
+      transaction. Retry choreography does not satisfy this constraint.
+
+  outbox_scope_constraints:
+    - internal_propagation_only
+    - not_a_public_event_api
+    - not_a_general_pub_sub_framework
+    - not_an_event_sourcing_ledger
+    - not_a_reconciliation_system
+    - not_a_multi_consumer_platform
+
+# ─────────────────────────────────────────────────────────────────
+# ZACHMAN: WHO — actors, roles, ownership
+# ─────────────────────────────────────────────────────────────────
+who:
+  owner: Architecture / Product Governance
+
+  pipeline_actors:
+    - role: prd_author
+      responsibilities:
+        - classify_feature_before_prescribing_any_transport
+        - complete_all_mandatory_admission_checks
+        - include_prd_required_section_verbatim
+        - reference_fib_amendment_if_any_scope_expansion_trigger_applies
+    - role: implementer
+      responsibilities:
+        - match_implementation_to_prd_classification
+        - no_browser_direct_producer_rpc_when_anchor_resolution_required
+        - no_ad_hoc_sql_write_bypassing_service_rpc_boundary
+        - authoring_row_and_outbox_row_in_one_db_transaction_when_outbox_required
+    - role: exec_spec_author
+      responsibilities:
+        - include_transport_conformance_checklist
+        - trace_all_work_items_to_prd_classification
+    - role: auditor
+      responsibilities:
+        - verify_feature_classification_present
+        - verify_transport_strength_matches_classification
+        - verify_no_browser_direct_rpc_with_semantic_eligibility
+        - verify_authoring_and_outbox_are_physically_atomic
+        - verify_consumer_does_not_mutate_authoring_stores
+        - verify_surface_values_carry_source_authority_completeness
+
+  ui_actor_constraint:
+    rule: >
+      UI surfaces may request domain actions. They must not independently
+      resolve ledger identity, semantic authority, casino scope, or adjustment
+      eligibility when those require domain rules.
+    correct_pattern:
+      ui: "adjust this slip by this amount for this reason"
+      bff_service: "resolves eligible original PFT"
+      rpc: "authors adjustment"
+    incorrect_pattern:
+      ui: "guesses original_txn_id"
+      browser: "calls producer RPC directly"
+      rpc: "silently emits nothing when anchor is null"
+
+# ─────────────────────────────────────────────────────────────────
+# ZACHMAN: WHEN — admission gates, pipeline stages, expansion triggers
+# ─────────────────────────────────────────────────────────────────
+when:
+  ordering_invariant:
+    stages:
+      - feature_intent_first
+      - classification_second
+      - transport_third
+      - implementation_fourth
+      - certification_last
+
+  pipeline_gates:
+    - stage: feature_intake
+      gate: Frozen feature intent and containment loop must exist before classification.
+      artifact_required: fib_with_frozen_containment_loop
+    - stage: prd_approval
+      gate: All mandatory admission checks must pass before PRD approval.
+      artifact_required: prd_required_section_complete
+    - stage: exec_spec
+      gate: Transport conformance block must be present before implementation begins.
+      artifact_required: exec_transport_conformance_checklist_complete
+    - stage: audit
+      gate: Any single audit failure item fails the artifact.
+      artifact_required: see_audit_checklist
+
+  mandatory_admission_checks:
+    - id: ADM-1
+      check: Primary feature classification is recorded.
+    - id: ADM-2
+      check: Secondary classifications are named if applicable.
+    - id: ADM-3
+      check: Selected transport mechanism is declared.
+    - id: ADM-4
+      check: Explicit statement of whether the feature authors a domain fact.
+    - id: ADM-5
+      check: Explicit statement of whether the feature emits a Projection Input.
+    - id: ADM-6
+      check: Explicit statement of whether outbox propagation is required.
+    - id: ADM-7
+      check: Explicit statement of whether the feature consumes outbox events.
+    - id: ADM-8
+      check: Explicit statement of whether financial Surface Values are rendered.
+    - id: ADM-9
+      check: >
+        Explicit statement of whether a new surface, actor, integration, or
+        workflow is introduced.
+    - id: ADM-10
+      check: If ADM-9 is yes, FIB amendment reference is provided.
+
+  scope_expansion_triggers:
+    description: >
+      Any of the following in a downstream artifact requires FIB amendment
+      before implementation may proceed.
+    triggers:
+      - new_actor
+      - new_operator_workflow
+      - new_user_visible_surface
+      - new_automation_path
+      - new_external_integration
+      - new_authority_claim
+      - new_projection_consumer
+      - new_event_category
+      - new_outbox_producer
+      - new_reconciliation_or_settlement_implication
+
+# ─────────────────────────────────────────────────────────────────
+# ZACHMAN: WHY — hard rules, invariants, audit checklist
+# ─────────────────────────────────────────────────────────────────
+why:
+  hard_rules:
+    - id: RULE-7.1
+      name: no_transport_before_classification
+      statement: >
+        No PRD may prescribe BFF, RPC, outbox, projection, or UI transport
+        before the feature classification is recorded. Implementation details
+        may not substitute for feature identity.
+      severity: hard
+
+    - id: RULE-7.2
+      name: ui_requests_intent_server_resolves_semantics
+      statement: >
+        UI surfaces may request domain actions. They must not independently
+        resolve ledger identity, semantic authority, casino scope, or
+        adjustment eligibility when those require domain rules.
+      severity: hard
+
+    - id: RULE-7.3
+      name: outbox_required_for_projection_inputs
+      statement: >
+        If an authored fact or dependency must be consumed by projections,
+        replay, completeness, freshness, dashboard state, or derived state,
+        it must emit through the transactional outbox. Same transaction means
+        literal database transaction, not retry choreography.
+      severity: hard
+
+    - id: RULE-7.4
+      name: outbox_not_generic_event_platform
+      statement: The outbox is internal propagation infrastructure only.
+      severity: hard
+      forbidden_uses:
+        - public_event_api
+        - general_pub_sub_framework
+        - event_sourcing_ledger
+        - reconciliation_system
+        - multi_consumer_platform
+        - generic_event_dumping_ground
+
+    - id: RULE-7.5
+      name: consumers_are_projection_only
+      statement: >
+        Consumers may write projection stores, dashboard caches,
+        receipt/idempotency tables, and derived operational state.
+        Consumers must not write PFT, grind authoring stores, MTL authoring
+        stores as settlement, authoritative domain facts, or final
+        reconciliation totals.
+      severity: hard
+      allowed_writes:
+        - projection_stores
+        - dashboard_caches
+        - receipt_idempotency_tables
+        - derived_operational_state
+      forbidden_writes:
+        - pft
+        - grind_authoring_stores
+        - mtl_authoring_stores_as_settlement
+        - authoritative_domain_facts
+        - final_reconciliation_totals
+
+    - id: RULE-7.6
+      name: surface_values_must_tell_the_truth
+      statement: >
+        Any financial or financial-adjacent value exposed outside the service
+        layer must carry visible source, authority, and completeness.
+      severity: hard
+      corollaries:
+        - Bare numbers are not valid financial Surface Values.
+        - Unknown completeness must be rendered as unknown, not hidden.
+        - Partial state must be rendered as partial, not patched by UI recomputation.
+
+    - id: RULE-7.7
+      name: scope_expansion_requires_intake_amendment
+      statement: >
+        If a downstream artifact introduces any scope expansion trigger, it
+        must amend the FIB before implementation.
+      severity: hard
+
+  audit_checklist:
+    fail_conditions:
+      - id: AUD-01
+        condition: Feature classification is missing.
+      - id: AUD-02
+        condition: Selected transport is stronger than needed without justification.
+      - id: AUD-03
+        condition: Selected transport is weaker than required by authoring/projection behavior.
+      - id: AUD-04
+        condition: UI resolves domain anchors that belong at the service/BFF boundary.
+      - id: AUD-05
+        condition: >
+          Browser calls producer RPC directly where semantic eligibility must
+          be enforced.
+      - id: AUD-06
+        condition: Authoring write and outbox insert are not physically atomic.
+      - id: AUD-07
+        condition: Consumer mutates authoring stores.
+      - id: AUD-08
+        condition: Projection claims authority not present in source events.
+      - id: AUD-09
+        condition: Surface renders bare financial values.
+      - id: AUD-10
+        condition: >
+          PRD introduces new actor/workflow/surface/integration without FIB
+          amendment.
+      - id: AUD-11
+        condition: Outbox is used as a generic event bus.
+      - id: AUD-12
+        condition: >
+          External integration relies on internal event semantics without ADR.
+
+  final_invariants:
+    - "A feature that cannot be classified is not ready."
+    - "A transport that does not follow classification is non-conformant."
+    - "A projection input without outbox is a dual-write risk."
+    - "A consumer that writes authoring state is a domain violation."
+    - "A financial surface without source, authority, and completeness is a truthfulness violation."
+
+# ─────────────────────────────────────────────────────────────────
+# Required artifact sections (PRD + EXEC templates)
+# ─────────────────────────────────────────────────────────────────
+required_sections:
+  prd:
+    section_title: Feature Classification and Transport Selection
+    fields:
+      - name: primary_classification
+        type: enum
+        values:
+          - ui_interaction
+          - read_composition
+          - authoring
+          - projection_input
+          - projection_consumer
+          - surface_value
+          - external_integration
+        required: true
+      - name: secondary_classifications
+        type: array
+        required: false
+        note: Explicitly name or declare None.
+      - name: authors_domain_fact
+        type: boolean
+        required: true
+        if_true: name the fact
+      - name: emits_projection_input
+        type: boolean
+        required: true
+        if_true: name the event_type and category
+      - name: requires_transactional_outbox
+        type: boolean
+        required: true
+        if_true: explain why
+      - name: consumes_outbox_events
+        type: boolean
+        required: true
+        if_true: name consumer and projection store
+      - name: renders_financial_surface_values
+        type: boolean
+        required: true
+        if_true: name source, authority, and completeness behavior
+      - name: selected_transport
+        type: enum
+        required: true
+        values:
+          - ui_only
+          - bff_api_read
+          - bff_api_to_service_to_rpc
+          - rpc_plus_transactional_outbox
+          - outbox_consumer_to_projection
+          - external_integration_tbd
+      - name: narrowest_valid_transport_justification
+        type: prose_paragraph
+        required: true
+      - name: rejected_mechanisms
+        type: array
+        required: true
+        item_shape:
+          - mechanism: string
+          - reason: string
+      - name: fib_amendment_required
+        type: boolean
+        required: true
+        if_true: link amendment
+
+  exec_spec:
+    section_title: Transport Conformance
+    checklist:
+      - id: TC-01
+        item: Implementation matches PRD classification.
+      - id: TC-02
+        item: No browser-direct producer RPC when BFF/service anchor resolution is required.
+      - id: TC-03
+        item: No UI-side domain authority inference.
+      - id: TC-04
+        item: No ad-hoc SQL write bypassing the service/RPC boundary.
+      - id: TC-05
+        item: >
+          If outbox is required, authoring row and outbox row share one DB
+          transaction.
+      - id: TC-06
+        item: >
+          If consumer is introduced, processed_messages idempotency is atomic
+          with projection side effect.
+      - id: TC-07
+        item: Consumer does not write authoring stores.
+      - id: TC-08
+        item: origin_label and fact_class are preserved.
+      - id: TC-09
+        item: Surface Values render source, authority, and completeness.
+      - id: TC-10
+        item: Scope expansion checked against FIB.
+
+# ─────────────────────────────────────────────────────────────────
+# Classification examples
+# ─────────────────────────────────────────────────────────────────
+examples:
+  - id: EX-01
+    name: Mount Grind Buy-in Panel
+    primary_classification: authoring
+    secondary_classifications:
+      - projection_input
+      - surface_value
+    transport: >
+      ui → bff_api_or_service_hook → rpc → outbox → operational_projection
+    reason: >
+      Operator authors grind.observed; shift telemetry projection depends on
+      it.
+
+  - id: EX-02
+    name: Add Admin Outbox Observability Page
+    primary_classification: read_composition
+    secondary_classifications:
+      - surface_tooling
+    transport: >
+      admin_ui → api → read_only_security_definer_rpc
+    outbox_posture: reads_only_does_not_emit
+    reason: >
+      Surface inspects transport state; it does not author facts or
+      projections.
+
+  - id: EX-03
+    name: Adjustment Creation From Rating Slip Modal
+    primary_classification: authoring
+    secondary_classifications:
+      - projection_input
+    transport: >
+      ui_intent → bff_service_anchor_resolution →
+      rpc_create_financial_adjustment → outbox
+    reason: >
+      Adjustment must resolve original PFT at slip scope; browser must not
+      bypass anchor resolution.
+
+  - id: EX-04
+    name: Change Dashboard Card Layout
+    primary_classification: ui_interaction
+    transport: ui_only
+    reason: "No new fact, no projection, no surface authority change."
+
+  - id: EX-05
+    name: Visit Financial Completeness Signal
+    primary_classification: projection_consumer
+    secondary_classifications:
+      - surface_value
+    transport: >
+      outbox_consumer → projection_store → dto_envelope → ui
+    reason: "Completeness is derived from event flow and lifecycle state."
+
+  - id: EX-06
+    name: External Reconciliation Export
+    primary_classification: external_integration
+    secondary_classifications:
+      - surface_value
+    transport: no_default_requires_fib_and_adr
+    reason: >
+      Touches custody, settlement interpretation, and external authority
+      boundaries.
