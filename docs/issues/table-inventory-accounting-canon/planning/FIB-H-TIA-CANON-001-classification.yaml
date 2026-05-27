@@ -1,0 +1,974 @@
+artifact:
+  type: feature_classification_record
+  schema_ref: docs/70-governance/feature-intake/FEATURE-CLASSIFICATION-AND-TRANSPORT-SELECTION-STANDARD.yaml
+  schema_version: "1.0.0"
+  status: frozen_amended
+  feature_id: FIB-H-TIA-CANON-001
+  feature_name: Table Inventory Accounting Canonization
+  fib_ref: docs/issues/table-inventory-accounting-canon/planning/FIB-H-TABLE-INVENTORY-ACCOUNTING-CANONIZATION-v1-exemplar.md
+  date_classified: "2026-05-27"
+  date_frozen: "2026-05-27"
+  classified_by: Architecture / Product Governance
+  fib_frozen: true
+  fib_gate_status: >
+    Frozen 2026-05-27. §L human sign-off received. FIB-H is frozen as v1
+    historical intent + exemplar companion. Active semantic authorities are this
+    classification artifact and the patched UL baseline. PRD gate is now open.
+  amendments:
+    - date: "2026-05-27"
+      author: Architecture / Product Governance
+      reason: >
+        Scaffold SCAFFOLD-TABLE-INVENTORY-CANON.md introduced a semantic patch
+        that was not yet reflected in this frozen artifact. The scaffold was
+        subsequently deleted (untracked, never committed). This amendment
+        preserves the patch so it is not lost before the PRD is written.
+      changes:
+        - >
+          opener/closer lifecycle invariant: opening_inventory_cents and
+          closing_inventory_cents are required lifecycle snapshots, not optional
+          completeness inputs. Their absence is a lifecycle/data-integrity failure
+          represented in integrity_issues, not in missing_inputs. Zero is a valid
+          explicit inventory count and does not trigger integrity_issues. This
+          corrects FIB-H's original nullable typing of these fields.
+        - >
+          Three-state DTO model made explicit in step 7 values list:
+          (1) all five inputs present → projected_table_win_loss_cents;
+          (2) drop absent, opener/closer resolvable → partial_table_result_cents;
+          (3) opener or closer unresolvable → integrity_issues populated,
+          all table-result values suppressed, neither result field rendered.
+        - >
+          integrity_issues added to completeness_envelope.fields.
+        - >
+          deterministic_fixture extended with partial and integrity-failure cases.
+        - >
+          telemetry_derived_drop_estimate_cents source resolved: the approved
+          PT-2 operational telemetry source is a session-scoped aggregate of
+          table_buyin_telemetry (RATED_BUYIN + GRIND_BUYIN), filtered to the
+          session window. This closes FIB-H §L open question. The gap between
+          rpc_shift_table_metrics (gaming-day scope) and the rundown path
+          (session scope) must be bridged in the new service module.
+
+# ─────────────────────────────────────────────────────────────────
+# ZACHMAN: WHAT — classification decision
+# ─────────────────────────────────────────────────────────────────
+what:
+  primary_classification:
+    id: CLS-002
+    name: read_composition
+    label: Read Composition Feature
+    qualifier: with_canonical_derived_model
+    qualifier_note: >
+      The projection output is canonical_for_downstream_table_result_consumption:
+      it owns the formula, the surface labels, the DTO shape, and is the sole
+      authority downstream table-result consumers may consult. It is not the
+      source of record for inventory facts, custody facts, or final accounting
+      truth — those remain with upstream authoring stores and external custody
+      authorities. §3.2 forbids treating a composed read model as a source of
+      record; that prohibition holds for inventory and custody authority. It
+      does not prevent the projection from being the canonical formula and DTO
+      owner for its downstream consumption surface — which is the only claim
+      made here. Not a transient composed view. This places the feature in a taxonomy gap
+      between CLS-002 and CLS-005; see taxonomy_gap below. CLS-002 is the
+      nearest valid bucket because inputs are inventory authoring tables (not
+      outbox events), which disqualifies CLS-005 (Projection Consumer).
+
+  secondary_classifications:
+    - id: CLS-006
+      name: surface_value
+      label: Surface Value Feature
+      rationale: >
+        projected_table_win_loss_cents and partial_table_result_cents are
+        financial-adjacent operational values exposed to the operator at the
+        Pit Terminal Rundown surface boundary. Both carry the two-axis
+        completeness model (input_completeness + custody_status).
+        final_table_win_loss_cents is explicitly out of scope — it requires
+        external custody authority and a separate ADR/FIB amendment.
+        See win_loss_semantic_clarification below.
+
+  rejected_classifications:
+    - id: CLS-001
+      name: ui_interaction
+      reason: >
+        The feature changes stored domain structure, DTO ownership, and
+        bounded-context authority. It cannot be removed without affecting
+        downstream surfaces.
+
+    - id: CLS-003
+      name: authoring
+      reason: >
+        This slice does not introduce new authoring RPCs or write new
+        authoritative domain facts. Existing inventory authoring workflows
+        are consumed as-is.
+
+    - id: CLS-004
+      name: projection_input
+      reason: >
+        No new finance_outbox rows are emitted. Inputs are already-authored
+        inventory facts. No transactional outbox propagation required or
+        permitted in this slice.
+
+    - id: CLS-005
+      name: projection_consumer
+      reason: >
+        §3.5 admission test requires the feature be "derived, rebuildable, and
+        downstream of the outbox." FIB-H inputs are inventory authoring tables,
+        not finance_outbox events. The outbox pipeline (relay → idempotent
+        consumer → processed_messages) does not apply. Adding it would
+        violate RULE-7.4 and the §12 Minimalism Rule.
+
+    - id: CLS-007
+      name: external_integration
+      reason: No system outside PT-2 is involved.
+
+  taxonomy_gap:
+    present: true
+    description: >
+      The standard contains no named sub-pattern for a canonical materialized
+      model whose inputs are authoritative tables (not outbox events) but whose
+      output is the system-of-record for downstream consumers. The gap sits
+      between CLS-002 (Read Composition, which forbids source-of-record status)
+      and CLS-005 (Projection Consumer, which requires outbox substrate).
+    recommended_standard_amendment: >
+      Add a "canonical_derived_model" sub-pattern under CLS-002 to cover
+      materialized or read-time derived projections from authoritative stores
+      that are intended as canonical source-of-record for downstream consumers
+      but do not require outbox substrate.
+    impact_on_this_classification: >
+      CLS-002 with qualifier "with_canonical_derived_model" is used. The
+      forbidden property "treating_composed_read_model_as_source_of_record"
+      is explicitly overridden by the FIB-H canonical direction (§M) under
+      the understanding that the upstream inventory stores remain the authority,
+      not the derived model itself. The projection carries authority metadata
+      from its inputs; it does not upgrade authority.
+
+  win_loss_semantic_clarification:
+    rule: >
+      In this slice, "Win/Loss" has two distinct meanings and must not be
+      collapsed.
+
+      Final Win/Loss is custody-authoritative, settlement-grade, and requires
+      external count-room / soft-count / custodial-chain authority. Final
+      Win/Loss is out of scope for this slice.
+
+      Projected Win/Loss is an operational estimate produced by PT-2 from
+      gathered telemetry and table inventory inputs. Projected Win/Loss is in
+      scope, provided it is visibly labeled as projected/estimated, carries
+      source and completeness metadata, and is never presented as final,
+      reconciled, posted, settled, or custody-authoritative.
+
+    allowed_surface_labels:
+      - Projected Win/Loss
+      - Estimated Win/Loss
+      - Partial Table Result
+
+    forbidden_surface_labels:
+      - Win/Loss
+      - Final Win/Loss
+      - Total Drop
+      - Posted Drop
+      - Settled Result
+      - Reconciled Result
+
+    canonical_fields:
+      projected_table_win_loss_cents:
+        in_scope: true
+        authority: estimated_operational
+        source: PT-2 operational telemetry and table inventory inputs
+        purpose: shift-manager review and downstream custody-chain handoff
+        custody_status: non_custody_estimate
+
+      final_table_win_loss_cents:
+        in_scope: false
+        authority: external_custody_authoritative
+        source: external count-room / soft-count / custody authority
+        requires: ADR/FIB amendment
+
+    completeness_model:
+      input_completeness:
+        meaning: whether PT-2 expected operational inputs are present
+        allowed_values:
+          - complete
+          - partial
+        note: >
+          "complete" means all five PT-2 operational inputs are present:
+          opening_inventory_cents, closing_inventory_cents, fills_cents,
+          credits_cents, and telemetry_derived_drop_estimate_cents.
+          It does not imply custody-final authority. These two axes are orthogonal.
+
+          missing_inputs covers only drop_estimate — the one input whose
+          absence is a normal partial-result state. opening_inventory_cents
+          and closing_inventory_cents are required lifecycle snapshots, not
+          optional completeness inputs. Their absence is a lifecycle/data-integrity
+          failure represented in integrity_issues, not in missing_inputs.
+          Zero opener or closer is a valid explicit inventory count.
+
+      custody_status:
+        meaning: whether the value is final custody/accounting truth
+        allowed_values:
+          - non_custody_estimate
+          - external_custody_authoritative
+        note: >
+          All values produced by this slice carry custody_status = non_custody_estimate.
+          external_custody_authoritative is unreachable without external integration.
+
+    custody_status_glossary:
+      purpose: >
+        Distinguishes PT-2 operational estimates from external custody-authoritative
+        accounting results. This axis does not create custody authority inside PT-2.
+      values:
+        non_custody_estimate:
+          meaning: >
+            The value is produced by PT-2 from operational telemetry, table inventory
+            inputs, or other internally observed/recorded application data. It may be
+            useful for shift-manager review and downstream custody-chain handoff, but
+            it is not count-room-confirmed, soft-count-confirmed, settled, reconciled,
+            posted, or final.
+          allowed_in_this_slice: true
+        external_custody_authoritative:
+          meaning: >
+            The value originates from, or has been certified by, an external custody
+            authority such as soft count, count room, cage reconciliation, or another
+            approved accounting/custodial system.
+          allowed_in_this_slice: false
+          requires: ADR/FIB amendment and explicit external authority source
+
+    custody_status_invariant: >
+      PT-2 cannot upgrade a value from non_custody_estimate to
+      external_custody_authoritative by completing internal inputs, recomputing a
+      formula, closing a shift, rendering a report, or handing data downstream.
+      external_custody_authoritative requires an explicit external custody-authoritative
+      source introduced by ADR/FIB amendment.
+
+    semantic_invariant: >
+      input_completeness = complete never changes custody_status.
+      A projected table result may be complete relative to PT-2 operational inputs
+      while remaining non_custody_estimate and non-final.
+
+    hard_rule: >
+      PT-2 may produce projected win/loss estimates. PT-2 may not produce
+      final win/loss. Any surface value must make that distinction visible.
+      Final Win/Loss is unreachable in this slice. Projected Win/Loss is the
+      point of the slice. PT-2 is an observability layer — it gives the shift
+      manager an operational estimate of the floor state and hands structured
+      running totals downstream to the custodial chain. It is not the soft
+      count room.
+
+  adr_053_authority_constraint:
+    authority: ADR-053 — Financial System Scope Boundary
+    rule: >
+      PT-2 does not observe the full cash lifecycle — count room totals,
+      inventory counts, cage custody handoffs, or physical cash movements.
+      It must not produce "Total Drop," shift-end settlement values, final
+      money position, reconciliation, or variance resolution. It may expose
+      partial aggregates only with source, authority, and completeness labels.
+    consequence_for_this_feature: >
+      No custody-authoritative drop input exists inside PT-2 at this stage.
+      All drop-like inputs are recorded operational values — non-custody,
+      non-final. The canon may compute projected_table_win_loss_cents from
+      these inputs, labeled as Projected Win/Loss or Estimated Win/Loss.
+      It must not call the result Final Win/Loss, Posted Drop, or unqualified
+      Win/Loss. final_table_win_loss_cents is out of scope and requires
+      ADR/FIB amendment.
+    hard_rule:
+      wrong: >
+        "No posted_drop_amount_cents → no Win/Loss."
+        (Conflates projected operational Win/Loss with final custody Win/Loss.
+        Also implies Win/Loss becomes valid when posted_drop is present
+        inside PT-2, which is false under ADR-053 unless that value carries
+        external custody authority.)
+      also_wrong: >
+        "Win/Loss is not reachable in this slice."
+        (Throws out Projected Win/Loss, which is the operational point of
+        the slice.)
+      correct: >
+        "Final Win/Loss is not reachable in this slice.
+        Projected Win/Loss is in scope, labeled and non-custody.
+        No custody-authoritative drop input → no final_table_win_loss_cents."
+    drop_term_status:
+      posted_drop_amount_cents:
+        status: dangerous
+        reason: >
+          Implies a finalized, posted accounting result. Unless sourced from
+          an external count-room or custody authority (out of scope per FIB-H §G),
+          this term creates false-authority semantics and is non-compliant with
+          ADR-053.
+      recorded_operational_drop_cents:
+        status: deprecated_avoid
+        reason: >
+          "recorded drop" reads too close to "posted drop" or "counted drop"
+          and carries implicit custody connotation. Use
+          telemetry_derived_drop_estimate_cents instead.
+          Retained here as a tombstone so implementors know to reject it.
+      telemetry_derived_drop_estimate_cents:
+        status: preferred
+        reason: >
+          Describes a non-custody, non-final drop-like value derived from PT-2
+          operational telemetry. Unambiguously estimated; carries no posting
+          or counting connotation. Requires source=pt2_operational_telemetry
+          and custody_status=non_custody_estimate on every use.
+      estimated_drop_cents:
+        status: acceptable_with_label
+        reason: >
+          System-estimated value from recorded telemetry or inventory-side
+          operational inputs. ADR-053 compliant if labeled estimated/partial.
+      external_custody_drop_cents:
+        status: future_only
+        reason: >
+          Drop value received from soft count, count room, or custody authority.
+          Out of scope for this FIB. Requires external integration ADR and
+          FIB amendment before it may be used as a Win/Loss input.
+    fib_amendment_note: >
+      FIB-H §M canonical win/loss formula uses "posted_or_counted_drop_amount_cents"
+      as a completeness trigger for unqualified "Win/Loss." FIB-H §N vocabulary
+      table lists "posted_drop_amount_cents" as "Accounting input, non-final
+      unless source authority says otherwise." This classification artifact
+      overrides the FIB's implicit label claim: unqualified "Win/Loss" must
+      split into projected_table_win_loss_cents (in scope, labeled
+      "Projected Win/Loss") and final_table_win_loss_cents (out of scope,
+      requires custody authority). The FIB's §M canonical formula and §N
+      vocabulary table should be amended to name this distinction explicitly
+      before the PRD is approved.
+
+  admission_checks:
+    ADM-1_primary_classification_recorded: true
+    ADM-2_secondary_classifications_named: true
+    ADM-3_selected_transport_declared: true
+    ADM-4_authors_domain_fact: false
+    ADM-5_emits_projection_input: false
+    ADM-6_outbox_propagation_required: false
+    ADM-7_consumes_outbox_events: false
+    ADM-8_renders_financial_surface_values: true
+    ADM-9_new_surface_actor_integration_or_workflow:
+      value: true
+      detail: >
+        Introduces one new operator-visible surface: the canonical Pit Terminal
+        Rundown backed by TableInventoryAccountingProjection. This is within
+        FIB-H scope as stated in §F and §P of the FIB. No FIB amendment
+        required for this surface — it is the named exemplar.
+    ADM-10_fib_amendment_reference:
+      required: false
+      reason: >
+        The new surface is the explicitly designated exemplar in FIB-H §P.1.
+        Amendment required only if scope expansion triggers in FIB-H §K
+        are tripped by downstream artifacts.
+
+# ─────────────────────────────────────────────────────────────────
+# ZACHMAN: HOW — transport selection and decision tree trace
+# ─────────────────────────────────────────────────────────────────
+how:
+  decision_tree_trace:
+    - step: 1
+      question: Is there a frozen feature intent and containment loop?
+      answer: true
+      status: frozen
+      note: >
+        FIB-H §E containment loop (9 steps) is established.
+        FIB-H §L sign-off received 2026-05-27. FIB-H frozen as v1 historical
+        intent + exemplar companion. PRD gate is now open.
+
+    - step: 2
+      question: Does the feature only change local UI behavior or presentation?
+      answer: false
+      reason: >
+        Creates a canonical TableInventoryAccountingProjection, changes
+        bounded-context ownership, retires legacy DTOs and formulas. Stored
+        domain structure changes.
+
+    - step: 3
+      question: Does the feature compose existing backend data without mutation?
+      answer: partial
+      classification_reached: CLS-002
+      tension: >
+        The feature reads from existing inventory authoring stores without
+        authoring new facts — satisfying the §3.2 definition. However,
+        §3.2 forbids "treating a composed read model as a source of record,"
+        which FIB-H explicitly requires. Classification is CLS-002 with the
+        canonical_derived_model qualifier; the source-of-record property is
+        anchored to upstream inventory stores, not the projection itself.
+
+    - step: 4
+      question: Does the feature create, correct, or append a domain fact?
+      answer: false
+      reason: No new authoring RPCs or authoritative fact writes in this slice.
+
+    - step: 5
+      question: Does the authored fact affect projections/replay/dashboards?
+      answer: not_applicable
+      reason: Step 4 was false; no authored fact exists.
+
+    - step: 6
+      question: Does the feature derive rebuildable state from existing events?
+      answer: yes_with_caveat
+      classification_considered: CLS-005
+      classification_rejected: true
+      rejection_reason: >
+        Inputs are inventory authoring tables, not finance_outbox events.
+        §3.5 admission test requires "downstream of the outbox." The derivation
+        is algebraically idempotent from canonical inputs; no outbox pipeline
+        (relay, idempotent consumer, processed_messages) is required or
+        permitted.
+      final_classification: CLS-002 with canonical_derived_model qualifier
+
+    - step: 7
+      question: Does the feature expose financial/financial-adjacent values at a system boundary?
+      answer: true
+      classification_reached: CLS-006
+      values:
+        - name: projected_table_win_loss_cents
+          in_scope: true
+          source: >
+            PT-2 operational inputs: opener, closer, fills, credits, plus a
+            telemetry-derived drop estimate input (non-custody, non-final).
+            Formula: recorded_drop + closing_inventory + credits
+            - opening_inventory - fills.
+          authority: estimated_operational
+          custody_status: non_custody_estimate
+          input_completeness: >
+            complete when all five PT-2 operational inputs are present:
+            opening_inventory_cents, closing_inventory_cents, fills_cents,
+            credits_cents, telemetry_derived_drop_estimate_cents.
+            partial when drop estimate absent but opener/closer resolvable.
+            NOTE: opener or closer unresolvable does NOT produce input_completeness=partial
+            — it produces integrity_issues and suppresses this field entirely.
+          label_rule: >
+            Surface label must be "Projected Win/Loss" or "Estimated Win/Loss."
+            Must never use bare "Win/Loss," "Posted Win/Loss," "Final Win/Loss,"
+            or any label implying custody-final authority.
+          completeness_envelope_required: true
+
+        - name: partial_table_result_cents
+          in_scope: true
+          source: >
+            inventory-side inputs only (opener, closer, fills, credits);
+            no drop-like input present. opener and closer MUST be resolvable
+            for this state to apply — unresolvable opener or closer triggers
+            integrity_issues instead and suppresses this field.
+          authority: estimated_operational
+          custody_status: non_custody_estimate
+          input_completeness: partial
+          missing_inputs: drop_estimate (the only valid normal missing input)
+          label_rule: >
+            Surface label must be "Partial Table Result."
+            Must not use "Win/Loss" or any variant.
+            Must disclose missing inputs explicitly.
+
+        - name: integrity_issues_state
+          in_scope: true
+          description: >
+            Third DTO condition — not a completeness state. Activated when
+            opening_inventory_cents or closing_inventory_cents is unresolvable
+            from source data (null opener or null closer after all resolution
+            paths are exhausted). This is a lifecycle/data-integrity failure,
+            not a partial-result state.
+          trigger: >
+            opening_inventory_snapshot_id resolves to null after dual-path
+            lookup (session_id FK + direct FK fallback), OR
+            closing_inventory_snapshot_id resolves to null after same.
+          effect:
+            - projected_table_win_loss_cents: suppressed (null)
+            - partial_table_result_cents: suppressed (null)
+            - integrity_issues: populated with one or both of
+                ['missing_opening_inventory_snapshot', 'missing_closing_inventory_snapshot']
+          surface_behavior: >
+            UI must render explicit missing-snapshot disclosure, not opaque null.
+            Neither "Projected Win/Loss" nor "Partial Table Result" label may appear.
+          invariants:
+            - zero opening_inventory_cents is valid — does NOT trigger integrity_issues
+            - zero closing_inventory_cents is valid — does NOT trigger integrity_issues
+            - only unresolvable null (no snapshot linked, not explicit zero count) triggers integrity_issues
+            - absent telemetry_derived_drop_estimate_cents NEVER triggers integrity_issues
+
+        - name: final_table_win_loss_cents
+          in_scope: false
+          reason: >
+            Requires external count-room / soft-count / custody authority.
+            Out of scope for this slice. Requires ADR/FIB amendment.
+          custody_status: external_custody_authoritative
+          label_rule: >
+            "Win/Loss" (unqualified) or "Final Win/Loss" — reserved for this field only.
+        - name: completeness_envelope
+          fields:
+            - status
+            - missing_inputs
+            - integrity_issues
+            - calculation_kind
+            - source_authority
+          required: true
+          render_rule: >
+            Every table-result value at the surface must carry the completeness
+            envelope. integrity_issues is populated (non-empty array) only when
+            opener or closer is unresolvable — it is mutually exclusive with
+            input_completeness=partial. When integrity_issues is non-empty,
+            both result fields are null and the surface renders the disclosure path.
+
+    - step: 8
+      question: Does the feature communicate with external systems?
+      answer: false
+
+  selected_transport:
+    chain:
+      - canonical inventory authoring tables
+      - TableInventoryAccounting service (read layer)
+      - formula derivation (deterministic; algebraic idempotency)
+      - TableInventoryAccountingProjection DTO
+      - BFF/API route
+      - Pit Terminal Rundown surface
+    preferred_implementation: read_time_derivation
+    materialized_cache_posture: >
+      Acceptable as a proven-cost optimization in a subsequent EXEC. Not
+      a classification-mandated baseline. If introduced, the projection
+      writer reads from authoring tables and writes derived state only —
+      no outbox emission, no authoring store writes.
+
+  narrowest_valid_transport_justification: >
+    Inputs are present in inventory authoring stores accessible via the
+    service layer. No new fact authoring is required. No finance_outbox events
+    exist for these inputs in this slice. Algebraic recomputation from
+    authoritative inputs is idempotent by construction — no relay worker,
+    processed_messages table, or at-least-once infrastructure is needed.
+    The BFF/API → service → read transport satisfies derivability and
+    deterministic recomputability without additional infrastructure. Canonical status
+    comes from the formula and ownership declaration, not the transport
+    mechanism.
+
+  rejected_mechanisms:
+    - mechanism: transactional_outbox_plus_relay_consumer
+      reason: >
+        Inputs are not finance_outbox events. Adding outbox substrate without
+        declared Projection Input events makes the outbox a generic bus for
+        internal read-model propagation, violating RULE-7.4 and §12.
+
+    - mechanism: ui_side_formula_computation_over_raw_stores
+      reason: >
+        Forbidden by RULE-7.6 (partial state must not be patched by UI
+        recomputation) and FIB-H §O.10 (competing formulas must be deleted,
+        not accommodated). Reproduces the split-brain in the wrong direction.
+
+    - mechanism: persisted_projection_store_as_exemplar_baseline
+      reason: >
+        Adds infrastructure beyond what the invariant requires. Algebraic
+        idempotency from authoritative inputs satisfies the replayability
+        requirement without a write path. Acceptable later as optimization
+        only — not a classification-mandated design choice.
+
+    - mechanism: dashboard_first_implementation
+      reason: >
+        FIB-H §P.1 explicitly rejects dashboard-first. The shift dashboard
+        carries legacy semantic pollution (win_loss_inventory, estimated_drop_buyins,
+        par/bootstrap opener fallback). Starting there turns the exemplar
+        into a UI salvage exercise.
+
+  open_question_L3_impact:
+    question: >
+      Should partial table result be persisted as a projection value or
+      derived at read time from canonical inputs? (FIB-H §L.3)
+    classification_impact: none
+    transport_impact: >
+      Read-time derivation → service layer formula only; no projection writer.
+      Persisted → separate projection writer (trigger or service) reads from
+      authoring tables and writes derived state to a projection store; no
+      outbox emission; no authoring writes.
+    recommendation: read_time_derivation
+    recommendation_reason: >
+      Narrowest valid implementation. Eliminates projection staleness problem.
+      Avoids introducing a separate write pathway for a deterministic formula.
+      Materialization is a subsequent EXEC optimization if performance profiling
+      shows unacceptable read cost at shift scale.
+
+  open_question_L_telemetry_source:
+    question: >
+      What is the approved PT-2 operational source for
+      telemetry_derived_drop_estimate_cents? (FIB-H §L open question)
+    status: resolved
+    resolved_date: "2026-05-27"
+    resolution: >
+      The approved source is a session-scoped aggregate of table_buyin_telemetry
+      (RATED_BUYIN + GRIND_BUYIN rows), filtered to the session window
+      (table_id + session opened_at / closed_at timestamps).
+      This is the same underlying data as rpc_shift_table_metrics's
+      estimated_drop_buyins_cents, re-scoped from gaming-day window to
+      single session. source_authority.drop must be set to
+      'telemetry_derived_estimate' on every use; custody_status remains
+      non_custody_estimate.
+    implementation_gap: >
+      rpc_shift_table_metrics aggregates over a gaming-day window (pit-level).
+      rpc_compute_table_rundown has no buy-in telemetry aggregation at all.
+      The new TableInventoryAccounting service module must add a session-scoped
+      SUM of table_buyin_telemetry.amount_cents as a read-time derivation step.
+    fib_h_rule_clarification: >
+      FIB-H §G.7 prohibits "telemetry bridge from buy-ins into drop or win/loss"
+      and the split_brain regression test states "adding buy-in telemetry does
+      not alter projected_table_win_loss_cents." These rules target the naive
+      path: routing raw observed_buyin_activity_cents directly into the formula
+      without an explicit aggregation and provenance step. They do not prohibit
+      the session-scoped table_buyin_telemetry aggregate from being the
+      telemetry_derived_drop_estimate_cents input, provided it carries the
+      required source and custody_status metadata.
+    null_framing: >
+      For any rated session with at least one PFT buy-in, this value is non-null
+      from the moment the first buy-in lands (via trg_bridge_finance_to_telemetry).
+      Null is only possible for unrated sessions with zero GRIND_BUYIN entries.
+      Null does NOT trigger integrity_issues — it triggers partial_table_result_cents.
+
+# ─────────────────────────────────────────────────────────────────
+# ZACHMAN: WHERE — boundaries in use
+# ─────────────────────────────────────────────────────────────────
+where:
+  active_boundaries:
+    - id: BND-01
+      name: ui
+      role: Pit Terminal Rundown — renders TableInventoryAccountingProjection DTO; must not re-derive values from raw fields
+    - id: BND-02
+      name: bff_api_route
+      role: Owns composition; delivers surface-shaped DTO to Pit Terminal Rundown
+    - id: BND-03
+      name: service_layer
+      role: >
+        TableInventoryAccounting read service; applies canonical formula;
+        resolves completeness state; maps to projection DTO
+    - id: BND-10
+      name: dto_envelope
+      role: >
+        TableInventoryAccountingProjection carries source_authority,
+        completeness, calculation_kind, and all named value fields;
+        financial surface values must not leave this boundary without the envelope
+
+  inactive_boundaries:
+    - id: BND-04
+      name: rpc_authoring_boundary
+      reason: No new authoring in this slice
+    - id: BND-05
+      name: finance_outbox
+      reason: Inputs are not outbox events; outbox is not used
+    - id: BND-06
+      name: relay
+      reason: No outbox consumption
+    - id: BND-07
+      name: idempotent_consumer
+      reason: No outbox consumption
+    - id: BND-08
+      name: processed_messages
+      reason: No at-least-once delivery problem; algebraic idempotency from canonical inputs
+    - id: BND-09
+      name: projection_store
+      reason: >
+        Inactive at exemplar baseline. May become active as optimization
+        if EXEC decides to materialize the projection.
+
+  canonical_owner:
+    bounded_context: TableContext
+    subdomain: TableInventoryAccounting
+    controls:
+      - canonical input names
+      - formula semantics
+      - projected_table_win_loss_cents (non-custody, input_completeness = complete or partial) and partial_table_result_cents
+      - final_table_win_loss_cents boundary (out of scope; ownership declared here but unreachable without external custody authority)
+      - missing-input disclosure
+      - source authority metadata
+      - deterministic projection behavior
+    consumers_only:
+      - shift dashboard
+      - shift metrics
+      - rundown local formula (to be retired)
+
+# ─────────────────────────────────────────────────────────────────
+# ZACHMAN: WHO — actors and ownership
+# ─────────────────────────────────────────────────────────────────
+who:
+  primary_actor: pit_boss_slash_shift_manager_slash_operations_lead
+  operator_moment: >
+    Active shift review, table rundown, operational drop estimate review,
+    and end-of-period operational handoff.
+  surface: Pit Terminal Rundown (exemplar); shift dashboard (subsequent consumer)
+
+  ui_actor_constraint:
+    applies: true
+    detail: >
+      The Pit Terminal Rundown receives a fully-shaped TableInventoryAccountingProjection
+      DTO. It must not re-derive calculation_kind, completeness.status, or missing_inputs
+      from raw fields. These are resolved at the service/BFF boundary.
+
+  legacy_stream_disposition:
+    ownership_retired:
+      - win_loss_inventory_cents (dashboard-local)
+      - win_loss_estimated_cents (dashboard-local)
+      - win_loss_estimated_total_cents (dashboard-local)
+      - estimated_drop_buyins_cents (dashboard-local)
+      - rpc_shift_table_metrics win/loss ownership
+      - rundown-local formula ownership
+    disposition: >
+      Delete or quarantine. Because the application is not in production,
+      compatibility preservation is not a goal by default.
+
+# ─────────────────────────────────────────────────────────────────
+# ZACHMAN: WHEN — pipeline gate status
+# ─────────────────────────────────────────────────────────────────
+when:
+  ordering_invariant_status:
+    feature_intent: done
+    classification: done
+    transport: done
+    implementation: not_started
+    certification: not_started
+
+  pipeline_gates:
+    - stage: feature_intake
+      status: closed
+      closed_date: "2026-05-27"
+      artifact: FIB-H-TABLE-INVENTORY-ACCOUNTING-CANONIZATION-v1-exemplar.md
+      note: §L human sign-off received; FIB-H frozen as v1 historical intent + exemplar companion
+
+    - stage: prd_approval
+      status: open
+      note: >
+        FIB gate satisfied. PRD may now proceed. Active semantic authorities
+        are FIB-H-TIA-CANON-001-classification.yaml and the patched UL baseline.
+
+    - stage: exec_spec
+      status: not_started
+      artifact_required: exec_transport_conformance_checklist_complete
+
+    - stage: audit
+      status: not_started
+
+  scope_expansion_triggers_active:
+    - trigger: new_user_visible_surface
+      status: within_scope
+      detail: >
+        Pit Terminal Rundown is the named exemplar surface in FIB-H §P.1.
+        No amendment required.
+    - trigger: canonical_derived_model_output
+      status: within_scope
+      detail: >
+        TableInventoryAccountingProjection DTO is the named canonical output
+        in FIB-H §F and §P.4. No amendment required.
+
+  fib_expansion_triggers_that_would_require_amendment:
+    - introduction of final_table_win_loss_cents or any custody-authoritative drop input (requires external integration ADR + FIB amendment)
+    - promoting projected_table_win_loss_cents to custody_status = external_custody_authoritative without amendment (ADR-053 violation)
+    - any surface that renders unqualified "Win/Loss," "Total Drop," or "Posted Drop" without external-custody-authoritative input
+    - new win/loss formula
+    - new table-result surface beyond Pit Terminal Rundown exemplar
+    - outbox routing of inventory events
+    - external count-room or custody integration
+    - compatibility preservation for legacy DTOs
+    - use of buy-in telemetry as drop
+    - use of par/bootstrap as canonical accounting opener
+    - any new authority claim
+
+# ─────────────────────────────────────────────────────────────────
+# ZACHMAN: WHY — hard rules and audit pre-check
+# ─────────────────────────────────────────────────────────────────
+why:
+  applicable_hard_rules:
+    - id: RULE-7.1
+      applies: true
+      note: Classification recorded before transport; PRD must not prescribe transport first.
+
+    - id: RULE-7.2
+      applies: true
+      enforcement: >
+        calculation_kind, completeness.status, and missing_inputs are resolved
+        at the service/BFF boundary. The Pit Terminal Rundown must not infer
+        these from raw fields.
+
+    - id: RULE-7.3
+      applies: false
+      reason: No authored fact in this slice; no outbox required.
+
+    - id: RULE-7.4
+      applies: true
+      enforcement: >
+        Outbox must not be introduced for this slice. Finance_outbox is not
+        used as a mechanism to propagate inventory-derived read models.
+
+    - id: RULE-7.5
+      applies: conditionally
+      condition: >
+        Applies if a persisted projection store is introduced as an optimization
+        in a subsequent EXEC. The projection writer may write derived state only.
+        It must not write to authoring stores, PFT, or any authoritative table.
+
+    - id: RULE-7.6
+      applies: true
+      enforcement: >
+        Two-axis completeness model (see win_loss_semantic_clarification) applies
+        to every surface value.
+
+        projected_table_win_loss_cents: in scope. Must carry label "Projected
+        Win/Loss" or "Estimated Win/Loss." Must carry input_completeness and
+        custody_status = non_custody_estimate. May have input_completeness = complete
+        when all PT-2 operational inputs are present — that does not make it
+        custody-final.
+
+        partial_table_result_cents: in scope when drop-like input is absent.
+        Must carry label "Partial Table Result." Must list missing inputs.
+
+        final_table_win_loss_cents: out of scope. Any surface that renders
+        unqualified "Win/Loss," "Final Win/Loss," "Total Drop," "Posted Drop,"
+        "Settled Result," or "Reconciled Result" is a hard audit failure.
+
+        Bare financial numbers are forbidden.
+        Unknown completeness must be rendered as unknown, not hidden.
+
+    - id: RULE-7.7
+      applies: true
+      enforcement: >
+        FIB-H §K expansion triggers apply to all downstream artifacts.
+        Any tripped trigger requires FIB amendment before implementation proceeds.
+
+  audit_pre_check:
+    AUD-01_classification_present: pass
+    AUD-02_transport_not_stronger_than_needed: pass
+    AUD-03_transport_not_weaker_than_required: pass
+    AUD-04_ui_not_resolving_domain_anchors: pass
+    AUD-05_no_browser_direct_rpc: pass
+    AUD-06_authoring_outbox_physically_atomic: not_applicable
+    AUD-07_consumer_not_mutating_authoring_stores: pass
+    AUD-08_projection_not_claiming_upgraded_authority: pass
+    AUD-09_surface_not_rendering_bare_financials:
+      status: pending_implementation
+      requirement: >
+        All table-result values must carry completeness envelope at render time.
+        This check passes only after EXEC implementation is verified.
+    AUD-10_no_new_scope_without_fib_amendment: pass
+    AUD-11_outbox_not_used_as_generic_bus: pass
+    AUD-12_no_external_integration_without_adr: not_applicable
+
+  deterministic_fixture:
+    case_1_all_inputs_present:
+      description: >
+        Adapted from FIB-H §P.6. All five PT-2 operational inputs present.
+        output is projected_table_win_loss_cents; surface label "Projected Win/Loss."
+        input_completeness = complete. custody_status = non_custody_estimate always.
+        final_table_win_loss_cents remains null.
+      inputs:
+        opening_inventory_cents: 20000
+        fills_cents: 5000
+        credits_cents: 2000
+        closing_inventory_cents: 18000
+        telemetry_derived_drop_estimate_cents: 9000
+      expected_output:
+        projected_table_win_loss_cents: 4000
+        formula: >
+          telemetry_derived_drop_estimate + closing_inventory + credits
+          - opening_inventory - fills
+          = 9000 + 18000 + 2000 - 20000 - 5000 = 4000
+        partial_table_result_cents: null
+        input_completeness: complete
+        missing_inputs: []
+        integrity_issues: []
+        custody_status: non_custody_estimate
+        surface_label: Projected Win/Loss
+        final_table_win_loss_cents: null
+
+    case_2_drop_absent:
+      description: >
+        Drop estimate absent. opener, closer, fills, credits all present and resolvable.
+        Activates partial_table_result_cents. projected_table_win_loss_cents is null.
+        surface label "Partial Table Result." input_completeness = partial.
+      inputs:
+        opening_inventory_cents: 20000
+        fills_cents: 5000
+        credits_cents: 2000
+        closing_inventory_cents: 18000
+        telemetry_derived_drop_estimate_cents: null
+      expected_output:
+        projected_table_win_loss_cents: null
+        partial_table_result_cents: -5000
+        formula: >
+          closing_inventory + credits - opening_inventory - fills
+          = 18000 + 2000 - 20000 - 5000 = -5000
+        input_completeness: partial
+        missing_inputs: [drop_estimate]
+        integrity_issues: []
+        custody_status: non_custody_estimate
+        surface_label: Partial Table Result
+        final_table_win_loss_cents: null
+
+    case_3_opener_unresolvable:
+      description: >
+        opening_inventory_cents unresolvable (no snapshot linked to session).
+        Activates integrity_issues. Both result fields suppressed.
+        Must NOT render "Partial Table Result" — this is not a partial state.
+      inputs:
+        opening_inventory_cents: null
+        fills_cents: 5000
+        credits_cents: 2000
+        closing_inventory_cents: 18000
+        telemetry_derived_drop_estimate_cents: 9000
+      expected_output:
+        projected_table_win_loss_cents: null
+        partial_table_result_cents: null
+        input_completeness: null
+        missing_inputs: []
+        integrity_issues: [missing_opening_inventory_snapshot]
+        custody_status: non_custody_estimate
+        surface_label: "(integrity disclosure — no result rendered)"
+        final_table_win_loss_cents: null
+
+    case_4_zero_opener_is_valid:
+      description: >
+        opening_inventory_cents = 0 is an explicit valid count (empty tray).
+        Must NOT trigger integrity_issues. Activates normal completeness path.
+      inputs:
+        opening_inventory_cents: 0
+        fills_cents: 5000
+        credits_cents: 2000
+        closing_inventory_cents: 18000
+        telemetry_derived_drop_estimate_cents: 9000
+      expected_output:
+        projected_table_win_loss_cents: 24000
+        formula: >
+          9000 + 18000 + 2000 - 0 - 5000 = 24000
+        partial_table_result_cents: null
+        input_completeness: complete
+        missing_inputs: []
+        integrity_issues: []
+        custody_status: non_custody_estimate
+        surface_label: Projected Win/Loss
+        final_table_win_loss_cents: null
+
+  split_brain_regression_requirements:
+    - "Bare 'Win/Loss' label must never appear on any surface in this slice — only 'Projected Win/Loss', 'Estimated Win/Loss', or 'Partial Table Result' are allowed"
+    - "final_table_win_loss_cents must always be null in this slice"
+    - "projected_table_win_loss_cents with input_completeness = complete and custody_status = non_custody_estimate is the correct all-inputs-present output"
+    - removing the telemetry_derived_drop_estimate degrades projected_table_win_loss_cents to null and activates partial_table_result_cents
+    - changing par_total_cents does not alter projected_table_win_loss_cents or partial_table_result_cents
+    - adding buy-in telemetry does not alter projected_table_win_loss_cents (telemetry is not a drop-like input)
+    - dashboard and rundown cannot compute competing table-result formulas
+    - unresolvable opener or closer populates integrity_issues and suppresses all table-result values; must never render "Partial Table Result"; zero opener or closer is a valid explicit count and does not trigger integrity_issues
+    - the same canonical projection feeds all surviving table-result consumers
+    - "custody_status must always be 'non_custody_estimate' in this slice"
+    - when the exemplar lands, legacy dashboard/metrics win-loss display (win_loss_inventory_cents, win_loss_estimated_cents, estimated_drop_buyins_cents) must be suppressed — not merely deprecated; competing visible semantics are a split-brain violation regardless of consumer migration timeline
+
+  prd_gate_patches:
+    - id: dashboard_suppression_gate
+      severity: P0
+      change: >
+        Move dashboard/metrics legacy display suppression into the exemplar PRD
+        acceptance criteria. Consumer migration can be later, but competing
+        visible semantics must be suppressed when the exemplar lands. A UI that
+        simultaneously shows win_loss_inventory_cents on the shift dashboard and
+        projected_table_win_loss_cents on the Pit Terminal Rundown is a
+        split-brain state — the exemplar delivery must close it.
+
+  optional_patches:
+    - id: module_location
+      severity: P2
+      note: >
+        services/table-context/table-inventory-accounting/ is acceptable as a
+        subdirectory, but if the project's SLAD pattern favors a single module
+        file first (as with services/table-context/rundown.ts), avoid
+        over-foldering until the service actually grows beyond one file.
+        Start with services/table-context/table-inventory-accounting.ts and
+        extract to a subdirectory only when a second file is needed.
+
+    - id: bridge_pending
+      severity: P2
+      note: >
+        "rated session with zero telemetry rows" is an imprecise MVP heuristic.
+        Prefer: "rated session with a qualifying PFT buy-in and no matching
+        table_buyin_telemetry row" — otherwise a rated slip with no buy-in
+        events (e.g. a comp or zero-amount transaction) may be falsely flagged
+        as a telemetry gap when the bridge trigger simply had nothing to bridge.
