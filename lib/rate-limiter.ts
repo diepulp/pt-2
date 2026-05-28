@@ -25,6 +25,11 @@ const rateLimitStore = new Map<string, RateLimitEntry>();
 
 // Cleanup interval (run every 5 minutes)
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+const cleanupIntervalKey = Symbol.for('pt2.rateLimiter.cleanupInterval');
+
+type RateLimiterGlobal = typeof globalThis & {
+  [cleanupIntervalKey]?: ReturnType<typeof setInterval>;
+};
 
 /**
  * Check if request should be rate limited
@@ -155,5 +160,14 @@ function cleanupExpiredEntries(): void {
 
 // Start periodic cleanup
 if (typeof setInterval !== 'undefined') {
-  setInterval(cleanupExpiredEntries, CLEANUP_INTERVAL_MS);
+  const rateLimiterGlobal = globalThis as RateLimiterGlobal;
+
+  if (!rateLimiterGlobal[cleanupIntervalKey]) {
+    const cleanupInterval = setInterval(
+      cleanupExpiredEntries,
+      CLEANUP_INTERVAL_MS,
+    );
+    cleanupInterval.unref?.();
+    rateLimiterGlobal[cleanupIntervalKey] = cleanupInterval;
+  }
 }

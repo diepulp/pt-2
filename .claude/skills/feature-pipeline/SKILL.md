@@ -191,7 +191,45 @@ Record these in the scaffold frontmatter. The classification drives Phase 2 RFC 
 **ADR-Worthy:** Identity storage strategy, parser choice, actor-binding mechanism.  
 **Not in ADR:** RLS SQL, trigger bodies, index definitions, migration steps (those go in EXEC-SPEC via build-pipeline).
 
-**Gate:** `adr-frozen` — ADR contains only context/decision/consequences, no SQL/code.
+### Phase 4 Preamble: Scope Check (required before authoring begins)
+
+Before writing any ADR, count the independent decisions listed in the RFC's "Decisions Required" section. A decision is independent if it could be accepted or rejected without affecting the others.
+
+**If more than one independent decision is detected, or if any decision contains implementation guidance (file paths, component names, suppression lists, migration steps), HARD STOP:**
+
+```
+[PHASE 4 SCOPE CHECK]
+─────────────────────────────────────────
+Detected {N} independent decisions in this phase:
+
+  Decision A: {document type} — {domain} — {one-line boundary}
+  Decision B: {document type} — {domain} — {one-line boundary}
+  ...
+
+⚠ This phase exceeds single-ADR scope. Producing multiple ADRs
+  in one pass causes context collapse and unverified content.
+
+How do you want to proceed?
+  1. Decompose — run a separate pipeline phase per decision
+  2. Scope to one decision now, defer the rest (specify which)
+  3. Collapse into one ADR (you acknowledge the scope risk)
+  4. Other — describe your preferred approach
+
+Waiting for your decision before continuing.
+```
+
+Do not proceed, spawn agents, or make a "best guess" decomposition. The pipeline's job at this gate ends at naming what it found. Sequencing and topology belong to the user.
+
+**Scope overflow heuristics (any one triggers the stop):**
+- RFC "Decisions Required" section lists more than one independently resolvable decision
+- Any decision involves a list of more than ~3 specific file paths, component names, or DTO field names — that is EXEC-SPEC content, not ADR content
+- Any decision includes SQL, migration steps, or implementation instructions — those belong in the EXEC-SPEC produced by build-pipeline
+
+Record the user's choice in `adr_scope.user_choice` before proceeding. If the user chooses option 1 or 2, update `adr_scope.active_index` to track which decision is being authored in this run.
+
+**Gate:** `adr-frozen` — Two conditions, both required:
+1. ADR contains only context/decision/consequences — no SQL, no code, no file paths, no component lists
+2. Scope check ran and `adr_scope.user_choice` is non-null (even for single-ADR phases, record `"not-applicable"`)
 
 **Coherence check (fib-bound):** ADR decisions must not depend on capabilities in `coherence.non_goals[]`. Violation → revise ADR or file Intake Amendment.
 
@@ -307,7 +345,7 @@ If no checkpoint exists:
 
 ```json
 {
-  "schema_version": 5,
+  "schema_version": 7,
   "feature_id": "csv-player-import",
   "current_phase": 3,
   "status": "in_progress",
@@ -335,6 +373,7 @@ If no checkpoint exists:
   },
   "feature_classification": {
     "primary": null,
+    "qualifier": null,
     "secondary": [],
     "selected_transport": null,
     "scope_expansion_check_ran": false,
@@ -344,6 +383,13 @@ If no checkpoint exists:
       "ADM-1": null, "ADM-2": null, "ADM-3": null, "ADM-4": null, "ADM-5": null,
       "ADM-6": null, "ADM-7": null, "ADM-8": null, "ADM-9": null, "ADM-10": null
     }
+  },
+  "adr_scope": {
+    "overflow_detected": false,
+    "decision_manifest": [],
+    "user_choice": null,
+    "active_index": 0,
+    "deferred_decisions": []
   },
   "da_review": {
     "magnitude_score": 0, "magnitude_tier": null, "magnitude_signals": [],
@@ -375,7 +421,9 @@ If no checkpoint exists:
 - **`gates`** keys: `srm-ownership`, `scaffold-approved`, `design-approved`, `sec-approved`, `adr-frozen`, `prd-approved`. No others.
 - **`artifacts`** keys: `feature_boundary`, `scaffold`, `rfc`, `sec_note`, `adr`, `prd`. No others.
 - **`feature_classification.primary`** must be set before `scaffold-approved` passes.
+- **`feature_classification.qualifier`** must be explicitly set before `scaffold-approved` passes — `null` when no sub-pattern applies, or one of `"canonical_derived_model"` (CLS-002-Q1) / `"telemetry_fact"` (CLS-004-Q1) when the Phase 1 decision tree trace reaches a qualifier condition. The field must not be absent from the checkpoint.
 - **`feature_classification.adm_checks`** all 10 values must be non-null before `prd-approved` passes.
+- **`adr_scope.user_choice`** must be non-null before `adr-frozen` passes. Valid values: `"decompose"` | `"scope-to-one"` | `"collapse-user-acknowledged"` | `"user-defined"` | `"not-applicable"` (single unambiguous decision, no overflow detected).
 - **Forbidden fields:** `exec_spec`, `dod_gates`, `exec_spec_workstreams`, `execution_phases` — build-pipeline state. If present, strip and warn.
 
 ### Migration
@@ -387,6 +435,10 @@ If no checkpoint exists:
 **v3 → v4:** Set `schema_version: 4`. Inject `fib_context` block: `mode` from `gates["fib-approved"].passed` (`"fib-bound"` if true, else `"fib-absent"`); `fib_h_ref`/`fib_s_ref` from `artifacts.fib_h`/`artifacts.fib_s`; `loaded_at` from `gates["fib-approved"].timestamp`. Remove `fib-approved` from `gates`. Remove `fib_h`/`fib_s` from `artifacts`. Shift `current_phase` by -1; clamp minimum to 0.
 
 **v4 → v5:** Set `schema_version: 5`. Inject `feature_classification` block with all null/empty defaults (see schema above). Existing checkpoints that have already passed `scaffold-approved` should backfill `primary` and `selected_transport` from the scaffold frontmatter if readable; otherwise leave null and re-run Phase 1 classification sub-step.
+
+**v5 → v6:** Set `schema_version: 6`. Inject `"qualifier": null` into `feature_classification` immediately after `"primary"`. For checkpoints that have already passed `scaffold-approved`, backfill `qualifier` from the scaffold frontmatter classification block if present; set to `null` if no qualifier was recorded. No other fields change.
+
+**v6 → v7:** Set `schema_version: 7`. Inject `adr_scope` block immediately before `da_review`: `{ "overflow_detected": false, "decision_manifest": [], "user_choice": null, "active_index": 0, "deferred_decisions": [] }`. For checkpoints that have already passed `adr-frozen`, set `user_choice` to `"not-applicable"` (scope check predates the gate). No other fields change.
 
 ---
 
@@ -439,11 +491,12 @@ If no checkpoint exists:
 - [ ] **FIB pair** loaded at startup — `fib-bound` or `fib-absent` recorded in `fib_context`
 - [ ] SRM ownership sentence written; boundary declared and table-validated against SRM
 - [ ] Scaffold cites FIB scope authority (fib-bound); 5+ non-goals, 2+ options with tradeoffs
-- [ ] **Feature Classification block present in scaffold** — `primary_classification`, `selected_transport`, scope expansion check ran; `feature_classification.primary` set in checkpoint
+- [ ] **Feature Classification block present in scaffold** — `primary_classification`, `qualifier` (or explicit `null`), `selected_transport`, scope expansion check ran; `feature_classification.primary` and `feature_classification.qualifier` both set in checkpoint
 - [ ] RFC proposes direction consistent with `selected_transport`; names ADR-worthy decisions; scope validated against FIB non-goals (fib-bound)
 - [ ] If new UI surface: Surface Classification declared; preliminary MEAS-IDs identified
 - [ ] SEC Note covers assets, threats, controls, deferred risks
-- [ ] ADR(s) contain only durable decisions (no SQL/code); validated against FIB exclusions (fib-bound)
+- [ ] **Phase 4 scope check ran** — `adr_scope.user_choice` is non-null; if overflow was detected, user's decomposition decision is recorded before authoring began
+- [ ] ADR(s) contain only durable decisions (no SQL/code, no file paths, no component lists); validated against FIB exclusions (fib-bound)
 - [ ] PRD references ADR IDs and FIB containment loop (fib-bound); testable acceptance criteria
 - [ ] **PRD includes Feature Classification and Transport Selection section** — all ADM-1 through ADM-10 checks answered; `feature_classification.adm_checks` fully populated in checkpoint
 - [ ] PRD frontmatter includes `intake_ref`/`structured_ref` (fib-bound) for build-pipeline handoff

@@ -6,7 +6,20 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
 
+const enableSentry =
+  process.env.NODE_ENV === 'production' ||
+  process.env.CI === 'true' ||
+  process.env.ENABLE_SENTRY_IN_DEV === 'true';
+
 const nextConfig: NextConfig = {
+  // Prevent webpack from bundling these packages — they use Node.js-only require()
+  // calls that fail when bundled. @prisma/instrumentation bundles its own
+  // @opentelemetry/instrumentation (ESM) which is pulled in by @sentry/node's
+  // Prisma integration.
+  serverExternalPackages: [
+    '@opentelemetry/instrumentation',
+    '@prisma/instrumentation',
+  ],
   reactCompiler: true,
   images: {
     remotePatterns: [
@@ -60,14 +73,18 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(withBundleAnalyzer(nextConfig), {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  authToken: process.env.SENTRY_AUTH_TOKEN,
+const config = withBundleAnalyzer(nextConfig);
 
-  // Clean build output
-  silent: !process.env.CI,
+export default enableSentry
+  ? withSentryConfig(config, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
 
-  // Upload source maps after build completes
-  widenClientFileUpload: true,
-});
+      // Clean build output
+      silent: !process.env.CI,
+
+      // Upload source maps after build completes
+      widenClientFileUpload: true,
+    })
+  : config;

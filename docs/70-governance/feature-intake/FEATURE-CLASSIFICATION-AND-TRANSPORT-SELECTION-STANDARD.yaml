@@ -1,9 +1,12 @@
 artifact:
   type: feature_classification_transport_standard
-  version: "1.0.0"
+  version: "1.1.0"
   status: proposed
-  source_document: docs/70-governance/FEATURE-CLASSIFICATION-AND-TRANSPORT-SELECTION-STANDARD.md
+  source_document: docs/70-governance/feature-intake/FEATURE-CLASSIFICATION-AND-TRANSPORT-SELECTION-STANDARD.md
   date: "2026-05-21"
+  last_amended: "2026-05-27"
+  amendment_notes:
+    - "1.1.0 (2026-05-27): Added CLS-002 qualifier canonical_derived_model (§3.2.1). Added CLS-004 sub-class telemetry_fact with outbox deferral rule (§3.4.1). Added telemetry adjacency temptation to minimalism_rule."
   owner: Architecture / Product Governance
   related_authorities:
     - id: ADR-040
@@ -106,6 +109,33 @@ what:
         bff_api_required: true
         rpc_required: false
         projection_store: false
+      qualifiers:
+        - id: CLS-002-Q1
+          name: canonical_derived_model
+          label: Canonical Derived Model
+          description: >
+            Applied when the Read Composition output is the canonical
+            source-of-record for downstream consumers — owning the formula,
+            surface labels, and DTO shape — but the upstream authoring or
+            inventory stores remain the authority for the input facts.
+            The projection owns derivation semantics and DTO contract only.
+          conditions:
+            - inputs_from_authoritative_tables_not_outbox_events
+            - derivation_is_algebraically_idempotent_from_canonical_inputs
+            - no_outbox_substrate_required_or_permitted
+          forbidden:
+            - treating_derived_model_as_source_of_record_for_input_facts
+            - upgrading_authority_claims_from_upstream_stores
+            - emitting_outbox_rows_for_internal_read_model_propagation
+          transport: >
+            Identical to CLS-002: BFF/API → service read layer → formula
+            derivation → DTO. Materialized cache is an EXEC optimization only,
+            not a classification-mandated baseline.
+          taxonomy_gap_note: >
+            This qualifier fills the gap between CLS-002 (which forbids
+            source-of-record status) and CLS-005 (which requires outbox
+            substrate). TIA canonization (FIB-H-TIA-CANON-001) is the
+            reference exemplar.
 
     - id: CLS-003
       name: authoring
@@ -195,11 +225,52 @@ what:
         If the feature creates a fact that another surface, projection, replay
         path, or completeness signal depends on, it is a Projection Input
         Feature and requires transactional outbox propagation.
+        Exception: if the authored fact is a telemetry fact with no proven
+        async consumer, apply the telemetry_fact qualifier (CLS-004-Q1) and
+        remain in CLS-003 Authoring with deferred outbox.
       transport_matrix:
         outbox_required: true
         bff_api_required: true
         rpc_required: true
         projection_store: false
+      qualifiers:
+        - id: CLS-004-Q1
+          name: telemetry_fact
+          label: Telemetry Fact (outbox-deferred)
+          description: >
+            Applied when the authored fact is operator-attested or
+            machine-observed telemetry whose projection dependency is not yet
+            proven. Classifies as CLS-003 Authoring with explicit outbox
+            deferral. Does not graduate to CLS-004 on adjacency to financial
+            semantics alone.
+          examples:
+            - operator_entered_average_bet_estimate
+            - grind_observational_checkpoints_without_declared_consumers
+            - rating_domain_inputs_without_proven_downstream_projections
+          outbox_deferral_rule:
+            default: local_derivation_from_source_table
+            graduation_triggers:
+              - at_least_one_async_consumer_declared_and_proven
+              - independent_projection_rebuild_path_requires_replay
+              - failure_isolation_between_bounded_contexts_required
+              - live_source_queries_demonstrably_cost_prohibitive_at_scale
+              - local_derivation_no_longer_satisfies_the_invariant
+            forbidden_graduation_reasons:
+              - adjacency_to_financial_semantics
+              - precautionary_future_proofing
+              - classification_gap_anxiety
+          classification_record_must_state:
+            - telemetry_fact: true
+            - outbox_deferred: true
+            - outbox_graduation_criteria: listed_explicitly
+            - current_transport: local_derivation
+          transport: >
+            While deferred: identical to CLS-003 — BFF/API → service → RPC
+            → authoring table. Derived aggregates (e.g. visit-level weighted
+            average) are read-time computations from the source table, not
+            outbox-propagated projections.
+          reference_investigation: >
+            docs/issues/rating-slip/avg-aggregation-problem/modeling-problem-first-rating-telemetry.md
 
     - id: CLS-005
       name: projection_consumer
@@ -492,6 +563,10 @@ how:
       - temptation: "Let's compute the total from raw stores in the UI"
         correct_response: >
           No. Render projection state and completeness honestly.
+      - temptation: "This telemetry fact is adjacent to financials — add it to the outbox"
+        correct_response: >
+          No. Adjacency is not dependency. Apply the telemetry_fact qualifier
+          (CLS-004-Q1); defer outbox until a real async consumer is proven.
 
 # ─────────────────────────────────────────────────────────────────
 # ZACHMAN: WHERE — surfaces, boundaries, bounded contexts
@@ -842,6 +917,7 @@ required_sections:
         values:
           - ui_only
           - bff_api_read
+          - read_time_derivation
           - bff_api_to_service_to_rpc
           - rpc_plus_transactional_outbox
           - outbox_consumer_to_projection

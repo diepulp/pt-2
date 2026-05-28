@@ -1,0 +1,1340 @@
+meta:
+  artifact_type: semantic_integrity_zachman_companion
+  version: "0.1.0"
+  status: active
+  purpose: >
+    Semantic topology snapshot for SIGP-002 — Table Inventory Accounting Win/Loss
+    Split-Brain Review. Maps the fractured domain across TableContext (session
+    rundown) and ShiftMetrics (shift dashboard) where two independent win/loss
+    streams share the same label, diverge in gate, formula inputs, opening
+    baseline authority, and drop semantics, while the UL Baseline confirms
+    that drop and win/loss are external/custody-authority facts PT-2 does not
+    currently own.
+  review_id: SIGP-002
+  companion_doc: SIGP-002-table-inventory-win-loss-split-brain.md
+
+review_context:
+  review_id: SIGP-002
+  review_date: "2026-05-27"
+  reviewer:
+    name: Vladimir Ivanov
+    role: Lead Architect
+  trigger:
+    type:
+      - split_brain_detection
+      - authority_ambiguity
+      - vocabulary_drift
+    description: >
+      Investigation of how the shift dashboard renders live win/loss while the
+      session rundown returns NULL for the same session revealed two structurally
+      independent computation streams both labeled "Win/Loss". Drop posture audit
+      further revealed three disconnected concepts all named "drop" with no
+      custody chain, no count-room integration, and a telemetry-buy-in substitute
+      that the UL Baseline classifies as a different fact category entirely.
+      The UL Baseline (TABLE_INVENTORY_ACCOUNTING_UBIQUITOUS_LANGUAGE_BASELINE.md)
+      confirms win/loss is an Accounting Aggregate requiring custody/count-room
+      authority PT-2 does not possess.
+  disposition:
+    status: risk_registered
+    severity: S4
+
+scope:
+  bounded_contexts:
+    - name: TableContext / SessionRundown
+      status: fractured
+      notes: >
+        rpc_compute_table_rundown and rpc_persist_table_rundown compute
+        table_win_cents using the canonical formula (closer + credits + drop -
+        opener - fills). Hard gate: returns NULL when drop_posted_at IS NULL.
+        Drop is entered manually by accounting hours after the physical soft
+        count — no automation, no custody chain integration. Labels the output
+        "Win/Loss" on the pit terminal rundown panel and close session dialog.
+        The term "drop" in this context means manually-posted-accounting-entry,
+        not custody/count-room fact.
+
+    - name: ShiftMetrics / ShiftDashboard
+      status: fractured
+      notes: >
+        rpc_shift_table_metrics (PRD-036 amended) computes two sub-streams:
+        win_loss_inventory = (closer - opener) - fills + credits;
+        win_loss_estimated = win_loss_inventory + estimated_drop_buyins.
+        No drop posting required. Opening baseline uses 4-tier cascade
+        (snapshot:prior_count → bootstrap:par_target → fallback:earliest_in_window
+        → none); par bootstrap means tables with no physical count produce
+        non-null numbers. estimated_drop_buyins comes from table_buyin_telemetry
+        (RATED_BUYIN + GRIND_BUYIN + RATED_ADJUSTMENT) — a Telemetry Fact, not
+        a Custody Fact. The telemetry bridge from player_financial_transaction
+        is not wired. Dashboard hero (HeroWinLossCompact) renders
+        win_loss_estimated_total_cents under the label "Win/Loss" with an ESTIMATE
+        badge, but no authority envelope, no completeness declaration, no
+        distinction from accounting truth.
+
+    - name: DropCustody (table_drop_event)
+      status: unstable
+      notes: >
+        table_drop_event records physical box custody transfer (removed_at
+        timestamp). drop_custody_present boolean on shift metrics indicates
+        a drop event exists in the window. Does NOT populate drop_total_cents
+        on table_session. No dollar amount, no count-room link. Custody chain
+        exists in schema but is disconnected from the accounting computation path.
+
+  excluded_contexts:
+    - PFT (player_financial_transaction) — not involved in table accounting; UL
+      Baseline §10.1 prohibits use as surrogate.
+    - MTL / Compliance — separate authority domain.
+    - Loyalty — separate projection consumer.
+
+  related_artifacts:
+    adrs:
+      - ADR-027  # Table bank mode, need_total_cents, dual-stream win/loss
+      - ADR-028  # Table availability gate, drop_posted_at column
+    prds:
+      - PRD-038  # Rundown persistence schema and inline close
+      - PRD-038A # Close governance, force-close, has_unresolved_items
+      - PRD-036  # Shift metrics opening baseline cascade, sign-convention fix
+    exec_specs:
+      - EXEC-038A  # Rundown implementation execution spec
+    fibs: []
+    rollout_maps: []
+    risk_register_entries:
+      - SRR-002-001  # Win/Loss label collision (S4)
+      - SRR-002-002  # Drop semantic overload (S3)
+      - SRR-002-003  # Opening baseline authority divergence (S3)
+      - SRR-002-004  # Estimated drop = buy-ins misclassification (S4)
+
+# ============================================================================
+# ZACHMAN DIMENSIONS
+# ============================================================================
+
+zachman:
+
+  # --------------------------------------------------------------------------
+  # WHAT — Semantic entities and truth-bearing concepts
+  # --------------------------------------------------------------------------
+  what:
+    description: >
+      Facts, records, and computed values in the table inventory accounting
+      domain. Mapped against UL Baseline categories.
+
+    entities:
+
+      - name: table_session.drop_total_cents
+        ul_category: "Custody / Count-Room Fact (misclassified as such)"
+        category: authority_fact  # claimed; actually telemetry/manual in practice
+        canonical_owner: TableContext / accounting staff
+        authoritative: false
+        mutable: true
+        append_only: false
+        correction_model: mutate
+        source_of_truth: manual entry via rpc_post_table_drop_total
+        competing_sources:
+          - table_drop_event.removed_at (custody record, no dollar amount)
+          - table_buyin_telemetry (buy-in totals used as proxy in shift metrics)
+        consumers:
+          - rpc_compute_table_rundown
+          - rpc_persist_table_rundown
+          - _persist_inline_rundown (called by close/force-close RPCs)
+        known_fractures:
+          - >
+            Named "drop" but sourced from manual accounting entry, not
+            count-room/custody chain. No automated path from table_drop_event
+            (physical) to drop_total_cents (dollar). Disconnect means the
+            custody event and the dollar amount are independently managed and
+            can permanently disagree.
+          - >
+            UL Baseline §5.6 classifies Drop as an External Authority fact.
+            PT-2 treats it as an authored value with no custody provenance.
+
+      - name: table_rundown_report.table_win_cents
+        ul_category: "Accounting Aggregate (projected; not final authority)"
+        category: projection_artifact
+        canonical_owner: TableContext / SessionRundown
+        authoritative: false
+        mutable: true
+        append_only: false
+        correction_model: supersede
+        source_of_truth: >
+          Computed inline at session close from: closer + credits + drop
+          - opener - fills. Gate: NULL when drop_posted_at IS NULL.
+        competing_sources:
+          - win_loss_inventory_cents (ShiftMetrics, same period, different formula inputs)
+          - win_loss_estimated_cents (ShiftMetrics, adds telemetry buy-ins)
+        consumers:
+          - pit terminal rundown panel
+          - close session dialog
+          - table_rundown_report (persisted)
+          - EXEC-065 shift report (downstream)
+        known_fractures:
+          - >
+            Labeled "Win/Loss" on pit terminal. UL Baseline: win/loss is an
+            Accounting Aggregate requiring all custody/count-room inputs.
+            drop_total_cents is manually entered, not custody-authenticated.
+            The number is a projection, not final accounting truth.
+          - >
+            NULL during live session (drop not posted) while dashboard shows
+            a non-null estimate for the same table — same label, opposite
+            nullability signal.
+
+      - name: win_loss_inventory_cents (rpc_shift_table_metrics output)
+        ul_category: "Accounting Aggregate — inventory projection only"
+        category: projection_artifact
+        canonical_owner: ShiftMetrics
+        authoritative: false
+        mutable: false  # recomputed on each RPC call; not persisted
+        append_only: false
+        correction_model: recompute
+        source_of_truth: >
+          (closer - opener) - fills + credits. Requires both opening baseline
+          and closing snapshot. No drop component.
+        competing_sources:
+          - table_win_cents (includes drop; different gate)
+        consumers:
+          - ShiftDashboardV3 (center metrics table, pit table)
+          - aggregated into pit/casino rollups
+        known_fractures:
+          - >
+            Formula omits drop entirely. Represents tray delta adjusted for
+            fills/credits — a chips-in-tray movement measurement, not an
+            accounting result. Rendered alongside win_loss_estimated under
+            "Win/Loss" framing in the metrics table.
+          - >
+            Opening baseline may be par_total_cents (bootstrap:par_target) for
+            tables with no pre-window snapshot. A number derived from a
+            configuration target is not an inventory count.
+
+      - name: win_loss_estimated_cents (rpc_shift_table_metrics output)
+        ul_category: "Accounting Aggregate — inventory + telemetry projection"
+        category: projection_artifact
+        canonical_owner: ShiftMetrics
+        authoritative: false
+        mutable: false
+        append_only: false
+        correction_model: recompute
+        source_of_truth: >
+          (closer - opener) - fills + credits + estimated_drop_buyins.
+          estimated_drop_buyins = sum(table_buyin_telemetry) in window.
+          Telemetry bridge not wired; usually equals win_loss_inventory_cents.
+        competing_sources:
+          - table_win_cents (different gate, different drop definition)
+        consumers:
+          - HeroWinLossCompact (shift dashboard left rail hero — primary user-visible surface)
+        known_fractures:
+          - >
+            Dashboard hero renders this as "Win/Loss". The "estimated_drop"
+            component is telemetry buy-ins (Telemetry Fact per UL Baseline §5.2),
+            not counted drop (Custody Fact per UL Baseline §5.6). These are
+            categorically different. UL Baseline §10.4 explicitly forbids calling
+            estimated cash-in "drop".
+          - >
+            Because the telemetry bridge is not wired, estimated_drop_buyins_cents
+            is effectively zero in most sessions. The "estimated" label on the
+            metric grade badge does not communicate this structural gap.
+          - >
+            Par bootstrap opening baseline means the formula can produce a
+            non-null result with no physical inventory count on either side.
+
+      - name: estimated_drop_buyins_cents (rpc_shift_table_metrics output)
+        ul_category: "Telemetry Fact (mislabeled as drop substitute)"
+        category: telemetry_fact
+        canonical_owner: ShiftMetrics / table_buyin_telemetry
+        authoritative: false
+        mutable: false
+        append_only: false
+        correction_model: recompute
+        source_of_truth: table_buyin_telemetry.amount_cents (sum in window)
+        competing_sources:
+          - drop_total_cents (actual posted accounting entry — different fact)
+        consumers:
+          - win_loss_estimated_cents formula
+          - pit/casino rollup estimated_drop_*_total_cents
+        known_fractures:
+          - >
+            Named "estimated_drop" but represents buy-in telemetry, not drop.
+            UL Baseline §10.4: "Do not call estimated cash-in 'drop'."
+            This naming error propagates into every surface consuming
+            estimated_drop_rated_cents / grind_cents / buyins_cents.
+          - >
+            No automated bridge from player_financial_transaction or
+            rating-slip buy-ins to table_buyin_telemetry. The value is zero
+            for most sessions, making the "estimated" stream identical to
+            the "inventory" stream in practice. The difference is a dead
+            formula path.
+
+      - name: table_session.need_total_cents
+        ul_category: "Inventory Control Signal — par snapshot at open"
+        category: surface_value
+        canonical_owner: TableContext
+        authoritative: false
+        mutable: false  # static snapshot; captured once at session open
+        append_only: false
+        correction_model: supersede
+        source_of_truth: >
+          gaming_table.par_total_cents snapshotted at rpc_open_table_session.
+          Static for session lifetime.
+        competing_sources: []
+        consumers:
+          - TableRundownDTO (returned by rpc_compute_table_rundown)
+          - pit terminal rundown panel (displayed alongside win/loss)
+        known_fractures:
+          - >
+            Labeled "need" but represents the configured par target, not a live
+            need signal. Live need = par - current_inventory; this field is par
+            only. No current_inventory is stored on the session. The
+            "need" concept described in UL Baseline §5.5 is a derived operational
+            signal; need_total_cents on table_session is only one input.
+          - >
+            Marked advisory in migration comments
+            (20260117153430_adr027_table_bank_mode_schema.sql:36).
+            Bank mode enum (INVENTORY_COUNT / IMPREST_TO_PAR) is informational;
+            close semantics do not change based on bank mode in current implementation.
+
+      - name: table_drop_event (custody record)
+        ul_category: "Custody / Count-Room Fact — physical event only"
+        category: lifecycle_signal
+        canonical_owner: DropCustody context
+        authoritative: true  # for physical custody transfer only
+        mutable: false
+        append_only: true
+        correction_model: append_adjustment
+        source_of_truth: physical drop box removal; removed_at timestamp
+        competing_sources:
+          - drop_total_cents (dollar amount — separate, disconnected)
+        consumers:
+          - drop_custody_present boolean in shift metrics
+          - drop_event_id FK on table_session and table_rundown_report
+        known_fractures:
+          - >
+            Physical custody event (box removed) is disconnected from dollar
+            amount (drop_total_cents). drop_custody_present = TRUE means the
+            box was removed; it does NOT mean a dollar amount was counted or
+            posted. The two facts share the name "drop" but represent
+            categorically different operations in different workflows.
+
+  # --------------------------------------------------------------------------
+  # HOW — Workflows, transformations, computation paths
+  # --------------------------------------------------------------------------
+  how:
+    description: >
+      The two independent win/loss computation workflows and the drop posting
+      workflow, which is the missing bridge between them.
+
+    workflows:
+
+      - name: Session Rundown Computation
+        primary_actor: pit_boss (triggers close); accounting (posts drop)
+        trigger: rpc_close_table_session or rpc_force_close_table_session
+        steps:
+          - step: 1
+            action: >
+              Drop total manually entered by accounting via
+              rpc_post_table_drop_total (sets drop_total_cents + drop_posted_at).
+              Timing: hours after physical drop in real casino operations.
+            resulting_state: table_session.drop_posted_at IS NOT NULL
+          - step: 2
+            action: >
+              Pit boss initiates close. rpc_close_table_session calls
+              _persist_inline_rundown which computes:
+              table_win_cents = closer + credits + drop - opener - fills.
+              Gate check: if drop_posted_at IS NULL → table_win_cents = NULL.
+            resulting_state: table_rundown_report row UPSERT'd; session CLOSED
+          - step: 3
+            action: >
+              Optional explicit rpc_persist_table_rundown or rpc_finalize_rundown.
+              Finalization stamps finalized_at; blocks future mutations.
+            resulting_state: table_rundown_report.finalized_at set
+        propagation:
+          emits: []  # no outbox events from rundown computation in current impl
+          consumes:
+            - table_inventory_snapshot (OPENING / CLOSING types; session-linked)
+            - table_session.fills_total_cents / credits_total_cents
+            - table_session.drop_total_cents (manually posted)
+        replayable: true
+        deterministic: true
+        known_fractures:
+          - >
+            Step 1 (drop posting) is decoupled from the physical custody
+            event (table_drop_event). A session can be CLOSED with
+            drop_custody_present=TRUE and table_win_cents=NULL if accounting
+            never posts the dollar amount. No workflow enforces sequencing.
+          - >
+            Opening snapshot lookup uses both session_id FK and
+            opening_inventory_snapshot_id FK as fallback. Dual-path lookup
+            creates ambiguity about which snapshot is authoritative.
+
+      - name: Shift Dashboard Win/Loss Computation
+        primary_actor: system (30s poll from HeroWinLossCompact / metrics table)
+        trigger: useShiftDashboardSummary hook; time-window parameter
+        steps:
+          - step: 1
+            action: >
+              rpc_shift_table_metrics called with p_window_start / p_window_end.
+              Opening baseline resolved via 4-tier cascade per PRD-036:
+              A/B: latest pre-window snapshot (chipset_total_cents);
+              C: gaming_table.par_total_cents bootstrap;
+              D: earliest in-window snapshot;
+              E: NULL (no baseline).
+            resulting_state: opening_bankroll_cents + opening_source resolved
+          - step: 2
+            action: >
+              Closing snapshot: latest snapshot <= p_window_end.
+              Fills/credits aggregated within window.
+              table_buyin_telemetry aggregated within window (rated + grind).
+            resulting_state: all formula inputs assembled
+          - step: 3
+            action: >
+              win_loss_inventory = (closer - opener) - fills + credits.
+              win_loss_estimated = win_loss_inventory + estimated_drop_buyins.
+              NULL only if opener IS NULL or closing snapshot missing.
+            resulting_state: metrics row emitted; not persisted
+          - step: 4
+            action: >
+              Client-side aggregation: pit rollup (aggregatePitMetrics) and
+              casino rollup (aggregateCasinoMetrics) via null-aware sum.
+              HeroWinLossCompact renders win_loss_estimated_total_cents.
+            resulting_state: "Win/Loss" displayed on dashboard hero
+        propagation:
+          emits: []
+          consumes:
+            - table_inventory_snapshot (by table_id and created_at window — NOT session-linked)
+            - table_fill / table_credit (by table_id and created_at window)
+            - table_buyin_telemetry (by table_id and occurred_at window)
+            - gaming_table.par_total_cents (Source C bootstrap)
+        replayable: true
+        deterministic: false  # Source C bootstrap uses live par_total_cents; Source D uses earliest in-window
+        known_fractures:
+          - >
+            Not deterministic when Source C (par bootstrap) is used: par_total_cents
+            can be updated at any time, changing historical window results.
+          - >
+            estimated_drop_buyins is zero in most sessions (no telemetry bridge).
+            The "estimated" sub-stream is a dead path for most tables.
+          - >
+            Time-window query is NOT session-scoped. Snapshot lookup by
+            (table_id, created_at) can include snapshots from prior or subsequent
+            sessions, especially near session boundaries.
+
+      - name: Drop Posting (Missing Bridge)
+        primary_actor: accounting staff
+        trigger: manual entry; no system-initiated workflow
+        steps:
+          - step: 1
+            action: >
+              Physical drop: table_drop_event recorded (box removed, chain of custody).
+              Dollar amount NOT derived from this event.
+            resulting_state: drop_custody_present = TRUE in shift metrics window
+          - step: 2
+            action: >
+              Hours later: count room opens box, counts cash.
+              No automated import — no count room integration exists.
+            resulting_state: external; no PT-2 state change
+          - step: 3
+            action: >
+              Accounting staff manually enters dollar amount via
+              rpc_post_table_drop_total(p_session_id, p_drop_total_cents).
+            resulting_state: table_session.drop_total_cents set; drop_posted_at set
+        propagation:
+          emits: []
+          consumes: []
+        replayable: false
+        deterministic: false
+        known_fractures:
+          - >
+            Physical custody event (step 1) and dollar amount (step 3) are
+            managed in separate, non-linked workflows. A session can be CLOSED
+            with a drop event but without a posted amount.
+          - >
+            No count-room integration: drop dollar amount is entirely trust-based
+            manual entry. No verification, no audit trail beyond the RPC call.
+          - >
+            Posting to table_session does NOT update shift metrics computation.
+            After drop is posted, the dashboard estimate does NOT incorporate it;
+            the session rundown will, but only on explicit recompute or close.
+            The two streams never reconcile automatically.
+
+  # --------------------------------------------------------------------------
+  # WHERE — Storage, surface, and propagation boundaries
+  # --------------------------------------------------------------------------
+  where:
+    description: >
+      Authoring stores, projection boundaries, surfaces that render win/loss,
+      and the absent propagation bridge between streams.
+
+    boundaries:
+      authoring_stores:
+        - name: table_session
+          owned_by: TableContext
+          forbidden_writes_from:
+            - ShiftMetrics
+            - direct INSERT/UPDATE/DELETE (blocked by RLS; all writes via SECURITY DEFINER RPCs)
+
+        - name: table_rundown_report
+          owned_by: TableContext / SessionRundown
+          forbidden_writes_from:
+            - ShiftMetrics
+            - direct INSERT/UPDATE/DELETE (RLS-blocked)
+
+        - name: table_inventory_snapshot
+          owned_by: TableContext
+          forbidden_writes_from:
+            - direct INSERT/UPDATE/DELETE (RLS-blocked)
+
+        - name: table_buyin_telemetry
+          owned_by: TableContext / telemetry path
+          forbidden_writes_from:
+            - rpc_shift_table_metrics (reads only)
+            - player_financial_transaction trigger (NOT wired — structural gap)
+
+        - name: table_drop_event
+          owned_by: DropCustody
+          forbidden_writes_from:
+            - rpc_post_table_drop_total (separate RPC; writes to table_session not here)
+
+      projections:
+        - name: SessionRundownProjection (table_rundown_report)
+          derived_from:
+            - table_session (drop_total_cents, fills_total_cents, credits_total_cents)
+            - table_inventory_snapshot (OPENING + CLOSING types)
+          rebuildable: true
+          lifecycle_window: session close → finalization
+
+        - name: ShiftMetricsDashboard (in-memory; not persisted)
+          derived_from:
+            - table_inventory_snapshot (by time window, NOT session-scoped)
+            - table_fill / table_credit (by time window)
+            - table_buyin_telemetry (by time window)
+            - gaming_table.par_total_cents (Source C bootstrap)
+          rebuildable: true
+          lifecycle_window: rolling time window (default 8h, user-adjustable)
+
+      surfaces:
+        - name: HeroWinLossCompact (shift dashboard left rail)
+          type: dashboard
+          renders:
+            - entity: win_loss_estimated_total_cents
+              authority_visible: false  # ESTIMATE badge present; no authority/completeness envelope
+              completeness_visible: false
+          known_risks:
+            - >
+              SRR-002-001: Renders Accounting Aggregate label ("Win/Loss") over
+              an inventory + telemetry projection. ESTIMATE badge is present
+              but does not communicate: (a) drop not included, (b) opening may
+              be par bootstrap, (c) telemetry bridge not wired.
+            - >
+              SRR-002-004: When tablesMissingBaselineCount > 0, renders amber
+              "X of N tables missing baseline" but does not distinguish between
+              missing snapshot vs par-bootstrap substituted vs in-window fallback.
+
+        - name: Metrics Table (shift dashboard center panel)
+          type: dashboard
+          renders:
+            - entity: win_loss_inventory_cents (per table)
+              authority_visible: false
+              completeness_visible: false
+            - entity: win_loss_estimated_cents (per table)
+              authority_visible: false
+              completeness_visible: false
+          known_risks:
+            - >
+              Both streams rendered side-by-side without explaining the difference.
+              win_loss_inventory omits drop entirely. win_loss_estimated adds
+              telemetry buy-ins. Neither surfaces authority class or input sources.
+
+        - name: Pit Terminal Rundown Panel / Close Session Dialog
+          type: ui
+          renders:
+            - entity: table_win_cents (from rpc_compute_table_rundown)
+              authority_visible: false
+              completeness_visible: false
+          known_risks:
+            - >
+              Renders NULL as a blank or loading state when drop not posted.
+              No explanation that NULL means "accounting is waiting for count-room
+              entry" vs "data unavailable" vs "not yet computed." Operators
+              closing a session see no win/loss and may not understand why.
+            - >
+              When drop is posted and a number appears, it is labeled "Win/Loss"
+              without communicating that drop_total_cents is a manual entry, not
+              a count-room/custody-authenticated value.
+
+      propagation_paths:
+        - source: table_session (drop_total_cents posted)
+          destination: ShiftMetrics / rpc_shift_table_metrics
+          transport: NONE — no propagation path exists
+          preserves_authority: false
+          preserves_identity: false
+          replay_supported: false
+          notes: >
+            After accounting posts a drop amount, the shift dashboard does not
+            receive it. The two streams never reconcile. This is the structural
+            root of the split-brain behavior.
+
+        - source: table_rundown_report (persisted at close)
+          destination: ShiftMetrics dashboard
+          transport: NONE — shift metrics reads raw tables, not rundown report
+          preserves_authority: false
+          preserves_identity: false
+          replay_supported: false
+          notes: >
+            The persisted rundown result is never consumed by the shift dashboard.
+            Dashboard recomputes from raw tables on every call regardless of
+            whether a session has been closed and a rundown persisted.
+
+        - source: player_financial_transaction (buy-in rows)
+          destination: table_buyin_telemetry
+          transport: NONE — bridge not implemented
+          preserves_authority: false
+          preserves_identity: false
+          replay_supported: false
+          notes: >
+            Structural gap documented in TABLE-SESSION-LIFECYCLE-IMPLEMENTATION-PRECIS.md §6.4.
+            Without this bridge, estimated_drop_buyins_cents is zero for rated sessions.
+
+  # --------------------------------------------------------------------------
+  # WHO — Actors, ownership, bounded context responsibility
+  # --------------------------------------------------------------------------
+  who:
+    description: >
+      Actors whose actions govern the win/loss computation lifecycle, and the
+      bounded context ownership of each computation stream.
+
+    actors:
+      - actor: pit_boss
+        operational_role: Table supervisor; opens/closes sessions; triggers rundown
+        owns:
+          - lifecycle  # session open/close/rundown transitions
+        touches_contexts:
+          - TableContext
+        inferred_by_system: false
+
+      - actor: accounting_staff
+        operational_role: Posts drop total after count-room soft count
+        owns:
+          - authority  # drop_total_cents; the only path to non-NULL table_win_cents
+        touches_contexts:
+          - TableContext (via rpc_post_table_drop_total)
+        inferred_by_system: false
+        notes: >
+          This actor is the blocking dependency for Stream 1 (session rundown).
+          They are external to the real-time shift workflow. In real casino
+          operations, accounting staff work in the count room 4-8 hours after
+          the physical drop. Stream 1 will show NULL for most of a shift's
+          operational window.
+
+      - actor: count_room (external)
+        operational_role: Physical soft count; produces the authoritative drop dollar amount
+        owns:
+          - authority  # true drop authority; external to PT-2
+        touches_contexts: []  # no PT-2 integration
+        inferred_by_system: false
+        notes: >
+          UL Baseline §5.6: Drop is a Custody / Count-Room Fact. The count
+          room is the authority owner. PT-2 has no integration. drop_total_cents
+          is a manually entered proxy, not count-room-authenticated.
+
+      - actor: system (polling / RPC)
+        operational_role: Computes and renders shift metrics on 30s interval
+        owns:
+          - projection  # Stream 2 (shift dashboard); computed, not authored
+        touches_contexts:
+          - ShiftMetrics
+        inferred_by_system: true
+
+    bounded_context_owners:
+      - context: SessionRundown (table_win_cents)
+        owning_service: TableContextService
+        lifecycle_owner: pit_boss (session transitions)
+        authority_owner: accounting_staff (drop entry) / count_room (true authority)
+        projection_owner: TableContextService (_persist_inline_rundown)
+        competing_owners:
+          - ShiftMetrics (computes independently; not authoritative)
+
+      - context: ShiftDashboard (win_loss_estimated_cents)
+        owning_service: ShiftMetrics service (getShiftDashboardSummary)
+        lifecycle_owner: system (rolling window; no lifecycle concept)
+        authority_owner: NONE — all inputs are projected; no authority claim
+        projection_owner: rpc_shift_table_metrics
+        competing_owners:
+          - SessionRundown (for the same operational period; different formula; different gate)
+
+  # --------------------------------------------------------------------------
+  # WHEN — Lifecycle windows, completeness, ordering
+  # --------------------------------------------------------------------------
+  when:
+    description: >
+      The temporal architecture of the two streams diverges structurally.
+      Stream 1 is session-scoped and gated on an event (drop post) that occurs
+      hours into or after the session. Stream 2 is time-window-scoped and
+      produces a value immediately from shift start.
+
+    lifecycle:
+      states:
+        - name: session.ACTIVE (no drop posted)
+          entered_by: rpc_open_table_session
+          exited_by: rpc_start_table_rundown or rpc_close_table_session
+          canonical_owner: TableContext
+          win_loss_stream_1: NULL (table_win_cents)
+          win_loss_stream_2: non-null if opening baseline resolvable
+
+        - name: session.RUNDOWN (no drop posted)
+          entered_by: rpc_start_table_rundown
+          exited_by: rpc_close_table_session or rpc_force_close_table_session
+          canonical_owner: TableContext
+          win_loss_stream_1: NULL (table_win_cents)
+          win_loss_stream_2: non-null (continues live update)
+
+        - name: drop.POSTED (drop_posted_at IS NOT NULL)
+          entered_by: rpc_post_table_drop_total
+          exited_by: N/A (immutable once set in practice; no correction RPC)
+          canonical_owner: TableContext / accounting_staff
+          win_loss_stream_1: non-null after next rundown compute
+          win_loss_stream_2: unchanged — does not consume drop_total_cents
+
+        - name: session.CLOSED (rundown persisted)
+          entered_by: rpc_close_table_session or rpc_force_close_table_session
+          exited_by: finalization
+          canonical_owner: TableContext
+          win_loss_stream_1: non-null IF drop was posted before close; NULL otherwise
+          win_loss_stream_2: continues to recompute from raw tables on each poll
+
+        - name: report.FINALIZED
+          entered_by: rpc_finalize_rundown
+          exited_by: N/A (terminal)
+          canonical_owner: TableContext
+          win_loss_stream_1: frozen in table_rundown_report.table_win_cents
+          win_loss_stream_2: still recomputes; ignores finalization
+
+      transitions:
+        - from: drop not posted
+          to: drop posted
+          authoritative_trigger: accounting_staff calls rpc_post_table_drop_total
+          replay_sensitive: false
+          notes: >
+            No system event emitted. No shift-metrics invalidation triggered.
+            Stream 2 does not respond to this transition.
+
+      completeness_windows:
+        - surface: HeroWinLossCompact (Stream 2)
+          complete_when: >
+            opening baseline = snapshot:prior_count AND closing snapshot exists
+            AND telemetry bridge wired (currently never)
+          partial_when: >
+            opening baseline = bootstrap:par_target OR fallback:earliest_in_window
+            (most tables in practice if opening snapshot not explicitly taken)
+          unknown_when: >
+            opening_source = 'none' (opening_bankroll_cents IS NULL)
+
+        - surface: Pit Terminal Rundown (Stream 1)
+          complete_when: >
+            drop_posted_at IS NOT NULL AND opening snapshot exists AND closing
+            snapshot exists
+          partial_when: >
+            drop posted but snapshots missing (formula uses COALESCE to 0)
+          unknown_when: >
+            drop_posted_at IS NULL — renders as NULL; operator sees no number
+
+      ordering_constraints:
+        - aggregate: SessionRundown
+          ordering_key: >
+            Drop must be posted BEFORE close for table_win_cents to be non-null
+            at close time. If drop is posted after close, rundown must be
+            explicitly recomputed via rpc_persist_table_rundown.
+          deterministic: false
+          notes: >
+            No system enforcement of drop-before-close ordering. Force-close
+            bypasses all artifact checks including drop requirement.
+
+  # --------------------------------------------------------------------------
+  # WHY — Operational meaning, intent, interpretation risk
+  # --------------------------------------------------------------------------
+  why:
+    description: >
+      The domain model reflects an architectural decision to show "something"
+      to operators during an active shift before accounting inputs are available.
+      The fracture is the gap between that legitimate operational intent and
+      the semantics of the "Win/Loss" label, which implies accounting authority
+      the system does not possess.
+
+    operational_meaning:
+      - concept: "Win/Loss" (shift dashboard hero)
+        operator_interpretation: >
+          How much money the casino won or lost this shift so far.
+          Operators read this as the financial result of the current shift.
+        system_intent: >
+          Operational estimate of tray delta adjusted for fills/credits plus
+          buy-in telemetry (usually zero). A floor-visibility heuristic,
+          not an accounting result.
+        misuse_risk: >
+          Operators may use this number in shift briefings, verbal reports, or
+          pre-shift handoffs as if it were the actual financial result. This
+          is incorrect: it excludes drop, may use par bootstrap as opening
+          baseline, and has no custody authority.
+        overclaim_risk: >
+          The ESTIMATE badge is present but does not communicate category:
+          it signals "not finalized" rather than "not accounting truth."
+          Operators trained on casino accounting may not distinguish these.
+        known_misreadings:
+          - "The shift made $45K" (reading estimate as result)
+          - "Table 3 is up $8K" (reading inventory projection as win/loss)
+
+      - concept: "Win/Loss" (pit terminal rundown panel)
+        operator_interpretation: >
+          The official table result for this session, used to close the table.
+        system_intent: >
+          Formula result requiring manually-posted drop. NULL means accounting
+          has not entered the count-room number yet.
+        misuse_risk: >
+          NULL is opaque. Pit bosses may not know why the number is missing
+          or who is responsible for providing it. May proceed with force-close
+          which sets requires_reconciliation=TRUE but still produces no win/loss.
+        overclaim_risk: >
+          When a number appears (drop posted), it is presented as the table
+          result without disclosing that drop_total_cents is a manual entry
+          rather than a count-room-authenticated figure.
+        known_misreadings:
+          - "Can't close the table, win/loss is blank" (cause unknown to operator)
+          - Treating posted drop as authoritative when it is manual entry
+
+      - concept: "Drop" (three uses)
+        operator_interpretation: >
+          Cash in the drop box, counted by the count room. This is the
+          standard casino accounting meaning.
+        system_intent:
+          table_drop_event: Physical box removed (custody event, no dollar)
+          drop_total_cents: Manually entered accounting figure
+          estimated_drop_buyins: Buy-in telemetry sum (not drop at all)
+        misuse_risk: >
+          Anyone reading "estimated drop" in the dashboard metrics table
+          may interpret it as a projection of the drop box contents.
+          It is actually a buy-in observation total — a completely different
+          fact category.
+        overclaim_risk: >
+          The "drop_custody_present" boolean in shift metrics conflates
+          box-removed (physical event) with dollar-counted (accounting event).
+        known_misreadings:
+          - "Drop is $22K" reading estimated_drop_buyins as count-room figure
+          - "Drop custody present" meaning dollar amount available
+
+      - concept: Need (need_total_cents)
+        operator_interpretation: >
+          How many chips does this table need? Signal to request a fill.
+        system_intent: >
+          Snapshot of gaming_table.par_total_cents taken at session open.
+          Static; does not update as fills/credits occur. Not a live
+          need signal.
+        misuse_risk: >
+          Displaying need_total_cents as current need is incorrect after the
+          first fill or credit of the session. The value is stale from session
+          open.
+        overclaim_risk: Low
+        known_misreadings:
+          - Treating session-open par snapshot as a live fill-recommendation signal
+
+    trust_boundaries:
+      - boundary: win_loss_estimated_cents (dashboard) vs count-room result
+        false_authority_risk: HIGH
+        reconciliation_risk: HIGH
+        compliance_risk: MEDIUM
+        projection_risk: HIGH
+        notes: >
+          Dashboard win/loss will diverge from count-room result because:
+          (a) drop excluded or substituted with buy-in telemetry;
+          (b) opening baseline may be par target, not physical count;
+          (c) closing snapshot may not align with session-close physical count.
+          Divergence is expected and structural, not a bug.
+
+      - boundary: drop_total_cents (manual entry) vs count-room authority
+        false_authority_risk: HIGH
+        reconciliation_risk: HIGH
+        compliance_risk: MEDIUM
+        projection_risk: LOW
+        notes: >
+          No custody chain authenticates drop_total_cents. Incorrect manual
+          entry cannot be detected by the system. No correction RPC exists.
+          UL Baseline §5.6 classifies this as an External Authority fact;
+          PT-2's manual entry path does not satisfy that classification.
+
+    semantic_constraints:
+      - rule: >
+          No surface may render a win/loss-like value without declaring:
+          input sources, drop presence/absence, opening baseline source,
+          completeness, and authority class.
+        rationale: UL Baseline §9 surface rendering requirements.
+        forbidden_behaviors:
+          - Rendering win/loss without authority/completeness envelope
+          - Labeling telemetry buy-in total as "estimated drop"
+          - Using NULL to mean both "unknown" and "drop not posted"
+          - Rendering par bootstrap result without disclosing input source
+
+      - rule: >
+          Do not equate table_buyin_telemetry sum with drop.
+        rationale: UL Baseline §10.4 — buy-ins ≠ counted drop.
+        forbidden_behaviors:
+          - Using estimated_drop_buyins as a drop substitute without explicit label
+          - Including telemetry in win/loss without declaring source/authority
+
+      - rule: >
+          Do not close a win/loss computation loop between the two streams.
+        rationale: >
+          The two streams serve different operational purposes. Merging them
+          without a resolved authority model would produce a third,
+          worse-defined number.
+        forbidden_behaviors:
+          - Writing shift metrics results back to table_session or table_rundown_report
+          - Consuming table_rundown_report in rpc_shift_table_metrics
+
+# ============================================================================
+# DIAGNOSTICS
+# ============================================================================
+
+diagnostics:
+  authority_audit:
+    status: fractured
+    findings:
+      - >
+        table_win_cents: labeled win/loss but requires manually-entered drop_total_cents
+        that has no custody chain. The value is a projection over manual inputs,
+        not an accounting authority fact.
+      - >
+        win_loss_estimated_cents: Accounting Aggregate label over an inventory
+        projection. No drop component in practice (telemetry bridge not wired).
+        Authority class not communicated on surface.
+      - >
+        drop_total_cents: Named as if it is a Custody Fact. It is a manually
+        authored value with no count-room authentication. UL Baseline conflict.
+      - >
+        estimated_drop_buyins: Named as drop estimate. Is actually a Telemetry
+        Fact (buy-in sum). UL Baseline §10.4 explicit prohibition.
+
+  aggregate_ownership_audit:
+    status: fractured
+    findings:
+      - >
+        Both TableContext/SessionRundown and ShiftMetrics/Dashboard compute
+        "win/loss" for the same table over overlapping time periods using
+        independent algorithms, different gates, and different opening baseline
+        strategies. Neither consumes the other's output. No canonical owner
+        declared.
+      - >
+        table_rundown_report (persisted, finalized) is never consumed by
+        the shift dashboard. The authoritative final value is invisible to
+        the primary win/loss surface operators watch during a shift.
+
+  propagation_integrity_audit:
+    status: fractured
+    findings:
+      - >
+        No events propagate between streams. Drop posting does not trigger
+        shift metrics invalidation or re-projection. Session close does not
+        trigger dashboard update beyond normal polling.
+      - >
+        The telemetry bridge (player_financial_transaction → table_buyin_telemetry)
+        is absent. The "estimated" stream is structurally dead for rated sessions.
+
+  surface_truthfulness_audit:
+    status: fractured
+    findings:
+      - >
+        HeroWinLossCompact renders win_loss_estimated_total_cents as "Win/Loss"
+        with ESTIMATE badge. ESTIMATE communicates quality degradation but not
+        category: the value is an inventory projection, not a degraded
+        accounting result. Operators are not told drop is excluded.
+      - >
+        Missing completeness envelope: no rendering of which tables used par
+        bootstrap opening, whether telemetry bridge is populated, or whether
+        the number would change materially when drop is posted.
+      - >
+        Pit terminal rundown: NULL rendered without context. Operators cannot
+        distinguish "drop not posted yet" from "computation error" from
+        "session has no snapshots."
+
+  vocabulary_integrity_audit:
+    status: fractured
+    findings:
+      - >
+        "drop" used for three distinct concepts: (1) table_drop_event (physical
+        custody event), (2) drop_total_cents (manual dollar entry),
+        (3) estimated_drop_buyins (telemetry buy-in sum). All three labeled
+        with "drop" in code, schema comments, and surface text.
+      - >
+        "win/loss" used for: (1) session rundown formula requiring posted drop
+        (NULL during active shift), (2) inventory-only tray delta (no drop),
+        (3) inventory + telemetry buy-ins (drop substitute). Same label on
+        three different numbers simultaneously visible in the same UI session.
+      - >
+        "need" used for: (1) par snapshot at session open (static), (2)
+        fill-recommendation signal (dynamic). Current implementation only
+        delivers (1); surface may imply (2).
+
+  projection_dependency_audit:
+    status: fractured
+    findings:
+      - >
+        Stream 2 opening baseline is non-deterministic when Source C
+        (par bootstrap) is used: gaming_table.par_total_cents can be updated
+        between the original shift and a historical re-query, changing past
+        results without any audit trail.
+      - >
+        Stream 2 is not session-scoped; snapshot and fill/credit queries use
+        time-window bounds against table_id, not session_id. Cross-session
+        contamination is possible near session boundaries (e.g., late-arriving
+        fills from prior session fall into next session's window).
+      - >
+        Stream 1 completeness cannot be computed at runtime: the system cannot
+        know whether drop_total_cents was entered correctly without an external
+        audit reference. "Complete" is asserted when drop_posted_at IS NOT NULL,
+        not when the value has been verified.
+
+  operational_reality_audit:
+    status: fractured
+    findings:
+      - >
+        In real casino operations, soft count occurs 4-8 hours after physical
+        drop. Stream 1 (session rundown) will show NULL for the entire shift
+        duration during live operations. Stream 2 (dashboard) shows a number
+        throughout. Operators have no reason to understand the structural
+        difference between these two behaviors from current UI signals.
+      - >
+        UL Baseline §5.6 classifies Drop as an External Authority fact. PT-2
+        treats it as an authored field. This means PT-2 is implicitly claiming
+        authority over a fact that operationally belongs to the count room.
+        The system is architecturally positioned as if it will eventually have
+        count-room integration, but this is unresolved.
+      - >
+        The IMPREST_TO_PAR bank mode is modeled but inert. Operators using
+        par-restore workflows receive no system support; the mode flag affects
+        no close semantics.
+
+# ============================================================================
+# SPLIT BRAIN DETECTION
+# ============================================================================
+
+split_brain_detection:
+  active_conflicts:
+
+    - id: SB-001
+      fracture_type: Aggregate Split-Brain
+      severity: S4
+      concept: win/loss
+      context_a:
+        owner: TableContext / SessionRundown
+        interpretation: >
+          NULL during active shift. Non-null only when drop_posted_at IS NOT NULL.
+          Formula: closer + credits + drop - opener - fills.
+          Gate: hard — no drop, no number.
+          Drop definition: manually entered accounting figure post-soft-count.
+      context_b:
+        owner: ShiftMetrics / ShiftDashboard
+        interpretation: >
+          Non-null from shift start (if opening baseline resolvable).
+          Formula: (closer - opener) - fills + credits [+ telemetry buy-ins].
+          Gate: soft — null only if no opening baseline AND no closing snapshot.
+          Drop definition: telemetry buy-in sum (usually zero; bridge not wired).
+      downstream_risk: >
+        Operators see "Win/Loss" on the dashboard all shift. At session close,
+        the pit terminal shows NULL or a different number. No reconciliation
+        path. No explanation. Operators are left to mentally bridge two
+        authoritative-looking numbers for the same table.
+      current_containment: >
+        ESTIMATE badge on dashboard. NULL on rundown when drop absent.
+        Neither communicates the categorical difference between streams.
+      required_resolution: >
+        Rename one or both streams to reflect actual semantic category.
+        Dashboard: "Operational Result Estimate" or "Projected Table Result".
+        Rundown: "Accounting Result (drop required)" or "Pending Accounting Entry".
+        Add completeness envelope declaring input sources and authority class.
+      successor_artifact: >
+        ADR: win/loss authority ownership and stream naming decision.
+        PRD: surface relabeling and completeness rendering for both surfaces.
+
+    - id: SB-002
+      fracture_type: Vocabulary Overload
+      severity: S3
+      concept: drop
+      context_a:
+        owner: DropCustody / table_drop_event
+        interpretation: >
+          Physical custody event: drop box removed from table. Timestamp only.
+          No dollar amount. Boolean presence flag (drop_custody_present) in
+          shift metrics.
+      context_b:
+        owner: TableContext / table_session.drop_total_cents
+        interpretation: >
+          Manually entered dollar amount by accounting staff.
+          Set by rpc_post_table_drop_total. The gate for Stream 1 win/loss.
+      context_c:
+        owner: ShiftMetrics / estimated_drop_buyins_cents
+        interpretation: >
+          Buy-in telemetry sum (RATED_BUYIN + GRIND_BUYIN + RATED_ADJUSTMENT).
+          Used as drop substitute in win_loss_estimated formula.
+          Categorically a Telemetry Fact, not a Custody Fact.
+      downstream_risk: >
+        Any new feature touching "drop" must know which of three concepts it
+        intends. Wrong pick causes formula contamination or false custody signals.
+        UL Baseline §10.4 explicitly prohibits calling estimated cash-in "drop."
+      current_containment: >
+        The three uses are in separate schema tables and RPCs but share naming
+        prefixes (drop_, estimated_drop_*). No internal code documentation
+        distinguishes the categories.
+      required_resolution: >
+        Rename estimated_drop_buyins to estimated_buyin_volume or
+        observed_cash_in_estimate. Add glossary entry to UL Baseline distinguishing
+        the three concepts. Guard with lint/grep rule against new "drop" fields
+        without category declaration.
+      successor_artifact: >
+        UL Baseline amendment (Phase C naming remediation).
+        Rename migration for estimated_drop_* columns (deferred; additive rename).
+
+    - id: SB-003
+      fracture_type: Projection Drift
+      severity: S3
+      concept: opening baseline
+      context_a:
+        owner: TableContext / SessionRundown
+        interpretation: >
+          Opening inventory snapshot attached to the session via
+          opening_inventory_snapshot_id or snapshot_type=OPENING query against
+          session_id. Physically counted at session open.
+      context_b:
+        owner: ShiftMetrics / opening_baseline CTE (PRD-036)
+        interpretation: >
+          4-tier cascade: pre-window snapshot → par_total_cents (gaming_table
+          configuration) → earliest in-window snapshot → NULL.
+          Sources B and C are not physical counts. Source C is a configuration
+          value that can change retroactively.
+      downstream_risk: >
+        Same table in the same period can have different opening baselines
+        in the two streams, causing permanent divergence even when all other
+        inputs are identical. Dashboard win/loss and session rundown win/loss
+        may differ even after drop is posted.
+      current_containment: >
+        PRD-036 provenance columns (opening_source, coverage_type) expose the
+        cascade result. Trust primitives (OpeningSourceBadge, TrustIndicator)
+        render in the dashboard. However, the pit terminal rundown does not
+        expose or compare opening baseline sources.
+      required_resolution: >
+        Define canonical opening baseline authority. Decide: should session
+        rundown and shift metrics use the same opening baseline, or is
+        divergence acceptable with disclosure? If disclosure: require both
+        surfaces to render opening_source when it affects the result.
+      successor_artifact: >
+        ADR: opening baseline authority — session-scoped vs window-scoped.
+        PRD: pit terminal opening source rendering.
+
+    - id: SB-004
+      fracture_type: Authority Ambiguity
+      severity: S4
+      concept: estimated_drop_buyins as win/loss input
+      context_a:
+        owner: UL Baseline / Casino Accounting
+        interpretation: >
+          Drop is the amount of cash counted from the drop box by the count room.
+          Buy-ins are player financial transactions. The two are correlated
+          (players buy in with cash that eventually ends up in the drop box)
+          but are not equivalent: timing differs, unrated cash is not in PFT,
+          and the drop box contains currency while buy-ins are recorded as chips.
+      context_b:
+        owner: ShiftMetrics / win_loss_estimated formula
+        interpretation: >
+          estimated_drop_buyins_cents substitutes for drop in the win/loss
+          formula to provide a live estimated result before drop is posted.
+          This treats buy-in telemetry as a drop approximation.
+      downstream_risk: >
+        Even if the telemetry bridge is eventually wired, buy-in sum ≠ drop.
+        The formula will produce a structurally incorrect win/loss number and
+        label it "estimated" rather than "categorically wrong input."
+        As telemetry coverage increases, the error surface grows, not shrinks.
+      current_containment: >
+        Bridge not wired; estimated_drop_buyins is zero in practice, making
+        win_loss_estimated = win_loss_inventory. The damage is latent, not
+        active.
+      required_resolution: >
+        Decide: is the inventory-only formula (no drop substitute) the correct
+        operational estimate? If so, remove the drop-substitute term and rename
+        win_loss_estimated to win_loss_inventory_with_telemetry_floor or
+        similar. If a drop proxy is needed, define the correct proxy
+        (e.g., pit cash observations) and its authority envelope.
+      successor_artifact: >
+        ADR: win/loss estimated formula definition — drop proxy decision.
+        PRD: rename estimated_drop_buyins columns and fix formula label.
+
+# ============================================================================
+# SEMANTIC RISK REGISTER
+# ============================================================================
+
+semantic_risk_register_projection:
+  unresolved_risks:
+    - risk_id: SRR-002-001
+      short_name: Win/Loss label collision — two streams, one label
+      severity: S4
+      fracture_type: Aggregate Split-Brain
+      propagation_scope: >
+        Shift dashboard (hero + metrics table), pit terminal rundown panel,
+        close session dialog, EXEC-065 shift report, any future projection
+        consumer of win/loss data.
+      blocked_work: >
+        Any new surface that renders win/loss without declaring which stream
+        and why. Any feature that implies accounting settlement for either stream.
+        Any count-room integration that does not resolve stream authority first.
+      allowed_work: >
+        Operational UI changes that do not add new win/loss surfaces.
+        Session lifecycle transitions (open/close/rundown).
+        Schema changes that do not add new win/loss computation paths.
+        UL Baseline adoption and naming remediation.
+      resolution_trigger: >
+        Any of: (a) new external-facing reporting surface consuming win/loss;
+        (b) count-room integration design begins; (c) operator confusion
+        incident reported; (d) compliance/audit review of financial surface truth.
+
+    - risk_id: SRR-002-002
+      short_name: Drop semantic overload — three concepts, one name
+      severity: S3
+      fracture_type: Vocabulary Overload
+      propagation_scope: >
+        Schema column names (drop_total_cents, estimated_drop_*),
+        RPC parameter names, dashboard metric labels, any future
+        count-room or cashier integration feature.
+      blocked_work: >
+        New features using "drop" terminology without selecting UL category.
+        Any integration labeled "drop" that is actually buy-in or custody.
+      allowed_work: >
+        Existing features using current column names (renaming deferred).
+        Internal telemetry features that correctly label themselves as
+        Telemetry Facts.
+      resolution_trigger: >
+        Phase C naming remediation from UL Baseline, or first count-room
+        integration PRD.
+
+    - risk_id: SRR-002-003
+      short_name: Opening baseline divergence — session vs window cascade
+      severity: S3
+      fracture_type: Projection Drift
+      propagation_scope: >
+        rpc_shift_table_metrics (dashboard), rpc_compute_table_rundown (pit terminal),
+        table_rundown_report, any EXEC-065 shift report consuming both.
+      blocked_work: >
+        Features that compare or reconcile Stream 1 and Stream 2 win/loss
+        numbers without resolving baseline authority divergence.
+      allowed_work: >
+        PRD-036 provenance rendering on existing surfaces (allowed_work).
+        Closing session with explicit OPENING snapshot (improves Source A/B coverage).
+      resolution_trigger: >
+        Opening snapshot becomes mandatory (custody gate), or a shift report
+        requires reconciliation between the two streams.
+
+    - risk_id: SRR-002-004
+      short_name: Buy-ins as drop proxy — structural formula error
+      severity: S4
+      fracture_type: Authority Ambiguity
+      propagation_scope: >
+        win_loss_estimated_cents everywhere it is consumed. EXEC-065 shift
+        report if it uses estimated win/loss. Any future telemetry enrichment
+        that populates table_buyin_telemetry (activates the latent error).
+      blocked_work: >
+        Wiring the telemetry bridge (player_financial_transaction →
+        table_buyin_telemetry) without first resolving whether buy-ins
+        are the correct drop proxy. Activating the bridge makes the error live.
+      allowed_work: >
+        Using win_loss_inventory_cents (no drop proxy) for any new feature.
+        Telemetry features that are explicitly labeled as buy-in observation
+        and do not feed into win/loss formula.
+      resolution_trigger: >
+        First attempt to wire telemetry bridge, or first operator report that
+        "estimated win/loss" diverges from count-room result in unexpected ways.
+
+# ============================================================================
+# CONTAINMENT
+# ============================================================================
+
+containment:
+  forbidden_expansions:
+    - introducing_new_authority_without_review
+    - consumer_reinterpretation_of_origin
+    - unlabeled_mixed_authority_surfaces
+    - lifecycle_reconstruction_in_ui
+    - duplicate_aggregate_ownership
+    - overloaded_vocabulary_without_glossary
+
+  temporary_allowances:
+    - allowance: >
+        HeroWinLossCompact continues to render win_loss_estimated_total_cents
+        under "Win/Loss" label with ESTIMATE badge while SRR-002-001 is open.
+      expires_when: >
+        Either (a) surface relabeling PRD is delivered, or (b) a new
+        external-facing financial surface is built that consumes this value.
+      containment_rule: >
+        No additional copies of this pattern. No removal of ESTIMATE badge.
+        No removal of tablesMissingBaselineCount indicator.
+
+    - allowance: >
+        drop_total_cents continues to function as the manual accounting entry
+        gate for Stream 1 win/loss while SRR-002-002 remains open.
+      expires_when: Count-room integration design begins.
+      containment_rule: >
+        No new RPC may accept a "drop" parameter without declaring which of
+        the three drop concepts it represents. No new schema column may use
+        "drop" prefix without UL category annotation.
+
+    - allowance: >
+        estimated_drop_buyins_cents formula path remains inert (bridge not wired)
+        while SRR-002-004 is open.
+      expires_when: >
+        Any PR wires the telemetry bridge from PFT or rating slips into
+        table_buyin_telemetry.
+      containment_rule: >
+        The telemetry bridge PR must be accompanied by a resolved
+        SRR-002-004 or an explicit ADR decision on the drop-proxy formula.
+        Bridge may not go live while the risk is unresolved.
+
+# ============================================================================
+# REVIEW OUTCOME
+# ============================================================================
+
+review_outcome:
+  summary: >
+    SIGP-002 identifies four unresolved semantic fractures in the table
+    inventory accounting domain. The two most severe (S4) are: (1) the
+    win/loss label collision between the session rundown and shift dashboard
+    streams, which can expose misleading financial figures to operators; and
+    (2) the use of buy-in telemetry as a drop proxy in the win/loss estimated
+    formula, which will produce structurally incorrect results when the
+    telemetry bridge is wired. Two S3 fractures cover drop vocabulary overload
+    and opening baseline divergence between the two streams. No immediate
+    rollout block is required because the S4 telemetry risk is latent (bridge
+    not wired) and the label collision risk is partially contained by the
+    ESTIMATE badge. However, both must be resolved before: (a) any count-room
+    integration is designed, (b) any new external-facing reporting surface is
+    built, or (c) the telemetry bridge PR is opened.
+
+  required_actions:
+    immediate:
+      - >
+        Adopt TABLE_INVENTORY_ACCOUNTING_UBIQUITOUS_LANGUAGE_BASELINE.md as
+        the naming gate for any PRD/FIB touching drop, win/loss, need, fill,
+        credit, opener, or closer.
+      - >
+        Add containment comment to estimated_drop_buyins_cents columns and
+        rpc_shift_table_metrics source identifying it as Telemetry Fact,
+        not Custody Fact. Block wiring of telemetry bridge without SRR-002-004
+        resolution.
+    deferred:
+      - >
+        Surface relabeling PRD: rename "Win/Loss" on dashboard to
+        "Operational Result Estimate" or equivalent. Requires authority ADR first.
+      - >
+        ADR: win/loss stream authority ownership and canonical name decision.
+      - >
+        UL Baseline Phase C naming remediation: rename estimated_drop_* columns.
+      - >
+        Opening baseline authority decision: session-scoped vs window-scoped.
+
+  downstream_artifacts_required:
+    - ul_note          # UL Baseline adoption as naming gate
+    - adr              # win/loss authority ownership; opening baseline authority; drop taxonomy
+    - prd              # surface relabeling; completeness rendering requirements
+    - migration_guard  # estimated_drop_* column rename (Phase C); deferred
+    - surface_contract_patch  # completeness envelope on HeroWinLossCompact
+    - replay_test      # verify opening baseline determinism for Source C
+
+  signoff:
+    reviewer: Vladimir Ivanov
+    date: "2026-05-27"

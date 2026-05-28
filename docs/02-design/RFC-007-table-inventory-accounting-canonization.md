@@ -310,8 +310,10 @@ Two ADRs are required before the PRD gate opens. A third is optional but recomme
 - Feature Boundary: `docs/20-architecture/specs/table-inventory-canon/FEATURE_BOUNDARY.md`
 - Feature Scaffold: `docs/01-scaffolds/SCAFFOLD-TABLE-INVENTORY-ACCOUNTING-CANON.md`
 - Exemplar Slice Discipline: `docs/70-governance/EXEMPLAR_SLICE_DISCIPLINE.md`
-- ADR(s): _(Phase 4 — pending)_
-- SEC Note: _(Phase 3 — pending)_
+- ADR-059: `docs/80-adrs/ADR-059-table-inventory-accounting-canon-ownership-and-formula.md`
+- ADR-060: `docs/80-adrs/ADR-060-drop-taxonomy-and-naming-standard.md`
+- ADR-061: `docs/80-adrs/ADR-061-session-scope-aggregation-boundary.md`
+- SEC Note: `docs/30-security/SEC-NOTE-TIA-CANON.md`
 - PRD: _(Phase 5 — pending)_
 
 ---

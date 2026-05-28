@@ -56,8 +56,7 @@ const navGroups: NavGroup[] = [
         icon: Table2,
         children: [
           { title: 'Floor View', url: '/pit' },
-          { title: 'Table Status', url: '/pit/tables' },
-          { title: 'Active Sessions', url: '/pit/sessions' },
+          { title: 'Pit Map', url: '/pit/tables' },
         ],
       },
       {
@@ -239,28 +238,6 @@ export function AppSidebar() {
         >
           {/* Collapsed content - icon-only view */}
           <div className="flex flex-col h-full">
-            <div className="flex justify-center p-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent/50">
-                    {casinoLoading ? (
-                      <span className="h-3 w-3 animate-pulse rounded bg-muted-foreground/30" />
-                    ) : (
-                      <span
-                        className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground"
-                        style={{ fontFamily: 'monospace' }}
-                      >
-                        {casinoInitials ?? '—'}
-                      </span>
-                    )}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8}>
-                  {casinoName ?? 'Loading…'}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-
             <div className="flex-1 flex flex-col items-center py-2 gap-1">
               {flatNavItems.map((item) => {
                 const Icon = item.icon;
@@ -332,7 +309,7 @@ export function AppSidebar() {
             <div className="h-4 w-32 animate-pulse rounded bg-muted/50" />
           ) : (
             <h2
-              className="truncate text-sm font-bold uppercase tracking-widest text-sidebar-foreground"
+              className="truncate text-sm font-medium uppercase tracking-widest text-sidebar-foreground"
               style={{ fontFamily: 'monospace' }}
             >
               {casinoName ?? '—'}

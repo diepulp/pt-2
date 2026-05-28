@@ -4,6 +4,7 @@
 **Status:** Proposed  
 **Applies to:** PT-2 / d3lt application feature intake, PRD, EXEC, implementation, and audit workflows  
 **Date:** 2026-05-21  
+**Last amended:** 2026-05-27 — §3.2.1 canonical_derived_model sub-pattern; §3.4.1 telemetry_fact sub-class with outbox deferral  
 **Owner:** Architecture / Product Governance  
 **Related authorities:**
 - ADR-040 — Identity Provenance Rule
@@ -160,6 +161,27 @@ UI
 
 If the UI needs one coherent answer that depends on multiple backend concepts, this is a Read Composition Feature and belongs behind a BFF/API boundary.
 
+### 3.2.1 Canonical Derived Model (qualifier)
+
+When a Read Composition Feature produces output that is the **canonical source-of-record for downstream consumers** — owning the formula, the surface labels, the DTO shape, and the sole authority downstream consumers may consult — apply the `canonical_derived_model` qualifier.
+
+This qualifier does not override the upstream stores' authority. It declares that the projection owns the derivation semantics and DTO contract, while the upstream authoring or inventory stores remain the authoritative source for the inputs.
+
+**Conditions for this qualifier:**
+
+- Inputs come from authoritative tables, not outbox events.
+- The derivation is algebraically idempotent from those canonical inputs.
+- No outbox substrate is required or permitted.
+- `treating_composed_read_model_as_source_of_record` is scoped to the input facts (opener, closer, custody state, etc.) — the upstream stores own those. The projection owns the formula and DTO shape only.
+
+**Forbidden in this sub-pattern:**
+
+- Treating the derived model as the source of record for the input facts themselves.
+- Upgrading authority claims from the upstream stores.
+- Emitting outbox rows to propagate the internal read model.
+
+**Transport:** identical to CLS-002 — BFF/API → service read layer → formula derivation → DTO. A materialized cache is acceptable as a proven-cost optimization in a subsequent EXEC only.
+
 ---
 
 ## 3.3 Authoring Feature
@@ -268,6 +290,39 @@ UI
 ### Admission test
 
 If the feature creates a fact that another surface, projection, replay path, or completeness signal depends on, it is a Projection Input Feature and requires transactional outbox propagation.
+
+**Exception — telemetry facts with no proven async consumer:** apply the `telemetry_fact` qualifier (§3.4.1) and remain in CLS-003 Authoring with deferred outbox. Do not graduate to CLS-004 on adjacency alone.
+
+### 3.4.1 Telemetry Fact (sub-class qualifier)
+
+When an Authoring Feature authors an **operator-attested or machine-observed telemetry fact** whose projection dependency is **not yet proven**, apply the `telemetry_fact` qualifier and defer the Projection Input classification upgrade.
+
+**Telemetry facts include:**
+
+- Operator-entered observational data (average-bet estimates, grind descriptions, table ratings).
+- Intermediate operational checkpoints that are adjacent to financial semantics but are not PFT ledger facts.
+- Rating domain inputs whose downstream consumers are not yet declared.
+
+**Outbox deferral rule:**
+
+A telemetry fact remains in CLS-003 (Authoring) until at least one graduation criterion is met:
+
+- At least one async consumer is declared and proven.
+- An independent projection rebuild path requires replay.
+- Failure isolation between the originating bounded context and another context is required.
+- Live source queries become demonstrably cost-prohibitive at the proven operating scale.
+- Local derivation from the source table no longer satisfies the invariant.
+
+Until graduation criteria are met, **local derivation from the source table is the required default.** The outbox must not be introduced as a precautionary measure.
+
+**Classification record must state:**
+
+- `telemetry_fact: true`
+- `outbox_deferred: true`
+- `outbox_graduation_criteria: [listed explicitly]`
+- `current_transport: local_derivation`
+
+**Transport while deferred:** identical to CLS-003 Authoring — BFF/API → service → RPC → authoring table. Derived aggregates (e.g. visit-level weighted average) are read-time computations over the source table, not outbox-propagated projections.
 
 ---
 
@@ -666,7 +721,7 @@ Every PRD for a new feature must include the following section.
 [Yes/No. If yes, name source/authority/completeness behavior.]
 
 **Selected transport:**  
-[UI-only | BFF/API read | BFF/API → service → RPC | RPC + transactional outbox | outbox consumer → projection | external integration TBD]
+[UI-only | BFF/API read | read-time derivation | BFF/API → service → RPC | RPC + transactional outbox | outbox consumer → projection | external integration TBD]
 
 **Why this is the narrowest valid transport:**  
 [One paragraph.]
@@ -733,6 +788,7 @@ Select the weakest mechanism that preserves the invariant.
 | "Let's make a projection for one card" | Only if derived state must be replayable, shared, or lifecycle-aware. |
 | "Let's expose this internal event to partners" | Separate FIB and ADR. |
 | "Let's compute the total from raw stores in the UI" | No. Render projection state and completeness honestly. |
+| "This telemetry fact is adjacent to financials — add it to the outbox" | No. Adjacency is not dependency. Apply the `telemetry_fact` qualifier; defer outbox until a real async consumer is proven. |
 
 Architecture does not become stronger by adding mechanisms.
 

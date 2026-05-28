@@ -12,7 +12,7 @@ import { RequestAccessForm } from '@/components/request-access-form';
 
 export default function RequestAccessPage() {
   return (
-    <div className="relative min-h-[70vh] overflow-hidden bg-[#000212]">
+    <div className="relative min-h-dvh overflow-hidden bg-[#000212]">
       {/* Dot grid texture */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -35,7 +35,7 @@ export default function RequestAccessPage() {
         }}
       />
 
-      <div className="relative flex min-h-[70vh] items-center justify-center px-5 py-16 sm:px-6">
+      <div className="relative flex min-h-dvh items-center justify-center px-5 py-8 sm:px-6">
         <div className="w-full max-w-[520px]">
           <Link
             href="/"
