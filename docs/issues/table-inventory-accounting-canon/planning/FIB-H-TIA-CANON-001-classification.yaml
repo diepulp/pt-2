@@ -47,6 +47,60 @@ artifact:
           session window. This closes FIB-H §L open question. The gap between
           rpc_shift_table_metrics (gaming-day scope) and the rundown path
           (session scope) must be bridged in the new service module.
+    - date: "2026-05-27"
+      author: Architecture / Product Governance
+      reason: >
+        Telemetry null semantics were underspecified. The original null_framing
+        stated "null triggers partial_table_result_cents," which is incorrect:
+        null telemetry must be discriminated by drop_estimate_state before
+        any surface result is inferred. For rated/PFT sessions, null telemetry
+        is bridge_pending (suspicious), not none_for_session (normal partial).
+      changes:
+        - >
+          drop_estimate_state discriminator added to TableInventoryAccountingProjection
+          DTO as a required field. Allowed values: 'present' | 'none_for_session' |
+          'bridge_pending' | 'source_unavailable' | 'integrity_issue'.
+        - >
+          Partial table result (inventory_only state) is triggered only when
+          drop_estimate_state = 'none_for_session'. All other null telemetry
+          states suppress both result fields and require surface disclosure.
+        - >
+          COALESCE of telemetry_derived_drop_estimate_cents to 0 is forbidden.
+          0 = source exists and summed to zero; null = no usable estimate.
+          These are semantically distinct claims and must not be conflated.
+        - >
+          bridge_pending detection rule added: rated session with a qualifying
+          PFT buy-in and no matching table_buyin_telemetry row → bridge_pending,
+          not none_for_session. Precision borrowed from bridge_pending P2 patch.
+        - >
+          null_framing updated to reflect discriminated state model.
+          telemetry_null_semantics block added to open_question_L_telemetry_source.
+    - date: "2026-05-27"
+      author: Architecture / Product Governance
+      reason: >
+        drop_estimate_state enum width corrected. The previous amendment introduced
+        five states including bridge_pending, source_unavailable, and integrity_issue.
+        Financial Model Authority review established that none of these three states
+        can be detected by TableInventoryAccounting without Finance cross-context signals
+        that do not exist as published DTOs in this slice: finance_outbox has no
+        table_session_id envelope column; shift_operational_projection is gaming-day
+        scoped (not session-scoped); no Finance → TableContextService DTO contract
+        is established in Wave 2. bridge_pending is additionally a relay-lag concern
+        — relay at-least-once delivery owns that truth, not the accounting projection.
+        This is a correction of enum width, not a reversal of the discriminator model.
+      changes:
+        - >
+          drop_estimate_state narrowed to two exemplar states: 'present' and
+          'none_for_session'. Both are resolvable entirely within TableContextService-
+          owned data (table_buyin_telemetry session-scoped SUM).
+        - >
+          bridge_pending, source_unavailable, and integrity_issue moved to
+          deferred_states block with explicit why_deferred rationale per state.
+          Reserved vocabulary — not populated at exemplar baseline.
+        - >
+          Deferral rule codified: deferred enum states require a declared Finance
+          cross-context DTO contract before implementation. Outbox observability
+          (Phase 2.3a) owns relay-lag truth.
 
 # ─────────────────────────────────────────────────────────────────
 # ZACHMAN: WHAT — classification decision
@@ -608,7 +662,78 @@ how:
       For any rated session with at least one PFT buy-in, this value is non-null
       from the moment the first buy-in lands (via trg_bridge_finance_to_telemetry).
       Null is only possible for unrated sessions with zero GRIND_BUYIN entries.
-      Null does NOT trigger integrity_issues — it triggers partial_table_result_cents.
+      Null does NOT trigger integrity_issues. However, null does not automatically
+      trigger partial_table_result_cents — the drop_estimate_state discriminator
+      governs which null condition applies. See telemetry_null_semantics below.
+
+    telemetry_null_semantics:
+      rule: >
+        telemetry_derived_drop_estimate_cents remains nullable (number | null),
+        but null must always be qualified by drop_estimate_state. Consumers must
+        not infer partial result from null alone. The two values are semantically
+        distinct: 0 = telemetry source exists and summed to zero;
+        null = no usable telemetry-derived estimate exists for this session.
+        No COALESCE to 0 is permitted.
+
+      drop_estimate_state_values:
+        present:
+          telemetry_derived_drop_estimate_cents: number
+          result: projected_table_win_loss_cents may render
+          meaning: qualifying telemetry rows exist and produced a value
+          detection: session-scoped SUM of table_buyin_telemetry is non-null
+
+        none_for_session:
+          telemetry_derived_drop_estimate_cents: null
+          result: partial_table_result_cents may render (the only valid partial case)
+          meaning: >
+            No qualifying RATED_BUYIN or GRIND_BUYIN rows exist for this session.
+            SQL SUM over zero rows = NULL. Not an error — an operational fact
+            (e.g. unrated session with no grind buy-ins).
+          detection: >
+            Session-scoped SUM of table_buyin_telemetry (RATED_BUYIN + GRIND_BUYIN)
+            is null. Detected entirely within TableContextService-owned data.
+            No cross-context reads required.
+
+      deferred_states:
+        note: >
+          The following states are named here as reserved vocabulary but are NOT
+          populated by TableInventoryAccounting at the exemplar baseline.
+          They require Finance-side signals that have no published cross-context
+          DTO contract in this slice. Relay-lag truth belongs to the outbox
+          observability layer (Phase 2.3a), not the accounting projection.
+          Extend the enum in a follow-on slice when detection paths and surface
+          disclosure patterns are formally defined.
+        states:
+          - name: bridge_pending
+            meaning: >
+              PFT buy-in entered finance_outbox but relay has not yet processed it;
+              table_buyin_telemetry row absent due to relay lag. Always transient —
+              relay at-least-once delivery resolves it. Detection requires
+              finance_outbox or a Finance-published session-scoped signal; neither
+              exists as a cross-context DTO contract in this slice.
+            why_deferred: >
+              finance_outbox has no table_session_id envelope column. No Finance
+              projection exposes a session-scoped buy-in signal (shift_operational_projection
+              PK is gaming-day scoped; visit_class_a_projection is visit-scoped Class A only).
+              Wave 2 posture: single internal consumer path, no published cross-context
+              DTO from Finance to TableContextService.
+          - name: source_unavailable
+            meaning: Telemetry source cannot be reached or queried
+            why_deferred: UX disclosure pattern undefined; detection mechanism not specified
+          - name: integrity_issue
+            meaning: Data defect detected in the telemetry path
+            why_deferred: UX disclosure pattern undefined; distinct from inventory integrity_issues
+
+      valid_partial_trigger:
+        drop_estimate_state: none_for_session
+        effect: partial_table_result_cents may render
+
+      forbidden:
+        - COALESCE telemetry_derived_drop_estimate_cents to 0
+        - treating all null telemetry estimates as partial_table_result_cents
+        - rendering Projected Win/Loss with null telemetry estimate
+        - inferring drop_estimate_state from null alone without service-layer resolution
+        - adding deferred enum states without a declared Finance cross-context DTO contract
 
 # ─────────────────────────────────────────────────────────────────
 # ZACHMAN: WHERE — boundaries in use

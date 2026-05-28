@@ -1,0 +1,94 @@
+{
+  "schema_version": 6,
+  "feature_id": "table-inventory-canon",
+  "fib_id": "FIB-H-TIA-CANON-001",
+  "feature_name": "Table Inventory Accounting Canonization",
+  "current_phase": 3,
+  "status": "in_progress",
+  "fib_context": {
+    "mode": "fib-bound",
+    "fib_h_ref": "docs/issues/table-inventory-accounting-canon/planning/FIB-H-TABLE-INVENTORY-ACCOUNTING-CANONIZATION-v1-exemplar.md",
+    "fib_s_ref": null,
+    "loaded_at": "2026-05-27T00:00:00Z"
+  },
+  "gates": {
+    "srm-ownership":     { "passed": true,  "timestamp": "2026-05-27T00:00:00Z" },
+    "scaffold-approved": { "passed": true,  "timestamp": "2026-05-27T00:00:00Z" },
+    "design-approved":   { "passed": true,  "timestamp": "2026-05-27T00:00:00Z" },
+    "sec-approved":      { "passed": false, "timestamp": null },
+    "adr-frozen":        { "passed": false, "timestamp": null },
+    "prd-approved":      { "passed": false, "timestamp": null }
+  },
+  "artifacts": {
+    "feature_boundary": "docs/20-architecture/specs/table-inventory-canon/FEATURE_BOUNDARY.md",
+    "scaffold": "docs/01-scaffolds/SCAFFOLD-TABLE-INVENTORY-ACCOUNTING-CANON.md",
+    "rfc": "docs/02-design/RFC-007-table-inventory-accounting-canonization.md",
+    "sec_note": "docs/30-security/SEC-NOTE-TIA-CANON.md",
+    "adr": null,
+    "prd": null
+  },
+  "feature_classification": {
+    "primary": "CLS-002",
+    "qualifier": "canonical_derived_model",
+    "secondary": ["CLS-006"],
+    "selected_transport": "read_time_derivation",
+    "scope_expansion_check_ran": true,
+    "expansion_triggers_found": [],
+    "fib_amendment_required": false,
+    "adm_checks": {
+      "ADM-1": "CLS-002 read_composition with canonical_derived_model qualifier",
+      "ADM-2": "CLS-006 surface_value",
+      "ADM-3": "read_time_derivation",
+      "ADM-4": false,
+      "ADM-5": false,
+      "ADM-6": false,
+      "ADM-7": false,
+      "ADM-8": true,
+      "ADM-9": "true — Pit Terminal Rundown is the named exemplar surface in FIB-H §P.1; no amendment required",
+      "ADM-10": false
+    }
+  },
+  "da_review": {
+    "magnitude_score": 0, "magnitude_tier": null, "magnitude_signals": [],
+    "tier_override": null, "tier_override_reason": null,
+    "ran": false, "verdict": null, "p0_count": 0, "p1_count": 0,
+    "attempt": 0, "override_reason": null, "team_name": null, "team_results": null,
+    "cross_artifact_findings": 0, "resolved_conflicts": [], "unresolved_conflicts": []
+  },
+  "coherence": {
+    "non_goals": [
+      "final_table_win_loss_cents — out of scope; external custody authority required",
+      "posted_drop_amount_cents as formula input",
+      "external count-room or custody integration",
+      "full reconciliation engine",
+      "drop posting workflow",
+      "persisted projection store at baseline",
+      "dashboard-first implementation",
+      "compatibility preservation for obsolete DTOs/widgets/formulas",
+      "bridge_pending/source_unavailable/integrity_issue drop_estimate_state values",
+      "any new surface beyond Pit Terminal Rundown exemplar"
+    ],
+    "feature_loop": ["E1","E2","E3","E4","E5","E6","E7","E8","E9"],
+    "feature_loop_frozen": true,
+    "deferred_items": [
+      "drop_estimate_state enum extension (bridge_pending etc) — requires Finance cross-context DTO",
+      "persisted projection store — follow-on EXEC optimization only",
+      "shift dashboard convergence — after exemplar proves canon"
+    ],
+    "scope_authority": {
+      "artifact": "FIB-H-TIA-CANON-001",
+      "version": "v1",
+      "frozen": true
+    },
+    "violations": []
+  },
+  "srm_validation": {
+    "ran": true,
+    "owner_service": "TableContextService / TableInventoryAccounting subdomain",
+    "write_tables": [],
+    "cross_context_contracts": ["TableInventoryAccountingProjection DTO"]
+  },
+  "branch": null,
+  "working_directory": null,
+  "timestamp": "2026-05-27T00:00:00Z"
+}
