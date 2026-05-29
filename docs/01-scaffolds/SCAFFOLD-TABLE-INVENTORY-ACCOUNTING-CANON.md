@@ -83,6 +83,8 @@ telemetry_derived_drop_estimate_cents =
   SUM(table_buyin_telemetry.amount_cents)
   WHERE table_id = :table_id
     AND telemetry_kind IN ('RATED_BUYIN', 'GRIND_BUYIN')
+    -- RATED_ADJUSTMENT intentionally excluded per ADR-060 D2.
+    -- Semantic exclusion, not structural. Do not add without ADR/FIB amendment.
     AND occurred_at >= table_session.opened_at
     AND occurred_at < COALESCE(table_session.closed_at, NOW())
 ```

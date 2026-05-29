@@ -84,6 +84,24 @@ Options:
 
 These anchors bind all subsequent phases. Scope expansion requires an Intake Amendment (`FEATURE_INTAKE_BRIEF_FORM.md` §9).
 
+**Exemplar + Deferred + Expansion Trigger Extraction (fib-bound only):**
+
+Run all three steps after the coherence snapshot. FIB constraints not projected into checkpoint fields are not considered loaded.
+
+**§P — Exemplar Scope.** Match canonical `§P` first, then aliases: `Exemplar Direction`, `Vertical Collapse`, `First Implementation Boundary`, `Exemplar Pair`; phrases "vertical exemplar", "first implementation", "exemplar pair".
+- Found → set `exemplar_scope.mode` (`"required"` if EXEMPLAR_SLICE_DISCIPLINE §3 all-four criteria met, else `"optional"`); `applies = true`; `evaluated = true`; populate `boundary`, `first_surface_or_pair[]`, `downstream_consumers[]`, `forbidden_during_exemplar[]`, `declaration_source`; record `criteria` counts from §3.
+- Not found but §3 criteria met → `mode = "required"`, `applies = true`, `evaluated = true`; add warning "FIB-H should name the exemplar pair explicitly."
+- §3 criteria not met → `mode = "not_applicable"`, `applies = false`, `evaluated = true`; populate all four `criteria` fields with negative evidence. Silence or missing §P does not permit `not_applicable` — unevaluated is the default.
+
+**§L — Deferred Decisions.** Match `§L` first, then aliases: `Deferred Decisions`, `Open Questions Not Implementation Input`, `Applies Only After`; phrases "not an implementation input for this slice", "deferred until", "applies only after".
+- Extract each deferred decision into `coherence.deferred_items[]` with FIB section citation.
+- Set `coherence.deferred_items_extraction.status`: `"extracted"` (found + populated), `"section_absent"` (no section found — empty array is valid), `"failed"` (section found but unparseable).
+- Gates check extraction status, not array length. Default `"unevaluated"` is a fib-bound gate failure.
+
+**§K — Expansion Triggers.** Match `§K` first, then aliases: `Expansion Trigger Rule`, `Intake Amendment Trigger`, `Amendment Required When`; phrases "requires amendment", "triggers amendment".
+- Extract into `coherence.expansion_triggers[]`. Set `coherence.expansion_triggers_extraction.status` using the same sentinel pattern.
+- Any ADR candidate whose scope trips an extracted trigger → classify `amendment_required` unless an approved amendment already covers it.
+
 Full enforcement rules per phase → `references/fib-context-protocol.md`.
 
 ---
@@ -103,6 +121,7 @@ Full enforcement rules per phase → `references/fib-context-protocol.md`.
 3. Write ownership sentence
 4. Create `docs/20-architecture/specs/{feature}/FEATURE_BOUNDARY.md` using `references/feature-boundary-template.md`
 5. Grep SRM for each declared write table — gate fails if owned by another service
+6. If the feature introduces new canonical terminology (result states, authority claims, surface labels, derivation rules): note `semantic_extension_pending: true` in the FEATURE_BOUNDARY.md document. SRL admission through `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md` §9 is required before any such term appears in a DTO, migration, API contract, or UI label. This is not a Phase 0 hard gate but a downstream obligation — record it now so it surfaces in Phase 4.
 
 Phase 0 is lean — ownership sentence and boundary table only. Narrative fields belong in Phase 1.
 
@@ -162,9 +181,60 @@ Record these in the scaffold frontmatter. The classification drives Phase 2 RFC 
 - Context, Scope & Goals, Proposed Direction, Detailed Design, Alternatives, Decisions Required
 - **Surface Classification** (only when the feature introduces a genuinely new UI surface): rendering delivery axis + data aggregation axis (per `SURFACE_CLASSIFICATION_STANDARD.md` §4), preliminary MEAS-IDs
 
-**Gate:** `design-approved` — Name every decision that needs an ADR. If the RFC mentions "page", "panel", "dashboard", "form", or "component", confirm Surface Classification (ADR-041) is handled.
+**Gate:** `design-approved` — Three conditions, all required:
+1. Every decision in "Decisions Required" is named; Surface Classification confirmed if RFC mentions "page", "panel", "dashboard", "form", or "component" (ADR-041).
+2. RFC scope does not violate `coherence.non_goals[]` (fib-bound). Violation → revise RFC or file Intake Amendment.
+3. **ADR Candidate Scope Matrix completed** (see sub-step below).
 
-**Coherence check (fib-bound):** RFC scope must not violate `coherence.non_goals[]`. Violation → revise RFC or file Intake Amendment.
+**ADR Candidate Scope Matrix (required before `design-approved` passes):**
+
+Classify every RFC "Decisions Required" entry against FIB anchors. Applies in fib-bound and fib-absent mode (fib-absent: classify against scaffold non-goals only; exemplar checks skipped).
+
+| Status | Meaning |
+|---|---|
+| `in_exemplar` | Required by and contained within the exemplar boundary |
+| `constrained` | Partially in scope; only `allowed_form` may be authored |
+| `deferred` | In `coherence.deferred_items[]` or `exemplar_scope.downstream_consumers` |
+| `out_of_scope` | Exceeds FIB scope authority entirely |
+| `amendment_required` | Requires Intake Amendment; or trips `coherence.expansion_triggers[]` |
+
+Each candidate requires:
+- `containment_loop_trace`: FIB section citation (e.g., `"FIB §L.2"`, `"FIB §P.3"`). No citation = invalid classification, gate fails.
+- `constrained` candidates: `allowed_form` (what may be authored) and `forbidden_form` (what must not appear in the authored ADR).
+- `deferred` / `out_of_scope` / `amendment_required`: `reason` with FIB section cite.
+
+Populate checkpoint arrays:
+- `decision_scope.all_candidates[]` — every RFC candidate regardless of status (full audit trail preserved)
+- `decision_scope.approved_candidates[]` — IDs with status `in_exemplar` or `constrained` only
+- `decision_scope.blocked_candidates.deferred[]` / `.out_of_scope[]` / `.amendment_required[]`
+
+If `blocked_candidates` is non-empty: HARD STOP before `design-approved` passes.
+
+```
+[CANDIDATE SCOPE GATE]
+─────────────────────────────────────────
+FIB scope authority: {fib_scope_authority.artifact} (frozen: {frozen})
+Exemplar boundary:   {exemplar_scope.boundary}
+Exemplar mode:       {exemplar_scope.mode}
+
+All candidates:
+  {id} — {title}
+  Status: {scope_status}   Trace: {containment_loop_trace}
+  [allowed_form / forbidden_form if constrained]
+  [reason if blocked]
+
+⚠ {N} candidate(s) blocked. Approved: {approved_candidates[]}
+
+How do you want to proceed?
+  1. Remove blocked candidates (defer to post-exemplar backlog)
+  2. File Intake Amendment to FIB-H (required for amendment_required)
+  3. Narrow constrained candidate to allowed_form only
+  4. Other — describe
+
+Waiting for your decision.
+```
+
+Set `decision_scope.adr_candidate_scope_matrix_completed = true` only after all blocked candidates are resolved.
 
 **Delegates to:** `lead-architect` skill
 
@@ -190,6 +260,7 @@ Record these in the scaffold frontmatter. The classification drives Phase 2 RFC 
 
 **ADR-Worthy:** Identity storage strategy, parser choice, actor-binding mechanism.  
 **Not in ADR:** RLS SQL, trigger bodies, index definitions, migration steps (those go in EXEC-SPEC via build-pipeline).
+**Delegates to:** `lead-architect` skill
 
 ### Phase 4 Preamble: Scope Check (required before authoring begins)
 
@@ -227,9 +298,35 @@ Do not proceed, spawn agents, or make a "best guess" decomposition. The pipeline
 
 Record the user's choice in `adr_scope.user_choice` before proceeding. If the user chooses option 1 or 2, update `adr_scope.active_index` to track which decision is being authored in this run.
 
-**Gate:** `adr-frozen` — Two conditions, both required:
+**ADR Authoring Precondition (verify before authoring any candidate):**
+
+```
+required:
+  - decision_scope.adr_candidate_scope_matrix_completed = true
+  - decision_scope.fib_scope_authority.artifact is non-null
+  - coherence.deferred_items_extraction.status in [extracted, section_absent]   ← not unevaluated
+  - coherence.expansion_triggers_extraction.status in [extracted, section_absent]
+  - exemplar_scope.evaluated = true                                               (fib-bound only)
+  - exemplar_scope.mode != "unevaluated"                                          (fib-bound only)
+fail_if:
+  - candidate ID not in decision_scope.approved_candidates[]
+  - candidate scope_status is deferred | out_of_scope | amendment_required
+  - candidate has no containment_loop_trace
+  - candidate contradicts exemplar_scope.boundary
+  - candidate resolves a coherence.deferred_items[] entry as implementation input
+```
+
+Primary enforcement is at the Phase 2 exit gate. Phase 4 precondition is a verification step only.
+
+**Gate:** `adr-frozen` — Three conditions, all required:
 1. ADR contains only context/decision/consequences — no SQL, no code, no file paths, no component lists
-2. Scope check ran and `adr_scope.user_choice` is non-null (even for single-ADR phases, record `"not-applicable"`)
+2. `adr_scope.user_choice` is non-null (record `"not-applicable"` for single unambiguous candidates)
+3. **Structural constrained check** (if candidate `scope_status = constrained`):
+   - ADR frontmatter includes `candidate_id` matching `decision_scope.all_candidates[].id`
+   - ADR body includes `allowed_scope_summary` (explicit statement of what is in scope)
+   - ADR non-goals section contains exclusions derived from `forbidden_form`
+   - Fail if: ADR defines schema / ownership / lifecycle / implementation for `forbidden_form` domain; ADR resolves a `coherence.deferred_items[]` entry; rejected-alternatives section authorizes `forbidden_form` indirectly
+4. **SRL admission check** (if ADR introduces new canonical terms, result states, authority claims, or operator-visible surface labels): ADR must explicitly bind each term to an SRM-owned service/subdomain. Record `semantic_extension_required: true` in the checkpoint and name the SRL artifact to create. ADRs that define terminology without SRM-bound SRL admission are incomplete (SRL Rule 1 + Rule 2). The SRL extension artifact is a dependency of this ADR — it must be created or dependency-linked before the ADR is marked frozen.
 
 **Coherence check (fib-bound):** ADR decisions must not depend on capabilities in `coherence.non_goals[]`. Violation → revise ADR or file Intake Amendment.
 
@@ -307,109 +404,11 @@ Set checkpoint `status` to `"design-complete"` and `current_phase` to `5`. Do no
 
 ---
 
-## Slash Commands
-
-| Command | Purpose |
-|---------|---------|
-| `/feature-start <name> [--fib-h <path>] [--fib-s <path>]` | Start new pipeline (FIB context load + Phase 0) |
-| `/feature-resume [name]` | Resume from last checkpoint |
-| `/feature-status [name]` | Show current phase, gates passed/pending |
-| `/feature-gate <gate>` | Run validation for a specific gate |
-
----
-
-## Smart Detection Logic
-
-```
-/feature-start <argument>
-
-If checkpoint exists for <argument>:
-  -> resume from last phase
-  -> re-check current gate if previously failed
-
-If no checkpoint exists:
-  -> load FIB context (fib-bound or fib-absent)
-  -> start new pipeline at Phase 0 (SRM)
-  -> create checkpoint
-
-/feature-status [argument]
-  -> display status (read-only)
-  -> if no argument, show most recent feature
-```
-
----
-
 ## State Management
 
-### Checkpoint Structure (v5)
+### Checkpoint Structure (v8)
 
-```json
-{
-  "schema_version": 7,
-  "feature_id": "csv-player-import",
-  "current_phase": 3,
-  "status": "in_progress",
-  "fib_context": {
-    "mode": "fib-bound",
-    "fib_h_ref": "docs/60-release/FIB-H-csv-player-import.md",
-    "fib_s_ref": "docs/60-release/FIB-S-csv-player-import.json",
-    "loaded_at": "2026-02-22T09:30:00Z"
-  },
-  "gates": {
-    "srm-ownership":     { "passed": true,  "timestamp": "2026-02-22T10:00:00Z" },
-    "scaffold-approved": { "passed": true,  "timestamp": "2026-02-22T11:00:00Z" },
-    "design-approved":   { "passed": true,  "timestamp": "2026-02-22T14:00:00Z" },
-    "sec-approved":      { "passed": false, "timestamp": null },
-    "adr-frozen":        { "passed": false, "timestamp": null },
-    "prd-approved":      { "passed": false, "timestamp": null }
-  },
-  "artifacts": {
-    "feature_boundary": "docs/20-architecture/specs/csv-player-import/FEATURE_BOUNDARY.md",
-    "scaffold": "docs/01-scaffolds/SCAFFOLD-001-csv-player-import.md",
-    "rfc": "docs/02-design/RFC-001-csv-player-import.md",
-    "sec_note": null,
-    "adr": null,
-    "prd": null
-  },
-  "feature_classification": {
-    "primary": null,
-    "qualifier": null,
-    "secondary": [],
-    "selected_transport": null,
-    "scope_expansion_check_ran": false,
-    "expansion_triggers_found": [],
-    "fib_amendment_required": false,
-    "adm_checks": {
-      "ADM-1": null, "ADM-2": null, "ADM-3": null, "ADM-4": null, "ADM-5": null,
-      "ADM-6": null, "ADM-7": null, "ADM-8": null, "ADM-9": null, "ADM-10": null
-    }
-  },
-  "adr_scope": {
-    "overflow_detected": false,
-    "decision_manifest": [],
-    "user_choice": null,
-    "active_index": 0,
-    "deferred_decisions": []
-  },
-  "da_review": {
-    "magnitude_score": 0, "magnitude_tier": null, "magnitude_signals": [],
-    "tier_override": null, "tier_override_reason": null,
-    "ran": false, "verdict": null, "p0_count": 0, "p1_count": 0,
-    "attempt": 0, "override_reason": null, "team_name": null, "team_results": null,
-    "cross_artifact_findings": 0, "resolved_conflicts": [], "unresolved_conflicts": []
-  },
-  "coherence": {
-    "non_goals": [], "feature_loop": [], "feature_loop_frozen": false,
-    "deferred_items": [],
-    "scope_authority": { "artifact": "FEATURE_INTAKE_BRIEF", "version": "v0", "frozen": false },
-    "violations": []
-  },
-  "srm_validation": {
-    "ran": false, "owner_service": null, "write_tables": [], "cross_context_contracts": []
-  },
-  "branch": null, "working_directory": null, "timestamp": "2026-02-22T14:00:00Z"
-}
-```
+Full JSON schema and field index: `references/checkpoint-schema.md`.
 
 **Location:** `.claude/skills/feature-pipeline/checkpoints/{feature-id}.json`
 
@@ -424,21 +423,16 @@ If no checkpoint exists:
 - **`feature_classification.qualifier`** must be explicitly set before `scaffold-approved` passes — `null` when no sub-pattern applies, or one of `"canonical_derived_model"` (CLS-002-Q1) / `"telemetry_fact"` (CLS-004-Q1) when the Phase 1 decision tree trace reaches a qualifier condition. The field must not be absent from the checkpoint.
 - **`feature_classification.adm_checks`** all 10 values must be non-null before `prd-approved` passes.
 - **`adr_scope.user_choice`** must be non-null before `adr-frozen` passes. Valid values: `"decompose"` | `"scope-to-one"` | `"collapse-user-acknowledged"` | `"user-defined"` | `"not-applicable"` (single unambiguous decision, no overflow detected).
+- **`exemplar_scope.mode`** must not remain `"unevaluated"` after FIB Context Load in fib-bound mode. `"not_applicable"` requires all four `criteria` fields populated with negative evidence.
+- **`coherence.deferred_items_extraction.status`** and **`expansion_triggers_extraction.status`** must not be `"unevaluated"` after FIB Context Load in fib-bound mode. Gates check status, not array length.
+- **`decision_scope.adr_candidate_scope_matrix_completed`** must be `true` before `design-approved` passes.
+- **`decision_scope.all_candidates[]`** must contain every RFC candidate regardless of status (full audit trail).
+- **`decision_scope.approved_candidates[]`** may only contain IDs with `scope_status` in [`in_exemplar`, `constrained`]. Phase 4 may author only IDs listed here.
 - **Forbidden fields:** `exec_spec`, `dod_gates`, `exec_spec_workstreams`, `execution_phases` — build-pipeline state. If present, strip and warn.
 
 ### Migration
 
-**v1 → v2:** Set `schema_version: 2`. Map `gates_passed`/`gates_pending` arrays to `gates` object (`passed: true/false`, timestamp from checkpoint). Initialize `da_review`, `coherence`, `srm_validation` with defaults. Remove old array fields.
-
-**v2 → v3:** Set `schema_version: 3`. Inject `"fib-approved": { "passed": false, "timestamp": null }` before `srm-ownership`. Inject `"fib_h": null, "fib_s": null` before `feature_boundary`. Expand `coherence` with `feature_loop`, `feature_loop_frozen`, `deferred_items`, `scope_authority`. Shift `current_phase` by +1.
-
-**v3 → v4:** Set `schema_version: 4`. Inject `fib_context` block: `mode` from `gates["fib-approved"].passed` (`"fib-bound"` if true, else `"fib-absent"`); `fib_h_ref`/`fib_s_ref` from `artifacts.fib_h`/`artifacts.fib_s`; `loaded_at` from `gates["fib-approved"].timestamp`. Remove `fib-approved` from `gates`. Remove `fib_h`/`fib_s` from `artifacts`. Shift `current_phase` by -1; clamp minimum to 0.
-
-**v4 → v5:** Set `schema_version: 5`. Inject `feature_classification` block with all null/empty defaults (see schema above). Existing checkpoints that have already passed `scaffold-approved` should backfill `primary` and `selected_transport` from the scaffold frontmatter if readable; otherwise leave null and re-run Phase 1 classification sub-step.
-
-**v5 → v6:** Set `schema_version: 6`. Inject `"qualifier": null` into `feature_classification` immediately after `"primary"`. For checkpoints that have already passed `scaffold-approved`, backfill `qualifier` from the scaffold frontmatter classification block if present; set to `null` if no qualifier was recorded. No other fields change.
-
-**v6 → v7:** Set `schema_version: 7`. Inject `adr_scope` block immediately before `da_review`: `{ "overflow_detected": false, "decision_manifest": [], "user_choice": null, "active_index": 0, "deferred_decisions": [] }`. For checkpoints that have already passed `adr-frozen`, set `user_choice` to `"not-applicable"` (scope check predates the gate). No other fields change.
+Full migration protocol (v1→v8): `references/checkpoint-schema.md`. Current schema version: 8.
 
 ---
 
@@ -474,6 +468,7 @@ If no checkpoint exists:
 
 | File | Purpose |
 |------|---------|
+| `references/checkpoint-schema.md` | v8 checkpoint JSON schema, full field invariants, migration protocol (v1→v8) |
 | `references/fib-context-protocol.md` | FIB context injection: startup loading, fib-bound/absent modes, phase-level enforcement, anti-invention boundary, PRD handoff requirements |
 | `docs/60-release/FEATURE_INTAKE_BRIEF_FORM.md` | FIB-H form template, completion rules, amendment protocol |
 | `docs/60-release/zachman_interpolated_feature_intake_recommendation.md` | FIB-S schema, Zachman field mapping |
@@ -483,6 +478,8 @@ If no checkpoint exists:
 | `docs/01-scaffolds/TEMPLATE.md` | Phase 1 scaffold template |
 | `docs/02-design/TEMPLATE.md` | Phase 2 RFC template |
 | `docs/70-governance/feature-intake/FEATURE-CLASSIFICATION-AND-TRANSPORT-SELECTION-STANDARD.yaml` | Phase 1 classification decision tree (§how.decision_tree steps 2–8); transport selection matrix; scope expansion triggers; Phase 5 PRD required section schema (ADM-1–10); audit checklist AUD-01–12 |
+| `docs/70-governance/EXEMPLAR_SLICE_DISCIPLINE.md` | §3 mandatory criteria (when exemplar discipline applies); §5 proof invariants (I1–I4); §6 containment rules; AP-ES-01/04/05 anti-patterns. Read during FIB Context Load to determine `exemplar_scope.mode`. |
+| `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md` | SRL companion authority; §9 admission paths for new canonical terms; §7 enforcement rules; §6 semantic class registry |
 
 ---
 
@@ -495,10 +492,15 @@ If no checkpoint exists:
 - [ ] RFC proposes direction consistent with `selected_transport`; names ADR-worthy decisions; scope validated against FIB non-goals (fib-bound)
 - [ ] If new UI surface: Surface Classification declared; preliminary MEAS-IDs identified
 - [ ] SEC Note covers assets, threats, controls, deferred risks
-- [ ] **Phase 4 scope check ran** — `adr_scope.user_choice` is non-null; if overflow was detected, user's decomposition decision is recorded before authoring began
-- [ ] ADR(s) contain only durable decisions (no SQL/code, no file paths, no component lists); validated against FIB exclusions (fib-bound)
+- [ ] **FIB §P extracted** (fib-bound) — `exemplar_scope.mode` and `criteria` recorded; not `"unevaluated"`
+- [ ] **FIB §L extracted** (fib-bound) — `coherence.deferred_items_extraction.status` in [`extracted`, `section_absent`]; not `"unevaluated"`
+- [ ] **FIB §K extracted** (fib-bound) — `coherence.expansion_triggers_extraction.status` in [`extracted`, `section_absent`]; not `"unevaluated"`
+- [ ] **ADR candidate scope matrix completed at Phase 2 exit** — all RFC candidates in `all_candidates[]` with FIB section citations; blocked candidates resolved before `design-approved` passes
+- [ ] **Phase 4 scope check ran** — `adr_scope.user_choice` is non-null; only `approved_candidates[]` authored
+- [ ] ADR(s) contain only durable decisions (no SQL/code, no file paths, no component lists); constrained candidates verified at `adr-frozen` gate (structural check); validated against FIB exclusions (fib-bound)
 - [ ] PRD references ADR IDs and FIB containment loop (fib-bound); testable acceptance criteria
 - [ ] **PRD includes Feature Classification and Transport Selection section** — all ADM-1 through ADM-10 checks answered; `feature_classification.adm_checks` fully populated in checkpoint
 - [ ] PRD frontmatter includes `intake_ref`/`structured_ref` (fib-bound) for build-pipeline handoff
 - [ ] Adversarial review passed (no P0 findings, or override-with-reason recorded)
+- [ ] If ADR introduces new canonical terms: `semantic_extension_required` flag recorded in checkpoint; SRL extension artifact created or dependency-linked; each term bound to SRM owner per `SEMANTIC_RESPONSIBILITY_LAYER.md` §4
 - [ ] Handoff displayed with all artifact paths

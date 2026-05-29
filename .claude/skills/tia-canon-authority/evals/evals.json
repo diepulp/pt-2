@@ -1,0 +1,23 @@
+{
+  "skill_name": "tia-canon-authority",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm implementing the table inventory accounting service for PT-2 and want to use `estimated_drop_buyins_cents` from the existing `rpc_shift_table_metrics` RPC as the drop input in the formula. The data looks right — it already sums up buy-in telemetry for the relevant table. Is that acceptable, and if not, what should I use instead?",
+      "expected_output": "Should reject estimated_drop_buyins_cents as non-canonical and rpc_shift_table_metrics as an excluded source (gaming-day scope, COALESCE to 0). Should name telemetry_derived_drop_estimate_cents as the correct field and explain the session-scoped SUM predicate from ADR-061 D2.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Our table session has opening_inventory_cents=20000, fills=5000, credits=2000, closing_inventory_cents=18000. When we query table_buyin_telemetry for RATED_BUYIN and GRIND_BUYIN rows in the session window, the SQL SUM returns NULL (no qualifying rows exist). What calculation_kind, result fields, and surface label does the DTO need?",
+      "expected_output": "Should correctly identify inventory_only state (drop_estimate_state = 'none_for_session'), compute partial_table_result_cents = -5000, label 'Partial Table Result', explain missing_inputs = ['drop_estimate'], emphasize no COALESCE to 0 is permitted.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I'm writing the first pass of the TableInventoryAccounting module. Here's my plan: (1) Call rpc_shift_table_metrics with opened_at/closed_at as window params to reuse the existing buy-in aggregation, (2) COALESCE the telemetry SUM to 0 if null so the formula never has a null operand, (3) Include RATED_ADJUSTMENT rows in the SUM since they're already in table_buyin_telemetry, (4) Label the computed result 'Win/Loss' on the Pit Terminal Rundown since all inputs are present. Can you identify all the violations in this plan?",
+      "expected_output": "Should identify all four violations: (1) rpc_shift_table_metrics excluded — gaming-day scope, forbidden COALESCE; (2) COALESCE to 0 forbidden — null means none_for_session, not zero; (3) RATED_ADJUSTMENT excluded from canon per ADR-060 D2; (4) 'Win/Loss' label forbidden — must use 'Projected Win/Loss'.",
+      "files": []
+    }
+  ]
+}

@@ -1,9 +1,9 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.26.0
+nsversion: 4.27.0
 status: CANONICAL
-effective: 2026-05-23
+effective: 2026-05-29
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
 source_of_truth:
   - database schema (supabase/migrations/)
@@ -29,12 +29,14 @@ source_of_truth:
   - docs/80-adrs/ADR-056-relay-worker-execution-environment.md
   - docs/archive/player-enrollment-specs/ADR-022_Player_Identity_Enrollment_ARCH_v7.md
   - docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md
+  - docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md
+changelog: docs/20-architecture/SRM-CHANGE-LOG.md
 ---
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.26.0 (Financial transactional outbox registry)
-> **Date**: 2026-05-23
+> **Version**: 4.27.0 (SRL companion reference)
+> **Date**: 2026-05-29
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -56,40 +58,18 @@ source_of_truth:
 - RLS templates → See `docs/30-security/SEC-001-rls-policy-matrix.md`
 - Implementation patterns → See `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md`
 
+**Semantic Responsibility Reference:**
+Semantic authority is governed by the companion Semantic Responsibility Layer (SRL)
+at `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md`. SRL entries must bind to
+an SRM-owned service, bounded context, or subdomain. A canonical term without an SRM
+owner is invalid. SRM does not inline full semantic responsibility records; it registers
+admitted semantic extensions by reference only.
+
 ---
 
 ## Change Log
 
-- **4.26.0 (2026-05-23)** – **Financial Transactional Outbox Registry**: Registered stable Wave 2 ownership boundaries for Finance projection infrastructure. PlayerFinancialService owns `finance_outbox`, `processed_messages`, `visit_class_a_projection`, and `shift_operational_projection` as Projection Input transport, consumer idempotency, and projection artifact stores governed by ADR-052 through ADR-056. CasinoService owns `gaming_day_lifecycle` as the foundational temporal close signal consumed by projection completeness logic. Authoring operational tables (`table_fill`, `table_credit`, `table_buyin_telemetry`) remain owned by TableContextService; Finance owns only relay/projection side effects.
-- **4.25.0 (2026-05-22)** – **FloorLayoutService PRD-068 Pit Bootstrap (Onboarding Materialization)**: Added `FloorLayoutService.bootstrapCasinoPitLayout()` method and `rpc_bootstrap_casino_pit_layout` SECURITY DEFINER RPC (ADR-024 INV-8, zero-param, context from JWT via `set_rls_context_from_staff`). Idempotent onboarding materialization: creates default floor_layout, active floor_layout_version, floor_layout_activation (fixed `activation_request_id='prd068_pit_bootstrap_v1'`), one floor_pit per distinct `gaming_table.pit` value, and one floor_table_slot per pit-bearing gaming_table. Two partial unique indexes added: `ux_floor_layout_activation_active_per_casino` on `floor_layout_activation(casino_id) WHERE deactivated_at IS NULL` (RULE-7 concurrent-bootstrap fence) and `ux_floor_pit_layout_version_label_lower` on `floor_pit(layout_version_id, lower(label))` (RULE-2 defense). Invoked from `app/(onboarding)/setup/_actions.ts completeSetupAction` after `rpc_complete_casino_setup` succeeds. **Onboarding remains a trigger host — no `services/onboarding/` directory exists and none should be created.** See `docs/10-prd/PRD-068-pit-bootstrap-onboarding-materialization-v0.md`, `docs/21-exec-spec/EXEC-068-pit-bootstrap-onboarding-materialization.md`, and migration `supabase/migrations/20260422183640_prd068_bootstrap_casino_pit_layout_rpc.sql`.
-- **4.24.0 (2026-05-12)** – **PilotContainmentService (PRD-083 Pilot Authentication Containment Gate)**: Registered `PilotContainmentService` as new `Pilot Access Governance` bounded context. New tables: `pilot_access_requests` (public INSERT, service_role SELECT/UPDATE), `approved_email_allowlist` (service_role only — never read by authenticated client). Both tables enforce canonical email via CHECK constraint and finite status values. Server actions: `sendMagicLinkAction`, `requestPilotAccessAction`, `approvePilotAccessAction`, `rejectPilotAccessAction`, `revokePilotAccessAction`. Service: `services/pilot/` with `createPilotContainmentService` factory. Admin authority via `PILOT_ADMIN_EMAILS` env var (server-only). Containment primitive — must not absorb IAM, billing, CRM, or RBAC (FIB-S RULE-9). See `docs/10-prd/PRD-083-pilot-auth-containment-v0.md` and `docs/21-exec-spec/EXEC-083-pilot-auth-containment.md`.
-- **4.23.0 (2026-04-06)** – **EmailService (PRD-062 Pilot SMTP & Email Wiring)**: Registered `EmailService` as pilot-scoped utility service (Operational context). New table: `email_send_attempt` (append-only send log). RLS: Pattern C hybrid SELECT + INSERT only (no UPDATE/DELETE). No RPCs — writes via authenticated Supabase client after `set_rls_context_from_staff()` in server actions. 3 server actions: `sendShiftReportAction`, `retryShiftReportAction`, `dismissFailedAttemptAction`. Infrastructure adapter: `lib/email/` with provider-agnostic interface, Resend implementation. Service: `services/email/` with `createEmailService` factory. See `docs/10-prd/_archive/PRD-062-pilot-smtp-email-wiring-v0.md` and `docs/21-exec-spec/_archive/EXEC-062-pilot-smtp-email-wiring.md`.
-- **4.22.0 (2026-03-25)** – **ShiftIntelligenceService Alert Maturity (PRD-056)**: Added `shift_alert`, `alert_acknowledgment` to Owns. 2 new RPCs: `rpc_persist_anomaly_alerts` (SECURITY DEFINER), `rpc_acknowledge_alert` (SECURITY DEFINER). 1 new RPC: `rpc_get_alert_quality` (SECURITY INVOKER). 3 new API routes: `POST /api/v1/shift-intelligence/persist-alerts`, `POST /api/v1/shift-intelligence/acknowledge-alert`, `GET /api/v1/shift-intelligence/alerts`. ALTER `table_metric_baseline` add `last_error`. Pattern C RLS + DELETE denial on new tables. RPC-only mutation posture.
-- **4.21.0 (2026-03-23)** – **ShiftIntelligenceService**: Registered `ShiftIntelligenceService` (Operational context) for shift anomaly detection. New table: `table_metric_baseline`. 2 new RPCs: `rpc_compute_rolling_baseline` (SECURITY DEFINER, ADR-024), `rpc_get_anomaly_alerts` (SECURITY INVOKER). 2 API routes: `POST /api/shift-intelligence/compute-baselines`, `GET /api/shift-intelligence/anomaly-alerts`. Dependencies: TableContextService (source metric RPCs), CasinoService (casino_settings), TemporalAuthority (compute_gaming_day). Cross-context reads only; writes confined to owned `table_metric_baseline`.
-- **4.20.0 (2026-03-19)** – **PRD-052 Loyalty Operator Issuance**: Added `reward_catalog`, `reward_price_points`, `reward_entitlement_tier`, `reward_limits`, `reward_eligibility`, `loyalty_earn_config` to LoyaltyService `Owns:` row. Registered `Player360DashboardService` as read-only aggregation service (follows `PlayerTimelineService` precedent). New service methods: `LoyaltyService.issueComp()`, `PromoService.issueEntitlement()`. New DTOs: `IssueCompParams`, `CompIssuanceResult`, `IssueEntitlementParams`, `EntitlementIssuanceResult`, `FulfillmentPayload` (frozen Vector C contract). New Zod schema: `issueRewardSchema`. See `docs/10-prd/PRD-052-loyalty-operator-issuance-v0.md` and `docs/21-exec-spec/EXEC-052-loyalty-operator-issuance.md`.
-- **4.19.0 (2026-03-10)** – **ADR-042 Player Exclusion Architecture**: Added `player_exclusion` table to PlayerService. Source-of-truth for exclusion/ban/watchlist records. Enforcement delegated to downstream consumers (VisitService for visit creation, CasinoService for enrollment). Canonical SQL functions: `is_exclusion_active()` (active predicate), `get_player_exclusion_status()` (precedence collapse). New RPC: `rpc_get_player_exclusion_status` (SECURITY DEFINER, ADR-024). Cross-context consumption: VisitService consumes exclusion status for visit creation enforcement. Critical table designation per ADR-030 D4 (session-var-only writes). See `docs/80-adrs/ADR-042-player-exclusion-architecture.md` and `docs/21-exec-spec/EXEC-050-player-exclusion-watchlist.md`.
-- **4.21.0 (2026-03-26)** – **PRD-059 OPEN Table Custody Gate**: Added `table_opening_attestation` to TableContextService. New columns: `table_session.predecessor_session_id`, `table_inventory_snapshot.consumed_by_session_id`/`consumed_at`. Enum: `close_reason_type` + `'cancelled'`. New RPC: `rpc_activate_table_session` (SECURITY DEFINER, ADR-024, attestation + OPEN→ACTIVE). Modified RPCs: `rpc_open_table_session` (OPEN status, predecessor linkage), `rpc_close_table_session` (OPEN-cancellation per ADR-048 D2), `rpc_start_table_rundown` (ACTIVE-only entry). Session gate fixes: `rpc_start_rating_slip` and `rpc_check_table_seat_availability` exclude OPEN from gameplay-allowed statuses. RLS: Pattern C hybrid SELECT on attestation, INSERT/UPDATE/DELETE denied. See `docs/80-adrs/ADR-048-open-table-custody-gate.md`.
-- **4.18.0 (2026-03-07)** – **ADR-039 Measurement Layer**: Added Measurement Layer (Cross-Cutting Read Models) section. New columns on `rating_slip`: `legacy_theo_cents`, `computed_theo_cents` (ADR-031 cents, materialized at close by 3 RPCs). New tables in LoyaltyService: `loyalty_valuation_policy`, `loyalty_liability_snapshot`. New SECURITY DEFINER RPC: `rpc_snapshot_loyalty_liability` (ADR-024, idempotent UPSERT). 2 cross-context views: `measurement_audit_event_correlation_v`, `measurement_rating_coverage_v` (security_invoker=true, Pattern C RLS). CHECK constraint `chk_closed_slip_has_theo` (NOT VALID). See `docs/80-adrs/ADR-039-measurement-layer.md`.
-- **4.17.0 (2026-02-25)** – **PRD-038A Table Lifecycle Audit Patch**: Added `close_reason_type` enum (8 values). Added 10 columns to `table_session`: `close_reason`, `close_note`, `has_unresolved_items`, `requires_reconciliation`, `activated_by_staff_id`, `paused_by_staff_id`, `resumed_by_staff_id`, `rolled_over_by_staff_id`, `crossed_gaming_day`. CHECK constraint: `close_reason='other'` requires trimmed non-empty `close_note`. Modified `rpc_close_table_session` with close guardrail (`has_unresolved_items` check) and `close_reason`/`close_note` params. New `rpc_force_close_table_session` (SECURITY DEFINER, ADR-024): privileged close for pit_boss/admin, sets `requires_reconciliation=true`, emits `audit_log`. Extracted `_persist_inline_rundown` helper to prevent drift. `has_unresolved_items` write ownership: Finance/MTL RPCs or `service_role` only. See `docs/10-prd/PRD-038A-table-lifecycle-audit-patch.md`.
-- **4.16.0 (2026-02-24)** – **PRD-038 Shift Rundown Persistence & Delta Checkpoints**: Added `table_rundown_report` and `shift_checkpoint` to TableContextService. `session_id` FK added to `table_fill` and `table_credit`. 3 new SECURITY DEFINER RPCs (ADR-024): `rpc_persist_table_rundown` (UPSERT), `rpc_finalize_rundown` (immutable stamp), `rpc_create_shift_checkpoint` (metric snapshot). Modified RPCs: `rpc_request_table_fill`, `rpc_request_table_credit` (session linkage, atomic totals, late-event detection), `rpc_close_table_session` (inline rundown persistence). Privilege posture: REVOKE ALL + GRANT SELECT on both new tables; writes via RPCs only. Pattern C hybrid RLS SELECT. See ADR-038 and `docs/10-prd/PRD-038-shift-rundown-persistence-deltas-v0.1.md`.
-- **4.15.0 (2026-02-23)** – **PRD-037 CSV Player Import**: Added PlayerImportService (Onboarding context) with ownership of `import_batch`, `import_row`. New enums: `import_batch_status`, `import_row_status`. 3 new SECURITY DEFINER RPCs (ADR-024): `rpc_import_create_batch`, `rpc_import_stage_rows`, `rpc_import_execute`. Cross-context writes to `player` (PlayerService) and `player_casino` (CasinoService) via execute RPC only. Identifier resolution indexes on `player(lower(email))`, `player(phone_number)`. See `docs/10-prd/PRD-CSV-PLAYER-IMPORT-MVP.md` and ADR-036.
-- **4.14.0 (2026-02-19)** – **ADR-035 Client State Lifecycle**: Added client-side store lifecycle governance to Platform/Frontend context. New section: Client State Lifecycle (session reset contract, store classification, `resetSessionState()` orchestrator). ADR-035 added to `source_of_truth` references. Cross-references ADR-003 Section 8 (Zustand scope) and ADR-030 (server-side auth hardening counterpart). See `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md`.
-- **4.13.0 (2026-02-17)** – **PRD-033 Cashier Workflow MVP**: Added confirmation lifecycle columns to `table_fill` (status, confirmed_at, confirmed_by, confirmed_amount_cents, discrepancy_note), `table_credit` (same 5), `table_drop_event` (cage_received_at, cage_received_by). 3 new SECURITY DEFINER RPCs (ADR-024): `rpc_confirm_table_fill`, `rpc_confirm_table_credit`, `rpc_acknowledge_drop_received`. 6 new API routes (3 PATCH confirmations + 3 GET list endpoints with filters). Immutability enforced via RLS: UPDATE restricted to `status='requested'`. `player_financial_transaction.external_ref` added (PlayerFinancialService). Cashier Console UI at `/cashier` with 3 tab screens.
-- **4.12.0 (2026-02-10)** – **GAP-SIGN-OUT ownership registration**: Added `staff_pin_attempts` (planned, MVP) to CasinoService. Follows `audit_log` precedent: cross-cutting operational rate-limit state owned by foundational context. Resolved governance drift where EXECUTION-SPEC used "Auth (cross-cutting)" — not a declared SRM bounded context. No schema changes (table created by GAP-SIGN-OUT WS4 migration).
-- **4.11.1 (2026-02-02)** – **Cross-reference sync (ADR-030, ADR-031, ADR-032)**: Added ADR-030 (Auth System Hardening), ADR-032 (Frontend Error Boundary Architecture) to source_of_truth. Added ADR-030, ADR-031, ADR-032 to Related Documents table. Added ERROR_HANDLING_STANDARD.md to source_of_truth references. No schema or ownership changes.
-- **4.11.0 (2026-01-21)** – **ADR-029 Player 360° Dashboard Event Taxonomy**: Added PlayerTimelineService (planned) for unified player interaction timeline. New tables planned: `player_note`, `player_tag`. New enum: `interaction_event_type`. New RPC: `rpc_get_player_timeline`. Cross-context timeline reads all service tables via UNION ALL view. See `docs/80-adrs/ADR-029-player-360-interaction-event-taxonomy.md` and `docs/25-api-data/PLAYER_360_EVENT_TAXONOMY.md`.
-- **4.10.0 (2026-01-17)** – **ADR-028 Table Status Standardization**: Added `labels.ts` pattern to TableContextService for centralized UI label/color constants. Documented `TableAvailability` and `SessionPhase` type aliases. Added `drop_posted_at` column to `table_session` for count posting status. RPC availability gate added to `rpc_open_table_session`. See `docs/80-adrs/ADR-028-table-status-standardization.md`.
-- **4.9.0 (2025-12-25)** – **ADR-023 Multi-Tenancy Formalization**: Official tenancy stance declared: Pool Primary; Silo Optional. Added SEC-002 and ADR-023 to source_of_truth. SEC-001/SEC-002 updated with tenancy cross-references. See `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md`.
-- **4.8.0 (2025-12-23)** – **ADR-022 v7.1 MVP Scope (Security Audited)**: Adopted production-ready MVP scope with 7-agent security audit. `player_identity` table planned with scanner-shaped schema. Key security fixes: auth.uid() guard (INV-7), actor binding (INV-9), key immutability (INV-10), document hash storage. Tax identity deferred post-MVP. See `docs/archive/player-enrollment-specs/ADR-022_Player_Identity_Enrollment_ARCH_v7.md`.
-- **4.4.0 (2025-12-12)** – **SEC-006 RLS Hardening**: FloorLayoutService full RLS coverage (5 tables). All 7 SECURITY DEFINER RPCs hardened with Template 5 context validation (ADR-018). Append-only denial policies added to ledger tables. See `docs/80-adrs/ADR-018-security-definer-governance.md` and migration `20251212080915_sec006_rls_hardening.sql`.
-- **4.3.0 (2025-12-11)** – **PlayerFinancialService IMPLEMENTED** (PRD-009): Full Pattern A implementation with 78 tests. Service layer: DTOs, schemas, keys, mappers, crud, http. Transport: 3 Route Handlers + 4 React Query hooks. Enums: `financial_direction` ('in'|'out'), `financial_source` ('pit'|'cage'|'system'), `tender_type`. RLS: Hybrid policies per ADR-015. Commits: 5f4522b, ccf9e98, 3ec0caf.
-- **4.2.1 (2025-12-11)** – Finance outbox deferred: Removed `finance_outbox` from current ownership (post-MVP per ADR-016). Added MVP Egress contract: synchronous only, no external side effects. MTLService integration via triggers remains in scope.
-- **4.2.0 (2025-12-11)** – Finance scope alignment: `visit_id` changed from optional to **required** for FinanceService consumption. Added `visit_id NOT NULL` to PlayerFinancialService schema invariants. Removed "buy-ins" from cashier cage operations (incorrect terminology - players cash out at cage, not buy-in). Cashier workflows limited to: cash-outs and marker settlements.
-- **4.1.0 (2025-12-10)** – ADR-017 compliance: Added `cashier` to `staff_role` enum. Documented cashier role capabilities in PlayerFinancialService section. Updated cross-context consumption rules.
-- **4.0.0 (2025-12-06)** – Major reduction per SRM/SLAD audit. Removed full DDL, error codes, middleware details, and RLS templates. Now a registry + invariants document only. Implementation patterns moved to SLAD. References canonical docs for all duplicated content.
-- **3.1.1 (2025-12-06)** – RatingSlip `player_id` removal per EXEC-VSE-001.
-- **3.1.0 (2025-11-13)** – Security & tenancy upgrade landed.
-- **3.0.2 (2025-10-21)** – Rating Slip Mid-Session Rewards patch.
+See [SRM-CHANGE-LOG.md](SRM-CHANGE-LOG.md) for full version history (v3.0.2 → current).
 
 ---
 
@@ -630,6 +610,23 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 - CTR/SAR thresholds (MTL)
 - Reward ledger (Loyalty)
 - Floor design (FloorLayoutService)
+
+### Semantic Extension Reference
+
+TableContextService has one admitted semantic extension:
+
+| ID | Bound Subdomain | Role | Full Record |
+|---|---|---|---|
+| SRL-TIA-001 | TableContextService.TableInventoryAccounting | Read-time derived semantic authority for table-result values | `docs/issues/table-inventory-accounting-canon/thesaurus/SRL-TIA-001-table-inventory-accounting.yaml` |
+
+**Basis:** ADR-059 (ownership + formula), ADR-060 (drop taxonomy), ADR-061 (session scope)
+
+⚠ `table_buyin_telemetry` is consumed by TableInventoryAccounting as its primary telemetry
+input table but is not yet listed in the main Service Responsibility Overview `Owns Tables`
+column. This ownership gap must be resolved at TIA PRD preflight or in the PRD itself. Not
+blocking for SRL admission.
+
+SRM owns the service/subdomain boundary. SRL owns the semantic records.
 
 **Full Schema**: `supabase/migrations/` (search: `create table gaming_table`)
 **RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#tablecontextservice`
@@ -1232,8 +1229,8 @@ create type import_row_status as enum ('staged','created','linked','skipped','co
 
 ---
 
-**Document Version**: 4.18.0
+**Document Version**: 4.27.0
 **Created**: 2025-10-21
 **Reduced**: 2025-12-06
-**Updated**: 2026-03-07 (ADR-039: Measurement Layer — Cross-Cutting Read Models)
+**Updated**: 2026-05-29 (SRL companion reference + TableContextService semantic extension entry)
 **Status**: CANONICAL - Registry + Invariants Only

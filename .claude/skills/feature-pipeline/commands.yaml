@@ -101,6 +101,17 @@ commands:
          - schema_version=3: migrate to v4 (inject fib_context block from fib-approved gate data;
            remove fib-approved from gates; remove fib_h/fib_s from artifacts;
            shift current_phase -1, clamp minimum to 0).
+         - schema_version=4: migrate to v5 (inject feature_classification block with null/empty defaults;
+           backfill primary/selected_transport from scaffold frontmatter if past scaffold-approved).
+         - schema_version=5: migrate to v6 (inject qualifier: null into feature_classification after primary;
+           backfill qualifier from scaffold frontmatter if past scaffold-approved).
+         - schema_version=6: migrate to v7 (inject adr_scope block before da_review with null defaults;
+           set user_choice to "not-applicable" if past adr-frozen).
+         - schema_version=7: migrate to v8 (inject exemplar_scope block after fib_context;
+           inject decision_scope block before da_review; add extraction status fields to coherence;
+           remove overflow_detected/decision_manifest from adr_scope; for checkpoints past
+           design-approved: set matrix_completed: false, requires_backfill_review: true).
+         Full field-level details: references/checkpoint-schema.md.
       3. Display FIB context mode, current phase, and pending gates.
       4. Show next action required.
       5. Continue from current phase.

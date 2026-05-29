@@ -43,6 +43,7 @@ This skill accepts any specification document with implementation requirements �
 | `scripts/validate-execution-spec.py` | Validate EXECUTION-SPEC (structural + governance) |
 | `scripts/classify-write-path.py` | Deterministic write-path signal scan for E2E mandate |
 | `scripts/temporal-integrity.py` | Flag upstream PRD/ADRs modified after EXEC-SPEC generation |
+| `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md` | SRL companion authority; §8 admitted extension registry used by governance gate; §7 enforcement rules |
 
 ---
 
@@ -143,6 +144,7 @@ When input is a PRD:
 1. Check PRD frontmatter for `scaffold_ref` and `adr_refs`
 2. Verify referenced files exist
 3. If missing: warn and require explicit waiver
+4. **SRL semantic check**: If any referenced ADR (via `adr_refs`) introduces canonical terms, or if PRD frontmatter declares `renders_financial_surface_values: true`, verify that a corresponding SRL extension artifact exists in `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md` §8 Admitted Extension Registry. If absent: emit a `[WARN]` (not a hard block) noting that downstream implementation workstreams for those terms will fail the Stage 3 governance gate until SRL admission is recorded.
 
 ```
 Warning: GOV-010 Gate Check
@@ -286,7 +288,7 @@ See `references/expert-routing.md` for:
 
    Checks:
    - **Structural**: YAML syntax, executor names, dependencies, gates
-   - **Governance**: SRM ownership, test locations, migration standards, DTO patterns
+   - **Governance**: SRM ownership (no workstream may claim table ownership outside the SRM), SRL semantic binding (if any workstream implements an SRL-admitted canonical term from `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md §8`, the test workstream's acceptance criteria must reference the enforcement test IDs from the term's SRL record; absent binding is a governance violation), migration standards (`MIGRATION_NAMING_STANDARD.md`), DTO patterns (`DTO_CANONICAL_STANDARD.md`)
 
    Both must pass before proceeding.
 
