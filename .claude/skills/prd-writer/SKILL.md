@@ -1,15 +1,15 @@
 ---
 name: prd-writer
-description: Create PRDs following PRD-STD-001 standard for PT-2 project. This skill should be used when users ask to write a PRD, create product requirements, document a new feature, or plan a new release. It produces bounded, shippable PRDs with proper YAML frontmatter, Definition of Done checklists, and cross-references to SDLC taxonomy categories. Delegates to lead-architect skill for PRD creation as part of architectural workflows.
+description: Create PRDs following PRD-STD-001 standard for PT-2 project. This skill should be used when users ask to write a PRD, create product requirements, document a new feature, or plan a new release. It produces bounded, shippable PRDs with proper YAML frontmatter, Definition of Done checklists, cross-references to SDLC taxonomy categories, and Exemplar Slice Discipline alignment for multi-category or multi-producer rollouts. Delegates to lead-architect skill for PRD creation as part of architectural workflows.
 ---
 
 # PRD Writer Skill
 
-Create Product Requirements Documents (PRDs) that are small, concrete, and shippable following the PRD-STD-001 standard.
+Create Product Requirements Documents (PRDs) that are bounded, shippable, and vertically collapsed to the smallest symmetric end-to-end proof when rollout scope spans multiple structural categories, following PRD-STD-001 and Exemplar Slice Discipline.
 
 ## Core Principle
 
-A PRD describes a *specific, bounded slice* of the product:
+A PRD describes a *specific, bounded slice* of the product. For multi-category or multi-producer rollouts, bounded means the smallest symmetric exemplar that proves the shared mechanism end-to-end before horizontal expansion:
 - The **problem** it solves
 - **Who** it is for
 - **What** must exist for it to be called "done"
@@ -23,17 +23,18 @@ A PRD is an **alignment artifact**, not a dumping ground for every detail.
 
 ### 1. Scope Assessment
 
-Before writing, validate scope is appropriate for a single PRD:
+Before writing, validate scope is appropriate for a single PRD and whether Exemplar Slice Discipline applies:
 
 **Valid PRD scopes:**
 - One release (MVP Pilot, v1.1, v2)
 - One bounded problem area (e.g., "Player Intake + Eligibility Checks")
-- One cohesive phase cutting across contexts (if shippable as a unit)
+- One cohesive phase cutting across contexts (if shippable as a unit and exemplar discipline is satisfied when applicable)
 
 **Invalid scopes (split into multiple PRDs):**
 - The entire product across many phases
 - Every bounded context at once
 - Multi-year roadmaps
+- Horizontal rollouts across multiple categories before a representative end-to-end exemplar is proven
 
 ### 2. PRD ID Convention
 
@@ -57,6 +58,7 @@ last_review: YYYY-MM-DD
 phase: [Phase N (Name)]
 pattern: [A | B | C]  # Optional: Service pattern per SRM
 http_boundary: [true | false]  # Optional: Has API routes
+renders_financial_surface_values: [true | false]  # Optional: triggers SRL gate in GOV-010
 ---
 ```
 
@@ -77,6 +79,8 @@ Every PRD MUST contain these sections in order:
 | 9 | Related Documents | Links to ARCH, API, SEC, QA docs |
 
 **For detailed section guidance, read:** `references/prd-standard.md`
+
+**When the rollout spans multiple producers, fact classes, event types, service layers, API variants, or surfaces sharing an unproven mechanism, also read:** `docs/70-governance/EXEMPLAR_SLICE_DISCIPLINE.md`
 
 ---
 
@@ -109,6 +113,11 @@ The release is considered **Done** when:
 - [ ] Key logs/metrics exist for debugging
 - [ ] Simple rollback or mitigation path defined
 
+**Exemplar Proof (if PRD spans multiple structural categories)**
+- [ ] Exemplar representatives include exactly one from each required category
+- [ ] Shared mechanism is proven end-to-end under real execution conditions
+- [ ] Horizontal expansion is explicitly deferred until exemplar proof is frozen
+
 **Documentation**
 - [ ] User-facing snippets or runbooks updated
 - [ ] Known limitations documented
@@ -135,8 +144,10 @@ PRDs link to (not duplicate) other document categories:
 | **OPS/SRE** | Observability, runbooks | `docs/50-ops/` |
 | **ADR** | Architecture decisions | `docs/80-adrs/` |
 | **GOV** | Standards, guardrails | `docs/70-governance/` |
+| **GOV/EX** | Exemplar Slice Discipline for multi-category rollout sequencing | `docs/70-governance/EXEMPLAR_SLICE_DISCIPLINE.md` |
 | **GOV/SURF** | Surface Classification Standard (ADR-041) | `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md` |
 | **GOV/PROV** | Metric Provenance Matrix (MEAS-001–012) | `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` |
+| **GOV/SRL** | Semantic Responsibility Layer — admitted canonical terms, epistemic claims, Zachman records | `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md` |
 
 **For full taxonomy details, read:** `references/sdlc-taxonomy.md`
 
@@ -159,6 +170,14 @@ PRDs link to (not duplicate) other document categories:
 ### Vague Goals
 - **Smell:** "better UX", "more consistent"
 - **Fix:** Every goal must be observable and binary testable
+
+### Horizontal Rollout Disguised as a Slice
+- **Smell:** PRD authorizes all producers, categories, or surfaces before the shared mechanism is proven
+- **Fix:** Collapse to the smallest symmetric exemplar pair; defer expansion until proof invariants pass
+
+### Asymmetric Exemplar
+- **Smell:** PRD selects only the easy category and claims it proves the whole mechanism
+- **Fix:** Include one representative from each required category or do not claim coverage
 
 ---
 

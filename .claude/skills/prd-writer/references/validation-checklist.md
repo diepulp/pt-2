@@ -70,6 +70,7 @@ Use this checklist before submitting a PRD for review. All items should be check
     - [ ] Operational Readiness
     - [ ] Documentation
   - [ ] Each item is binary (done/not done)
+  - [ ] Exemplar Proof category included when PRD spans multiple structural categories
 
 - [ ] **Section 9: Related Documents**
   - [ ] Links to Vision/Strategy
@@ -89,6 +90,7 @@ Use this checklist before submitting a PRD for review. All items should be check
   - Scope is limited to one release/phase/problem area
   - Does not cover entire product across many phases
   - Does not include all bounded contexts at once
+  - Multi-category or multi-producer scope collapses to the smallest symmetric end-to-end exemplar before expansion
 
 ### Content Separation
 
@@ -107,6 +109,14 @@ Use this checklist before submitting a PRD for review. All items should be check
   - No manual story-to-service-to-table-to-test mapping
   - Only key stories mapped to features if needed
 
+### Exemplar Slice Discipline
+
+- [ ] **Applies doctrine when required**
+  - Rollout checked for multiple producers, fact classes, event types, service layers, API variants, or surfaces
+  - Required category representatives are symmetric; no easy-category-only shortcut
+  - Shared mechanism is proven end-to-end under real execution conditions
+  - Horizontal expansion is deferred until exemplar proof is frozen
+
 ### Goal Quality
 
 - [ ] **Goals are NOT vague**
@@ -124,6 +134,13 @@ Use this checklist before submitting a PRD for review. All items should be check
 - [ ] All Related Documents links are valid
 - [ ] SRM sections referenced exist
 - [ ] ADR references are valid
+
+### Semantic Governance (SRL)
+
+- [ ] **If PRD introduces canonical terms or financial surface values:**
+  - [ ] `renders_financial_surface_values: true` declared in frontmatter, or explicitly confirmed not applicable
+  - [ ] Corresponding SRL extension artifact present in `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md` §8 Admitted Extension Registry, OR gap noted in Dependencies & Risks with explicit ADR path to admission
+  - [ ] ADR basis for each introduced term declared in `adr_refs` frontmatter field
 
 ### Consistency Checks
 
