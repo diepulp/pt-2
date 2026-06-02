@@ -1,0 +1,1044 @@
+legacy_consumer_classification:
+  meta:
+    prd: PRD-090
+    classification_date: 2026-05-30
+    classification_agent: parallel-codebase-audit
+    purpose: >
+      Pre-EXEC inventory of legacy table-result consumers and call sites.
+      Prevents PRD-090 execution from rediscovering suppression scope during build.
+      Every active operator-visible surface consuming a forbidden legacy table-result
+      field or label must be classified before WS5 implementation begins.
+    invariant: >
+      Active operator-visible surfaces must either consume
+      TableInventoryAccountingProjection or suppress legacy table-result rendering.
+      No active operator-visible surface may retain forbidden legacy values after the
+      exemplar lands.
+    exemplar_scope:
+      migrated_consumer:
+        - Pit Terminal Rundown (components/table/rundown-summary-panel.tsx)
+      non_exemplar_consumers:
+        rule: suppress_rendering unless separately amended by a subsequent PRD
+
+  forbidden_terms:
+    fields:
+      - win_loss_inventory_cents
+      - win_loss_estimated_cents
+      - win_loss_estimated_total_cents
+      - win_loss_inventory_total_cents  # discovered: pit/casino-level aggregate of win_loss_inventory_cents; same suppression rule applies
+      - estimated_drop_buyins_cents
+      - table_win_cents
+      - win_loss_cents                  # downstream aggregate of win_loss_inventory_cents in ShiftTableCheckpointDTO/ShiftCheckpointDeltaDTO; forbidden at DTO+API+label level
+    labels:
+      - "Win/Loss"           # unqualified; "Projected Win/Loss" and "Partial Table Result" are the permitted replacements
+      - "Estimated Win/Loss"
+      - "Total Drop"
+      - "Posted Drop"
+      - "Final Win/Loss"
+      - "Settled Result"
+      - "Reconciled Result"
+    forbidden_sources:
+      - rpc_shift_table_metrics       # gaming-day scope; COALESCE(SUM,0) — ADR-061 violation
+      - rpc_compute_table_rundown     # PATCHED stub; table_win_cents NULL when drop absent; no state discrimination
+      - gaming_day_scoped_table_result_formula
+      - coalesce_sum_to_zero_for_drop_estimate
+
+  disposition_policy:
+    consume_projection:
+      allowed_when: >
+        The surface is intentionally migrated in PRD-090 to consume
+        TableInventoryAccountingProjection.
+      expected_for:
+        - Pit Terminal Rundown (components/table/rundown-summary-panel.tsx)
+    suppress_rendering:
+      allowed_when: >
+        The surface is active/operator-visible but is not migrated in PRD-090.
+      requirement: >
+        It must not render or serialize forbidden legacy fields or labels.
+        Backing DTO fields may be retained in internal DTO for migration bookkeeping
+        only if they are never serialized to the operator-facing API response.
+    inactive_or_internal_only_with_reason:
+      allowed_when: >
+        The usage is deleted, archived, test-only, development-only, or internal
+        bookkeeping never returned to an operator-visible boundary.
+      forbidden_when: >
+        Any operator can see the value in UI, API, export, dashboard, or report.
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # UI COMPONENT CONSUMERS
+  # ─────────────────────────────────────────────────────────────────────────────
+  consumers:
+    - id: LEGACY-CONSUMER-001
+      path: components/shift-dashboard/table-metrics-table.tsx
+      symbol_or_usage: >
+        table.win_loss_inventory_cents (line 277),
+        table.win_loss_estimated_cents (line 278) —
+        conditional render: if metric_grade === 'AUTHORITATIVE' show inventory cents,
+        else show estimated cents; column header "Win/Loss" (line 212)
+      legacy_terms_found:
+        - win_loss_inventory_cents
+        - win_loss_estimated_cents
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        Shift dashboard table-level metrics panel. Renders a "Win/Loss" column that
+        conditionally displays either win_loss_inventory_cents or
+        win_loss_estimated_cents depending on the metric_grade field.
+        Data is driven by ShiftTableMetricsDTO from the shift-dashboard hook.
+      disposition: suppress_rendering
+      rationale: >
+        Active shift dashboard table panel. Not the exemplar migrated consumer.
+        The conditional win/loss column uses two forbidden fields and a forbidden
+        column label. Must be suppressed before exemplar lands.
+      required_prd090_action: >
+        Remove or hide the "Win/Loss" column entirely. Do not substitute a local
+        formula. Optionally replace with a neutral "Unavailable" placeholder.
+        Remove the metric_grade conditional logic for win_loss_inventory_cents /
+        win_loss_estimated_cents.
+      exec_obligation: code_change_required
+      grep_acceptance:
+        must_not_render:
+          - win_loss_inventory_cents
+          - win_loss_estimated_cents
+          - '"Win/Loss"'
+
+    - id: LEGACY-CONSUMER-002
+      path: components/shift-dashboard/pit-metrics-table.tsx
+      symbol_or_usage: >
+        pit.win_loss_inventory_total_cents (line 162),
+        pit.win_loss_estimated_total_cents (line 165) —
+        two side-by-side columns with headers "Win/Loss (Inv)" (line 128) and
+        "Win/Loss (Est)" (line 131)
+      legacy_terms_found:
+        - win_loss_inventory_total_cents
+        - win_loss_estimated_total_cents
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        Shift dashboard pit-level rollup table. Renders two adjacent Win/Loss columns:
+        inventory-based and estimated, rendered from ShiftPitMetricsDTO.
+      disposition: suppress_rendering
+      rationale: >
+        Active shift dashboard pit panel. Not the exemplar migrated consumer.
+        Two forbidden columns with forbidden variants of the "Win/Loss" label.
+      required_prd090_action: >
+        Remove both "Win/Loss (Inv)" and "Win/Loss (Est)" columns. Do not
+        reconstruct locally. Replace with neutral unavailable state or omit entirely.
+      exec_obligation: code_change_required
+      grep_acceptance:
+        must_not_render:
+          - win_loss_inventory_total_cents
+          - win_loss_estimated_total_cents
+
+    - id: LEGACY-CONSUMER-003
+      path: components/shift-dashboard/casino-summary-card.tsx
+      symbol_or_usage: >
+        data.win_loss_inventory_total_cents (line 212) as KpiCard title
+        "Win/Loss (Inventory)", data.win_loss_estimated_total_cents (line 220) as
+        KpiCard title "Win/Loss (Estimated)"
+      legacy_terms_found:
+        - win_loss_inventory_total_cents
+        - win_loss_estimated_total_cents
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        Casino-level summary card in shift dashboard. Renders two KpiCards showing
+        inventory-method win/loss and estimated win/loss for the casino shift.
+        Driven by ShiftCasinoMetricsDTO.
+      disposition: suppress_rendering
+      rationale: >
+        Active casino-level summary surface. Not the exemplar consumer. Both KPI
+        cards render forbidden fields with forbidden label variants.
+      required_prd090_action: >
+        Remove or suppress both "Win/Loss (Inventory)" and "Win/Loss (Estimated)"
+        KpiCards. Do not substitute local formula. Consider replacing with a
+        neutral "Win/Loss Unavailable" non-value placeholder until a canonical
+        casino-level projection consumer is developed in a subsequent PRD.
+      exec_obligation: code_change_required
+      grep_acceptance:
+        must_not_render:
+          - win_loss_inventory_total_cents
+          - win_loss_estimated_total_cents
+
+    - id: LEGACY-CONSUMER-004
+      path: components/pit-panels/analytics-panel.tsx
+      symbol_or_usage: >
+        tableMetrics.win_loss_inventory_cents (line 164) labeled "Win/Loss",
+        tableMetrics.estimated_drop_buyins_cents (line 176) labeled "Estimated Drop" —
+        in metrics array rendered to analytics panel metrics list
+      legacy_terms_found:
+        - win_loss_inventory_cents
+        - estimated_drop_buyins_cents
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        Per-table analytics panel in pit view. Renders a metrics list including
+        a "Win/Loss" metric (from win_loss_inventory_cents) and an "Estimated Drop"
+        metric (from estimated_drop_buyins_cents). Positivity gradient styling uses
+        win_loss_inventory_cents >= 0 comparison (line 166).
+        Hook: useShiftTableMetrics → ShiftTableMetricsDTO.
+      disposition: suppress_rendering
+      rationale: >
+        Active per-table pit panel. Not the exemplar consumer. Renders both
+        a forbidden field and a forbidden label. The positivity logic is also
+        derived from a forbidden field.
+      required_prd090_action: >
+        Remove "Win/Loss" and "Estimated Drop" entries from the metrics array.
+        Remove the positivity logic referencing win_loss_inventory_cents.
+        Do not compute a local replacement formula.
+      exec_obligation: code_change_required
+      grep_acceptance:
+        must_not_render:
+          - win_loss_inventory_cents
+          - estimated_drop_buyins_cents
+
+    - id: LEGACY-CONSUMER-005
+      path: components/table/rundown-summary-panel.tsx
+      symbol_or_usage: >
+        rundown.table_win_cents at three render sites:
+        (1) winLossVariant useMemo (lines 148-153) — null/positive/negative logic;
+        (2) MetricRow value prop (line 335) — conditional label "Table Win"/"Table Loss"/"Win/Loss";
+        (3) FinancialValue derivedFrom and value.value (line 350,352) — with value.type='estimated'
+      legacy_terms_found:
+        - table_win_cents
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        Pit Terminal Rundown surface. Renders table win/loss from table_win_cents
+        sourced via rpc_compute_table_rundown (PATCHED stub: null when drop_posted_at
+        is null). Cannot discriminate between absent-telemetry and integrity-failure
+        states. Shows blank to operator with no disclosure.
+      disposition: consume_projection
+      rationale: >
+        This is the designated Pit Terminal Rundown exemplar consumer. WS4 migrates
+        this surface to consume TableInventoryAccountingProjection exclusively.
+        The table_win_cents stub and rpc_compute_table_rundown path are fully
+        replaced by the canonical three-result-state rendering.
+      required_prd090_action: >
+        WS4: Replace table_win_cents stub and rpc_compute_table_rundown call with
+        TableInventoryAccountingProjection from GET
+        /api/v1/table-context/table-sessions/{sessionId}/accounting-projection.
+        Render based on calculation_kind discriminator per PRD-090 §4 WS4 spec:
+          telemetry_drop_formula → "Projected Win/Loss" + non-custody qualifier
+          inventory_only → "Partial Table Result" + missing-telemetry qualifier
+          integrity_failure → integrity disclosure only; no result label
+        Remove all three render sites for table_win_cents. Remove forbidden labels
+        "Win/Loss", "Table Win", "Table Loss".
+      exec_obligation: code_change_required
+
+    - id: LEGACY-CONSUMER-006
+      path: components/table/rundown-report-card.tsx
+      symbol_or_usage: >
+        report.table_win_cents (line 83) rendered in grid cell with label "Win/Loss"
+        (line 81)
+      legacy_terms_found:
+        - table_win_cents
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        Rundown report card component — separate from rundown-summary-panel.tsx.
+        Renders a "Win/Loss" label and formatCents(report.table_win_cents) in a
+        two-column grid. Sourced from RundownReportDTO.
+      disposition: suppress_rendering
+      rationale: >
+        Active operator-visible surface. This is NOT the Pit Terminal Rundown exemplar
+        path (that is rundown-summary-panel.tsx). The report card component renders
+        the forbidden table_win_cents field with the forbidden "Win/Loss" label.
+        Cannot use inactive classification while actively rendering.
+      required_prd090_action: >
+        Remove or suppress the "Win/Loss" row from the rundown report card grid.
+        Do not reconstruct locally. Replace with neutral unavailable state or omit
+        the row until a subsequent PRD migrates this report surface.
+      exec_obligation: code_change_required
+      grep_acceptance:
+        must_not_render:
+          - table_win_cents
+          - '"Win/Loss"'
+
+    - id: LEGACY-CONSUMER-007
+      path: components/shift-dashboard-v3/center/metrics-table.tsx
+      symbol_or_usage: >
+        table.win_loss_estimated_cents (lines 99, 104) passed to FinancialValue
+        component with label="Win/Loss"; null check for completeness.status
+      legacy_terms_found:
+        - win_loss_estimated_cents
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        v3 shift dashboard center panel table-level metrics. Renders a "Win/Loss"
+        FinancialValue component backed by win_loss_estimated_cents from
+        ShiftTableMetricsDTO.
+      disposition: suppress_rendering
+      rationale: >
+        Active v3 shift dashboard operator surface. Not the exemplar consumer.
+        Renders forbidden field with forbidden label.
+      required_prd090_action: >
+        Remove Win/Loss FinancialValue entry from the v3 metrics table.
+        Do not recompute from raw fields.
+      exec_obligation: code_change_required
+      grep_acceptance:
+        must_not_render:
+          - win_loss_estimated_cents
+
+    - id: LEGACY-CONSUMER-008
+      path: components/shift-dashboard-v3/center/pit-table.tsx
+      symbol_or_usage: >
+        pit.win_loss_estimated_total_cents (line 54) in FinancialValue with
+        label="Win/Loss"; table header "Win/Loss" (line 118)
+      legacy_terms_found:
+        - win_loss_estimated_total_cents
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        v3 shift dashboard pit-level table. Renders "Win/Loss" FinancialValue
+        backed by win_loss_estimated_total_cents from ShiftPitMetricsDTO.
+      disposition: suppress_rendering
+      rationale: >
+        Active v3 pit-level dashboard surface. Not the exemplar consumer.
+      required_prd090_action: >
+        Remove Win/Loss FinancialValue from v3 pit table. Remove "Win/Loss" column
+        header.
+      exec_obligation: code_change_required
+      grep_acceptance:
+        must_not_render:
+          - win_loss_estimated_total_cents
+
+    - id: LEGACY-CONSUMER-009
+      path: components/shift-dashboard-v3/shift-dashboard-v3.tsx
+      symbol_or_usage: >
+        summary?.casino?.win_loss_estimated_total_cents (line 197) passed as
+        winLossCents prop to HeroWinLossCompact component
+      legacy_terms_found:
+        - win_loss_estimated_total_cents
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        v3 shift dashboard root component. Passes casino-level
+        win_loss_estimated_total_cents to HeroWinLossCompact in the left rail.
+      disposition: suppress_rendering
+      rationale: >
+        Prop pass-through that feeds a forbidden value into an operator-visible
+        hero component. Suppression here must prevent the value from reaching
+        HeroWinLossCompact (LEGACY-CONSUMER-011).
+      required_prd090_action: >
+        Stop passing win_loss_estimated_total_cents to HeroWinLossCompact.
+        Pass null or undefined to the winLossCents prop, or remove the prop
+        entirely if HeroWinLossCompact is also suppressed.
+      exec_obligation: code_change_required
+
+    - id: LEGACY-CONSUMER-010
+      path: components/shift-dashboard-v3/charts/win-loss-trend-chart.tsx
+      symbol_or_usage: >
+        pit.win_loss_estimated_total_cents (line 111) mapped to chartData.winLoss;
+        "Win/Loss" in chart configuration labels (line 29, 57, 98, 117, 129), ARIA
+        text (line 158) — 6 occurrences
+      legacy_terms_found:
+        - win_loss_estimated_total_cents
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        v3 shift dashboard Win/Loss trend chart. Transforms pit data into chart
+        series with winLoss: pit.win_loss_estimated_total_cents. All chart labels,
+        axis names, tooltip labels, and ARIA text use the forbidden "Win/Loss" string.
+      disposition: suppress_rendering
+      rationale: >
+        Active operator-visible chart surface. Not the exemplar consumer. Renders
+        forbidden field in chart and uses forbidden label string in 6 places.
+      required_prd090_action: >
+        Remove or suppress the Win/Loss data series from the trend chart.
+        Remove all "Win/Loss" label strings from chart configuration, axis,
+        tooltip, and ARIA text. Do not substitute local computation.
+        The chart may be hidden entirely until a subsequent PRD defines a
+        canonical replacement metric.
+      exec_obligation: code_change_required
+      grep_acceptance:
+        must_not_render:
+          - win_loss_estimated_total_cents
+          - '"Win/Loss"'
+
+    - id: LEGACY-CONSUMER-011
+      path: components/shift-dashboard-v3/left-rail/hero-win-loss-compact.tsx
+      symbol_or_usage: >
+        winLossCents prop receives win_loss_estimated_total_cents from parent
+        (LEGACY-CONSUMER-009); renders "Win/Loss" label at lines 61, 87, 94
+      legacy_terms_found:
+        - label "Win/Loss" (3 occurrences)
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        v3 left-rail hero Win/Loss component. Receives casino-level win/loss value
+        via prop and renders it prominently with "Win/Loss" label.
+      disposition: suppress_rendering
+      rationale: >
+        Active operator-visible hero component receiving a forbidden value from
+        LEGACY-CONSUMER-009. The component itself renders the forbidden label.
+        Suppression at the parent (LEGACY-CONSUMER-009) plus label removal here
+        together close this surface.
+      required_prd090_action: >
+        Remove the "Win/Loss" label strings at lines 61, 87, and 94 — all three
+        sites render the label unconditionally, including in the null-value state,
+        so suppressing the prop value alone is insufficient. Either remove the
+        component from the render tree entirely, or remove all three label
+        occurrences and ensure the component renders nothing in the null state.
+        Do not substitute a local formula or a different forbidden label.
+      exec_obligation: code_change_required
+
+    - id: LEGACY-CONSUMER-012
+      path: components/reports/shift-report/sections/executive-summary.tsx
+      symbol_or_usage: >
+        "Win/Loss" KPI label (lines 75, 79) — backed by winLossInventoryCents /
+        winLossEstimatedCents mapped by shift-report assembler
+      legacy_terms_found:
+        - label "Win/Loss"
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        Shift report executive summary section. Renders a "Win/Loss" KPI metric
+        sourced from the shift-report assembler which maps win_loss_inventory_cents
+        and win_loss_estimated_cents.
+      disposition: suppress_rendering
+      rationale: >
+        Active operator-visible report surface. Not the exemplar consumer. The
+        "Win/Loss" KPI label is forbidden and the backing value is derived from
+        a forbidden source via the report assembler (LEGACY-API-007).
+      required_prd090_action: >
+        Remove the "Win/Loss" KPI from the executive summary section. Do not
+        substitute a local formula. If a canonical replacement is desired, that
+        requires a subsequent PRD to wire TableInventoryAccountingProjection
+        into the report assembler path.
+      exec_obligation: code_change_required
+
+    - id: LEGACY-CONSUMER-013
+      path: components/reports/shift-report/sections/financial-summary.tsx
+      symbol_or_usage: >
+        "Win/Loss" table header (line 74) — backed by shift-report assembler
+        winLoss facts
+      legacy_terms_found:
+        - label "Win/Loss"
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        Shift report financial summary section. Renders a table column with
+        "Win/Loss" header backed by assembler-mapped legacy fields.
+      disposition: suppress_rendering
+      rationale: >
+        Active operator-visible report surface. Not the exemplar consumer.
+        Forbidden "Win/Loss" header label.
+      required_prd090_action: >
+        Remove or suppress "Win/Loss" column from financial summary table.
+        Update assembler suppression in LEGACY-API-007 to not propagate
+        the legacy field to this section.
+      exec_obligation: code_change_required
+
+    - id: LEGACY-CONSUMER-014
+      path: components/shift-intelligence/anomaly-alert-card.tsx
+      symbol_or_usage: >
+        win_loss_cents: 'Win/Loss' label map entry (line 70) — maps the
+        ShiftTableCheckpointDTO.win_loss_cents metric key to the display label
+        "Win/Loss" in anomaly alert cards
+      legacy_terms_found:
+        - label "Win/Loss" (via label map)
+      visibility: active_operator_visible_ui
+      current_behavior: >
+        Anomaly alert card component. When an anomaly is detected for the
+        win_loss_cents metric (ShiftTableCheckpointDTO field derived from
+        win_loss_inventory_cents — see LEGACY-API-008), the card displays the
+        forbidden "Win/Loss" label. Operator-visible through shift-intelligence
+        anomaly alert surfaces.
+      disposition: suppress_rendering
+      rationale: >
+        Active operator-visible anomaly alert surface. The win_loss_cents field
+        in ShiftTableCheckpointDTO is derived from the forbidden
+        win_loss_inventory_cents via aggregation (shift-checkpoint/crud.ts:143).
+        The label "Win/Loss" is forbidden. Must not expose this metric to operators
+        with the forbidden label after the exemplar lands.
+      required_prd090_action: >
+        Remove win_loss_cents from the anomaly alert label map (line 70).
+        Suspend the anomaly detection logic for the win_loss_cents metric: since
+        LEGACY-API-008 removes win_loss_cents from ShiftTableCheckpointDTO, any
+        detection threshold check against this field will produce zero alerts (field
+        absent → null → no threshold breach) or a runtime error. Suspending the
+        detection explicitly — rather than relying on the null fallthrough — makes
+        the intent clear and prevents phantom alert suppression. Record the
+        suspension in the WS5 inventory. A canonical replacement anomaly detector
+        for table result metrics is deferred to a subsequent PRD that wires
+        TableInventoryAccountingProjection into the shift-intelligence pipeline.
+      anomaly_detection_suspension: >
+        DECIDED: suspend win_loss_cents anomaly detection at WS5 commit time.
+        Rationale: LEGACY-API-008 removes the source field from the DTO; silent
+        null-through is not an acceptable substitute for an explicit decision.
+      exec_obligation: code_change_required
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # API ROUTES AND DTO SURFACES
+  # ─────────────────────────────────────────────────────────────────────────────
+  api_and_dto_surfaces:
+    - id: LEGACY-API-001
+      path: services/table-context/shift-metrics/dtos.ts
+      exported_field_or_response: >
+        ShiftTableMetricsDTO fields:
+          win_loss_inventory_cents: number | null (line 109)
+          win_loss_estimated_cents: number | null (line 111)
+          estimated_drop_buyins_cents: number (line 103)
+      consumed_by:
+        - components/shift-dashboard/table-metrics-table.tsx (LEGACY-CONSUMER-001)
+        - components/pit-panels/analytics-panel.tsx (LEGACY-CONSUMER-004)
+        - components/shift-dashboard-v3/center/metrics-table.tsx (LEGACY-CONSUMER-007)
+        - hooks/shift-dashboard/use-shift-table-metrics.ts
+        - hooks/dashboard/use-exceptions-data.ts
+        - services/table-context/shift-checkpoint/crud.ts (aggregation source)
+      visibility: serialized_operator_facing_api
+      disposition: suppress_rendering
+      rationale: >
+        ShiftTableMetricsDTO is the DTO type for the operator-facing API route
+        app/api/v1/shift-dashboards/metrics/tables (LEGACY-API-006). It carries
+        three forbidden fields that flow directly to operator-visible components.
+        Fields must be removed from the DTO or excluded from the API serialization
+        boundary before PRD-090 lands.
+      required_prd090_action: >
+        Remove win_loss_inventory_cents, win_loss_estimated_cents, and
+        estimated_drop_buyins_cents from ShiftTableMetricsDTO. Update all consuming
+        components to suppress rendering per their individual LEGACY-CONSUMER
+        classifications. Update the API route to not return these fields.
+      exec_obligation: code_change_required
+
+    - id: LEGACY-API-002
+      path: services/table-context/dtos.ts
+      exported_field_or_response: >
+        TableRundownDTO field: table_win_cents: number | null (line 657)
+      consumed_by:
+        - components/table/rundown-summary-panel.tsx (LEGACY-CONSUMER-005 — exemplar)
+        - hooks/table-context/use-table-rundown.ts
+        - app/api/v1/table-sessions/[id]/rundown route
+      visibility: serialized_operator_facing_api
+      disposition: consume_projection
+      rationale: >
+        TableRundownDTO.table_win_cents is the source for the Pit Terminal Rundown
+        exemplar. WS4 migrates rundown-summary-panel.tsx to consume
+        TableInventoryAccountingProjection instead. After WS4, table_win_cents may
+        be retained in the DTO for migration bookkeeping only if it is never
+        serialized to the operator-facing API response.
+      required_prd090_action: >
+        WS4: Replace the /rundown API route's reliance on rpc_compute_table_rundown
+        and table_win_cents with TableInventoryAccountingProjection. After WS4:
+        if table_win_cents is retained in the DTO for non-exemplar paths, it must
+        not be returned on any active operator-visible API boundary.
+      exec_obligation: code_change_required
+
+    - id: LEGACY-API-003
+      path: services/table-context/rundown-report/dtos.ts
+      exported_field_or_response: >
+        RundownReportTableDTO: table_win_cents: number | null (line 45)
+        RundownReportCasinoDTO: table_win_cents: number | null (line 68)
+      consumed_by:
+        - components/table/rundown-report-card.tsx (LEGACY-CONSUMER-006)
+        - app/api/v1/table-rundown-reports/[id] route
+      visibility: serialized_operator_facing_api
+      disposition: suppress_rendering
+      rationale: >
+        RundownReport DTOs contain table_win_cents and back an operator-visible
+        report card surface. This is NOT the Pit Terminal Rundown exemplar path
+        (that is rundown-summary-panel.tsx via /table-sessions/[id]/rundown).
+        The rundown report card must suppress rendering of table_win_cents.
+      required_prd090_action: >
+        Remove table_win_cents from serialized API response of
+        app/api/v1/table-rundown-reports/[id]. Remove from RundownReport DTOs or
+        mark as not-serialized. Update LEGACY-CONSUMER-006 per its suppression action.
+      exec_obligation: code_change_required
+
+    - id: LEGACY-API-004
+      path: services/table-context/shift-metrics/dtos.ts
+      exported_field_or_response: >
+        ShiftPitMetricsDTO fields:
+          win_loss_estimated_total_cents: number | null (line 175)
+          win_loss_inventory_total_cents: number | null (line 173)
+      consumed_by:
+        - components/shift-dashboard/pit-metrics-table.tsx (LEGACY-CONSUMER-002)
+        - components/shift-dashboard-v3/center/pit-table.tsx (LEGACY-CONSUMER-008)
+        - hooks/shift-dashboard/http.ts (pits endpoint)
+        - app/api/v1/shift-dashboards/metrics/pits route
+      visibility: serialized_operator_facing_api
+      disposition: suppress_rendering
+      rationale: >
+        ShiftPitMetricsDTO carries both aggregate forbidden fields. Serialized to
+        the operator-facing /metrics/pits API endpoint and consumed by two pit table
+        components.
+      required_prd090_action: >
+        Remove win_loss_estimated_total_cents and win_loss_inventory_total_cents from
+        ShiftPitMetricsDTO and from the /metrics/pits serialized API response.
+        Update consuming components per LEGACY-CONSUMER-002 and LEGACY-CONSUMER-008.
+      exec_obligation: code_change_required
+
+    - id: LEGACY-API-005
+      path: services/table-context/shift-metrics/dtos.ts
+      exported_field_or_response: >
+        ShiftCasinoMetricsDTO fields:
+          win_loss_estimated_total_cents: number | null (line 246)
+          win_loss_inventory_total_cents: number | null (line 244)
+      consumed_by:
+        - components/shift-dashboard/casino-summary-card.tsx (LEGACY-CONSUMER-003)
+        - components/shift-dashboard-v3/shift-dashboard-v3.tsx (LEGACY-CONSUMER-009)
+        - hooks/shift-dashboard/http.ts (casino endpoint)
+        - app/api/v1/shift-dashboards/metrics/casino route
+      visibility: serialized_operator_facing_api
+      disposition: suppress_rendering
+      rationale: >
+        ShiftCasinoMetricsDTO carries both casino-level aggregate forbidden fields.
+        Serialized to the /metrics/casino API endpoint and consumed by casino summary
+        and hero components.
+      required_prd090_action: >
+        Remove win_loss_estimated_total_cents and win_loss_inventory_total_cents from
+        ShiftCasinoMetricsDTO and from the /metrics/casino serialized API response.
+        Update consuming components per LEGACY-CONSUMER-003 and LEGACY-CONSUMER-009.
+      exec_obligation: code_change_required
+
+    - id: LEGACY-API-006
+      path: app/api/v1/shift-dashboards/metrics/tables/route.ts
+      exported_field_or_response: >
+        GET /api/v1/shift-dashboards/metrics/tables — returns ShiftTableMetricsDTO[]
+        including win_loss_inventory_cents, win_loss_estimated_cents,
+        estimated_drop_buyins_cents
+      consumed_by:
+        - hooks/shift-dashboard/http.ts (fetchJSON<ShiftTableMetricsDTO[]> at line 67)
+        - All LEGACY-CONSUMER-001, LEGACY-CONSUMER-004, LEGACY-CONSUMER-007
+      visibility: serialized_operator_facing_api
+      disposition: suppress_rendering
+      rationale: >
+        This is the primary operator-facing API boundary for shift table metrics.
+        The route serializes ShiftTableMetricsDTO which contains three forbidden fields.
+        The route itself does not reference the forbidden fields directly (no inline
+        logic) but it must stop returning them in its JSON response.
+      required_prd090_action: >
+        After DTO field removal in LEGACY-API-001, verify that the route no longer
+        serializes win_loss_inventory_cents, win_loss_estimated_cents, and
+        estimated_drop_buyins_cents in its response. Add automated suppression gate
+        verification for this endpoint per WS5 acceptance criteria.
+      exec_obligation: code_change_required
+
+    - id: LEGACY-API-007
+      path: services/reporting/shift-report/assembler.ts
+      exported_field_or_response: >
+        Maps: win_loss_inventory_cents → report fact winLossInventoryCents (line 380)
+              win_loss_estimated_cents → report fact winLossEstimatedCents (line 381)
+              estimated_drop_buyins_cents → report fact (line 370)
+              win_loss_estimated_total_cents → casino/pit report facts (lines 345, 411)
+      consumed_by:
+        - components/reports/shift-report/sections/executive-summary.tsx (LEGACY-CONSUMER-012)
+        - components/reports/shift-report/sections/financial-summary.tsx (LEGACY-CONSUMER-013)
+        - app/api/v1/reports/shift-summary route
+      visibility: serialized_operator_facing_api
+      disposition: suppress_rendering
+      rationale: >
+        The shift report assembler propagates all five forbidden fields into the shift
+        report fact model that backs operator-visible report sections. Suppression here
+        prevents the forbidden values from reaching both shift report UI sections and
+        the shift-summary API endpoint.
+      required_prd090_action: >
+        Remove mappings for win_loss_inventory_cents, win_loss_estimated_cents,
+        win_loss_estimated_total_cents, and estimated_drop_buyins_cents from the
+        shift-report assembler. If the shift report requires table result data,
+        that must wait for a subsequent PRD that wires TableInventoryAccountingProjection
+        into the report assembly path. Until then, omit or mark as unavailable.
+      exec_obligation: code_change_required
+
+    - id: LEGACY-API-008
+      path: services/table-context/shift-checkpoint/dtos.ts
+      exported_field_or_response: >
+        ShiftTableCheckpointDTO.win_loss_cents: number | null (line 38)
+        ShiftCheckpointDeltaDTO.win_loss_cents: number | null (line 60, 68)
+        Derived in crud.ts:143 by aggregating win_loss_inventory_cents from
+        rpc_shift_table_metrics output
+      consumed_by:
+        - components/shift-intelligence/anomaly-alert-card.tsx (LEGACY-CONSUMER-014)
+        - app/api/v1/shift-checkpoints route family (latest, delta)
+      visibility: serialized_operator_facing_api
+      disposition: suppress_rendering
+      rationale: >
+        The shift-checkpoint win_loss_cents field is a downstream aggregate of the
+        forbidden win_loss_inventory_cents. It flows into anomaly alert cards with
+        the forbidden label "Win/Loss". The checkpoint DTO is serialized to
+        operator-facing checkpoint API endpoints.
+      required_prd090_action: >
+        Remove or suppress win_loss_cents from ShiftTableCheckpointDTO and
+        ShiftCheckpointDeltaDTO. Remove the win_loss_inventory_cents aggregation
+        in shift-checkpoint/crud.ts:143. Remove from checkpoint API serialization.
+        Coordinate with LEGACY-CONSUMER-014 anomaly alert label suppression.
+      exec_obligation: code_change_required
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # RPC AND QUERY SOURCES
+  # ─────────────────────────────────────────────────────────────────────────────
+  rpc_and_query_sources:
+    - id: LEGACY-RPC-001
+      path: services/table-context/rundown.ts
+      rpc_or_query: rpc_compute_table_rundown
+      active_call_site: line 78 — .rpc('rpc_compute_table_rundown', { p_session_id: sessionId })
+      used_by:
+        - TableRundownDTO production pipeline
+        - app/api/v1/table-sessions/[id]/rundown route
+        - components/table/rundown-summary-panel.tsx (via use-table-rundown.ts)
+      issue: >
+        PATCHED behavior: table_win_cents is NULL when drop_posted_at is null.
+        No discrimination between absent-telemetry (should produce partial_table_result_cents)
+        and integrity-failure (opener or closer unresolvable). Operator sees opaque blank.
+      disposition: >
+        WS4 removes rpc_compute_table_rundown from the exemplar render path entirely.
+        Post-WS4: if retained for non-exemplar callers (e.g., archived report paths),
+        the RPC must be quarantined from all active operator-visible paths per
+        PRD-090 §7.2 R3. Retention as dead/internal-only code requires tests proving
+        no active caller consumes table_win_cents from it.
+      required_prd090_action: >
+        WS4: Replace rpc_compute_table_rundown call in rundown.ts with
+        TableInventoryAccounting service call. After WS4: EXEC decides whether to
+        drop the RPC entirely or quarantine. If quarantined, add test proving no
+        active operator path calls it.
+      exec_obligation: code_change_required
+
+    - id: LEGACY-RPC-002
+      path: services/table-context/shift-metrics/service.ts
+      rpc_or_query: rpc_shift_table_metrics
+      active_call_site: line 44 — supabase.rpc('rpc_shift_table_metrics', { ... })
+      used_by:
+        - ShiftTableMetricsDTO production (all consumers: LEGACY-CONSUMER-001/004/007)
+        - services/table-context/shift-checkpoint/crud.ts:141 (win_loss_inventory_cents aggregation)
+        - All shift dashboard surfaces via cascaded DTO fields
+      issue: >
+        (a) Uses gaming-day scope instead of session scope — ADR-061 violation.
+        (b) COALESCE(SUM(...), 0) silently treats zero qualifying telemetry rows as
+        zero telemetry-derived drop estimate — ADR-061 D6 violation.
+        Must NOT be used as source for TableInventoryAccounting.telemetry_derived_drop_estimate_cents.
+      disposition: >
+        Must not be used in the canonical TableInventoryAccounting service path.
+        Shift dashboard consumers must suppress rendering of all fields derived
+        from this RPC per LEGACY-API-001/004/005 classifications. The service
+        call itself may remain for backward-compatible shift dashboard operations
+        during the suppression transition, but the fields it produces must not
+        appear in any operator-facing API response or rendered UI after WS5.
+      required_prd090_action: >
+        WS5: Remove win_loss_inventory_cents, win_loss_estimated_cents,
+        win_loss_estimated_total_cents, win_loss_inventory_total_cents, and
+        estimated_drop_buyins_cents from all DTOs and API responses that
+        consume this RPC's output. The RPC call site itself does not need to
+        be deleted in PRD-090 scope if other non-forbidden fields (e.g.,
+        fills_total_cents, telemetry_quality) remain in active legitimate use.
+      exec_obligation: code_change_required
+
+    - id: LEGACY-RPC-003
+      path: supabase/migrations/20260114004336_rpc_shift_table_metrics.sql
+      rpc_or_query: rpc_shift_table_metrics (SQL definition)
+      used_by:
+        - LEGACY-RPC-002 call site
+      issue: >
+        Line 244: COALESCE(ta.total_cents, 0)::bigint AS estimated_drop_buyins_cents
+        — forbidden COALESCE-to-zero pattern (ADR-061 D6 violation).
+        Gaming-day window in query (not session-scope). This is the DB-level source
+        of all ADR-061 violations in the shift-metrics stream.
+      disposition: inactive_or_internal_only_with_reason
+      rationale: >
+        SQL migration file is a DB artifact defining the legacy RPC. The migration
+        itself is not an operator-visible consumer surface. The WS2 implementation
+        creates a new canonical service (table-inventory-accounting.ts) with the
+        correct session-scope predicate. The legacy RPC definition remains in the DB
+        until formally dropped; dropping it is an EXEC decision.
+      required_prd090_action: >
+        No schema migration required in PRD-090 scope to change this definition.
+        EXEC decides whether to drop the legacy RPC in a subsequent migration.
+        WS6 tia.rpc_exclusion test must prove TableInventoryAccounting does not
+        call rpc_shift_table_metrics.
+      exec_obligation: documentation_and_gate_only
+
+    - id: LEGACY-RPC-004
+      path: supabase/migrations/20260114004455_rpc_shift_rollups.sql
+      rpc_or_query: rpc_shift_pit_metrics + rpc_shift_casino_metrics (SQL definitions)
+      used_by:
+        - Pit and casino level shift metrics (ShiftPitMetricsDTO, ShiftCasinoMetricsDTO)
+      issue: >
+        Lines 138-139 (pit): COALESCE(SUM(tm.win_loss_inventory_cents), 0)::bigint
+        Lines 261-262 (casino): COALESCE(SUM(tm.win_loss_inventory_cents), 0)::bigint
+        — rollup aggregation with COALESCE masking of missing snapshot data.
+        Both functions call rpc_shift_table_metrics() internally, inheriting its
+        gaming-day scope violation.
+      disposition: inactive_or_internal_only_with_reason
+      rationale: >
+        SQL migration defining legacy rollup RPCs. Not directly an operator-visible
+        consumer surface. The COALESCE masking is an internal DB computation artifact.
+        Services calling these RPCs are classified separately (LEGACY-API-004/005).
+      required_prd090_action: >
+        No schema migration required in PRD-090 scope. Service-level suppression
+        (LEGACY-API-004/005) closes the operator-visible exposure. EXEC may choose
+        to drop these RPCs in a subsequent migration.
+      exec_obligation: documentation_and_gate_only
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # ALLOWED RESIDUAL MATCHES
+  # (Legitimate appearances of forbidden terms that are not operator-visible)
+  # ─────────────────────────────────────────────────────────────────────────────
+  allowed_residual_matches:
+    - path: lib/sentry/pii-denylist.ts
+      term: win_loss_estimated_total_cents
+      reason: internal_bookkeeping
+      proof_not_operator_visible: >
+        String literal in PII scrubbing denylist. Used by Sentry SDK to redact
+        sensitive fields from error reports. Never returned to an operator-facing
+        boundary.
+
+    - path: docs/25-api-data/SHIFT_METRICS_CONTRACT_v1.md
+      term: win_loss_inventory_cents, win_loss_estimated_cents, estimated_drop_buyins_cents, win_loss_estimated_total_cents
+      reason: archived_doc
+      proof_not_operator_visible: >
+        API data contract documentation file. Documents the legacy field contract
+        for historical reference. Not rendered on any operator UI or API surface.
+        Will be superseded by PRD-090 canonical documentation.
+
+    - path: docs/25-api-data/SHIFT_METRICS_UX_CONTRACT_v1.md
+      term: win_loss_inventory_cents, win_loss_estimated_cents, "Win/Loss (Inv.)", "Win/Loss (Est.)"
+      reason: archived_doc
+      proof_not_operator_visible: >
+        UX display contract documentation. Documents legacy label mappings.
+        Not operator-visible. Superseded by PRD-090 ADR-060 naming standards.
+
+    - path: docs/25-api-data/SHIFT_SNAPSHOT_RULES_v1.md
+      term: win_loss_inventory_cents, rpc_shift_table_metrics
+      reason: archived_doc
+      proof_not_operator_visible: >
+        Data integrity rules documentation. Not an operator-visible surface.
+
+    - path: docs/25-api-data/SHIFT_READ_MODEL_AUDIT_v1.md
+      term: win_loss_inventory_cents, win_loss_estimated_cents, win_loss_estimated_total_cents, estimated_drop_buyins_cents
+      reason: archived_doc
+      proof_not_operator_visible: >
+        Audit rules documentation. Not an operator-visible surface.
+
+    - path: docs/25-api-data/TRUST_LAYER_RULES.md
+      term: win_loss_inventory_cents
+      reason: archived_doc
+      proof_not_operator_visible: >
+        Display rules documentation. Not an operator-visible surface.
+
+    - path: docs/25-api-data/SHIFT_PROVENANCE_ROLLUP_ALGO_v1.md
+      term: win_loss_inventory_cents, win_loss_estimated_cents
+      reason: archived_doc
+      proof_not_operator_visible: >
+        Algorithm pseudocode documentation. Not an operator-visible surface.
+
+    - path: services/table-context/rundown.ts (comments only)
+      term: table_win_cents (in comment text, lines 7, 64, 91)
+      reason: migration_comment
+      proof_not_operator_visible: >
+        Comment text documenting the PATCHED behavior for developer reference.
+        Not rendered to any operator-visible surface. Will be removed when
+        the service file is updated in WS4.
+
+    - path: hooks/table-context/use-table-rundown.ts (comments only)
+      term: table_win_cents (in comment/JSDoc text, lines 9, 51, 73)
+      reason: migration_comment
+      proof_not_operator_visible: >
+        JSDoc comment documenting the PATCHED behavior. Not rendered to any
+        operator-visible surface.
+
+    - path: services/table-context/shift-metrics/provenance.ts
+      term: win_loss_inventory_cents, win_loss_estimated_cents (lines 65-66 in provenance check)
+      reason: internal_bookkeeping
+      proof_not_operator_visible: >
+        Internal provenance evaluation logic. Computes metric_grade signal
+        (AUTHORITATIVE vs ESTIMATE) based on field nullability. The metric_grade
+        field itself is not a forbidden term; it is a quality signal. The provenance
+        computation is not returned to operators directly — it feeds into
+        ShiftTableMetricsDTO.metric_grade which drives conditional display logic.
+      exec_obligation: code_change_required
+      exec_note: >
+        BLOCKER (DA-EXEC-001): After LEGACY-API-001 removes win_loss_inventory_cents
+        and win_loss_estimated_cents from ShiftTableMetricsDTO, provenance.ts will
+        reference non-existent fields — the TypeScript build will fail. This MUST be
+        resolved in the same WS5 commit as LEGACY-API-001.
+        Required: either (a) replace the two field references with a non-forbidden
+        quality signal (e.g., derive metric_grade from telemetry_quality alone), or
+        (b) deprecate metric_grade from ShiftTableMetricsDTO entirely if no
+        non-suppressed consumer requires it.
+        Gate: `npm run type-check` must pass after LEGACY-API-001 changes are applied
+        and before any other WS5 commit is merged.
+
+    - path: supabase/migrations/* (all SQL migration files)
+      term: all forbidden terms
+      reason: migration_comment
+      proof_not_operator_visible: >
+        SQL migration artifacts define DB schema and RPC function bodies.
+        The migration files themselves are development-only artifacts. The
+        RPC definitions they contain are classified separately in
+        LEGACY-RPC-003 and LEGACY-RPC-004.
+
+    - path: >
+        All **/__tests__/*.ts, **/__tests__/*.tsx files —
+        including: components/shift-dashboard-v3/__tests__/,
+        services/table-context/__tests__/,
+        services/table-context/shift-metrics/__tests__/,
+        services/reporting/__tests__/
+      term: all forbidden terms (in test fixtures and mocks)
+      reason: test_only
+      proof_not_operator_visible: >
+        Test fixture data and mock objects. Tests run in development/CI only.
+        Forbidden fields in test mocks reflect the current DTO contract being tested.
+        Tests must be updated after DTO suppression in WS5 to reflect the new DTO
+        contract, but the field references in tests are not operator-visible.
+
+    - id: LEGACY-API-009
+      path: app/api/v1/shift-dashboards/metrics/pits/route.ts
+      exported_field_or_response: >
+        GET /api/v1/shift-dashboards/metrics/pits — delegates to getShiftPitMetrics()
+        or getShiftAllPitsMetrics(); returns ShiftPitMetricsDTO and ShiftTableMetricsDTO[]
+        without field filtering. Forbidden fields serialized via DTO passthrough:
+          win_loss_inventory_total_cents (ShiftPitMetricsDTO)
+          win_loss_estimated_total_cents (ShiftPitMetricsDTO)
+          estimated_drop_buyins_total_cents (ShiftPitMetricsDTO)
+          win_loss_inventory_cents (ShiftTableMetricsDTO via getShiftAllPitsMetrics)
+          win_loss_estimated_cents (ShiftTableMetricsDTO)
+          estimated_drop_buyins_cents (ShiftTableMetricsDTO)
+      consumed_by:
+        - hooks/shift-dashboard/http.ts (pits endpoint type assertion)
+        - components/shift-dashboard/pit-metrics-table.tsx (LEGACY-CONSUMER-002)
+        - components/shift-dashboard-v3/center/pit-table.tsx (LEGACY-CONSUMER-008)
+      visibility: serialized_operator_facing_api
+      disposition: suppress_rendering
+      rationale: >
+        Route delegates entirely to service; no independent field logic. Forbidden
+        fields are serialized via DTO passthrough from ShiftPitMetricsDTO (LEGACY-API-004)
+        and ShiftTableMetricsDTO (LEGACY-API-001). Suppression is achieved by DTO
+        field removal per LEGACY-API-004 and LEGACY-API-001 — no additional route-level
+        changes required beyond verifying the route does not add fields after DTO change.
+        Resolves UNRESOLVED-001 (inspected 2026-05-30).
+      required_prd090_action: >
+        After DTO field removal per LEGACY-API-004 and LEGACY-API-001, verify that
+        this route no longer serializes forbidden fields. Add route serialization test
+        for GET /api/v1/shift-dashboards/metrics/pits per WS5/WS6 acceptance criteria.
+      exec_obligation: verify_after_dto_suppression
+      extends: LEGACY-API-004
+
+    - id: LEGACY-API-010
+      path: app/api/v1/shift-dashboards/metrics/casino/route.ts
+      exported_field_or_response: >
+        GET /api/v1/shift-dashboards/metrics/casino — delegates to getShiftCasinoMetrics();
+        returns ShiftCasinoMetricsDTO without field filtering. Forbidden fields serialized
+        via DTO passthrough:
+          win_loss_inventory_total_cents (ShiftCasinoMetricsDTO)
+          win_loss_estimated_total_cents (ShiftCasinoMetricsDTO)
+          estimated_drop_buyins_total_cents (ShiftCasinoMetricsDTO)
+      consumed_by:
+        - hooks/shift-dashboard/http.ts (casino endpoint type assertion)
+        - components/shift-dashboard/casino-summary-card.tsx (LEGACY-CONSUMER-003)
+        - components/shift-dashboard-v3/shift-dashboard-v3.tsx (LEGACY-CONSUMER-009)
+      visibility: serialized_operator_facing_api
+      disposition: suppress_rendering
+      rationale: >
+        Route delegates entirely to service; no independent field logic. Forbidden
+        fields are serialized via DTO passthrough from ShiftCasinoMetricsDTO
+        (LEGACY-API-005). Suppression is achieved by DTO field removal per
+        LEGACY-API-005 — no additional route-level changes required.
+        Resolves UNRESOLVED-002 (inspected 2026-05-30).
+      required_prd090_action: >
+        After DTO field removal per LEGACY-API-005, verify that this route no longer
+        serializes forbidden fields. Add route serialization test for
+        GET /api/v1/shift-dashboards/metrics/casino per WS5/WS6 acceptance criteria.
+      exec_obligation: verify_after_dto_suppression
+      extends: LEGACY-API-005
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # UNRESOLVED FINDINGS (resolved 2026-05-30)
+  # ─────────────────────────────────────────────────────────────────────────────
+  unresolved_findings:
+    # All four unresolved route.ts files inspected 2026-05-30 via parallel codebase audit.
+    # UNRESOLVED-001 and UNRESOLVED-002 classified above as LEGACY-API-009 and LEGACY-API-010.
+    # UNRESOLVED-003 and UNRESOLVED-004 found CLEAN — see resolution notes below.
+
+    - id: UNRESOLVED-003
+      path: app/api/v1/shift-checkpoints/ (latest and delta routes)
+      resolution: CLEAN at formula level — inherits DTO suppression consequence from LEGACY-API-008
+      inspection_date: 2026-05-30
+      last_updated: 2026-06-01
+      finding: >
+        Both latest and delta checkpoint routes contain no independent formula logic.
+        However, win_loss_cents is now classified as a forbidden field (see
+        forbidden_terms.fields) because it is a downstream aggregate of
+        win_loss_inventory_cents computed in shift-checkpoint/crud.ts:143.
+        LEGACY-API-008 requires removing win_loss_cents from ShiftTableCheckpointDTO
+        and ShiftCheckpointDeltaDTO (exec_obligation: code_change_required).
+        The routes do not add forbidden fields independently, but they serialize
+        the DTOs that carry win_loss_cents. When LEGACY-API-008 DTO changes are
+        committed, the checkpoint route serialization tests must verify win_loss_cents
+        is absent from operator-facing JSON.
+      action_required: >
+        Add route serialization tests for GET /api/v1/shift-checkpoints/latest and
+        GET /api/v1/shift-checkpoints/delta proving win_loss_cents is absent after
+        LEGACY-API-008 DTO changes. Commit in the same WS5 batch as LEGACY-API-008.
+
+    - id: UNRESOLVED-004
+      path: app/api/v1/shift-intelligence/anomaly-alerts/route.ts
+      resolution: CLEAN — no suppression required
+      inspection_date: 2026-05-30
+      finding: >
+        The anomaly-alerts route returns AnomalyAlertsResponseDTO containing
+        FinancialAnomalyAlertDTO and RatioAnomalyAlertDTO (discriminated union).
+        These DTOs use FinancialValue wrapper types with observedValue, baselineMedian,
+        baselineMad, and thresholdValue — generic containers that do not carry
+        forbidden field names. The forbidden "Win/Loss" label exposure is at the
+        component layer (anomaly-alert-card.tsx LEGACY-CONSUMER-014), not in the
+        serialized API response. Route restricts access to pit_boss and admin roles.
+      action_required: none
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # ACCEPTANCE TESTS
+  # ─────────────────────────────────────────────────────────────────────────────
+  acceptance_tests:
+    grep_no_active_operator_legacy_rendering:
+      description: >
+        Repo grep proves no active operator route/component/API response renders
+        or serializes forbidden legacy table-result fields or labels.
+      forbidden_active_matches:
+        - win_loss_inventory_cents
+        - win_loss_estimated_cents
+        - win_loss_estimated_total_cents
+        - win_loss_inventory_total_cents
+        - estimated_drop_buyins_cents
+        - table_win_cents
+        - '"Win/Loss"'
+        - '"Estimated Win/Loss"'
+      allowed_match_categories:
+        - tests
+        - archived_docs (docs/25-api-data/)
+        - migration_comments (inline code comments)
+        - sql_migration_artifacts (supabase/migrations/)
+        - internal_only_dto_bookkeeping
+        - pii_denylist (lib/sentry/pii-denylist.ts)
+        - explicit_suppression_inventory_entries (this file)
+
+    no_local_formula_reconstruction:
+      description: >
+        No component, route, hook, or API reconstructs table result formulas from
+        raw inventory or telemetry inputs outside TableInventoryAccounting.
+      forbidden_patterns:
+        - local inventory plus telemetry win/loss calculation in components
+        - COALESCE SUM zero-drop fallback in TypeScript service code
+        - rpc_shift_table_metrics used as table accounting source for canonical projection
+
+    no_forbidden_api_serialization:
+      description: >
+        The operator-facing API endpoints listed below must not serialize forbidden
+        fields in their JSON responses after WS5.
+      target_routes:
+        - GET /api/v1/shift-dashboards/metrics/tables
+        - GET /api/v1/shift-dashboards/metrics/pits
+        - GET /api/v1/shift-dashboards/metrics/casino
+        - GET /api/v1/table-rundown-reports/[id]
+        - GET /api/v1/reports/shift-summary
+        - GET /api/v1/shift-checkpoints/latest    # UNRESOLVED-003: win_loss_cents must be absent post-LEGACY-API-008
+        - GET /api/v1/shift-checkpoints/delta     # UNRESOLVED-003: win_loss_cents must be absent post-LEGACY-API-008
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # FINAL VERDICT
+  # ─────────────────────────────────────────────────────────────────────────────
+  final_verdict:
+    classification_complete: true
+    classification_complete_caveat: null   # all four unresolved route.ts files inspected 2026-05-30
+    suppression_scope_summary:
+      active_operator_visible_ui_consumers: 14      # LEGACY-CONSUMER-001 through 014
+      api_and_dto_surfaces: 10                      # LEGACY-API-001 through 010
+      rpc_and_query_sources: 4                      # LEGACY-RPC-001 through 004
+      consume_projection: 2                         # LEGACY-CONSUMER-005, LEGACY-API-002
+      suppress_rendering: 20                        # all non-exemplar active surfaces (18 + LEGACY-API-009 + LEGACY-API-010)
+      inactive_or_internal_only: 6                  # tests, docs, SQL migrations, PII denylist
+      unresolved_requiring_exec_inspection: 0       # UNRESOLVED-001/002 → LEGACY-API-009/010; UNRESOLVED-003/004 → CLEAN
+    discovered_extensions_to_forbidden_terms:
+      - win_loss_inventory_total_cents  # pit/casino aggregate of win_loss_inventory_cents; same suppression rule
+      - win_loss_cents (ShiftTableCheckpointDTO) # checkpoint aggregate of win_loss_inventory_cents; forbidden at label level
+    blockers_before_exec: []
+    safe_to_draft_exec_when:
+      - every active consumer has one disposition (DONE — 14 UI + 10 API surfaces classified)
+      - every suppress_rendering item has a concrete suppression action (DONE for all 20)
+      - every consume_projection item is intentionally inside PRD-090 scope (DONE — 2 items)
+      - every inactive/internal item has proof it is not operator-visible (DONE)
+      - four unresolved route.ts files inspected and classified (DONE — 2026-05-30)

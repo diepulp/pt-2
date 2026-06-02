@@ -157,6 +157,24 @@ Reserved future vocabulary is not implementation permission.
 
 The thesaurus must not invent or preserve rejected terminology as a parallel negative vocabulary. Existing legacy names are tracked only as observed aliases with dispositions.
 
+### Rule 8 — Semantic ambiguity preflight
+
+Any artifact submitted for SRL admission MUST pass the semantic ambiguity preflight before it may be marked canonical.
+
+The preflight scans admitted terms, thesaurus entries, Zachman records, DTO boundary language, and legacy alias dispositions for ambiguous domain shorthand.
+
+Programmatic preflight is not the final semantic authority. It is a deterministic guardrail that catches known ambiguity patterns before human review.
+
+For the TIA exemplar, unqualified uses of `drop`, `drop telemetry`, `telemetry drop`, `drop input`, `drop source`, and `drop absent` are not acceptable in canonical prose when the intended meaning is `telemetry_derived_drop_estimate_cents`.
+
+Allowed uses must be one of:
+- a canonical identifier, such as `telemetry_derived_drop_estimate_cents`
+- a declared DTO key path, such as `source_authority.drop`
+- a reserved future term explicitly marked reserved or out of scope, such as `posted_drop_amount_cents` or `counted_drop_amount_cents`
+- a legacy alias disposition entry, where the alias is observed and mapped rather than admitted as canonical terminology
+
+A canonical SRL record must have zero hard-fail ambiguity findings.
+
 ---
 
 ## 8. Admitted Extension Registry
@@ -242,4 +260,69 @@ zachman:
   who: <owner and consumers>
   when: <validity conditions>
   why: <ambiguity eliminated>
+
+semantic_ambiguity_preflight:
+  status: pass | fail | pending | waived
+  scanner_version: <semantic linter version>
+  findings_count: <number>
+  hard_fail_count: <number>
+  waiver_reason: <required only when status = waived>
 ```
+
+---
+
+## 11. SRL Intake Preflight
+
+Before an SRL extension artifact is admitted as canonical, it must pass three checks:
+
+1. **Owner binding check** — every admitted term binds to an SRM owner.
+2. **Record completeness check** — every admitted term declares the eight semantic responsibility fields and answers the six Zachman interrogatives.
+3. **Semantic ambiguity check** — known ambiguous shorthand is absent from canonical prose or appears only in an allowed context.
+
+### 11.1 Hard-fail ambiguity examples
+
+For the TIA exemplar, the following phrases hard-fail when used as canonical prose:
+
+```text
+drop telemetry
+telemetry drop
+drop input
+drop source
+drop absent
+drop estimate source
+estimated win/loss
+source_authority.inventory
+```
+
+### 11.2 Allowed context examples
+
+```text
+telemetry_derived_drop_estimate_cents
+drop_estimate_state
+telemetry_drop_formula
+source_authority.drop
+posted_drop_amount_cents        # only when reserved/future/out-of-scope
+counted_drop_amount_cents       # only when reserved/future/out-of-scope
+final_reconciled_drop_amount_cents # only when reserved/out-of-scope
+```
+
+### 11.3 Acceptance rule
+
+```yaml
+srl_intake_acceptance:
+  pass:
+    hard_fail_count: 0
+    required_record_fields: complete
+    zachman_interrogatives: complete
+    srm_owner_binding: present
+  warn:
+    - shorthand appears only in quoted legacy alias disposition
+    - shorthand appears in historical context
+    - shorthand appears in an explicitly allowed DTO key path
+  fail:
+    - unqualified domain term appears in a semantic responsibility record
+    - pseudo-term appears in a new capability/function name
+    - prose uses "drop" where the intended meaning is telemetry_derived_drop_estimate_cents
+```
+
+Scanner: `scripts/semantic/srl_intake_lint.py` — exits nonzero when `hard_fail_count > 0`.

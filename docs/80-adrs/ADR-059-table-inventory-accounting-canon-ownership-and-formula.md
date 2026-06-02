@@ -1,7 +1,7 @@
 ---
 id: ADR-059
 title: Table Inventory Accounting Canon — Ownership and Formula
-status: Proposed
+status: Accepted
 date: 2026-05-28
 owner: Architecture Review
 decision_scope: >
@@ -28,7 +28,7 @@ related:
 
 ## 1. Context
 
-PT-2 currently derives table result language (Win/Loss, Drop, Need, inventory movement) from multiple independent formulas across `rpc_compute_table_rundown`, dashboard-local computation, and metric components. These formulas disagree on which inputs are included, whether drop is telemetry-derived or omitted, and what label is displayed when inputs are missing. The operator sees different values for the same table on the same shift depending on which surface they are looking at.
+PT-2 currently derives table result language (Win/Loss, Drop, Need, inventory movement) from multiple independent formulas across `rpc_compute_table_rundown`, dashboard-local computation, and metric components. These formulas disagree on which inputs are included, whether the telemetry-derived drop estimate is present or omitted, and what label is displayed when inputs are missing. The operator sees different values for the same table on the same shift depending on which surface they are looking at.
 
 ADR-053 further prohibits any PT-2 surface from claiming authoritative financial totals — all table result values must carry a surface envelope that separately declares input completeness and custody/authority status.
 
@@ -55,11 +55,11 @@ ADR-059 may be accepted independently as the ownership and DTO-authority decisio
 
 `TableInventoryAccounting` is established as a subdomain of `TableContextService`, not as a standalone bounded context.
 
-**Rationale:** The module reads only `TableContextService`-owned tables (`table_inventory_snapshot`, `table_fill`, `table_credit`, `table_buyin_telemetry`, `table_session`). It has no write authority and authors no domain facts. A standalone `TableAccountingService` would introduce cross-context reads without adding domain isolation benefits. The Over-Engineering Guardrail and the SRM Phase 0 ownership model both point to the subdomain form.
+**Rationale:** The module reads TableContext-owned session and inventory-side entities (`table_session`, `table_inventory_snapshot`, `table_fill`, `table_credit`) backed by `table_sessions`, `table_inventory_snapshots`, `table_fills`, and `table_credits`. It also consumes `table_buyin_telemetry` for `telemetry_derived_drop_estimate_cents`; SRM ownership of that telemetry source must be explicitly resolved before TIA PRD execution. The module has no write authority and authors no domain facts. A standalone `TableAccountingService` would introduce cross-context reads without adding domain isolation benefits. The Over-Engineering Guardrail and the SRM Phase 0 ownership model both point to the subdomain form.
 
 **Implementation:** The initial implementation must remain a minimal module within `TableContextService`; PRD/EXEC may choose a single file or small folder, but must not create a standalone bounded context. The subdomain boundary is declared here; it must be reflected in the SRM update that accompanies exemplar delivery.
 
-**Rejected alternative:** Standalone `TableAccountingService` with its own bounded context — adds cross-context read complexity, creates a new context boundary for a module that has no write authority and exclusively consumes data owned by an existing context.
+**Rejected alternative:** Standalone `TableAccountingService` with its own bounded context — adds cross-context read complexity, creates a new context boundary for a module that has no write authority, consumes TableContext-owned session and inventory-side entities, and consumes `table_buyin_telemetry` only for `telemetry_derived_drop_estimate_cents` pending explicit SRM ownership resolution.
 
 ---
 
@@ -76,7 +76,7 @@ projected_table_win_loss_cents =
   - fills_cents
 ```
 
-No `COALESCE` of `telemetry_derived_drop_estimate_cents` to `0` is permitted anywhere in the module or its callers. `0` means a telemetry source exists and summed to zero; `null` means no usable estimate exists for this session. These are semantically distinct claims and must not be conflated (ADR-053 D2; classification YAML amendment 2).
+No `COALESCE` of `telemetry_derived_drop_estimate_cents` to `0` is permitted anywhere in the module or its callers. `0` means qualifying telemetry rows exist and sum to zero; `null` means no telemetry-derived drop estimate exists for this session. These are semantically distinct claims and must not be conflated (ADR-053 D2; classification YAML amendment 2).
 
 `telemetry_derived_drop_estimate_cents` source binding is intentionally delegated to ADR-061. ADR-059 consumers must not infer gaming-day scope, session scope, telemetry-kind inclusion, or adjustment handling from the formula name alone.
 
@@ -128,11 +128,13 @@ interface TableInventoryAccountingProjection {
 }
 ```
 
-`final_table_win_loss_cents` is always `null` in this slice. It requires external custody authority and an ADR/FIB amendment before it may be populated (ADR-053 D2; FIB-H §G). `custody_status` is always `'non_custody_estimate'` in this slice. `input_completeness = complete` never upgrades `custody_status` (classification YAML `semantic_invariant`).
+`final_table_win_loss_cents` is always `null` in this slice. It requires external custody authority and an ADR/FIB amendment before it may be populated (ADR-053 D2; FIB-H §G). `custody_status` is always `'non_custody_estimate'` in this slice. `completeness.status = 'complete'` means input-complete relative to PT-2 internal operational inputs only; it never upgrades `custody_status` (classification YAML `semantic_invariant`).
 
 **Suppression invariant (architectural):** The PRD owns the deletion mechanics and acceptance criteria, but the architectural requirement is set here: after Pit Terminal Rundown exemplar acceptance, no active operator-visible surface may render a win/loss-like table result unless it consumes `TableInventoryAccountingProjection` or is explicitly suppressed.
 
-The PRD/EXEC suppression plan must include a verified inventory of active operator-visible win/loss-like surfaces and a disposition for each surface: consume `TableInventoryAccountingProjection`, suppress rendering, or document why the surface is outside the exemplar acceptance boundary. The exemplar acceptance gate must prove that no active operator-visible surface renders a competing table-result formula. "Outside the exemplar acceptance boundary" is valid only for surfaces that are demonstrably not active operator workflows for the exemplar release.
+For suppression obligations, an active operator-visible surface is a workflow-reachable pilot operator route, component, report, export, dashboard, or backing API response. "Active" here means workflow-reachable, not `table_session` lifecycle state.
+
+The PRD/EXEC suppression plan must include a verified inventory of active operator-visible win/loss-like surfaces and a disposition for each surface: consume `TableInventoryAccountingProjection`, suppress rendering, or document why the surface is outside the exemplar acceptance boundary. The exemplar acceptance gate must prove that no active operator-visible surface renders a competing table-result formula. "Outside the exemplar acceptance boundary" is valid only for surfaces that are demonstrably not workflow-reachable pilot operator surfaces for the exemplar release.
 
 ---
 
@@ -146,7 +148,7 @@ The canonical literal values for `included_inputs` and `missing_inputs` per `cal
 | `inventory_only` | `['opening_inventory', 'closing_inventory', 'fills', 'credits']` | `['drop_estimate']` |
 | `integrity_failure` | Deterministic subset of successfully resolved inputs, in canonical order: `opening_inventory`, `closing_inventory`, `fills`, `credits`, `telemetry_drop_estimate` | `[]` |
 
-`drop_estimate` is the only valid normal `missing_inputs` value. It represents the `none_for_session` drop state — the expected partial condition for unrated sessions with no `GRIND_BUYIN` rows. `opening_inventory_cents` and `closing_inventory_cents` are **never** listed in `missing_inputs`; their absence is a lifecycle/integrity failure surfaced via `integrity_issues` instead (see D5).
+`drop_estimate` is the only valid normal `missing_inputs` value. It represents `drop_estimate_state = 'none_for_session'` for telemetry_derived_drop_estimate_cents — the expected partial condition for sessions with no qualifying `RATED_BUYIN` or `GRIND_BUYIN` rows. `opening_inventory_cents` and `closing_inventory_cents` are **never** listed in `missing_inputs`; their absence is a lifecycle/integrity failure surfaced via `integrity_issues` instead (see D5).
 
 `integrity_failure.included_inputs` is diagnostic metadata, not a permission to render a partial result. It must be serialized deterministically so contract tests can compare exact DTO output.
 
@@ -159,13 +161,13 @@ The service module recognizes exactly three result states. No additional states 
 | State | Trigger | DTO result |
 |---|---|---|
 | `telemetry_drop_formula` | All five inputs present; `drop_estimate_state = 'present'` | `projected_table_win_loss_cents` set; `partial_table_result_cents = null`; `integrity_issues = []` |
-| `inventory_only` | Drop estimate null; `drop_estimate_state = 'none_for_session'`; opener and closer both resolvable (including zero) | `partial_table_result_cents` set; `projected_table_win_loss_cents = null`; `integrity_issues = []` |
+| `inventory_only` | `telemetry_derived_drop_estimate_cents` is null; `drop_estimate_state = 'none_for_session'`; opener and closer both resolvable (including zero) | `partial_table_result_cents` set; `projected_table_win_loss_cents = null`; `integrity_issues = []` |
 | `integrity_failure` | `opening_inventory_cents` or `closing_inventory_cents` is null after all resolution paths are exhausted | Both result fields null; `integrity_issues` populated with one or both of `['missing_opening_inventory_snapshot', 'missing_closing_inventory_snapshot']`; surface renders disclosure path only |
 
 **Invariants:**
 
 - Zero `opening_inventory_cents` or `closing_inventory_cents` is a valid explicit inventory count (empty tray). It **never** triggers `integrity_failure`.
-- Absent `telemetry_derived_drop_estimate_cents` **never** triggers `integrity_failure`. Null telemetry is a normal operational condition for unrated sessions.
+- Absent `telemetry_derived_drop_estimate_cents` **never** triggers `integrity_failure`. A null telemetry-derived drop estimate is a normal operational condition for sessions with no qualifying telemetry rows.
 - `integrity_failure` and `inventory_only` are mutually exclusive. A surface must not render "Partial Table Result" when `integrity_issues` is non-empty.
 - `partial_table_result_cents` is triggered **only** when `drop_estimate_state = 'none_for_session'`. No other null-telemetry condition triggers the partial path at exemplar baseline.
 - PRD/EXEC must require an observable signal for every `integrity_failure` result, either structured application logging or an equivalent reportable operational diagnostic. Silent UI-only disclosure is not sufficient.
@@ -195,7 +197,7 @@ The service module recognizes exactly three result states. No additional states 
 
 A standalone bounded context with its own service boundary, separate from `TableContextService`.
 
-**Rejected because:** The module reads only `TableContextService`-owned tables. It has no write authority, no authoring RPCs, and no cross-context writes. A standalone context would require cross-context reads without adding domain isolation. The Over-Engineering Guardrail prohibits introducing context boundaries for modules that have no write authority and no independent domain facts. The subdomain form (`TableInventoryAccounting` within `TableContextService`) provides ownership clarity without added complexity.
+**Rejected because:** The module reads TableContext-owned session and inventory-side entities, and consumes `table_buyin_telemetry` only for `telemetry_derived_drop_estimate_cents` pending explicit SRM ownership resolution. It has no write authority, no authoring RPCs, and no cross-context writes. A standalone context would require cross-context reads without adding domain isolation. The Over-Engineering Guardrail prohibits introducing context boundaries for modules that have no write authority and no independent domain facts. The subdomain form (`TableInventoryAccounting` within `TableContextService`) provides ownership clarity without added complexity.
 
 ### Generic `drop_cents` + `drop_type` discriminator
 

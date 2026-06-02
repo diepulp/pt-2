@@ -1,7 +1,7 @@
 
 # PRD-STD-001 — Product Requirements Document Standard
 
-> **Purpose:** Define how we write PRDs so they stay small, concrete, and shippable, and do **not** turn into architecture bibles or endless wishlists.
+> **Purpose:** Define how we write PRDs so they are bounded, shippable, and vertically collapsed to the smallest symmetric end-to-end proof when rollout scope spans multiple structural categories; PRDs must not turn into architecture bibles or endless wishlists.
 
 ---
 
@@ -9,7 +9,7 @@
 
 ### 1.1. Definition
 
-A **Product Requirements Document (PRD)** describes a *specific, bounded slice* of the product:
+A **Product Requirements Document (PRD)** describes a *specific, bounded slice* of the product. For multi-category or multi-producer rollouts, "bounded slice" means the smallest symmetric exemplar that proves the shared mechanism end-to-end before horizontal expansion:
 - The **problem** it solves.
 - **Who** it is for.
 - **What** must exist for this slice to be called “done”.
@@ -60,14 +60,14 @@ A single PRD **may** cover:
 
 - One **release** (MVP Pilot, v1.1, v2, etc.), or
 - One **bounded problem area** (e.g., “Player Intake + Eligibility Checks”), or
-- One **cohesive phase** cutting across several bounded contexts, *if* it can still be shipped as a unit.
+- One **cohesive phase** cutting across several bounded contexts, *if* it can still be shipped as a unit and complies with `docs/70-governance/EXEMPLAR_SLICE_DISCIPLINE.md` when the rollout spans multiple structural categories.
 
 A PRD **must not** attempt to cover:
 
 - The **entire product** across many phases, or
 - Every bounded context and subsystem at once (e.g., Casino + Table + Rating + Loyalty + Finance + MTL all in one).
 
-If scope feels like “the whole casino,” split it into **multiple PRDs**.
+If scope feels like “the whole casino,” split it into **multiple PRDs**. If scope spans multiple producers, fact classes, event types, service layers, API variants, or surfaces that share an unproven transport/lifecycle/projection mechanism, collapse the PRD around the required exemplar pair before authorizing expansion.
 
 ---
 
@@ -171,7 +171,7 @@ Every PRD must include a **clear, minimal, release-specific Definition of Done**
 
 ### 4.1. DoD Principles
 
-- **Small and concrete:** It must describe a state that can realistically be reached in the near term.
+- **Vertically collapsed when applicable:** For multi-category or multi-producer rollouts, it must prove the smallest symmetric end-to-end exemplar before horizontal expansion. "Small" alone is insufficient if the slice omits a required category or proves only one side of the mechanism.
 - **Observable:** Every bullet must be answerable in binary form: done or not.
 - **Behavior-first:** Focus on working behavior in the real environment, not just code structure.
 - **Test-light but meaningful for early phases:** The first release DoD should be rigorous yet *not* equivalent to a full enterprise maturity standard.

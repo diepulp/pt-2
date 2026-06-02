@@ -107,7 +107,7 @@ Approved JSON blobs (all others require first-class columns):
 | **Foundational** | CasinoService           | casino, casino_settings, company, staff, game_settings, audit_log, report, **player_casino**, gaming_day_lifecycle ¹¹, _staff_pin_attempts_ ⁴ | Root temporal authority, global policy, & player enrollment |
 | **Identity**     | PlayerService           | player, **player_exclusion** ⁶, _player_identity_ ², _player_note_ ³, _player_tag_ ³                                       | Identity management & collaboration artifacts               |
 | **Analytics**    | PlayerTimelineService ³ | (read-only view across all services)                                                                                       | Unified player interaction timeline                         |
-| **Operational**  | TableContextService     | gaming_table, gaming_table_settings, dealer_rotation, table_inventory_snapshot, table_fill, table_credit, table_drop_event, table_session, table_opening_attestation, table_rundown_report, shift_checkpoint | Table lifecycle & operational telemetry                     |
+| **Operational**  | TableContextService     | gaming_table, gaming_table_settings, dealer_rotation, table_inventory_snapshot, table_fill, table_credit, table_drop_event, table_session, table_opening_attestation, table_rundown_report, shift_checkpoint; _consumes_ table_buyin_telemetry ¹⁴ | Table lifecycle, operational telemetry & inventory accounting (TableInventoryAccounting subdomain) |
 | **Operational**  | FloorLayoutService      | floor_layout, floor_layout_version, floor_pit, floor_table_slot, floor_layout_activation                                   | Floor design & activation                                   |
 | **Operational**  | VisitService            | visit                                                                                                                      | Session lifecycle (3 archetypes)                            |
 | **Operational**  | ShiftIntelligenceService | table_metric_baseline, shift_alert, alert_acknowledgment                                                                  | Shift anomaly detection, rolling baselines & alert maturity |
@@ -133,6 +133,7 @@ Approved JSON blobs (all others require first-class columns):
 > ¹¹ `gaming_day_lifecycle` is a foundational temporal close-signal store. Finance projections may consume it for completeness derivation, but PlayerFinancialService does not own the gaming-day lifecycle authority.
 > ¹² `processed_messages` is the Wave 2 consumer idempotency store for `finance_outbox`. It is service-role-only and records relay receipt atomicity; it is not domain authoring state.
 > ¹³ `visit_class_a_projection` is a Wave 2 projection artifact derived from Class A ledger Projection Inputs. It is rebuildable projection state and does not supersede `player_financial_transaction` as source of truth.
+> ¹⁴ `table_buyin_telemetry` is a **consumed input** for `TableContextService.TableInventoryAccounting` — read-only semantic input for `telemetry_derived_drop_estimate_cents` (session-scoped SUM, `RATED_BUYIN` + `GRIND_BUYIN` only, per ADR-061 D2). TableContextService holds no write authority over this table. Registered as a consumed-input gap in SRL-TIA-001 `srm_ownership_gaps`; resolved here per EXEC-090 WS1. Does not create a standalone bounded context — `TableInventoryAccounting` is a subdomain of `TableContextService`.
 
 ---
 
@@ -495,6 +496,8 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 
 **Owns**: `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event`, `table_session`, `table_opening_attestation`, `table_rundown_report`, `shift_checkpoint`
 
+**Consumes**: `table_buyin_telemetry` as the telemetry input for `TableContextService.TableInventoryAccounting.telemetry_derived_drop_estimate_cents` (read-time derivation only; no write authority)
+
 **Bounded Context**: "What is the operational state and chip custody posture of this gaming table?"
 
 ### Service Layer Modules
@@ -621,10 +624,9 @@ TableContextService has one admitted semantic extension:
 
 **Basis:** ADR-059 (ownership + formula), ADR-060 (drop taxonomy), ADR-061 (session scope)
 
-⚠ `table_buyin_telemetry` is consumed by TableInventoryAccounting as its primary telemetry
-input table but is not yet listed in the main Service Responsibility Overview `Owns Tables`
-column. This ownership gap must be resolved at TIA PRD preflight or in the PRD itself. Not
-blocking for SRL admission.
+`table_buyin_telemetry` is registered as a consumed input for `TableInventoryAccounting`.
+This is read-only semantic input consumption for `telemetry_derived_drop_estimate_cents`;
+it does not transfer write authority or create a standalone TableAccounting bounded context.
 
 SRM owns the service/subdomain boundary. SRL owns the semantic records.
 
@@ -1232,5 +1234,5 @@ create type import_row_status as enum ('staged','created','linked','skipped','co
 **Document Version**: 4.27.0
 **Created**: 2025-10-21
 **Reduced**: 2025-12-06
-**Updated**: 2026-05-29 (SRL companion reference + TableContextService semantic extension entry)
+**Updated**: 2026-05-30 (PRD-090 consumed input closure for TableInventoryAccounting)
 **Status**: CANONICAL - Registry + Invariants Only

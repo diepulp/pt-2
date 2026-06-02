@@ -1,7 +1,7 @@
 ---
 id: ADR-061
 title: Session-Scope Aggregation Boundary
-status: Proposed
+status: Accepted
 date: 2026-05-28
 owner: Architecture Review
 decision_scope: >
@@ -29,7 +29,7 @@ related:
 
 ## 1. Context
 
-`telemetry_derived_drop_estimate_cents` is the drop-like input to the canonical table win/loss formula (ADR-059 D2). It is derived from a SUM over `table_buyin_telemetry`. The question this ADR must close is: **what rows does that SUM cover?**
+`telemetry_derived_drop_estimate_cents` is the telemetry-derived drop estimate input to the canonical table win/loss formula (ADR-059 D2). It is derived from a SUM over `table_buyin_telemetry`. The question this ADR must close is: **what rows does that SUM cover?**
 
 Two aggregation scopes exist in the codebase and they produce different numbers for the same table:
 
@@ -38,7 +38,7 @@ Two aggregation scopes exist in the codebase and they produce different numbers 
 
 `rpc_shift_table_metrics` — the only existing aggregation of `table_buyin_telemetry` — uses gaming-day scope (caller-supplied `p_window_start`/`p_window_end` parameters set to gaming-day boundaries). It also COALESCEs the SUM result to 0, which conflates "zero qualifying rows" with "qualifying rows that summed to zero" — semantically distinct states (ADR-059 D2).
 
-The two scopes are not equivalent. A gaming-day window can commingle telemetry from multiple consecutive sessions at the same table; it includes buy-ins from other sessions that happened to fall on the same gaming day. That produces a value that is neither session-authoritative nor per-session-comparable. It is the wrong input for a per-session `TableInventoryAccountingProjection`.
+The two scopes are not equivalent. A gaming-day window can commingle telemetry from multiple consecutive sessions at the same table; it includes buy-ins from other sessions that happened to fall on the same gaming day. That produces a value that is neither session-scoped nor per-session-comparable. It is the wrong input for a per-session `TableInventoryAccountingProjection`.
 
 The scaffold §4 froze the session-scoped predicate on 2026-05-27. This ADR makes that freeze a durable decision record, closes audit finding `session_scope_aggregation_boundary`, and explicitly prohibits gaming-day scope from re-entering the formula path.
 
@@ -116,7 +116,7 @@ The new `TableInventoryAccounting` service module must implement the session-sco
 
 ### D6 — Null SUM Semantics and Index Coverage
 
-**Null semantics:** SQL `SUM` over zero qualifying rows returns `NULL`, not `0`. This null must not be COALESCEd to 0 anywhere in `TableInventoryAccounting` or its callers. `NULL` means no qualifying `RATED_BUYIN` or `GRIND_BUYIN` rows exist for this session window — a normal operational state for unrated sessions. It triggers `drop_estimate_state = 'none_for_session'` per ADR-059 D2. `0` means qualifying rows exist and their amounts summed to zero — a distinct claim. The two must not be conflated.
+**Null semantics:** SQL `SUM` over zero qualifying rows returns `NULL`, not `0`. This null must not be COALESCEd to 0 anywhere in `TableInventoryAccounting` or its callers. `NULL` means no qualifying `RATED_BUYIN` or `GRIND_BUYIN` rows exist for this session window — a normal operational state for sessions with no qualifying telemetry rows. It triggers `drop_estimate_state = 'none_for_session'` per ADR-059 D2. `0` means qualifying rows exist and their amounts summed to zero — a distinct claim. The two must not be conflated.
 
 **Index coverage (RFC-007 §8 open question 1 — closed here):** The existing index `idx_tbt_kind` on `(casino_id, table_id, telemetry_kind, occurred_at)` directly supports the canonical predicate. The leading `casino_id + table_id` columns match the equality predicates; `telemetry_kind` matches the `IN` filter; `occurred_at` supports the range scan. No new migration is required at exemplar baseline to support the session-window query at shift scale (O(10) concurrent tables per pit).
 
@@ -143,7 +143,7 @@ The new `TableInventoryAccounting` service module must implement the session-sco
 
 Use `gaming_day` as the aggregation boundary, joining `table_buyin_telemetry.gaming_day = table_session.gaming_day`.
 
-**Rejected because:** A gaming day contains many sessions across many tables. A gaming-day aggregate for a specific table commingles telemetry from all sessions at that table on the same gaming day. The result is not a per-session drop estimate — it is a shift-level or day-level aggregate being used as a session input. That produces a systematically inflated `projected_table_win_loss_cents` for every session after the first on a given table per gaming day. This is precisely the scope confusion the codebase already exhibits in `rpc_shift_table_metrics`, which this ADR set exists to correct.
+**Rejected because:** A gaming day contains many sessions across many tables. A gaming-day aggregate for a specific table commingles telemetry from all sessions at that table on the same gaming day. The result is not a per-session telemetry-derived drop estimate — it is a shift-level or day-level aggregate being used as a session input. That produces a systematically inflated `projected_table_win_loss_cents` for every session after the first on a given table per gaming day. This is precisely the scope confusion the codebase already exhibits in `rpc_shift_table_metrics`, which this ADR set exists to correct.
 
 ### Use `rpc_shift_table_metrics` with a session-scoped window override
 

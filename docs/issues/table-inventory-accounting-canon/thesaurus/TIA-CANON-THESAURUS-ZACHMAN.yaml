@@ -14,7 +14,7 @@ intent:
   operator_problem: >
     Table result values (win/loss-like) are derived independently across the pit terminal,
     shift dashboard, rundown report, and analytics panel using different formulas, different
-    drop inputs, and different labels. A pit boss sees different numbers on different screens
+    telemetry-derived estimate inputs, formula inputs, and win/loss-like inputs. A pit boss sees different numbers on different screens
     for the same session with no clear authority ordering and no disclosure of what the number
     means.
   pilot_fit: >
@@ -40,7 +40,7 @@ intent:
         telemetry SUM per ADR-060 D2.
     - Gaming-day scope aggregation — the telemetry SUM window is session scope only
         (opened_at / COALESCE(closed_at, NOW())); gaming_day is lifecycle metadata only.
-    - rpc_shift_table_metrics as a drop source — uses gaming-day scope and forbidden
+    - rpc_shift_table_metrics as a source for telemetry_derived_drop_estimate_cents — uses gaming-day scope and forbidden
         COALESCE to 0; both disqualifying per ADR-061 D5.
     - Any formula input beyond the five canonical operands (telemetry_derived_drop_estimate_cents,
         opening_inventory_cents, closing_inventory_cents, fills_cents, credits_cents).
@@ -53,7 +53,7 @@ intent:
       why_rejected_now: RATED_ADJUSTMENT posture is unclear in the current schema —
         the exemplar cannot claim it is safe to include without a separate ADR clarifying
         its semantics. It is explicitly excluded to maintain a clean, auditable predicate.
-    - idea: Use rpc_shift_table_metrics as the telemetry drop source
+    - idea: Use rpc_shift_table_metrics as the source for telemetry_derived_drop_estimate_cents
       why_considered: The RPC already aggregates buy-in activity and is in production.
       why_rejected_now: It uses gaming-day scope and COALESCE(SUM(...), 0) — both
         forbidden. Session scope and null-preserving SUM are non-negotiable (ADR-061 D5).
@@ -62,8 +62,8 @@ intent:
       why_rejected_now: "Win/Loss" unqualified is reserved for final_table_win_loss_cents
         which requires external custody authority. Using it for a non-custody estimate
         creates a false authority claim.
-    - idea: Implement partial result without a drop estimate as a temporary display path
-      why_considered: Showing any result is better than showing nothing when drop is absent.
+    - idea: Implement partial result without telemetry_derived_drop_estimate_cents as a temporary display path
+      why_considered: Showing any result is better than showing nothing when telemetry_derived_drop_estimate_cents is absent.
       why_rejected_now: The three-result-state machine already handles this correctly as
         the inventory_only path. "Partial Table Result" is the canonical label for that
         state. No additional path is needed.
@@ -120,6 +120,7 @@ zachman:
           session open or close. Provides opening_inventory_cents and closing_inventory_cents
           for the formula. A null snapshot after all resolution paths are exhausted is
           an integrity failure — not a partial result.
+          (Resolution paths enumerated in vocabulary.snapshot_resolution_paths.)
         stateful: true
         system_of_record: supabase / table_inventory_snapshots table
         fields_hint:
@@ -204,7 +205,7 @@ zachman:
         verb: read
         description: >
           Determine which of the three canonical result states applies for the session:
-          telemetry_drop_formula (all 5 inputs present), inventory_only (drop absent,
+          telemetry_drop_formula (all 5 inputs present), inventory_only (telemetry_derived_drop_estimate_cents absent,
           opener+closer resolvable), or integrity_failure (opener or closer unresolvable).
           Exactly one state must be selected. States are mutually exclusive.
         served_outcomes:
@@ -212,7 +213,7 @@ zachman:
         loop_steps:
           - STEP-2
 
-      - name: aggregate_session_telemetry_drop
+      - name: aggregate_session_telemetry_derived_drop_estimate
         verb: read
         description: >
           Execute a session-scoped SUM of table_buyin_telemetry.amount_cents WHERE
@@ -356,6 +357,7 @@ zachman:
           Opener and closer are lifecycle facts, not optional inputs. Their absence after all
           resolution paths are exhausted is an integrity_failure — not a partial completeness
           condition. drop_estimate is the only valid entry in completeness.missing_inputs.
+          (Resolution paths enumerated in vocabulary.snapshot_resolution_paths.)
         severity: hard
       - id: RULE-5
         statement: >
@@ -388,8 +390,8 @@ zachman:
       - id: RULE-10
         statement: >
           source_authority must use the corrected key shape: drop / snapshots / fills / credits.
-          The legacy key source_authority.inventory is superseded and must not appear in the
-          final DTO contract.
+          The legacy 'inventory' key shape is superseded — use source_authority.snapshots for
+          opener/closer references. The superseded key must not appear in the final DTO contract.
         severity: hard
     invariants:
       - At most one result field (projected_table_win_loss_cents or partial_table_result_cents)
@@ -417,7 +419,7 @@ zachman:
         explicitly accepts the expanded contract and test burden.
       - >
         gaming_day is lifecycle metadata only. It must not appear in the telemetry SUM
-        predicate. Its presence in a WHERE clause for the drop estimate is a hard violation.
+        predicate. Its presence in a WHERE clause for the telemetry-derived drop estimate is a hard violation.
 
 containment:
   loop:
@@ -501,7 +503,7 @@ traceability:
       outcomes: [OUT-1, OUT-2]
     - capability: resolve_result_state
       outcomes: [OUT-5]
-    - capability: aggregate_session_telemetry_drop
+    - capability: aggregate_session_telemetry_derived_drop_estimate
       outcomes: [OUT-1]
     - capability: suppress_legacy_surfaces
       outcomes: [OUT-3, OUT-4]
@@ -546,3 +548,160 @@ governance:
     - observed legacy aliases have dispositions (not glossary definitions)
     - RATED_ADJUSTMENT exclusion expressed as source-predicate exclusion
     - completeness terminology aligned to completeness.status
+
+vocabulary:
+  purpose: >
+    Canonical term definitions for this feature slice. Congruent with
+    SRL-TIA-001 semantic_disambiguation. ADR-059/060/061 govern behavioral
+    decisions; this section governs term meanings used throughout this document.
+
+  completeness_status_qualification:
+    term: completeness.status.complete
+    canonical_meaning: >
+      Input-complete relative to PT-2 internal operational inputs only.
+      Does not mean final, reconciled, posted, settled, or custody-authoritative.
+    preferred_prose_phrase: input-complete
+    forbidden_inferences:
+      - complete -> final
+      - complete -> external_custody_authoritative
+      - complete -> reconciled
+    authority: RULE-6 / ADR-059 D4
+
+  estimate_axes:
+    purpose: >
+      "Estimate" appears in two independent semantic axes. They must not be conflated.
+    value_estimation:
+      term: telemetry_derived_drop_estimate_cents
+      meaning: >
+        Value derived from session-scoped telemetry, not a counted or posted drop.
+        Uncertain relative to a physical soft-count.
+    custody_estimation:
+      term: custody_status.non_custody_estimate
+      meaning: >
+        Result is not external custody-authoritative, even if all PT-2 internal
+        inputs are present and completeness.status = 'complete'.
+    independence_rule: >
+      These axes are independent. Input-completeness does not promote custody
+      authority. A projection may be input-complete and still non_custody_estimate.
+
+  inventory_term_split:
+    purpose: >
+      "Inventory" resolves to three distinct contexts. Use qualified forms only.
+    table_inventory_snapshot:
+      meaning: point-in-time opener or closer chip count; a row in table_inventory_snapshots
+    source_authority_snapshots:
+      field: source_authority.snapshots
+      meaning: source-authority reference for opener and closer snapshot inputs only
+    inventory_only_state:
+      field: calculation_kind value 'inventory_only'
+      meaning: >
+        Result state when telemetry_derived_drop_estimate_cents is absent but opener,
+        closer, fills, and credits are all resolvable.
+      preferred_prose_alias: inventory-side-only result state
+    forbidden:
+      - source_authority.inventory   # superseded by source_authority.snapshots per ADR-060 D3
+      - inventory as an umbrella term covering fills, credits, and snapshots jointly
+
+  partial_result_semantics:
+    term: partial_table_result_cents
+    canonical_meaning: >
+      A valid inventory-side result produced when telemetry_derived_drop_estimate_cents
+      is absent. "Partial" describes a missing drop input, not an invalid or degraded
+      calculation.
+    must_not_mean:
+      - opener is missing
+      - closer is missing
+      - arithmetic is degraded or provisional
+    integrity_boundary: >
+      Missing opener or closer after all snapshot resolution paths are exhausted
+      is integrity_failure, not partial_table_result_cents. The boundary is hard.
+
+  snapshot_resolution_paths:
+    purpose: >
+      Defines what "all resolution paths exhausted" means where referenced in this
+      document (table_inventory_snapshot entity description, RULE-4). Null after all
+      listed paths is integrity_failure — not a partial result.
+    opening_inventory_cents:
+      primary: table_session.opening_inventory_snapshot_id -> table_inventory_snapshots.total_cents
+      fallback: table_session.id + snapshot_kind = 'opener' (if FK-only is not adopted)
+    closing_inventory_cents:
+      primary: table_session.closing_inventory_snapshot_id -> table_inventory_snapshots.total_cents
+      fallback: table_session.id + snapshot_kind = 'closer' (if FK-only is not adopted)
+    exhaustion_rule: >
+      Null after all listed paths is integrity_failure. Does not route to
+      partial_table_result_cents. Implementation must commit to FK-only or
+      FK+fallback before PRD execution.
+
+  active_operator_visible_surface:
+    meaning: >
+      Any route, component, report, export, dashboard, or API response reachable by a
+      pilot operator or consumed by a pilot operator-facing surface in the exemplar release.
+      "Active" here means workflow-reachable, not table_session lifecycle state.
+    includes:
+      - Pit Terminal Rundown
+      - shift dashboard metrics table
+      - shift dashboard pit metrics table
+      - analytics panel
+      - shift report
+      - API DTOs backing those surfaces
+    excludes:
+      - deleted routes
+      - test fixtures
+      - archived documentation
+      - migration-only compatibility views not returned by active APIs
+    activity_rule: >
+      A surface is active if a pilot workflow can reach it without developer-only access.
+      RULE-8 legacy suppression obligations apply to all active surfaces at exemplar delivery.
+
+  active_terms:
+    purpose: >
+      "Active" resolves to two distinct concepts. Use qualified forms in normative prose.
+    active_session_state:
+      meaning: >
+        A table_session lifecycle/status value used in session preconditions, such as
+        a session that may be closed from OPEN or ACTIVE state. This is lifecycle state.
+    active_operator_visible_surface:
+      meaning: >
+        A workflow-reachable pilot operator surface, report, export, dashboard, route,
+        component, or backing API response. This is release reachability.
+    forbidden_collapse:
+      - ACTIVE session state used to determine whether a surface is operator-visible
+      - surface reachability used to imply anything about table_session lifecycle state
+
+  session_terms:
+    purpose: >
+      "Session" resolves to two distinct concepts. Use qualified forms in normative prose.
+    table_session:
+      meaning: >
+        The lifecycle aggregate row in table_sessions. Owns opened_at, closed_at,
+        table identity, and snapshot FK references. This is the entity.
+    session_scope_window:
+      meaning: >
+        The temporal aggregation window [opened_at, COALESCE(closed_at, NOW())) used
+        exclusively for the telemetry_derived_drop_estimate_cents SUM predicate.
+        This is a query parameter, not an entity.
+    forbidden_collapse:
+      - gaming_day as a substitute for session_scope_window
+      - table_session entity conflated with a telemetry aggregation result
+
+  result_terms:
+    purpose: >
+      "Result" is overloaded across four usages. Use the qualified terms below.
+    table_result_value:
+      meaning: >
+        The non-null monetary output of a projection: one of projected_table_win_loss_cents
+        or partial_table_result_cents. At most one is non-null per response.
+    result_state:
+      field: calculation_kind
+      values:
+        - telemetry_drop_formula
+        - inventory_only
+        - integrity_failure
+    result_label:
+      allowed:
+        - "Projected Win/Loss"       # calculation_kind = telemetry_drop_formula
+        - "Partial Table Result"     # calculation_kind = inventory_only
+      integrity_failure_rendering: integrity disclosure only; no result label
+    forbidden:
+      - result as a standalone normative term without qualification
+      - "Win/Loss" unqualified as a surface label in this slice

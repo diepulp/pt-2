@@ -43,14 +43,14 @@ admitted_terms:
       PT-2 has computed a table-result value from all five canonical formula inputs: a
       session-scoped telemetry-derived drop estimate plus inventory-side inputs (opener,
       closer, fills, credits). This is the system's best non-custody estimate of table
-      win/loss when drop telemetry is present for the session.
+      win/loss when telemetry_derived_drop_estimate_cents is present for the session.
 
     how_the_system_knows: >
-      Read-time derivation by TableInventoryAccounting using the 5-operand formula:
-      telemetry_derived_drop_estimate_cents + closing_inventory_cents + credits_cents
-      − opening_inventory_cents − fills_cents. Applied only when calculation_kind =
-      'telemetry_drop_formula' (all five inputs non-null). Source predicate is frozen
-      per TIA-CANON-EXEMPLAR-THESAURUS.md §3.8.
+      Read-time derivation by TableInventoryAccounting using the 5-operand formula
+      defined in ADR-060 D1 (operands: telemetry_derived_drop_estimate_cents,
+      opening_inventory_cents, closing_inventory_cents, fills_cents, credits_cents).
+      Applied only when calculation_kind = 'telemetry_drop_formula' (all five inputs
+      non-null). Source predicate is frozen per TIA-CANON-EXEMPLAR-THESAURUS.md §3.8.
 
     authority_posture: non_custody_estimate
     allowed_surface_label: "Projected Win/Loss"
@@ -91,8 +91,8 @@ admitted_terms:
       - active-surface suppression gate
 
     zachman:
-      what: The canonical 5-operand table win/loss estimate when drop telemetry is present.
-      how: Read-time derivation via 5-operand formula; session-scoped telemetry SUM as drop input.
+      what: The canonical 5-operand table win/loss estimate when telemetry_derived_drop_estimate_cents is present.
+      how: Read-time derivation via 5-operand formula; session-scoped telemetry SUM as the telemetry_derived_drop_estimate_cents input.
       where: TableInventoryAccounting service module; exposed through TableInventoryAccountingProjection DTO.
       who: Owned by TableContextService.TableInventoryAccounting; consumed by pit terminal, shift dashboard, rundown report, shift report.
       when: Non-null only when calculation_kind = 'telemetry_drop_formula'; null for inventory_only or integrity_failure.
@@ -107,17 +107,18 @@ admitted_terms:
 
     what_the_system_knows: >
       PT-2 has computed a table-result value from opener, closer, fills, and credits only.
-      No drop estimate is available for this session. The result is explicitly partial: it
-      accounts for inventory changes but not for drop.
+      No telemetry_derived_drop_estimate_cents is available for this session. The result is explicitly partial: it
+      accounts for inventory changes but not for the telemetry-derived drop estimate.
 
     how_the_system_knows: >
-      Read-time derivation using 4 operands: closing_inventory_cents + credits_cents
-      − opening_inventory_cents − fills_cents. Applied only when calculation_kind =
-      'inventory_only' (drop absent, opener and closer both resolvable).
+      Read-time derivation by TableInventoryAccounting using the 4-operand formula
+      defined in ADR-059 D5 (operands: opening_inventory_cents, closing_inventory_cents,
+      fills_cents, credits_cents). Applied only when calculation_kind = 'inventory_only'
+      (telemetry_derived_drop_estimate_cents absent, opener and closer both resolvable).
 
     authority_posture: non_custody_estimate
     allowed_surface_label: "Partial Table Result"
-    allowed_surface_qualifier: "Disclose missing inputs (e.g., 'Drop estimate not available for this session')."
+    allowed_surface_qualifier: "Disclose missing inputs (e.g., 'Telemetry-derived drop estimate not available for this session')."
 
     source_inputs:
       - opening_inventory_cents
@@ -143,7 +144,7 @@ admitted_terms:
     boundary_contract:
       dto: TableInventoryAccountingProjection
       api: table inventory accounting projection endpoint
-      ui: only through projection-consuming surfaces; must disclose missing drop estimate
+      ui: only through projection-consuming surfaces; must disclose missing telemetry_derived_drop_estimate_cents
 
     enforcement:
       - DTO contract test
@@ -152,12 +153,12 @@ admitted_terms:
       - active-surface suppression gate
 
     zachman:
-      what: The canonical 4-operand table result when drop telemetry is absent for the session.
-      how: Read-time derivation via 4 operands (opener + closer + fills + credits; no drop).
+      what: The canonical 4-operand table result when telemetry_derived_drop_estimate_cents is absent for the session.
+      how: Read-time derivation via 4 operands (opener + closer + fills + credits; no telemetry-derived drop estimate).
       where: TableInventoryAccounting service module; exposed through TableInventoryAccountingProjection DTO.
       who: Owned by TableContextService.TableInventoryAccounting; consumed by surfaces that handle inventory_only calculation_kind.
       when: Non-null only when calculation_kind = 'inventory_only'; null for telemetry_drop_formula or integrity_failure.
-      why: Provides a canonical non-null result for sessions where drop telemetry is absent; makes incompleteness explicit to the operator rather than silently collapsing to zero.
+      why: Provides a canonical non-null result for sessions where telemetry_derived_drop_estimate_cents is absent; makes incompleteness explicit to the operator rather than silently collapsing to zero.
 
   - term: final_table_win_loss_cents
     owning_context: TableContextService
@@ -256,7 +257,7 @@ admitted_terms:
       - DTO contract test
 
     zachman:
-      what: A two-valued discriminator encoding whether session telemetry drop is present or absent.
+      what: A two-valued discriminator encoding whether telemetry_derived_drop_estimate_cents is present or absent.
       how: Derived from nullability of the session-scoped SUM result; never COALESCE'd.
       where: TableInventoryAccountingProjection DTO field.
       who: Owned by TableContextService.TableInventoryAccounting; used by rendering consumers for conditional logic.
@@ -272,7 +273,7 @@ admitted_terms:
 
     what_the_system_knows: >
       Which of the three canonical result states applies for this projection:
-      'telemetry_drop_formula' (all 5 inputs present), 'inventory_only' (drop absent,
+      'telemetry_drop_formula' (all 5 inputs present), 'inventory_only' (telemetry_derived_drop_estimate_cents absent,
       opener+closer resolvable), or 'integrity_failure' (opener or closer unresolvable).
 
     how_the_system_knows: >
@@ -376,12 +377,12 @@ admitted_terms:
       - DTO contract test
 
     zachman:
-      what: The session-scoped aggregate of RATED_BUYIN + GRIND_BUYIN telemetry; the sole drop proxy input to the canonical formula.
+      what: The session-scoped aggregate of RATED_BUYIN + GRIND_BUYIN telemetry; the sole telemetry-derived, non-custody estimate input to the canonical formula.
       how: Null-preserving SUM with frozen predicate; RATED_ADJUSTMENT excluded; session window only.
       where: Derived within TableInventoryAccounting; exposed as a DTO field in TableInventoryAccountingProjection.
       who: Owned by TableContextService.TableInventoryAccounting; consumed internally as a formula operand.
       when: Non-null (including zero) when qualifying rows exist in the session window; null when no qualifying rows.
-      why: Provides the only telemetry-based drop proxy; its null-vs-zero integrity is load-bearing for drop_estimate_state discrimination; RATED_ADJUSTMENT exclusion keeps the estimate clean and auditable.
+      why: Provides the only telemetry-derived, non-custody estimate input; its null-vs-zero integrity is load-bearing for drop_estimate_state discrimination; RATED_ADJUSTMENT exclusion keeps the estimate clean and auditable.
 
 legacy_alias_disposition:
 
@@ -535,6 +536,230 @@ key_semantic_laws:
       Consumers may render; they may not recompute. No surface, RPC, or component
       may derive its own table win/loss-like value from raw inputs.
     severity: hard
+
+  - law: no_unqualified_drop_shorthand
+    statement: >
+      SRL-TIA-001 must not use domain shorthand that conflates the physical
+      counted-drop concept with the telemetry-derived estimate concept. Any prose
+      that refers to the canonical formula input must use either
+      telemetry_derived_drop_estimate_cents (the identifier) or the phrase
+      "telemetry-derived drop estimate" (the qualified form). Generic shorthand
+      that omits the telemetry-derived qualifier violates this law. See hard-fail
+      rules HF-01 through HF-06 in srl_intake_lint.py for the enumerated
+      prohibited patterns.
+    severity: hard
+
+semantic_ambiguity_preflight:
+  status: pass
+  scanner_version: srl_intake_lint.py@0.1.0
+  findings_count: 11
+  hard_fail_count: 0
+  warn_count: 11
+  warn_note: >
+    All 11 remaining warns are either: (a) the qualified phrase "telemetry-derived drop estimate"
+    which is acceptable canonical prose, or (b) in explicitly allowed legacy_alias_disposition
+    contexts. No canonical prose uses unqualified shorthand.
+
+semantic_disambiguation:
+
+  completeness_status_qualification:
+    term: completeness.status.complete
+    canonical_gloss: >
+      Input-complete relative to PT-2 internal operational inputs only.
+      Does not mean final, reconciled, posted, settled, or custody-authoritative.
+    preferred_prose_phrase: input-complete
+    forbidden_inferences:
+      - complete -> final
+      - complete -> external_custody_authoritative
+      - complete -> reconciled
+    authority: >
+      completeness.status = 'complete' never upgrades custody_status. All
+      custody_status values remain 'non_custody_estimate' in this slice per
+      key_semantic_law custody_status_permanent and ADR-059 D4.
+
+  estimate_axes:
+    purpose: >
+      "Estimate" appears in two independent semantic axes. They must not be conflated.
+    value_estimation:
+      applies_to:
+        - telemetry_derived_drop_estimate_cents
+      meaning: >
+        Value is derived from session-scoped telemetry, not a counted or posted drop.
+        Uncertain relative to a physical soft-count.
+    custody_estimation:
+      applies_to:
+        - custody_status.non_custody_estimate
+      meaning: >
+        Result is not external custody-authoritative, even if all PT-2 internal inputs
+        are present and completeness.status = 'complete'.
+    independence_rule: >
+      These axes are independent. A projection may be input-complete (value_estimation
+      axis) and still non_custody_estimate (custody_estimation axis). No combination
+      of input completeness promotes custody authority in this slice. Cross-reference:
+      ADR-060 requires every use of telemetry_derived_drop_estimate_cents to carry
+      source_authority.drop = 'telemetry_derived_estimate' and custody_status =
+      'non_custody_estimate'.
+
+  inventory_term_split:
+    purpose: >
+      "Inventory" resolves to three distinct contexts. Use qualified forms only.
+    table_inventory_snapshot:
+      meaning: point-in-time opener or closer chip count; a row in table_inventory_snapshots
+    source_authority_snapshots:
+      field: source_authority.snapshots
+      meaning: source-authority reference for opener and closer snapshot inputs only
+    inventory_only_state:
+      field: calculation_kind value 'inventory_only'
+      meaning: >
+        Result state when telemetry_derived_drop_estimate_cents is absent but opener,
+        closer, fills, and credits are all resolvable.
+      preferred_prose_alias: inventory-side-only result state
+    forbidden:
+      - superseded source-authority key for inventory   # deleted key; superseded by source_authority.snapshots per ADR-060 D3
+      - inventory as an umbrella term covering fills, credits, and snapshots jointly
+
+  partial_result_semantics:
+    term: partial_table_result_cents
+    canonical_meaning: >
+      A valid inventory-side result produced when telemetry_derived_drop_estimate_cents
+      is absent for the session. "Partial" describes a missing telemetry_derived_drop_estimate_cents input, not an
+      invalid or degraded calculation.
+    must_not_mean:
+      - opener is missing
+      - closer is missing
+      - arithmetic is degraded or provisional
+      - custody truth is pending
+    integrity_boundary: >
+      Missing opener or closer after all snapshot resolution paths are exhausted
+      is integrity_failure, not partial_table_result_cents. The boundary is hard.
+    acceptance_test: >
+      When opener or closer resolves to null, assert calculation_kind =
+      'integrity_failure' and no "Partial Table Result" label is rendered.
+
+  snapshot_resolution_paths:
+    purpose: >
+      Enumerates what "all resolution paths exhausted" means for opener and closer.
+      Null after all listed paths is integrity_failure — not a partial result.
+    opening_inventory_cents:
+      primary: table_session.opening_inventory_snapshot_id -> table_inventory_snapshots.total_cents
+      fallback: table_session.id + snapshot_kind = 'opener' (if FK-only is not adopted)
+    closing_inventory_cents:
+      primary: table_session.closing_inventory_snapshot_id -> table_inventory_snapshots.total_cents
+      fallback: table_session.id + snapshot_kind = 'closer' (if FK-only is not adopted)
+    exhaustion_rule: >
+      If all listed paths return null or no row, populate integrity_issues and suppress
+      both result fields. Exhausted resolution is integrity_failure; it does not route
+      to partial_table_result_cents.
+    implementation_commitment: >
+      Choose FK-only or FK+fallback and document that decision here before PRD execution.
+      "Resolution paths" must not remain unspecified procedure at implementation time.
+
+  active_operator_visible_surface:
+    meaning: >
+      Any route, component, report, export, dashboard, or API response reachable by a
+      pilot operator or consumed by a pilot operator-facing surface in the exemplar release.
+      "Active" here means workflow-reachable, not table_session lifecycle state.
+    includes:
+      - Pit Terminal Rundown (rundown-summary-panel, rundown-report-card)
+      - shift dashboard metrics table
+      - shift dashboard pit metrics table
+      - analytics panel
+      - shift report
+      - API DTOs backing those surfaces
+    excludes:
+      - deleted routes
+      - test fixtures and unit test mocks
+      - archived documentation
+      - migration-only compatibility views not returned by active APIs
+    activity_rule: >
+      A surface is active if a pilot workflow can reach it without developer-only access.
+      Legacy suppression obligations apply to all active surfaces at exemplar delivery.
+
+  active_terms:
+    purpose: >
+      "Active" resolves to two distinct concepts. Use qualified forms in normative prose.
+    active_session_state:
+      meaning: >
+        A table_session lifecycle/status value used in session preconditions, such as
+        a session that may be closed from OPEN or ACTIVE state. This is lifecycle state.
+    active_operator_visible_surface:
+      meaning: >
+        A workflow-reachable pilot operator surface, report, export, dashboard, route,
+        component, or backing API response. This is release reachability.
+    forbidden_collapse:
+      - ACTIVE session state used to determine whether a surface is operator-visible
+      - surface reachability used to imply anything about table_session lifecycle state
+
+  session_terms:
+    purpose: >
+      "Session" resolves to two distinct concepts. Use qualified forms in normative prose.
+    table_session:
+      meaning: >
+        The lifecycle aggregate row in table_sessions. Owns opened_at, closed_at, table
+        identity, and snapshot foreign-key references. This is the entity.
+    session_scope_window:
+      meaning: >
+        The temporal aggregation window [opened_at, COALESCE(closed_at, NOW())) used
+        exclusively for the telemetry_derived_drop_estimate_cents SUM predicate.
+        This is a query parameter, not an entity.
+    forbidden_collapse:
+      - gaming_day as a substitute for session_scope_window
+      - table_session entity conflated with a telemetry aggregation result
+
+  result_terms:
+    purpose: >
+      "Result" is overloaded across four usages. Use the qualified terms below.
+    table_result_value:
+      meaning: >
+        The non-null monetary output of a projection: one of projected_table_win_loss_cents
+        or partial_table_result_cents. At most one is non-null per response.
+    result_state:
+      field: calculation_kind
+      values:
+        - telemetry_drop_formula
+        - inventory_only
+        - integrity_failure
+    result_label:
+      allowed:
+        - "Projected Win/Loss"       # calculation_kind = telemetry_drop_formula
+        - "Partial Table Result"     # calculation_kind = inventory_only
+      integrity_failure_rendering: integrity disclosure only; no result label
+    forbidden:
+      - result as a standalone normative term without qualification
+      - '"Win/Loss" unqualified as a surface label in this slice'
+    snapshot_role_bindings:
+      opener:
+        domain_meaning: opening inventory snapshot for a table session
+        schema_binding:
+          table: table_inventory_snapshot
+          column: snapshot_type
+          values:
+            - open
+        # 'OPENING' does NOT exist in the schema. The CHECK constraint
+        # (migration 20251108195341) only permits 'open', 'close', 'rundown'.
+        # prd038 RPCs query IN ('OPENING', 'open') but the uppercase arm is
+        # dead code — no such row can ever be inserted.
+        canonical_result_field: opening_inventory_cents
+
+      closer:
+        domain_meaning: closing inventory snapshot for a table session
+        schema_binding:
+          table: table_inventory_snapshot
+          column: snapshot_type
+          values:
+            - close
+        # 'CLOSING' does NOT exist in the schema. Same constraint applies.
+        # prd038 RPC fallback queries include 'CLOSING' as dead code.
+        canonical_result_field: closing_inventory_cents
+
+      rundown:
+        domain_meaning: interim inventory snapshot during a session
+        schema_binding:
+          table: table_inventory_snapshot
+          column: snapshot_type
+          values:
+            - rundown
+        canonical_result_field: not_an_opener_or_closer
 
 boundary_contract:
   dto: TableInventoryAccountingProjection

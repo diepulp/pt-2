@@ -1,0 +1,24 @@
+{
+  "id": "PRD-090",
+  "exec_spec": "docs/21-exec-spec/EXEC-090-table-inventory-accounting-canon-exemplar.md",
+  "status": "awaiting_approval",
+  "complexity_prescreen": "full",
+  "gov010_check": "passed",
+  "fib_s_loaded": false,
+  "write_path_classification": "none",
+  "current_phase": 0,
+  "created_at": "2026-06-01T23:24:14Z",
+  "updated_at": "2026-06-01T23:24:14Z",
+  "completed_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "dormant_workstreams": [],
+  "gate_evidence": {},
+  "decisions": {
+    "DEC-1": "No mandatory opener-capture step. integrity_failure is correct canonical outcome.",
+    "DEC-2": "Quarantine rpc_compute_table_rundown. WS6 grep/AST test enforces.",
+    "DEC-3": "FK+fallback snapshot resolution. snapshot_type = open/close only.",
+    "DEC-4": "Simple Query data aggregation pattern (ADR-041 D2)."
+  },
+  "srl_binding": "SRL-TIA-001",
+  "notes": "EXEC-SPEC generated 2026-06-01. SRL-TIA-001 semantic governance binding active. Pre-inventoried suppression map from legacy_alias_disposition. Validation: structural+governance PASS, write-path NONE, temporal integrity CLEAN."
+}

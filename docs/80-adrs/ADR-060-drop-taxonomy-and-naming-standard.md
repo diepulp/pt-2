@@ -1,7 +1,7 @@
 ---
 id: ADR-060
 title: Drop Taxonomy and Naming Standard
-status: Proposed
+status: Accepted
 date: 2026-05-28
 owner: Architecture Review
 decision_scope: >
@@ -79,7 +79,7 @@ This is the **complete and exhaustive set for the canonical exemplar projection*
 
 **`RATED_ADJUSTMENT` is explicitly excluded from the canon.** This exclusion is semantic, not a claim that the value is absent from the current database schema. Current legacy/shift-metrics paths may accept or aggregate `RATED_ADJUSTMENT`; that is precisely the kind of drift this canonization slice is allowed to retire, suppress, or quarantine. `RATED_ADJUSTMENT` must not cross the `TableInventoryAccountingProjection` boundary as part of `telemetry_derived_drop_estimate_cents` unless a future ADR/FIB amendment changes the canonical source definition.
 
-Any future `telemetry_kind` value — including any adjustment, correction, or reversal kind — requires an explicit amendment to this ADR before it may be included in the canonical drop estimate computation. Inclusion is not automatic merely because the schema or a legacy RPC permits the value.
+Any future `telemetry_kind` value — including any adjustment, correction, or reversal kind — requires an explicit amendment to this ADR before it may be included in the `telemetry_derived_drop_estimate_cents` computation. Inclusion is not automatic merely because the schema or a legacy RPC permits the value.
 
 **Kind semantics (canonical exemplar):**
 
@@ -121,7 +121,7 @@ source_authority: {
 
 **Rules:**
 - `drop: 'telemetry_derived_estimate'` when `drop_estimate_state = 'present'`; `drop: 'none'` when `drop_estimate_state = 'none_for_session'`
-- `snapshots`, `fills`, and `credits` are always set to their literal source table names — they are not nullable; absence of a snapshot produces `integrity_issues`, not a null `source_authority` entry
+- `snapshots`, `fills`, and `credits` are always set to their literal source authority labels — they are not nullable; absence of a snapshot produces `integrity_issues`, not a null `source_authority` entry
 - No source authority key may be set to `'table_inventory_snapshot'` for fills or credits; doing so is a naming violation
 
 This shape amendment applies to the `TableInventoryAccountingProjection` DTO (ADR-059 D3). All other ADR-059 D3 decisions remain in force.
@@ -156,14 +156,14 @@ Reconciled Result
 
 The words `final`, `reconciled`, and `settled` must not appear in any PT-2 drop or win/loss field name or surface label unless the value is sourced from an external custody-authoritative system introduced by ADR/FIB amendment.
 
-**Legacy / quarantine rule:** Forbidden field names that already exist in legacy code or API responses (`estimated_drop_buyins_cents`, `win_loss_estimated_cents`, `win_loss_inventory_cents`, etc.) may survive only as internal inputs to the migration path. They must not cross the `TableInventoryAccountingProjection` DTO boundary and must be scheduled for deletion or rename in the PRD suppression inventory. Presence in an active API response after exemplar acceptance is a P0 split-brain violation.
+**Legacy / quarantine rule:** Forbidden field names that already exist in legacy code or API responses (`estimated_drop_buyins_cents`, `win_loss_estimated_cents`, `win_loss_inventory_cents`, etc.) may survive only as internal inputs to the migration path. They must not cross the `TableInventoryAccountingProjection` DTO boundary and must be scheduled for deletion or rename in the PRD suppression inventory. Presence in a workflow-reachable pilot operator-facing API response after exemplar acceptance is a P0 split-brain violation.
 
 **Allowed surface labels (exhaustive):**
 
 | `calculation_kind` | Required label | Required qualifier / disclosure |
 |---|---|---|
 | `telemetry_drop_formula` | "Projected Win/Loss" | "Includes telemetry-derived drop estimate. Non-custody. Not final." |
-| `inventory_only` | "Partial Table Result" | Must disclose missing inputs (e.g. "Drop estimate not available for this session") |
+| `inventory_only` | "Partial Table Result" | Must disclose missing inputs (e.g. "Telemetry-derived drop estimate not available for this session") |
 | `integrity_failure` | _(no result label)_ | Render integrity disclosure only; neither result label may appear |
 
 No label outside this table may be used to describe a table result value at any operator-visible surface. Inventing a new label that avoids forbidden words while not appearing in this table is not compliant.
@@ -192,7 +192,7 @@ These are not optional annotations. A `telemetry_derived_drop_estimate_cents` va
 
 ### Trade-offs
 
-- Any future or existing non-canonical `telemetry_kind` value that should contribute to the drop estimate requires an ADR amendment before crossing the `TableInventoryAccountingProjection` boundary. This is an intentional forcing function, not an oversight.
+- Any future or existing non-canonical `telemetry_kind` value that should contribute to `telemetry_derived_drop_estimate_cents` requires an ADR amendment before crossing the `TableInventoryAccountingProjection` boundary. This is an intentional forcing function, not an oversight.
 - The `source_authority` shape change from ADR-059 D3 adds two new keys (`fills`, `credits`) that EXEC-SPEC and PRD must reflect. This is a breaking amendment to the DTO shape, but it corrects a semantic error in the original.
 
 ---
@@ -207,7 +207,7 @@ Replace explicit field names with a single `drop_cents` field carrying a `drop_t
 
 ### Partial enumeration (allow future kinds without amendment)
 
-Allow new `telemetry_kind` values to contribute to the drop estimate without an ADR amendment, relying on the service implementation to filter correctly.
+Allow new `telemetry_kind` values to contribute to `telemetry_derived_drop_estimate_cents` without an ADR amendment, relying on the service implementation to filter correctly.
 
 **Rejected because:** The telemetry kind list is a formula input contract, not an implementation detail. A future kind that is silently included in the SUM changes the value of `telemetry_derived_drop_estimate_cents` without changing its name or custody status. That is a semantic change to a frozen formula input. Amendment is the correct gate for that change, not a service-layer implementation decision.
 
