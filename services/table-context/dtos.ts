@@ -667,3 +667,64 @@ export interface PostTableDropTotalInput {
   sessionId: string;
   dropTotalCents: number;
 }
+
+// === TableInventoryAccounting DTOs (PRD-090 / SRL-TIA-001) ===
+
+/**
+ * Three-result-state discriminator for TableInventoryAccounting derivation.
+ * SRL class: lifecycle_state (governs rendering logic — not a surface label).
+ * @see ADR-059
+ */
+export type CalculationKind =
+  | 'telemetry_drop_formula'
+  | 'inventory_only'
+  | 'integrity_failure';
+
+/**
+ * Telemetry drop estimate availability discriminator.
+ * SRL class: lifecycle_state (internal — not a surface label).
+ * 'present' iff telemetry_derived_drop_estimate_cents is non-null (including zero). Null ≠ zero.
+ */
+export type DropEstimateState = 'present' | 'absent';
+
+/**
+ * TableInventoryAccounting read-time projection.
+ * Pattern A (Contract-First): canonical output of the three-state derivation machine.
+ *
+ * Semantic laws (SRL-TIA-001, all severity: hard):
+ *   - At most ONE of projected_table_win_loss_cents / partial_table_result_cents is non-null.
+ *   - final_table_win_loss_cents is ALWAYS null (reserved_null_this_slice).
+ *   - custody_status is ALWAYS 'non_custody_estimate'.
+ *   - integrity_failure → both result fields null, integrity_issues non-empty.
+ *   - Consumers render only — no re-derivation from raw inputs.
+ *
+ * @see PRD-090, ADR-059, ADR-060, ADR-061, SRL-TIA-001
+ */
+
+export interface TableInventoryAccountingProjection {
+  table_session_id: string;
+  casino_id: string;
+  calculation_kind: CalculationKind;
+  /** SRL: derived_surface_value. Non-null only when calculation_kind = 'telemetry_drop_formula'. */
+  projected_table_win_loss_cents: bigint | null;
+  /** SRL: derived_surface_value. Non-null only when calculation_kind = 'inventory_only'. */
+  partial_table_result_cents: bigint | null;
+  /** SRL: reserved_null_this_slice. ALWAYS null — external custody authority required for final result. */
+  final_table_win_loss_cents: null;
+  /** SRL: telemetry_fact. Null means no qualifying rows — NEVER coalesced to 0. */
+  telemetry_derived_drop_estimate_cents: bigint | null;
+  drop_estimate_state: DropEstimateState;
+  /** ALWAYS 'non_custody_estimate'. completeness.status never upgrades this. */
+  custody_status: 'non_custody_estimate';
+  completeness: { status: string };
+  /** source_authority keys: drop / snapshots / fills / credits — NOT 'inventory' (ADR-060 D3). */
+  source_authority: {
+    drop: string | null;
+    snapshots: string | null;
+    fills: string | null;
+    credits: string | null;
+  };
+  integrity_issues: string[];
+  request_id: string;
+  derived_at: string;
+}

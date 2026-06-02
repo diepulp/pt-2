@@ -194,7 +194,7 @@ export function ShiftDashboardV3() {
           <PanelErrorBoundary panelName="Summary">
             <div className="space-y-3 p-4" aria-live="polite">
               <HeroWinLossCompact
-                winLossCents={summary?.casino?.win_loss_estimated_total_cents}
+                winLossCents={null}
                 metricGrade={summary?.casino?.provenance?.grade}
                 isLoading={metricsLoading}
               />

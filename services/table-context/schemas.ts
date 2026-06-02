@@ -352,6 +352,11 @@ export const updateTableParSchema = z.object({
 export type CreateGamingTableInput = z.infer<typeof createGamingTableSchema>;
 export type UpdateTableParInput = z.infer<typeof updateTableParSchema>;
 
+// TableInventoryAccounting route params (PRD-090 WS3)
+export const accountingProjectionParamsSchema = z.object({
+  sessionId: uuidSchema('session ID'),
+});
+
 // === Cashier Route Params (PRD-033) ===
 
 /** Route params schema for cashier confirmation endpoints ([id] param). */

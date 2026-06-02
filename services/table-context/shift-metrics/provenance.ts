@@ -61,18 +61,9 @@ const QUALITY_ORDER: Record<'GOOD_COVERAGE' | 'LOW_COVERAGE' | 'NONE', number> =
 export function deriveTableProvenance(
   table: Omit<ShiftTableMetricsDTO, 'provenance'>,
 ): ProvenanceMetadata {
-  // Source derivation
-  const hasInventory = table.win_loss_inventory_cents != null;
-  const hasEstimated = table.win_loss_estimated_cents != null;
-
-  let source: ProvenanceMetadata['source'];
-  if (hasInventory && hasEstimated) {
-    source = 'mixed';
-  } else if (hasInventory) {
-    source = 'inventory';
-  } else {
-    source = 'telemetry';
-  }
+  // Source derivation — win_loss fields suppressed per PRD-090 WS5; source defaults to telemetry.
+  // TODO-WS4: restore mixed/inventory derivation from TableInventoryAccountingProjection.
+  const source: ProvenanceMetadata['source'] = 'telemetry';
 
   // Coverage ratio: 1.0 (both), 0.5 (one), 0.0 (neither)
   const hasOpening = !table.missing_opening_snapshot;

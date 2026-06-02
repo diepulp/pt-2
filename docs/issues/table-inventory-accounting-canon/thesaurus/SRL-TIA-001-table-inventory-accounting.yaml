@@ -29,6 +29,19 @@ srm_ownership_gaps:
     blocks_srl_admission: false
     blocks_tia_prd_execution: yes_unless_explicitly_resolved
     must_resolve_by: TIA_PRD_preflight_or_PRD_itself
+    resolution:
+      status: resolved
+      resolved_by: EXEC-090-WS1
+      resolved_at: "2026-06-02"
+      evidence: >
+        SRM SERVICE_RESPONSIBILITY_MATRIX.md v4.27.0 (updated 2026-05-30):
+        overview table row adds `_consumes_ table_buyin_telemetry` with footnote
+        declaring read-only consumed-input authority for
+        TableInventoryAccounting.telemetry_derived_drop_estimate_cents (session-scoped
+        SUM, RATED_BUYIN + GRIND_BUYIN only, per ADR-061 D2). SRM §494 narrative
+        reconciled. SRL-TIA-001 semantic extension reference bound at SRM §617.
+        No standalone bounded context created — TableInventoryAccounting is a
+        subdomain of TableContextService.
 
 admitted_terms:
 

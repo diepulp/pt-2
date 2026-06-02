@@ -55,8 +55,8 @@ export interface ExecutiveSummarySection {
   pitsCount: number;
   fillsTotalCents: number;
   creditsTotalCents: number;
-  winLossInventoryTotalCents: number | null;
-  winLossEstimatedTotalCents: number | null;
+  // winLossInventoryTotalCents removed — PRD-090 WS5 (SRL-TIA-001 legacy_alias_disposition)
+  // winLossEstimatedTotalCents removed — PRD-090 WS5 (SRL-TIA-001 legacy_alias_disposition)
   snapshotCoverageRatio: number;
   coverageTier: string;
 }
@@ -68,12 +68,12 @@ export interface FinancialTableRow {
   tableLabel: string;
   pitId: string | null;
   gameType: string | null;
-  /** Estimated total drop (rated + grind + buyins) in cents */
+  /** Estimated total drop (rated + grind) in cents. estimated_drop_buyins_cents removed per PRD-090 WS5. */
   dropTotalCents: number;
   fillsTotalCents: number;
   creditsTotalCents: number;
-  winLossInventoryCents: number | null;
-  winLossEstimatedCents: number | null;
+  // winLossInventoryCents removed — PRD-090 WS5: canonical = partial_table_result_cents (TODO-WS4)
+  // winLossEstimatedCents removed — PRD-090 WS5: canonical = projected_table_win_loss_cents (TODO-WS4)
   holdPercent: number | null;
   /** Inline cash obs: total observed estimate (DEC-001) */
   cashObsEstimateCents: number;
@@ -87,8 +87,8 @@ export interface FinancialSummarySection {
     dropTotalCents: number;
     fillsTotalCents: number;
     creditsTotalCents: number;
-    winLossInventoryTotalCents: number | null;
-    winLossEstimatedTotalCents: number | null;
+    // winLossInventoryTotalCents removed — PRD-090 WS5 (SRL-TIA-001 legacy_alias_disposition)
+    // winLossEstimatedTotalCents removed — PRD-090 WS5 (SRL-TIA-001 legacy_alias_disposition)
     holdPercent: number | null;
     cashObsEstimateTotalCents: number;
     cashObsTotalCount: number;

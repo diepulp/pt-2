@@ -274,8 +274,8 @@ export function TableMetricsTable({
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm tabular-nums">
                       {table.metric_grade === 'AUTHORITATIVE'
-                        ? formatCents(table.win_loss_inventory_cents)
-                        : formatCents(table.win_loss_estimated_cents)}
+                        ? 'Unavailable'
+                        : 'Unavailable'}
                     </TableCell>
                     <TableCell className="text-center">
                       <TelemetryBadge quality={table.telemetry_quality} />

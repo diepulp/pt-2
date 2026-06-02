@@ -37,22 +37,8 @@ export function ExecutiveSummaryPdf({
         />
       </View>
       <View style={styles.metricsRow}>
-        <MetricBox
-          label="Win/Loss (Inv)"
-          value={
-            data.winLossInventoryTotalCents != null
-              ? formatCents(data.winLossInventoryTotalCents)
-              : 'N/A'
-          }
-        />
-        <MetricBox
-          label="Win/Loss (Est)"
-          value={
-            data.winLossEstimatedTotalCents != null
-              ? formatCents(data.winLossEstimatedTotalCents)
-              : 'N/A'
-          }
-        />
+        <MetricBox label="Win/Loss (Inv)" value={'—'} />
+        <MetricBox label="Win/Loss (Est)" value={'—'} />
         <MetricBox
           label="Coverage"
           value={formatPercent(data.snapshotCoverageRatio * 100)}

@@ -186,19 +186,6 @@ export async function getShiftDashboardSummary(
 // === Shared Aggregation Helpers ===
 
 /**
- * PRD-036: Null-aware win/loss summation.
- * Returns null when ALL values are null, otherwise sums non-null values.
- */
-function nullAwareSum(
-  tables: ShiftTableMetricsDTO[],
-  getter: (t: ShiftTableMetricsDTO) => number | null,
-): number | null {
-  const withValues = tables.filter((t) => getter(t) != null);
-  if (withValues.length === 0) return null;
-  return withValues.reduce((sum, t) => sum + getter(t)!, 0);
-}
-
-/**
  * Aggregate table metrics into a pit-level DTO.
  * PRD-036: Uses null-aware summation for win/loss totals.
  */
@@ -241,21 +228,15 @@ function aggregatePitMetrics(
       (sum, t) => sum + t.estimated_drop_grind_cents,
       0,
     ),
+    // estimated_drop_buyins_cents removed from table DTO (PRD-090 WS5); derive from rated+grind
     estimated_drop_buyins_total_cents: tables.reduce(
-      (sum, t) => sum + t.estimated_drop_buyins_cents,
+      (sum, t) =>
+        sum + t.estimated_drop_rated_cents + t.estimated_drop_grind_cents,
       0,
     ),
-    // PRD-036: Null-aware win/loss aggregation
-    win_loss_inventory_total_cents: nullAwareSum(
-      tables,
-      (t) => t.win_loss_inventory_cents,
-    ),
-    win_loss_estimated_total_cents: nullAwareSum(
-      tables,
-      (t) => t.win_loss_estimated_cents,
-    ),
+    // win_loss totals suppressed per PRD-090 WS5; TODO-WS4: wire TableInventoryAccountingProjection
     tables_missing_baseline_count: tables.filter(
-      (t) => t.win_loss_inventory_cents == null,
+      (t) => t.missing_opening_snapshot,
     ).length,
     snapshot_coverage_ratio: ratio,
     coverage_tier: getCoverageTier(ratio),
@@ -311,21 +292,15 @@ function aggregateCasinoMetrics(
       (sum, t) => sum + t.estimated_drop_grind_cents,
       0,
     ),
+    // estimated_drop_buyins_cents removed from table DTO (PRD-090 WS5); derive from rated+grind
     estimated_drop_buyins_total_cents: tables.reduce(
-      (sum, t) => sum + t.estimated_drop_buyins_cents,
+      (sum, t) =>
+        sum + t.estimated_drop_rated_cents + t.estimated_drop_grind_cents,
       0,
     ),
-    // PRD-036: Null-aware win/loss aggregation
-    win_loss_inventory_total_cents: nullAwareSum(
-      tables,
-      (t) => t.win_loss_inventory_cents,
-    ),
-    win_loss_estimated_total_cents: nullAwareSum(
-      tables,
-      (t) => t.win_loss_estimated_cents,
-    ),
+    // win_loss totals suppressed per PRD-090 WS5; TODO-WS4: wire TableInventoryAccountingProjection
     tables_missing_baseline_count: tables.filter(
-      (t) => t.win_loss_inventory_cents == null,
+      (t) => t.missing_opening_snapshot,
     ).length,
     snapshot_coverage_ratio: casinoCoverageRatio,
     coverage_tier: getCoverageTier(casinoCoverageRatio),
@@ -360,19 +335,12 @@ function toShiftTableMetrics(row: unknown): ShiftTableMetricsDTO {
     drop_custody_present: Boolean(r.drop_custody_present),
     estimated_drop_rated_cents: Number(r.estimated_drop_rated_cents ?? 0),
     estimated_drop_grind_cents: Number(r.estimated_drop_grind_cents ?? 0),
-    estimated_drop_buyins_cents: Number(r.estimated_drop_buyins_cents ?? 0),
+    // estimated_drop_buyins_cents removed (PRD-090 WS5 suppression); value came from rated+grind
+    // win_loss_inventory_cents removed (PRD-090 WS5); win_loss_estimated_cents removed (PRD-090 WS5)
     telemetry_quality:
       (r.telemetry_quality as 'GOOD_COVERAGE' | 'LOW_COVERAGE' | 'NONE') ??
       'NONE',
     telemetry_notes: (r.telemetry_notes as string) ?? '',
-    win_loss_inventory_cents:
-      r.win_loss_inventory_cents != null
-        ? Number(r.win_loss_inventory_cents)
-        : null,
-    win_loss_estimated_cents:
-      r.win_loss_estimated_cents != null
-        ? Number(r.win_loss_estimated_cents)
-        : null,
     metric_grade:
       (r.metric_grade as 'ESTIMATE' | 'AUTHORITATIVE') ?? 'ESTIMATE',
     missing_opening_snapshot: Boolean(r.missing_opening_snapshot),
@@ -422,14 +390,7 @@ function toShiftPitMetrics(row: unknown): ShiftPitMetricsDTO {
     estimated_drop_buyins_total_cents: Number(
       r.estimated_drop_buyins_total_cents ?? 0,
     ),
-    win_loss_inventory_total_cents:
-      r.win_loss_inventory_total_cents != null
-        ? Number(r.win_loss_inventory_total_cents)
-        : null,
-    win_loss_estimated_total_cents:
-      r.win_loss_estimated_total_cents != null
-        ? Number(r.win_loss_estimated_total_cents)
-        : null,
+    // win_loss_*_total_cents removed (PRD-090 WS5 suppression); TODO-WS4 wires canonical projection
     tables_missing_baseline_count: 0, // RPC-based pit metrics don't have this; default 0
     snapshot_coverage_ratio: ratio,
     coverage_tier: getCoverageTier(ratio),
@@ -472,8 +433,7 @@ function toShiftCasinoMetrics(row: unknown): ShiftCasinoMetricsDTO {
       estimated_drop_rated_total_cents: 0,
       estimated_drop_grind_total_cents: 0,
       estimated_drop_buyins_total_cents: 0,
-      win_loss_inventory_total_cents: null,
-      win_loss_estimated_total_cents: null,
+      // win_loss_*_total_cents removed (PRD-090 WS5 suppression)
       tables_missing_baseline_count: 0,
       snapshot_coverage_ratio: 0,
       coverage_tier: 'NONE',
@@ -507,14 +467,7 @@ function toShiftCasinoMetrics(row: unknown): ShiftCasinoMetricsDTO {
     estimated_drop_buyins_total_cents: Number(
       r.estimated_drop_buyins_total_cents ?? 0,
     ),
-    win_loss_inventory_total_cents:
-      r.win_loss_inventory_total_cents != null
-        ? Number(r.win_loss_inventory_total_cents)
-        : null,
-    win_loss_estimated_total_cents:
-      r.win_loss_estimated_total_cents != null
-        ? Number(r.win_loss_estimated_total_cents)
-        : null,
+    // win_loss_*_total_cents removed (PRD-090 WS5 suppression); TODO-WS4 wires canonical projection
     tables_missing_baseline_count: 0, // RPC-based casino metrics don't have this; default 0
     snapshot_coverage_ratio: ratio,
     coverage_tier: getCoverageTier(ratio),

@@ -138,10 +138,10 @@ export function FinancialSummaryPdf({ data }: FinancialSummaryPdfProps) {
               {formatCents(row.creditsTotalCents)}
             </Text>
             <Text style={[styles.tableCellRight, { width: COL.winLossInv }]}>
-              {formatCentsOrNA(row.winLossInventoryCents)}
+              {'—'}
             </Text>
             <Text style={[styles.tableCellRight, { width: COL.winLossEst }]}>
-              {formatCentsOrNA(row.winLossEstimatedCents)}
+              {'—'}
             </Text>
             <Text style={[styles.tableCellRight, { width: COL.hold }]}>
               {formatPercentOrNA(row.holdPercent)}
@@ -176,10 +176,10 @@ export function FinancialSummaryPdf({ data }: FinancialSummaryPdfProps) {
             {formatCents(data.casinoTotals.creditsTotalCents)}
           </Text>
           <Text style={[styles.tableCellBold, { width: COL.winLossInv }]}>
-            {formatCentsOrNA(data.casinoTotals.winLossInventoryTotalCents)}
+            {'—'}
           </Text>
           <Text style={[styles.tableCellBold, { width: COL.winLossEst }]}>
-            {formatCentsOrNA(data.casinoTotals.winLossEstimatedTotalCents)}
+            {'—'}
           </Text>
           <Text style={[styles.tableCellBold, { width: COL.hold }]}>
             {formatPercentOrNA(data.casinoTotals.holdPercent)}

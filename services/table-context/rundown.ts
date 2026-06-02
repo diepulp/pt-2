@@ -2,12 +2,10 @@
  * TableContextService - Rundown Module (ADR-027)
  *
  * Service functions for table rundown computation and drop posting.
- * Implements visibility slice for table win/loss calculation.
- *
- * IMPORTANT: table_win_cents is NULL when drop is not posted (PATCHED behavior).
  *
  * @see ADR-027 Table Bank Mode (Visibility Slice, MVP)
  * @see ADR-024 (RLS context injection)
+ * @see PRD-090 DEC-2 — computeTableRundown QUARANTINED (replaced by TableInventoryAccounting)
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -54,22 +52,8 @@ function mapRpcError(error: { code?: string; message: string }): DomainError {
   return new DomainError('INTERNAL_ERROR', error.message);
 }
 
-/**
- * Compute table rundown for a session.
- *
- * Returns all formula components:
- * - opening_total_cents, closing_total_cents
- * - fills_total_cents, credits_total_cents
- * - drop_total_cents (NULL if not posted)
- * - table_win_cents (NULL if drop not posted - PATCHED behavior)
- *
- * Formula: win = closing + credits + drop - opening - fills
- *
- * @param supabase - Supabase client with staff context
- * @param sessionId - Table session UUID
- * @returns TableRundownDTO with all components
- * @throws DomainError if session not found or RPC fails
- */
+// QUARANTINED (PRD-090 DEC-2): rpc_compute_table_rundown replaced by TableInventoryAccounting.
+// No new callers. WS6 tia.rpc_exclusion test enforces this boundary.
 export async function computeTableRundown(
   supabase: SupabaseClient<Database>,
   sessionId: string,

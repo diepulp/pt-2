@@ -1,82 +1,95 @@
 /**
- * Table Rundown Query and Mutation Hooks (ADR-027)
+ * Table Accounting Projection Hook (PRD-090)
  *
- * Hooks for table rundown visibility and drop total posting.
- * Uses RPC-based computation for accurate win/loss calculation.
+ * Replaces the legacy useTableRundown hook (ADR-027 / rpc_compute_table_rundown,
+ * quarantined per PRD-090 DEC-2). Fetches TableInventoryAccountingProjection
+ * from the canonical BFF endpoint.
  *
- * Formula: win = closing + credits + drop - opening - fills
+ * Drop posting mutation (usePostDropTotal) is retained unchanged.
  *
- * IMPORTANT: table_win_cents is NULL when drop is not posted (PATCHED behavior).
- *
- * @see services/table-context/rundown.ts - Service functions
- * @see services/table-context/keys.ts - Query key factory
- * @see ADR-027 Table Bank Mode (Visibility Slice, MVP)
+ * @see services/table-context/table-inventory-accounting.ts - derivation service
+ * @see app/api/v1/table-context/table-sessions/[sessionId]/accounting-projection/route.ts
+ * @see PRD-090 DEC-2 — computeTableRundown quarantined
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { createBrowserComponentClient } from '@/lib/supabase/client';
-import type {
-  TableRundownDTO,
-  TableSessionDTO,
-} from '@/services/table-context/dtos';
+import type { TableSessionDTO } from '@/services/table-context/dtos';
 import { tableContextKeys } from '@/services/table-context/keys';
-import {
-  computeTableRundown,
-  postTableDropTotal,
-} from '@/services/table-context/rundown';
+import { postTableDropTotal } from '@/services/table-context/rundown';
 
 // === Query Key Factory Extension ===
 
-/**
- * Query keys for table rundown operations.
- * Extends tableContextKeys for ADR-027 rundown queries.
- */
 export const tableRundownKeys = {
-  /** All rundown queries scope */
   all: [...tableContextKeys.root, 'rundown'] as const,
-  /** Rundown for a specific session */
   detail: (sessionId: string) => [...tableRundownKeys.all, sessionId] as const,
 };
 
-// === Query Hooks ===
+// === API Response Type ===
+
+/** bigint fields serialized as string at the HTTP boundary (lossless JSON) */
+export interface AccountingProjectionApiResponse {
+  table_session_id: string;
+  casino_id: string;
+  calculation_kind:
+    | 'telemetry_drop_formula'
+    | 'inventory_only'
+    | 'integrity_failure';
+  projected_table_win_loss_cents: string | null;
+  partial_table_result_cents: string | null;
+  final_table_win_loss_cents: null;
+  telemetry_derived_drop_estimate_cents: string | null;
+  drop_estimate_state: 'present' | 'absent';
+  custody_status: 'non_custody_estimate';
+  completeness: { status: string };
+  source_authority: {
+    drop: string | null;
+    snapshots: string | null;
+    fills: string | null;
+    credits: string | null;
+  };
+  integrity_issues: string[];
+  request_id: string;
+  derived_at: string;
+}
+
+// === Query Hook ===
 
 /**
- * Fetches table rundown for a session.
+ * Fetches the canonical TableInventoryAccountingProjection for a session.
  *
- * Returns all formula components:
- * - opening_total_cents, closing_total_cents
- * - fills_total_cents, credits_total_cents
- * - drop_total_cents (NULL if not posted)
- * - table_win_cents (NULL if drop not posted - PATCHED behavior)
+ * Returns the three-state result (telemetry_drop_formula / inventory_only /
+ * integrity_failure). Consumers render only — no re-derivation from raw fields.
  *
- * @param sessionId - Table session UUID (null to disable query)
+ * bigint fields arrive as strings from the API and must be converted with
+ * Number() at display time.
  */
-export function useTableRundown(sessionId: string | null) {
-  return useQuery<TableRundownDTO>({
+export function useTableAccountingProjection(sessionId: string | null) {
+  return useQuery<AccountingProjectionApiResponse>({
     queryKey: tableRundownKeys.detail(sessionId ?? ''),
     queryFn: async () => {
-      const supabase = createBrowserComponentClient();
-      return computeTableRundown(supabase, sessionId!);
+      const res = await fetch(
+        `/api/v1/table-context/table-sessions/${sessionId}/accounting-projection`,
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+      if (!res.ok) {
+        throw new Error(`Accounting projection fetch failed: ${res.status}`);
+      }
+      const json = await res.json();
+      return json.data as AccountingProjectionApiResponse;
     },
     enabled: !!sessionId,
-    staleTime: 30_000, // 30 seconds - rundown values may change during shift
+    staleTime: 30_000,
   });
 }
 
-// === Mutation Hooks ===
+// === Mutation Hook ===
 
 /**
- * Posts drop total to a session.
+ * Posts drop total to a session (write-path unchanged from ADR-027).
  *
- * This persists drop_total_cents AND sets drop_posted_at timestamp.
- * After posting, subsequent rundown computations will include table_win_cents.
- *
- * Invalidates:
- * - Rundown query for the session
- * - Session queries (current and by-id)
- *
- * @returns Mutation with sessionId and dropTotalCents parameters
+ * Invalidates rundown queries so the projection refreshes after drop posting.
  */
 export function usePostDropTotal() {
   const queryClient = useQueryClient();
@@ -92,18 +105,15 @@ export function usePostDropTotal() {
       return postTableDropTotal(supabase, sessionId, dropTotalCents);
     },
     onSuccess: (data, variables) => {
-      // Invalidate rundown query for this session
       queryClient.invalidateQueries({
         queryKey: tableRundownKeys.detail(variables.sessionId),
       });
 
-      // Update session caches with returned data
       queryClient.setQueryData(
         tableContextKeys.sessions.byId(variables.sessionId),
         data,
       );
 
-      // If tableId provided, also update current session cache
       if (variables.tableId) {
         queryClient.setQueryData(
           tableContextKeys.sessions.current(variables.tableId),
@@ -115,4 +125,4 @@ export function usePostDropTotal() {
 }
 
 // Re-export types for convenience
-export type { TableRundownDTO };
+export type { AccountingProjectionApiResponse as TableAccountingProjection };

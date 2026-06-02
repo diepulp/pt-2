@@ -108,7 +108,7 @@ export function WinLossTrendChart({
 
   const chartData = pitsData.map((pit) => ({
     pitLabel: pit.pit_id,
-    winLoss: pit.win_loss_estimated_total_cents,
+    winLoss: null,
     fills: pit.fills_total_cents,
     credits: pit.credits_total_cents,
   }));
