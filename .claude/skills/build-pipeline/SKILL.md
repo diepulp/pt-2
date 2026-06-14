@@ -144,12 +144,15 @@ When input is a PRD:
 1. Check PRD frontmatter for `scaffold_ref` and `adr_refs`
 2. Verify referenced files exist
 3. If missing: warn and require explicit waiver
-4. **SRL semantic check**: If any referenced ADR (via `adr_refs`) introduces canonical terms, or if PRD frontmatter declares `renders_financial_surface_values: true`, verify that a corresponding SRL extension artifact exists in `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md` §8 Admitted Extension Registry. If absent: this is a hard block — treat it the same as a missing `scaffold_ref`:
+4. **SRL semantic check**: If any referenced ADR (via `adr_refs`) introduces canonical terms, or if PRD frontmatter declares EITHER `renders_derived_value_surface: true` OR its financial alias `renders_financial_surface_values: true`, verify that a corresponding SRL extension artifact exists in `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md` §8 Admitted Extension Registry. If absent: this is a hard block — treat it the same as a missing `scaffold_ref`:
+
+   > The render-surface trigger was generalized in WS1 (FIB §I.1.a): `renders_derived_value_surface` is the canonical flag; `renders_financial_surface_values` is a recognized alias retained for instance #1. Either flag fires this gate. All existing SRL §8 admission behavior is otherwise unchanged.
 
    ```
    [FAIL] GOV-010 SRL Gate
    ─────────────────────────────────────────
-   PRD declares canonical terms (via adr_refs or renders_financial_surface_values)
+   PRD declares canonical terms (via adr_refs, renders_derived_value_surface,
+   or its financial alias renders_financial_surface_values)
    but no SRL admission record found in §8 Admitted Extension Registry.
 
    Options:
@@ -292,7 +295,74 @@ See `references/expert-routing.md` for:
 
    Read-only PRDs: no E2E workstream required (read-only UI rendering is Tier 2 per workflows-gaps.md).
 
-5. **SRL Semantic Preflight (when SRL-touching terms are present).**
+   > **The write-path mandate and this step are UNCHANGED (FIB §F.9).** Gate B (step 5 below) is a separate, additive classifier for derived-value read surfaces. The write-path classifier (`classify-write-path.py`), its E2E injection, and its Phase-4 gate are not modified by the render-proof mandate.
+
+5. **Gate B Classification (Render-Path / Derived-Value Surface).** Run the classifier:
+
+   ```bash
+   python .claude/skills/build-pipeline/scripts/classify-render-path.py \
+       {prd_path} {exec_spec_path}
+   ```
+
+   The script emits JSON with `detected`, `classification`, `signal`, and `warranted_tiers`. Branch on `classification`:
+
+   - `classification == "none"` → record `gate_b_classification: "none"` in checkpoint; skip to step 6.
+   - `classification == "derived_value"` → record `gate_b_classification: "derived_value"` in checkpoint; display the banner below and auto-inject the warranted tier workstreams:
+
+   ```
+   [GATE B MANDATE] PRD-{ID} declares a derived-value surface but has no real-execution proof workstreams.
+   ─────────────────────────────────────────────────────────────────────
+   Classification signal: {signal}   (primary_flag | secondary_projection_dto)
+
+   Action: Adding real-execution proof workstreams to EXEC-SPEC:
+     - WS_{SURFACE}_DB_INT      (service derivation *.int.test.ts)
+     - WS_{SURFACE}_ROUTE_INT   (this surface's OWN projection route *.int.test.ts)
+     - WS_{SURFACE}_COMPONENT   (component render test)
+   Override: reply "skip-render-proof" with justification + issue_id to waive (Gate B only — see waiver discipline).
+   ─────────────────────────────────────────────────────────────────────
+   ```
+
+   Auto-inject (mirrors the `WS_E2E` injection block — one workstream per warranted tier):
+   ```yaml
+   WS_{SURFACE}_DB_INT:
+     name: Derived-Value Service Integration Tests
+     description: Real-DB integration specs for the derived-value computation
+     executor: qa-specialist
+     executor_type: skill
+     depends_on: [service derivation workstream]
+     outputs:
+       - services/{context}/__tests__/*.int.test.ts
+     gate: gate-b-presence
+     estimated_complexity: medium
+   WS_{SURFACE}_ROUTE_INT:
+     name: Projection-Route Boundary Integration Tests
+     description: Role matrix + cross-casino isolation for the surface's OWN projection route ONLY
+     executor: qa-specialist
+     executor_type: skill
+     depends_on: [projection route workstream]
+     outputs:
+       - app/api/**/__tests__/*.int.test.ts
+     gate: gate-b-presence
+     estimated_complexity: medium
+   WS_{SURFACE}_COMPONENT:
+     name: Component Render Tests
+     description: Rendered-state tests for the derived-value component on its operator surface
+     executor: qa-specialist
+     executor_type: skill
+     depends_on: [component workstream]
+     outputs:
+       - components/**/__tests__/*.test.tsx
+     gate: gate-b-presence
+     estimated_complexity: medium
+   ```
+
+   Add `gate-b-presence` to the gates definition. `warranted_tiers` from the classifier maps 1:1 to these three injected workstreams (`service_db_int` → `WS_*_DB_INT`, `route_int` → `WS_*_ROUTE_INT`, `component_render` → `WS_*_COMPONENT`).
+
+   > `WS_*_ROUTE_INT` proves the derived surface's **own projection route ONLY** (role matrix + cross-casino isolation). This is **not** a broad all-routes / all-casino-scoped-routes RLS mandate — that tier was considered and pulled (FIB §F.3 / §G). Do not expand it.
+
+   Record `gate_b_classification: "derived_value" | "none"` in checkpoint. If waived, record `render_proof_waiver: {reason, issue_id}` (see waiver discipline below — a waiver without an `issue_id` is invalid).
+
+6. **SRL Semantic Preflight (when SRL-touching terms are present).**
 
    Trigger: `gov010_srl_check` is `"passed"` or `"waived"` (i.e., not `"not_applicable"`).
 
@@ -318,9 +388,9 @@ See `references/expert-routing.md` for:
 
    Record `srl_preflight: "pass" | "fail:{N}" | "waived:{reason}" | "skipped"` in checkpoint. Skipped only when `gov010_srl_check == "not_applicable"`.
 
-6. **Output** to `docs/21-exec-spec/EXEC-###-{slug}.md`.
+7. **Output** to `docs/21-exec-spec/EXEC-###-{slug}.md`.
 
-7. **Validate** before proceeding:
+8. **Validate** before proceeding:
    ```bash
    python .claude/skills/build-pipeline/scripts/validate-execution-spec.py \
        docs/21-exec-spec/EXEC-###-{slug}.md
@@ -332,7 +402,7 @@ See `references/expert-routing.md` for:
 
    Both must pass before proceeding.
 
-8. **Initialize checkpoint** (see `references/checkpoint-format.md`).
+9. **Initialize checkpoint** (see `references/checkpoint-format.md`).
 
 ---
 
@@ -474,9 +544,78 @@ After all phases complete:
    ─────────────────────────────────────────────────────────────────────
    ```
 
-3. Update `docs/MVP-ROADMAP.md` — mark PRD as complete
-4. Generate summary of files created, tests passing, gates passed
-5. Display final status via `/mvp-status`
+   > The E2E Mandate Gate above (write-path) is UNCHANGED (FIB §F.9). Gate A and Gate B below are additive.
+
+3. **Gate A — Universal Test Fidelity (ALL slices, runs before any stack spin-up):**
+
+   Gate A is universal, stack-free, and **NOT waivable** (honesty is non-negotiable and free — FIB §F.2/§F.5). Run the fidelity grep over the slice's TOUCHED integration-named files. The orchestrator supplies the touched set (files created by the slice, or whose test body the slice modified); the script inspects exactly those — Gate A is **not** retroactive and does not fail on untouched legacy mocked-int files.
+
+   ```bash
+   python .claude/skills/build-pipeline/scripts/check-test-fidelity.py \
+       {touched_int_file_1} {touched_int_file_2} ...
+   ```
+
+   The script emits JSON with `detected`, `violations[]`, and `cleared[]`. Branch:
+   - `detected == false` → record `gate_a_fidelity: "pass"`; proceed.
+   - `detected == true` (an uncleared client-constructor mock in a slice-touched `*.int.test.ts`) → **BLOCK**. Record `gate_a_fidelity: "fail:{N}"` where N = `violations.length`. A flagged line is cleared only by an explicit `// integration-fidelity:allow <reason>` comment with a non-empty reason. No waiver lane exists.
+
+   ```
+   [GATE A BLOCK] {N} integration-named test file(s) mock the Supabase client constructor.
+   ─────────────────────────────────────────────────────────────────────
+   Coverage theatre — a file claiming integration must really hit the DB:
+     - {pattern} at {file}:{line} — {excerpt}
+
+   Action required: convert the mock to a real-DB integration test, or annotate
+   the line with `// integration-fidelity:allow <reason>` if it is legitimately exempt.
+   Gate A is NOT waivable.
+   ─────────────────────────────────────────────────────────────────────
+   ```
+
+4. **Gate B — Real-Execution Proof Presence (only when `gate_b_classification == "derived_value"`):**
+
+   Cheap checks first, stack last (FIB §F.4). If `gate_b_classification == "none"`, record `gate_b_presence: "not_applicable"` and skip this step entirely — non-derived builds stay stack-free.
+
+   1. **Gate A honesty (cheap, already run in step 3).** If it blocked, Gate B never reaches the stack.
+   2. **Presence existence (cheap).** Block unless ALL three warranted tier files exist:
+      - service derivation `*.int.test.ts`,
+      - the surface's OWN projection-route `*.int.test.ts` (role matrix + cross-casino isolation),
+      - component render test.
+      Absence of any tier is a **gate failure, not a warning**. On absence → `gate_b_presence: "fail:{tiers}"` (the missing tiers), BLOCK.
+   3. **Mount verification (cheap).** Confirm the component is imported and rendered on its declared operator surface (the code now exists). Absence → gate failure.
+   4. **Stack probe (cheap, FIB §I.1.c).** Runs only after the cheap checks pass, immediately before execution:
+
+      ```bash
+      timeout 15 npx supabase status -o env > /tmp/gateb-stack.env
+      ```
+
+      THREE-STATE, fail-closed:
+      - probe `rc == 0` → stack UP, continue to execution;
+      - probe `rc != 0` → **BLOCK (`blocked:stack_down`)**. This is **distinct from FAIL** and is **NOT** a `skip-render-proof` waiver (infra-down ≠ deliberate deferral). Halt with non-zero exit, record `gate_b_presence: "blocked:stack_down"`, and emit operator message "run `npx supabase start`". Never a silent green.
+
+   5. **Execution (expensive, only if probe UP).** Force `RUN_INTEGRATION_TESTS=true` so `describe.skip` cannot mask absence:
+
+      ```bash
+      RUN_INTEGRATION_TESTS=true npx jest --config jest.integration.config.js \
+          --testPathPatterns='services/{context}/__tests__/' \
+          --testPathIgnorePatterns='trees/' \
+          --testPathIgnorePatterns='\.claude/' \
+          --ci --runInBand > /tmp/gateb-integration.log 2>&1
+      ```
+
+      Read `/tmp/gateb-integration.log` selectively (Agent Shell Safety — never stream large output). This lane is additive + conditional: only derived-value slices spin up the stack.
+
+      > **TWO-CONFIG CAVEAT (FIB §I.1.c.6).** The component render tier runs under the **jsdom** config (`jest.config.js`), NOT the node integration config (`jest.integration.config.js`). Gate-B execution is therefore **two separate invocations** — the node integration run above plus a separate jsdom run for the component render tier. Do NOT collapse them into one.
+
+   **Verdict mapping:**
+   - execution rc `0` → `gate_b_presence: "pass"`;
+   - execution rc `!= 0` (tests ran and failed) → `gate_b_presence: "fail:{tiers}"`, FAIL;
+   - probe down (never executed) → `gate_b_presence: "blocked:stack_down"`, BLOCK.
+
+   **Waiver discipline (FIB §F.5).** Gate A is NOT waivable. A Gate B waiver `skip-render-proof` requires BOTH: (1) explicit **human approval at the approval gate** — the orchestrator may not self-waive; and (2) a tracked follow-up `issue_id`, recorded as `render_proof_waiver: {reason, issue_id}` with `gate_b_presence: "waived:{issue_id}"`. **A waiver without an `issue_id` is invalid.** A `blocked:stack_down` verdict is never satisfied by a waiver — fix the stack.
+
+5. Update `docs/MVP-ROADMAP.md` — mark PRD as complete
+6. Generate summary of files created, tests passing, gates passed
+7. Display final status via `/mvp-status`
 
 ---
 
@@ -515,6 +654,11 @@ A workstream never disappears from the graph — deferring it means moving it in
 - `fib_s_loaded`: boolean
 - `write_path_classification`: `"detected"` | `"none"`
 - `srl_preflight`: `"pass"` | `"fail:{N}"` | `"waived:{reason}"` | `"skipped"`
+- `gate_a_fidelity`: `"pass"` | `"fail:{N}"` (universal, NOT waivable)
+- `gate_b_classification`: `"derived_value"` | `"none"`
+- `gate_b_presence`: `"pass"` | `"fail:{tiers}"` | `"blocked:stack_down"` | `"waived:{issue_id}"` | `"not_applicable"`
+
+**Completion binding (FIB §F.6):** a build may NOT reach `status: complete` while `gate_b_presence` is `fail:*` or `blocked:*` without a recorded waiver `issue_id` (`render_proof_waiver: {reason, issue_id}`). Completion is bound to the gate, not merely to the checkpoint being written. `gate_a_fidelity: "fail:*"` also blocks completion and has no waiver lane.
 
 ---
 

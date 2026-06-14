@@ -431,6 +431,8 @@ graph TB
     style DB_TYPES fill:#c8e6c9,stroke:#2e7d32,stroke-width:3px
 ```
 
+> **Projection Response DTO suffix**: A `GET` route returning a read-time-derived **Projection Artifact** (Wave-2 ubiquitous-language concept term) MUST name its response DTO `*ProjectionResponseDTO` (regex `/Projection(ResponseDTO)?$/`). See `DTO_CANONICAL_STANDARD.md` Pattern 5; this suffix is the governance hook binding the DTO to the Projection Artifact concept for SRL/SIGP coherence and the FIB-H-RENDER-PROOF-001 Gate-B classifier.
+
 ---
 
 ## Bounded Context DTO Access Rules
