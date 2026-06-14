@@ -159,6 +159,26 @@ export type CreateFinancialTxnParams = Pick<
 
 ---
 
+### Pattern 5: Projection Response DTOs (Read-Time-Derived Surface Output)
+
+**Principle**: A `GET` route returning a read-time-derived **projection artifact** (a value composed/computed at read time rather than read straight from an authoring row) MUST name its response DTO with the `*ProjectionResponseDTO` suffix.
+
+```typescript
+// ✅ Projection-return DTO carries the canonical *ProjectionResponseDTO suffix
+export type OperationalProjectionResponseDTO = {
+  totalCents: number;
+  count: number;
+  completeness: { status: 'complete' | 'partial' | 'unknown' };
+  type: 'estimated';
+};
+```
+
+**Enforcing regex**: `/Projection(ResponseDTO)?$/`
+
+**Why the suffix?**: The suffix is the governance hook that lets the render-path classifier (FIB-H-RENDER-PROOF-001 Gate B, secondary signal) mechanically detect a derived-value surface from a `GET` route's return DTO — without it the projection nature of the response is non-discoverable. The bare `*Projection` form is **rejected**; the canonical token is `*ProjectionResponseDTO`. This is backward-compatible with the existing `OperationalProjectionResponseDTO` (`services/player-financial/dtos.ts`) — no rename, no migration.
+
+---
+
 ## Enforcement Mechanisms
 
 ### 1. ESLint Rule: Syntax (Build-Time)

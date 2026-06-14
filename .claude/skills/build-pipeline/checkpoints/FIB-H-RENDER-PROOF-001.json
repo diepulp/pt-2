@@ -1,0 +1,74 @@
+{
+  "prd": "FIB-H-RENDER-PROOF-001",
+  "prd_title": "Real-Execution Proof Mandate \u2014 pipeline gates (Gate A + Gate B)",
+  "exec_spec": "docs/21-exec-spec/EXEC-091-render-path-proof-mandate.md",
+  "current_phase": 4,
+  "status": "complete",
+  "completed_workstreams": [
+    "WS1",
+    "WS2",
+    "WS3",
+    "WS4"
+  ],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "dormant_workstreams": [
+    "WS_F8_DESIGN_TIME"
+  ],
+  "artifacts": {
+    "WS_F8_DESIGN_TIME": {
+      "status": "dormant",
+      "reason": "FIB \u00a7F.8 / \u00a7K.2 explicitly deferred from MVP; gates do not depend on it. PRD-091 frozen DoD is the template source."
+    },
+    "WS1": [
+      "docs/70-governance/feature-intake/FEATURE-CLASSIFICATION-AND-TRANSPORT-SELECTION-STANDARD.yaml",
+      "docs/25-api-data/DTO_CANONICAL_STANDARD.md",
+      "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md",
+      ".claude/skills/prd-writer/SKILL.md",
+      ".claude/skills/prd-writer/references/validation-checklist.md"
+    ],
+    "WS2": [
+      ".claude/skills/build-pipeline/scripts/check-test-fidelity.py",
+      ".claude/skills/build-pipeline/scripts/classify-render-path.py"
+    ],
+    "WS3": [
+      ".claude/skills/build-pipeline/SKILL.md",
+      ".claude/skills/build-pipeline/references/checkpoint-format.md"
+    ],
+    "WS4": [
+      ".claude/skills/build-pipeline/scripts/__tests__/test_check_test_fidelity.py",
+      ".claude/skills/build-pipeline/scripts/__tests__/test_classify_render_path.py",
+      ".claude/skills/build-pipeline/__tests__/fixtures/render-proof/"
+    ]
+  },
+  "gates_passed": [
+    "lint (WS1)",
+    "test-pass (WS2)",
+    "lint (WS3)",
+    "test-pass (WS4: 34 passed)"
+  ],
+  "gates_pending": [],
+  "complexity_prescreen": "full",
+  "complexity_override": "consolidated-to-4ws",
+  "fib_h_ref": "docs/issues/gaps/render-path-proof-mandate/FIB-H-RENDER-PROOF-001-render-path-proof-mandate.md",
+  "fib_s_loaded": false,
+  "gov010_check": "not_applicable",
+  "gov010_srl_check": "not_applicable",
+  "write_path_classification": "none",
+  "e2e_mandate_waiver": "6 classifier signals are self-referential prose (FIB \u00a7B problem statement + EXEC risk note quoting write-path tokens); slice ships zero write paths per FIB \u00a7F.9/\u00a7G",
+  "srl_preflight": "skipped",
+  "decisions": [
+    "DEC-001: projection DTO suffix frozen to *ProjectionResponseDTO, regex /Projection(ResponseDTO)?$/, no rename of OperationalProjectionResponseDTO"
+  ],
+  "created_at": "2026-06-14T23:06:07Z",
+  "updated_at": "2026-06-14T23:23:59Z",
+  "gate_a_fidelity": "pass",
+  "gate_b_classification": "none",
+  "gate_b_presence": "not_applicable",
+  "dod": {
+    "type_check": "1 pre-existing unrelated error (app/api/dev/otp/route.ts:64, commit 596e387f); ZERO from this slice",
+    "lint": "unaffected \u2014 all code under .claude/** (eslint-ignored); rest is md/yaml",
+    "python_unit_tests": "34 passed",
+    "write_path_mandate": "unchanged (WS3 verified byte-for-byte)"
+  }
+}

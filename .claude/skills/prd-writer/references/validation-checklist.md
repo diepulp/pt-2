@@ -137,8 +137,8 @@ Use this checklist before submitting a PRD for review. All items should be check
 
 ### Semantic Governance (SRL)
 
-- [ ] **If PRD introduces canonical terms or financial surface values:**
-  - [ ] `renders_financial_surface_values: true` declared in frontmatter, or explicitly confirmed not applicable
+- [ ] **If PRD introduces canonical terms or a derived-value surface (financial, MTL/CTR, eligibility, tier):**
+  - [ ] `renders_derived_value_surface: true` declared in frontmatter, or explicitly confirmed not applicable (`renders_financial_surface_values` is the retained alias for the financial instance)
   - [ ] Corresponding SRL extension artifact present in `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md` §8 Admitted Extension Registry, OR gap noted in Dependencies & Risks with explicit ADR path to admission
   - [ ] ADR basis for each introduced term declared in `adr_refs` frontmatter field
 
