@@ -29,6 +29,13 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createServerClient } from '@supabase/ssr';
+// Integration test needs the raw service-role client for seed/teardown — the
+// same direct-import pattern used by sibling *.int.test.ts (e.g.
+// services/floor-layout/__tests__). The eslint.config.mjs __tests__ relaxation
+// block (no-restricted-imports: off) fails to match this file because the
+// Next.js dynamic-route segment "[sessionId]" in the path contains glob
+// special chars that break flat-config `files` matching, so disable inline.
+// eslint-disable-next-line no-restricted-imports
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 
