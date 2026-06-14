@@ -62,8 +62,9 @@ export interface AccountingProjectionApiResponse {
  * Returns the three-state result (telemetry_drop_formula / inventory_only /
  * integrity_failure). Consumers render only — no re-derivation from raw fields.
  *
- * bigint fields arrive as strings from the API and must be converted with
- * Number() at display time.
+ * NFR-1: the `*_cents` fields arrive as 64-bit-safe strings. Consumers MUST keep
+ * them as strings / parse with BigInt for display — never round-trip through
+ * Number(), which loses precision beyond 2^53 (up to the signed-64-bit sentinel).
  */
 export function useTableAccountingProjection(sessionId: string | null) {
   return useQuery<AccountingProjectionApiResponse>({

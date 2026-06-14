@@ -20,7 +20,6 @@ import { AlertCircle, TrendingDown, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTableAccountingProjection } from '@/hooks/table-context/use-table-rundown';
-import { formatCents } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { TableBankMode } from '@/services/table-context/dtos';
 import { TABLE_BANK_MODE_LABELS } from '@/services/table-context/labels';
@@ -41,16 +40,53 @@ interface ResultRowProps {
   qualifier: string;
 }
 
+type ResultSign = 'positive' | 'negative' | 'neutral';
+
+/**
+ * Parse a canonical cent value (string from the projection DTO) into a bigint.
+ *
+ * NFR-1: the canonical `*_cents` values are 64-bit-safe strings. They MUST NOT be
+ * round-tripped through Number() — values beyond 2^53 (up to the signed-64-bit
+ * sentinel 9223372036854775807) would silently lose precision. Returns null for
+ * absent or non-numeric input.
+ */
+function parseCentsBigInt(valueCents: string | null): bigint | null {
+  if (valueCents == null) return null;
+  try {
+    return BigInt(valueCents);
+  } catch {
+    return null;
+  }
+}
+
+function centsSign(value: bigint | null): ResultSign {
+  if (value == null) return 'neutral';
+  const zero = BigInt(0);
+  if (value > zero) return 'positive';
+  if (value < zero) return 'negative';
+  return 'neutral';
+}
+
+/**
+ * Whole-dollar currency display, bigint-safe. Mirrors `formatDollars`
+ * (USD, $ prefix, comma thousands groups, 0 fraction digits, round-half-up
+ * magnitude) but derives every digit from the bigint — no lossy Number().
+ */
+function formatWholeDollarsFromCents(value: bigint | null): string {
+  if (value == null) return '—';
+  const negative = value < BigInt(0);
+  const abs = negative ? -value : value;
+  const hundred = BigInt(100);
+  const remainder = abs % hundred;
+  let dollars = abs / hundred;
+  if (remainder >= BigInt(50)) dollars += BigInt(1); // round half away from zero (matches Intl)
+  const grouped = dollars.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return `${negative ? '-' : ''}$${grouped}`;
+}
+
 function ResultRow({ label, valueCents, qualifier }: ResultRowProps) {
-  const cents = valueCents != null ? Number(valueCents) : null;
-  const variant: 'positive' | 'negative' | 'neutral' =
-    cents == null
-      ? 'neutral'
-      : cents > 0
-        ? 'positive'
-        : cents < 0
-          ? 'negative'
-          : 'neutral';
+  const value = parseCentsBigInt(valueCents);
+  const variant: ResultSign = centsSign(value);
 
   const Icon =
     variant === 'positive'
@@ -79,7 +115,7 @@ function ResultRow({ label, valueCents, qualifier }: ResultRowProps) {
         >
           {Icon && <Icon className="h-4 w-4" />}
           <span className="font-mono text-lg tabular-nums">
-            {cents != null ? formatCents(cents) : '—'}
+            {formatWholeDollarsFromCents(value)}
           </span>
         </div>
       </div>
