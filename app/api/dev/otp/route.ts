@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
   // EXECUTE is REVOKE'd from PUBLIC; only service_role can call it.
   const { data, error } = await serviceClient.rpc(
     'dev_get_latest_otp_token' as never,
-    { p_email: email },
+    { p_email: email } as never,
   );
 
   const row = (data as OtpTokenRow[] | null)?.[0] ?? null;
