@@ -410,8 +410,9 @@ if [ -n "$STAGED_SERVICE_FILES" ]; then
       continue
     fi
 
-    # Skip test files
-    if echo "$file" | grep -q "\.test\.ts$\|\.spec\.ts$"; then
+    # Skip test files, incl. fixtures/helpers under __tests__/ (matches the
+    # exclusion convention used by the ADR-034 hook and the outbox check below)
+    if echo "$file" | grep -qE "\.test\.ts$|\.spec\.ts$|/__tests__/"; then
       continue
     fi
 

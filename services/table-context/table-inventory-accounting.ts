@@ -77,6 +77,8 @@ type TableSessionRow = {
 type SnapshotRow = {
   id: string;
   session_id: string | null;
+  casino_id: string;
+  table_id: string;
   total_cents: number | null;
   chipset: Record<string, number> | null;
   snapshot_type: string;
@@ -90,6 +92,8 @@ function isSnapshotRow(value: unknown): value is SnapshotRow {
     typeof obj.id === 'string' &&
     typeof obj.snapshot_type === 'string' &&
     typeof obj.created_at === 'string' &&
+    typeof obj.casino_id === 'string' &&
+    typeof obj.table_id === 'string' &&
     (obj.total_cents === null || typeof obj.total_cents === 'number') &&
     (obj.session_id === null || typeof obj.session_id === 'string')
   );
@@ -146,17 +150,35 @@ async function resolveSnapshot(
   snapshotType: 'open' | 'close',
   sessionId: string,
   fkSnapshotId: string | null,
+  casinoId: string,
+  tableId: string,
 ): Promise<{ value: bigint | null; issueKey: string | null }> {
   const missingIssue =
     snapshotType === 'open'
       ? 'missing_opening_inventory_snapshot'
       : 'missing_closing_inventory_snapshot';
 
+  // Identity gate (R-5): a snapshot may only contribute if it belongs to the
+  // fetched session's identity — same session_id, same casino_id, same table_id,
+  // and the expected snapshot_type for this side. A row sharing only one
+  // identifier (e.g. session_id) but a wrong type/casino/table is rejected, never
+  // computed into a financial result.
+  function isIdentityValid(snap: SnapshotRow): boolean {
+    return (
+      snap.session_id === sessionId &&
+      snap.casino_id === casinoId &&
+      snap.table_id === tableId &&
+      snap.snapshot_type === snapshotType
+    );
+  }
+
   // Primary: FK lookup
   if (fkSnapshotId != null) {
     const { data: rawSnap, error } = await supabase
       .from('table_inventory_snapshot')
-      .select('id, session_id, total_cents, chipset, snapshot_type, created_at')
+      .select(
+        'id, session_id, casino_id, table_id, total_cents, chipset, snapshot_type, created_at',
+      )
       .eq('id', fkSnapshotId)
       .maybeSingle();
 
@@ -178,22 +200,27 @@ async function resolveSnapshot(
         );
       }
       const snap = rawSnap;
-      // Stale-FK check: session_id must match (null = pre-PRD-038 row → stale)
-      const isStale = snap.session_id == null || snap.session_id !== sessionId;
-      if (!isStale) {
+      // Identity gate: session_id (null = pre-PRD-038 row → stale), casino_id,
+      // table_id, and snapshot_type must all match the fetched session.
+      if (isIdentityValid(snap)) {
         const value = resolveSnapshotValue(snap);
         if (value != null) return { value, issueKey: null };
       }
-      // Stale FK → fall through to session-linked fallback
+      // Invalid identity / stale FK → fall through to session-linked fallback
     }
   }
 
-  // Fallback: session-linked snapshot, deterministic order (DEC-3)
+  // Fallback: session-linked snapshot, deterministic order (DEC-3).
+  // Identity-scoped to the fetched session's casino_id + table_id (R-5).
   const { data: rawFallbacks, error: fbError } = await supabase
     .from('table_inventory_snapshot')
-    .select('id, session_id, total_cents, chipset, snapshot_type, created_at')
+    .select(
+      'id, session_id, casino_id, table_id, total_cents, chipset, snapshot_type, created_at',
+    )
     .eq('session_id', sessionId)
     .eq('snapshot_type', snapshotType)
+    .eq('casino_id', casinoId)
+    .eq('table_id', tableId)
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(1);
@@ -224,11 +251,18 @@ async function resolveSnapshot(
 async function queryFillsTotal(
   supabase: SupabaseClient<Database>,
   sessionId: string,
+  casinoId: string,
+  tableId: string,
 ): Promise<bigint> {
+  // Identity-scoped (R-5): only confirmed fills that belong to the fetched
+  // session's identity (session_id + casino_id + table_id) contribute. A fill
+  // carrying the target session_id but a mismatched casino/table is rejected.
   const { data, error } = await supabase
     .from('table_fill')
     .select('confirmed_amount_cents')
     .eq('session_id', sessionId)
+    .eq('casino_id', casinoId)
+    .eq('table_id', tableId)
     .eq('status', 'confirmed');
 
   if (error) {
@@ -253,11 +287,17 @@ async function queryFillsTotal(
 async function queryCreditsTotal(
   supabase: SupabaseClient<Database>,
   sessionId: string,
+  casinoId: string,
+  tableId: string,
 ): Promise<bigint> {
+  // Identity-scoped (R-5): mirror queryFillsTotal — session_id + casino_id +
+  // table_id + confirmed status. Credits sharing only the session_id are rejected.
   const { data, error } = await supabase
     .from('table_credit')
     .select('confirmed_amount_cents')
     .eq('session_id', sessionId)
+    .eq('casino_id', casinoId)
+    .eq('table_id', tableId)
     .eq('status', 'confirmed');
 
   if (error) {
@@ -377,15 +417,29 @@ export function createTableInventoryAccountingService(
           'open',
           session.id,
           session.opening_inventory_snapshot_id,
+          casinoId,
+          session.gaming_table_id,
         ),
         resolveSnapshot(
           supabase,
           'close',
           session.id,
           session.closing_inventory_snapshot_id,
+          casinoId,
+          session.gaming_table_id,
         ),
-        queryFillsTotal(supabase, session.id),
-        queryCreditsTotal(supabase, session.id),
+        queryFillsTotal(
+          supabase,
+          session.id,
+          casinoId,
+          session.gaming_table_id,
+        ),
+        queryCreditsTotal(
+          supabase,
+          session.id,
+          casinoId,
+          session.gaming_table_id,
+        ),
         queryTelemetryDropEstimate(supabase, {
           casinoId,
           tableId: session.gaming_table_id,

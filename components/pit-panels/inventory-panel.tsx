@@ -6,6 +6,7 @@ import * as React from 'react';
 
 import { ChipCountCaptureDialog } from '@/components/table/chip-count-capture-dialog';
 import { RundownReportCard } from '@/components/table/rundown-report-card';
+import { RundownSummaryPanel } from '@/components/table/rundown-summary-panel';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,6 +20,7 @@ import {
   useInventorySnapshots,
   type TableInventorySnapshotDTO,
 } from '@/hooks/table-context/use-inventory-snapshots';
+import { tableRundownKeys } from '@/hooks/table-context/use-table-rundown';
 import { useCurrentTableSession } from '@/hooks/table-context/use-table-session';
 import { tableContextKeys } from '@/services/table-context/keys';
 
@@ -144,6 +146,14 @@ export function InventoryPanel({
       })
     : 'Never';
 
+  // Fetch current table session for the rundown surface
+  const { data: currentSession } = useCurrentTableSession(tableId);
+  const showRundownCard =
+    currentSession &&
+    (currentSession.status === 'ACTIVE' ||
+      currentSession.status === 'RUNDOWN' ||
+      currentSession.status === 'CLOSED');
+
   // Handle refresh
   const handleRefresh = () => {
     queryClient.invalidateQueries({
@@ -152,15 +162,14 @@ export function InventoryPanel({
     queryClient.invalidateQueries({
       queryKey: tableContextKeys.drops(tableId),
     });
+    // Also refresh the canonical accounting projection so the mounted
+    // RundownSummaryPanel result updates after operator action (PRD-091 FR-1).
+    if (currentSession) {
+      queryClient.invalidateQueries({
+        queryKey: tableRundownKeys.detail(currentSession.id),
+      });
+    }
   };
-
-  // Fetch current table session for RundownReportCard
-  const { data: currentSession } = useCurrentTableSession(tableId);
-  const showRundownCard =
-    currentSession &&
-    (currentSession.status === 'ACTIVE' ||
-      currentSession.status === 'RUNDOWN' ||
-      currentSession.status === 'CLOSED');
 
   const isLoading = isLoadingSnapshots || isLoadingDrops;
 
@@ -212,12 +221,18 @@ export function InventoryPanel({
         {/* Panel Content */}
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-6">
-            {/* Rundown Report (PRD-038) */}
+            {/* Rundown surface (PRD-091): the canonical accounting projection is
+                the SOLE operator-visible table-result statement (FR-1). The legacy
+                report card below carries only Fills/Credits/Drop telemetry +
+                report actions — it no longer states a table result (FR-3). */}
             {showRundownCard && (
-              <RundownReportCard
-                sessionId={currentSession.id}
-                sessionStatus={currentSession.status}
-              />
+              <>
+                <RundownSummaryPanel sessionId={currentSession.id} />
+                <RundownReportCard
+                  sessionId={currentSession.id}
+                  sessionStatus={currentSession.status}
+                />
+              </>
             )}
 
             {/* Bank Summary */}

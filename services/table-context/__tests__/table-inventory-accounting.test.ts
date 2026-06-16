@@ -45,6 +45,8 @@ function makeOpenerSnap(overrides: Record<string, unknown> = {}) {
   return {
     id: OPENER_SNAP_ID,
     session_id: SESSION_ID,
+    casino_id: CASINO_ID,
+    table_id: TABLE_ID,
     total_cents: 500_000,
     chipset: null,
     snapshot_type: 'open',
@@ -57,6 +59,8 @@ function makeCloserSnap(overrides: Record<string, unknown> = {}) {
   return {
     id: CLOSER_SNAP_ID,
     session_id: SESSION_ID,
+    casino_id: CASINO_ID,
+    table_id: TABLE_ID,
     total_cents: 480_000,
     chipset: null,
     snapshot_type: 'close',
