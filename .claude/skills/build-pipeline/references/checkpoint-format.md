@@ -58,6 +58,24 @@ interface PipelineCheckpoint {
     line?: number;
   };
 
+  // Optional: Render-Proof Mandate gates (FIB-H-RENDER-PROOF-001)
+  // Gate A — Universal Test Fidelity (all slices, NOT waivable, stack-free)
+  gate_a_fidelity?: "pass" | string;            // "pass" | "fail:{N}"
+  // Gate B classification (Stage 3) + presence verdict (Phase 4)
+  gate_b_classification?: "derived_value" | "none";
+  gate_b_presence?:
+    | "pass"
+    | string                                     // "fail:{tiers}"
+    | "blocked:stack_down"
+    | string                                     // "waived:{issue_id}"
+    | "not_applicable";
+  // Gate B waiver — requires human approval AND a tracked issue_id (a waiver
+  // without an issue_id is invalid; stack_down is never satisfied by a waiver).
+  render_proof_waiver?: {
+    reason: string;
+    issue_id: string;
+  };
+
   // Optional: Execution Notes
   eslint_fixes?: Array<{
     file: string;
@@ -77,6 +95,17 @@ type CheckpointStatus =
   | "failed"          // Workstream/gate failed
   | "complete";       // All workstreams done
 ```
+
+### Render-Proof Mandate Fields (FIB-H-RENDER-PROOF-001)
+
+| Field | Values | Meaning |
+|-------|--------|---------|
+| `gate_a_fidelity` | `"pass"` \| `"fail:{N}"` | Universal Test Fidelity (Gate A). `N` = count of touched `*.int.test.ts` files mocking the Supabase client constructor. NOT waivable; stack-free. |
+| `gate_b_classification` | `"derived_value"` \| `"none"` | Render-path classifier verdict (Stage 3). `derived_value` triggers Gate B presence; `none` makes Gate B `not_applicable`. |
+| `gate_b_presence` | `"pass"` \| `"fail:{tiers}"` \| `"blocked:stack_down"` \| `"waived:{issue_id}"` \| `"not_applicable"` | Real-Execution Proof Presence (Gate B, Phase 4). `fail:{tiers}` lists missing/failing warranted tiers; `blocked:stack_down` = probe down (distinct from FAIL, never satisfied by a waiver); `not_applicable` = non-derived slice. |
+| `render_proof_waiver` | `{ reason, issue_id }` | Gate B waiver record. Requires human approval at the gate AND a tracked `issue_id`. A waiver without an `issue_id` is invalid. |
+
+**Completion binding (FIB §F.6):** `status: "complete"` is **blocked** while `gate_b_presence ∈ {fail:*, blocked:*}` without a recorded waiver `issue_id`. Completion is bound to the gate, not merely to the checkpoint being written. `gate_a_fidelity: "fail:*"` likewise blocks completion and has no waiver lane (`blocked:stack_down` cannot be waived — fix the stack).
 
 ---
 
@@ -333,3 +362,11 @@ When `/build PRD-XXX --resume` is invoked:
 | `paused` | empty | none |
 | `failed` | empty | required |
 | `complete` | empty | none |
+
+### Render-Proof Completion Binding (FIB §F.6)
+
+`status: "complete"` is **invalid** when any of the following hold:
+- `gate_a_fidelity` is `fail:*` (no waiver lane exists for Gate A);
+- `gate_b_presence` is `fail:*` or `blocked:*` **and** no `render_proof_waiver.issue_id` is recorded.
+
+A `gate_b_presence: "waived:{issue_id}"` is only valid when `render_proof_waiver.issue_id` matches the embedded `issue_id`. `blocked:stack_down` is never resolved by a waiver — the stack must be brought up.

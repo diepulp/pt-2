@@ -907,10 +907,23 @@ required_sections:
         type: boolean
         required: true
         if_true: name consumer and projection store
-      - name: renders_financial_surface_values
+      - name: renders_derived_value_surface
         type: boolean
         required: true
         if_true: name source, authority, and completeness behavior
+        note: >
+          Authoritative flag — true for any PRD whose surface computes a value the
+          operator acts on (financial, MTL/CTR, eligibility, tier). Triggers the
+          GOV-010 SRL gate and the Gate-B render-proof classifier (FIB-H-RENDER-PROOF-001 §I.1.a).
+      - name: renders_financial_surface_values
+        type: boolean
+        required: true
+        alias_of: renders_derived_value_surface
+        if_true: name source, authority, and completeness behavior
+        note: >
+          Recognized alias of renders_derived_value_surface, retained for instance #1
+          (financial). Preserves its existing GOV-010/SRL semantics — every current
+          trigger remains in force; financial is a strict subset of the derived-value set.
       - name: selected_transport
         type: enum
         required: true

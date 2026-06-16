@@ -58,7 +58,7 @@ last_review: YYYY-MM-DD
 phase: [Phase N (Name)]
 pattern: [A | B | C]  # Optional: Service pattern per SRM
 http_boundary: [true | false]  # Optional: Has API routes
-renders_financial_surface_values: [true | false]  # Optional: triggers SRL gate in GOV-010
+renders_derived_value_surface: [true | false]  # Optional: triggers SRL gate in GOV-010. Set true for any surface computing a value the operator acts on (financial, MTL/CTR, eligibility, tier). renders_financial_surface_values is the retained alias for the financial instance.
 ---
 ```
 

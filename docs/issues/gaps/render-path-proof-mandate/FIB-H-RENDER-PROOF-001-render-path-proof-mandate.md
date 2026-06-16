@@ -1,6 +1,6 @@
 # FIB-H — Real-Execution Proof Mandate (Pipeline Infrastructure)
 
-**Status:** Proposed
+**Status:** Delivered — implemented via EXEC-091 (2026-06-14); gate-zero preconditions resolved (see §I.1)
 **Artifact type:** Feature Intake Brief — Human Scope Authority
 **Feature ID:** FIB-H-RENDER-PROOF-001
 **Date opened:** 2026-06-14
@@ -65,7 +65,7 @@ Derived-value surfaces (TIA, shift-financials, MTL/CTR thresholds, exclusion/eli
 
 1. Any slice enters the pipeline → **Gate A (universal fidelity)** is in force: every integration-claiming test file touched by the slice must construct a real client. Gate A is cheap and stack-free, so it is checked first and fast-fails before any stack spin-up.
 2. The Gate-B classifier runs alongside the write-path classifier → emits whether the slice declares a **derived-value surface**.
-3. If a derived-value surface is detected → its three proof tiers (service DB-integration, own-projection-route, component render) attach as **DoD on the slice's existing producer workstreams**; a standalone test workstream is injected **only** where the producer workstream is absent (F.4).
+3. If a derived-value surface is detected → the pipeline auto-injects the proof workstreams its tiers warrant: service DB-integration, route-boundary (for the surface's own projection route), and component render.
 4. Execution proceeds; injected workstreams are authored by domain experts against the real stack.
 5. Phase 4 enforces **Gate A honesty** (cheap, first), then **Gate B presence** (the warranted tiers exist and pass against the real DB/route).
 6. Verdicts and any Gate-B waiver (human-gated, issue-tracked) are recorded in the checkpoint.
@@ -123,15 +123,7 @@ For a flagged slice the gate runs **cheap checks first, stack last** (PRD-090 fa
 3. **Mount verification (cheap).** Confirm the component is imported and rendered on its declared operator surface (the code now exists).
 4. **Execution (expensive, stack).** Run `jest.integration.config.js` with `RUN_INTEGRATION_TESTS=true`, scoped to the affected context glob **with `trees/` and `.claude/worktrees/` exclusion flags** (`integration-remediation-ops.md` §4), output redirected per Agent Shell Safety. The warranted tiers must pass.
 
-**Proof tiers attach as DoD on producer workstreams first — standalone injection only when the producer is absent.** To protect pipeline efficacy, the three tiers are **not** spawned as parallel test-only workstreams by default. Each tier attaches as a Definition-of-Done obligation on the slice's existing producer workstream:
-
-- service-derivation `*.int.test.ts` → DoD on the **service** workstream (`backend-service-builder`);
-- own projection-route `*.int.test.ts` → DoD on the **route** workstream (`api-builder`);
-- component render test → DoD on the **frontend** workstream (`frontend-design-pt-2`).
-
-A standalone workstream (`WS_*_DB_INT` / `WS_*_ROUTE_INT` / `WS_*_COMPONENT`) is **auto-injected only when the corresponding producer workstream is absent** from the slice (mirroring `WS_E2E` injection, with a visible banner). This keeps workstream *count* flat — the proof is carried by the same agent already building that layer, not by a second orchestration pass. `WS_*_ROUTE_INT` (when injected) proves the derived surface's own projection route only.
-
-> Rationale: this is the difference between "3 extra workstreams per derived-value slice" (inflates topology, feels heavy) and "3 DoD line-items on work already happening" (lean). The Phase-4 gate (presence + execution) is identical either way — it checks that the tiers *exist and pass*, regardless of which workstream produced them.
+Auto-injection of the warranted workstreams (`WS_*_DB_INT`, `WS_*_ROUTE_INT`, `WS_*_COMPONENT`) mirrors the existing `WS_E2E` injection, with a visible banner. `WS_*_ROUTE_INT` here proves the derived surface's own projection route only.
 
 ### F.5 Waiver discipline (Gate B only)
 
@@ -199,20 +191,50 @@ This slice does not include:
 
 - The write-path E2E mandate is the structural pattern to mirror.
 - `renders_financial_surface_values` exists (GOV-010 SRL gate); **v3 depends on generalizing it to `renders_derived_value_surface`** (or adding the latter with the former as alias) — net-new governance, flagged.
-- The `*Projection`-suffix naming for projection-return DTOs **must be a governance rule** for the F.3 secondary signal. This is **gate-zero / blocking** — it is the only *mechanical* detection signal, and the F.6/F.7 validation fixture (detect PRD-090 via `*Projection`) cannot be trusted without it. See **Preconditions** below; it is NOT a follow-up.
+- The `*Projection`-suffix naming for projection-return DTOs **must be a governance rule** for the F.3 secondary signal; if not already mandated, adoption depends on establishing it.
 - ADR-044 (Testing Governance Posture) names coverage theatre (Context item 5); `qa-specialist` Anti-Pattern 5 is the operational rule. **There is no ADR-044 §9** — prior skill prose mis-cited it. ADR-044 is also a **duplicated number** (cross-property-recognition-entitlement vs testing-governance-posture) — pre-existing defect, see K.
 - **Local Supabase/Postgres must be running where Gate B executes.** DoD today runs `jest.node.config.js` (no integration); the integration runner (`test:verify`, `test:integration:canary`) is separate.
 
 **Delegation (resolve during design):** the Gate-B stack-availability contract is owned by `devops-pt2`; the fidelity/heuristic design and the legacy-baseline scoping by `qa-specialist`; confirming `renders_derived_value_surface` and the `*Projection`-suffix as canonical governance rules by `lead-architect` (both are net-new/unconfirmed and the Gate-B trigger depends on them).
 
-### I.1 Preconditions (gate-zero — must clear before design/build of this FIB starts)
+---
 
-The build slice for this mandate **may not start** until `lead-architect` ratifies:
+## I.1 Gate-zero preconditions (resolved 2026-06-14)
 
-1. **`*Projection`-suffix DTO naming rule** (blocking) — projection-return DTOs must carry the `*Projection` suffix. This is the only mechanical Gate-B detection signal and a direct dependency of the F.6/F.7 validation fixture. Without it, detection collapses to the honor-system flag the FIB explicitly rejects, and the fixture is unverifiable.
-2. **`renders_derived_value_surface` frontmatter flag** (blocking for the primary trigger) — generalizes `renders_financial_surface_values` (kept as alias). Less critical than #1 (the suffix backstops route-based surfaces), but the primary trigger is vapor until it exists.
+The two delegated preconditions were resolved by `lead-architect` (governance) and `devops-pt2` (stack contract) before acceptance. Both returned **CONDITIONAL GO**: neither Gate-B signal is buildable as originally assumed without a governance/infra landing first. These are **blocking dependencies** for the Gate-B classifier and execution lane — Gate A is unaffected and may land independently.
 
-These are **preconditions, not follow-ups.** Stack-availability (`devops-pt2`) is a parallel precondition for Gate-B *execution* (F.4 step 4) but not for Gate-A or for classification. The duplicate-ADR-044 cleanup and F.8 design-time templates remain genuine follow-ups (K).
+### I.1.a Primary signal — `renders_derived_value_surface` flag — **net-new, blocking**
+- Base flag `renders_financial_surface_values` exists (`docs/70-governance/feature-intake/FEATURE-CLASSIFICATION-AND-TRANSPORT-SELECTION-STANDARD.yaml` ~L910; enforced at GOV-010 SRL gate, `build-pipeline/SKILL.md:147`) — but its defining schema doc is itself `status: proposed`, so the base is *proposed*-canonical.
+- The generalized flag exists only inside this FIB. **Must land before the classifier's primary branch is real:**
+  1. Add `renders_derived_value_surface: {type: boolean, required: true}` to the classification standard yaml; demote `renders_financial_surface_values` to `alias_of` (retained for instance #1).
+  2. Broaden the GOV-010 trigger from the financial flag to `(renders_derived_value_surface OR financial alias)`.
+  3. Update `prd-writer` frontmatter stub + DoD checklist to the generalized flag.
+- Alias soundness: confirmed (financial is a strict subset; no behavioral regression, no ADR amendment).
+
+### I.1.b Secondary signal — `*Projection`-suffix DTO rule — **net-new + reconciliation, blocking the backstop**
+- Not canonical anywhere (`DTO_CANONICAL_STANDARD.md` has zero "Projection"; SRM/Wave-2 "Projection Artifact" is a DB/domain term, not a DTO suffix). The one live projection route returns `OperationalProjectionResponseDTO` (`services/player-financial/dtos.ts:437`, Pattern 3 `*ResponseDTO`); the FIB-cited `TableInventoryAccountingProjection` type does not exist in code.
+- **DECISION (frozen): adopt token `*ProjectionResponseDTO`; classifier matches `/Projection(ResponseDTO)?$/`.** This is backward-compatible with the existing `OperationalProjectionResponseDTO` — **no rename / no migration**. Rejected alternative: bare `*Projection` suffix, which would have required renaming the live DTO and yielded zero true positives today.
+  1. Add a canonical "Projection Response DTO" pattern to `DTO_CANONICAL_STANDARD.md` mandating the `*ProjectionResponseDTO` suffix for GET routes returning a read-time-derived projection artifact.
+  2. `classify-render-path.py` secondary signal regex = `/Projection(ResponseDTO)?$/` on GET route return DTOs.
+  3. One-line cross-reference from SLAD + Wave-2 ubiquitous-language doc binding the suffix to the "Projection Artifact" concept term.
+
+### I.1.c Stack contract — Gate-B execution lane — **blocking Gate-B execution**
+- Phase-4 DoD runs `jest.node.config.js`, which structurally excludes `*.int.test.ts` → **Gate B cannot execute at all today.** `jest.integration.config.js` has no env gating → with `RUN_INTEGRATION_TESTS` unset the suite goes green via `describe.skip` having run nothing (the §G silent-pass hole, == PRD-090 failure mode).
+- **Contract (frozen):**
+  1. **Probe:** `timeout 15 npx supabase status -o env > /tmp/gateb-stack.env` — runs **only** on `gate_b_classification == "derived_value"`, immediately before the expensive step (after the cheap honesty/presence/mount checks).
+  2. **Three-state verdict, fail-closed:** `PASS` / `FAIL (fail:{tiers})` / **`BLOCK (blocked:stack_down)`**. BLOCK is distinct from FAIL and is **not** a `skip-render-proof` waiver (infra-down ≠ deliberate deferral); it halts with non-zero exit and an operator message, never a silent green.
+  3. **Forced flag on flagged slices:** the classifier-flagged path sets `RUN_INTEGRATION_TESTS=true` so `describe.skip` cannot mask absence.
+  4. **Execution invocation:** `RUN_INTEGRATION_TESTS=true npx jest --config jest.integration.config.js --testPathPatterns='services/{context}/__tests__/' --testPathIgnorePatterns='trees/' --testPathIgnorePatterns='\.claude/' --ci --runInBand > /tmp/gateb-integration.log 2>&1`, read selectively (Agent Shell Safety).
+  5. **Additive + conditional:** the integration lane is added to Phase-4 for flagged slices only; non-derived builds stay stack-free (Over-Engineering Guardrail preserved).
+  6. **Two-config caveat:** the component-render tier runs under jsdom (`jest.config.js`), not the node integration config → Gate-B execution is two invocations; do not collapse them.
+
+### I.1.d Sequencing
+1. `renders_derived_value_surface` flag generalization (I.1.a) — cheap, no code.
+2. `*ProjectionResponseDTO` suffix rule (I.1.b) — DTO-standard amendment, no rename.
+3. Phase-4 conditional integration lane + probe wiring (I.1.c).
+Gate A (universal fidelity grep) has no precondition and may land first/in parallel. Per §F.3 the primary flag is load-bearing; the `*Projection` backstop covers route-based surfaces only (the non-route detection hole stays declared-open per §K.5).
+
+All three landings remain inside §K.4 / §G — no amendment of ADR-044/015/020/024 or any TIA/financial ADR; the pulled route/RLS tier (§K.1) stays closed.
 
 ---
 
@@ -220,11 +242,6 @@ These are **preconditions, not follow-ups.** Stack-availability (`devops-pt2`) i
 
 ```yaml
 acceptance_gates:
-  gate_zero_preconditions:
-    - lead_architect_ratified_projection_suffix_rule   # blocking; fixture depends on it
-    - lead_architect_ratified_renders_derived_value_surface_flag
-    - devops_pt2_confirmed_gate_b_stack_availability
-
   gate_a_fidelity_universal:
     - any_slice_int_test_mocking_client_constructor_fails
     - touched_files_only_not_retroactive_repo_scan
@@ -246,7 +263,6 @@ acceptance_gates:
   gate_b_presence_risk_triggered:
     - warranted_tier_absent_blocks_phase4
     - derived_value_requires_service_int_own_route_int_and_component_render
-    - proof_tiers_attach_as_dod_on_producer_ws_standalone_only_if_absent
     - mount_verified_at_phase4
     - integration_glob_excludes_trees_and_worktrees
     - missing_local_stack_blocks_not_silently_passes
@@ -275,9 +291,8 @@ acceptance_gates:
 1. **Route/tenancy proof mandate** — a standalone tier proving real RLS isolation on casino-scoped routes (the tier pulled from v3). It fires on ~92% of routes and is a *security* concern, so it warrants its own FIB with its own proportionality argument. **Not yet opened** (per scope decision).
 2. **F.8 design-time declaration** in `prd-writer` / `feature-pipeline` (cut from MVP).
 3. Resolve the **duplicate ADR-044 number** and fix dangling "§9" citations in skill prose.
-4. Close the **non-route derived-surface detection hole** (server-component/hook with no `*Projection` route) if that class proliferates.
-
-> Note: ratifying the `*Projection`-suffix rule and the `renders_derived_value_surface` flag are **NOT** listed here — they are **gate-zero preconditions** (see I.1), not follow-ups.
+4. Establish/confirm the `*Projection`-suffix and `renders_derived_value_surface` governance rules if not already canonical.
+5. Close the **non-route derived-surface detection hole** (server-component/hook with no `*Projection` route) if that class proliferates.
 
 ---
 
@@ -290,10 +305,10 @@ Amend if implementation proposes: changing the write-path mandate; making Gate B
 ## M. Scope authority block
 
 **Intake version:**
-v3.1 — two-gate model, route tier pulled. Splits the v2 single gate into **Gate A (universal Test Fidelity)** and **Gate B (risk-triggered Real-Execution Proof Presence)**; generalizes the trigger from "financial" to "derived-value surface" (financial = instance #1). **Route-boundary proof is retained only for a derived-value surface's own projection route** — the standalone "all casino-scoped routes" tier was pulled per DA audit (fired on 92% of routes; a security concern parked in K). Also: defined Gate A "touched files" scope; reordered Gate A ahead of the stack; named the non-route detection hole; bound `status: complete` to a waiver issue_id; stated Gate A's preventive limits; **proof tiers attach as DoD on producer workstreams (standalone injection only when the producer is absent)** to keep pipeline topology flat. Supersedes v2.
+v3.1 — two-gate model, route tier pulled. Splits the v2 single gate into **Gate A (universal Test Fidelity)** and **Gate B (risk-triggered Real-Execution Proof Presence)**; generalizes the trigger from "financial" to "derived-value surface" (financial = instance #1). **Route-boundary proof is retained only for a derived-value surface's own projection route** — the standalone "all casino-scoped routes" tier was pulled per DA audit (fired on 92% of routes; a security concern parked in K). Also: defined Gate A "touched files" scope; reordered Gate A ahead of the stack; named the non-route detection hole; bound `status: complete` to a waiver issue_id; stated Gate A's preventive limits. Supersedes v2.
 
 **Frozen for downstream design:**
-No — proposed for approval
+Yes — accepted 2026-06-14; gate-zero preconditions resolved (§I.1), suffix token frozen to `*ProjectionResponseDTO`.
 
 **Downstream expansion allowed without amendment:**
 No
@@ -306,4 +321,4 @@ Governs only the addition of the two proof gates to the build pipeline and their
 > Complete when (A) every slice's integration-claiming touched files are mechanically barred from mocking the Supabase client (universal, stack-free), and (B) derived-value surfaces are blocked at Phase-4 unless their warranted real-execution tiers (service derivation, own projection route, component render) exist and pass against the real DB/route — proven by Gate A failing a mocked non-financial int test, Gate B blocking PRD-090's original absence, and Gate B passing PRD-091's delivered state. A documentation rule, a checklist item, or a per-feature closure PRD does not satisfy this mandate.
 
 **Human approval / sign-off:**
-Pending
+Approved 2026-06-14 (human scope authority). Gate-zero preconditions resolved and frozen (§I.1); cleared for implementation.
