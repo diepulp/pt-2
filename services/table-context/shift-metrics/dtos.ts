@@ -99,16 +99,15 @@ export interface ShiftTableMetricsDTO {
   estimated_drop_rated_cents: number;
   /** Estimated drop from grind buy-ins only, in cents (subset of buyins_cents) */
   estimated_drop_grind_cents: number;
-  /** Estimated drop total in cents — superset: equals rated_cents + grind_cents */
-  estimated_drop_buyins_cents: number;
+  // estimated_drop_buyins_cents removed — PRD-090 WS5: non-canonical name per ADR-060 D3.
+  // Use estimated_drop_rated_cents + estimated_drop_grind_cents at call sites.
   telemetry_quality: 'GOOD_COVERAGE' | 'LOW_COVERAGE' | 'NONE';
   telemetry_notes: string;
 
-  // Win/Loss
-  /** Win/loss from inventory method in cents (opening + fills - credits - closing). Null if snapshots missing. */
-  win_loss_inventory_cents: number | null;
-  /** Win/loss from estimated drop method in cents (drop - closing + opening - fills + credits). Null if drop unavailable. */
-  win_loss_estimated_cents: number | null;
+  // Win/Loss (suppressed per PRD-090 WS5 / SRL-TIA-001 legacy_alias_disposition)
+  // win_loss_inventory_cents → canonical: partial_table_result_cents (TableInventoryAccountingProjection)
+  // win_loss_estimated_cents → canonical: projected_table_win_loss_cents (TableInventoryAccountingProjection)
+  // TODO-WS4: wire TableInventoryAccountingProjection per-session data for canonical surface.
   metric_grade: 'ESTIMATE' | 'AUTHORITATIVE';
 
   // Exception flags
@@ -168,11 +167,9 @@ export interface ShiftPitMetricsDTO {
   /** Estimated drop total across all tables, in cents — superset: equals rated + grind */
   estimated_drop_buyins_total_cents: number;
 
-  // Win/Loss totals (PRD-036: nullable — null when all tables have null win/loss)
-  /** Aggregated win/loss from inventory method across all tables, in cents */
-  win_loss_inventory_total_cents: number | null;
-  /** Aggregated win/loss from estimated drop method across all tables, in cents */
-  win_loss_estimated_total_cents: number | null;
+  // Win/Loss totals removed — PRD-090 WS5: suppressed per SRL-TIA-001 legacy_alias_disposition.
+  // win_loss_inventory_total_cents → canonical: aggregated partial_table_result_cents (TODO-WS4)
+  // win_loss_estimated_total_cents → canonical: aggregated projected_table_win_loss_cents (TODO-WS4)
 
   // PRD-036: Baseline missing count
   /** Number of tables with no opening baseline (opening_source = 'none') */
@@ -239,11 +236,9 @@ export interface ShiftCasinoMetricsDTO {
   /** Estimated drop total across all tables, in cents — superset: equals rated + grind */
   estimated_drop_buyins_total_cents: number;
 
-  // Win/Loss totals (PRD-036: nullable — null when all tables have null win/loss)
-  /** Aggregated win/loss from inventory method across all tables, in cents */
-  win_loss_inventory_total_cents: number | null;
-  /** Aggregated win/loss from estimated drop method across all tables, in cents */
-  win_loss_estimated_total_cents: number | null;
+  // Win/Loss totals removed — PRD-090 WS5: suppressed per SRL-TIA-001 legacy_alias_disposition.
+  // win_loss_inventory_total_cents → canonical: aggregated partial_table_result_cents (TODO-WS4)
+  // win_loss_estimated_total_cents → canonical: aggregated projected_table_win_loss_cents (TODO-WS4)
 
   // PRD-036: Baseline missing count
   /** Number of tables with no opening baseline (opening_source = 'none') */

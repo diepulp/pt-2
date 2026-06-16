@@ -106,7 +106,7 @@ export function FinancialSummary({ data }: FinancialSummaryProps) {
                 {formatCents(row.creditsTotalCents)}
               </TableCell>
               <TableCell className="text-right font-mono text-xs tabular-nums">
-                {formatCents(row.winLossInventoryCents)}
+                {'—'}
               </TableCell>
               <TableCell className="text-right font-mono text-xs tabular-nums">
                 {formatPercent(row.holdPercent)}
@@ -137,7 +137,7 @@ export function FinancialSummary({ data }: FinancialSummaryProps) {
               {formatCents(data.casinoTotals.creditsTotalCents)}
             </TableCell>
             <TableCell className="text-right font-mono text-xs tabular-nums font-bold">
-              {formatCents(data.casinoTotals.winLossInventoryTotalCents)}
+              {'—'}
             </TableCell>
             <TableCell className="text-right font-mono text-xs tabular-nums font-bold">
               {formatPercent(data.casinoTotals.holdPercent)}

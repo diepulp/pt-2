@@ -136,6 +136,12 @@ Run validation checklist from `references/validation-checklist.md`:
   - New services must specify which test layers apply (unit, integration, E2E) and their enforcement tier (Required/Advisory/Quarantined)
   - CI changes that reduce enforcement require §12 disclosure
   - Reference: `docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`, `docs/80-adrs/ADR-044-testing-governance-posture.md`
+- **SRL Semantic Admission (SEMANTIC_RESPONSIBILITY_LAYER.md)** — if the design introduces new canonical terms, result states, authority claims, or operator-visible surface labels:
+  - A canonical term must have an SRL record before it appears in any DTO, migration, API contract, or UI label (SRL Rule 2)
+  - New terms are admitted via `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md` §9: Direct SRM ownership amendment (obvious existing owner, no architectural change), ADR-backed semantic amendment (changes authority, formula, result state, or projection ownership), or Candidate term review
+  - Every admitted term must answer all six Zachman interrogatives within its SRL record (SRL §5)
+  - Any ADR that introduces terminology must bind each term to SRM ownership; an ADR without SRL binding is incomplete (SRL Rule 1)
+  - Reference: `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md`, exemplar: `docs/issues/table-inventory-accounting-canon/thesaurus/SRL-TIA-001-table-inventory-accounting.yaml`
 
 ### Step 5: Document
 
@@ -144,6 +150,7 @@ Update canonical docs atomically:
 - ADR - Decision records for significant tradeoffs
 - API Contracts - Route definitions, payloads
 - Schema Changes - Migrations with invariants
+- SRL - New semantic extension artifact (`SEMANTIC_RESPONSIBILITY_LAYER.md` §8) when new canonical terms are admitted
 
 ## PT-2 Constraints
 
@@ -328,6 +335,10 @@ When designing or reviewing architecture that touches `gaming_day`, date ranges,
 | `docs/20-architecture/temporal-patterns/TEMP-002-temporal-authority-pattern.md` | CasinoService temporal authority |
 | `docs/20-architecture/temporal-patterns/TEMP-003-temporal-governance-enforcement.md` | Banned patterns, CI gates, remediation |
 | `docs/10-prd/PRD-027-temporal-standardization-v0.1.md` | System time standardization PRD |
+| `docs/70-governance/SIGP/SEMANTIC_INTEGRITY_GOVERNANCE_PROTOCOL.md` | SIGP - Domain semantic coherence |
+| `docs/70-governance/EXEMPLAR_SLICE_DISCIPLINE.md` | VErtical collapse exemplar rollout doctrine |
+| `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md` | Semantic Responsibility Layer — canonical term admission registry; admission paths (§9), enforcement rules (§7), class registry (§6) |
+| `docs/issues/table-inventory-accounting-canon/thesaurus/SRL-TIA-001-table-inventory-accounting.yaml` | TIA exemplar SRL extension — 6 canonical terms with full Zachman records, 8 legacy alias dispositions |
 
 ### Related Skills
 
@@ -350,6 +361,7 @@ Architecture task is complete when:
 6. Documentation consistency validated
 7. Open questions/risks listed
 8. Implementation plan actionable
+9. If new canonical terms introduced: SRL extension record created in `SEMANTIC_RESPONSIBILITY_LAYER.md` §8; each term bound to SRM owner
 
 ## Non-Goals
 

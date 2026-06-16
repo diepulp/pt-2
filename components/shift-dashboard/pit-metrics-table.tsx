@@ -159,10 +159,10 @@ export function PitMetricsTable({
                     {pit.tables_count}
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm tabular-nums">
-                    {formatCents(pit.win_loss_inventory_total_cents)}
+                    {'—'}
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm tabular-nums">
-                    {formatCents(pit.win_loss_estimated_total_cents)}
+                    {'—'}
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm tabular-nums">
                     <FinancialValue

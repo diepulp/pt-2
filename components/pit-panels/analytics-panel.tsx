@@ -161,9 +161,9 @@ export function AnalyticsPanel({
   const metrics = [
     {
       label: 'Win/Loss',
-      value: formatCents(tableMetrics?.win_loss_inventory_cents),
+      value: 'Unavailable',
       icon: DollarSign,
-      positive: (tableMetrics?.win_loss_inventory_cents ?? 0) >= 0,
+      positive: false,
       grade: tableMetrics?.metric_grade,
     },
     {
@@ -173,7 +173,9 @@ export function AnalyticsPanel({
           variant="compact"
           label="Estimated Drop"
           value={{
-            value: tableMetrics?.estimated_drop_buyins_cents ?? 0,
+            value:
+              (tableMetrics?.estimated_drop_rated_cents ?? 0) +
+              (tableMetrics?.estimated_drop_grind_cents ?? 0),
             type: 'estimated',
             source: 'shift_metrics',
             completeness: {

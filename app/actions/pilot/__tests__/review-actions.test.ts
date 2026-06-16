@@ -20,20 +20,21 @@ jest.mock('@/services/pilot/crud', () => ({
 
 type MockQueryResult = { data: unknown; error: unknown };
 
-function makeChain(result: MockQueryResult) {
-  const terminal = jest.fn().mockResolvedValue(result);
-  const chain: Record<string, jest.Mock> = {};
-  // Support .select().eq().maybeSingle(), .update().eq(), .upsert()
-  const builder = new Proxy(chain, {
-    get: (_target, prop: string) => {
-      if (prop === 'maybeSingle' || prop === 'then') return terminal;
-      if (!chain[prop]) {
-        chain[prop] = jest.fn().mockReturnValue(builder);
-      }
-      return chain[prop];
-    },
-  });
-  return { builder, terminal };
+// .update() returns a builder whose .eq() is BOTH directly awaitable (the
+// reject/revoke paths do `await .update().eq(...)` and destructure { error })
+// AND chainable (the approve path adds an optimistic-lock guard:
+// `.update().eq('id').eq('status','pending').select('id')` per 596e387f).
+// A real resolved Promise satisfies the await; Object.assign grafts the
+// chainable .eq()/.select() onto it for the approve path.
+function makeUpdateBuilder(result: MockQueryResult) {
+  const thenableEq = () =>
+    Object.assign(Promise.resolve(result), {
+      eq: jest.fn().mockReturnValue({
+        select: jest.fn().mockResolvedValue(result),
+      }),
+      select: jest.fn().mockResolvedValue(result),
+    });
+  return { eq: jest.fn().mockImplementation(thenableEq) };
 }
 
 // ── Auth mocks ───────────────────────────────────────────────────────────────
@@ -62,7 +63,14 @@ function makeServiceClientMock(overrides?: {
     error: null,
   };
   const upsertResult = overrides?.upsertResult ?? { data: null, error: null };
-  const updateResult = overrides?.updateResult ?? { data: null, error: null };
+  // Non-empty data by default so the approve optimistic-lock guard
+  // (`!updatedRows?.length`) proceeds to the OTP/success path. Reject/revoke
+  // only read `error`, so the data shape is inert for them. Tests asserting the
+  // partial-write / already-processed branches override updateResult.
+  const updateResult = overrides?.updateResult ?? {
+    data: [{ id: 'req-1' }],
+    error: null,
+  };
 
   // from() returns different builders depending on which table is queried
   const fromMock = jest.fn().mockImplementation((table: string) => {
@@ -73,17 +81,13 @@ function makeServiceClientMock(overrides?: {
             maybeSingle: jest.fn().mockResolvedValue(fetchResult),
           }),
         }),
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue(updateResult),
-        }),
+        update: jest.fn().mockReturnValue(makeUpdateBuilder(updateResult)),
       };
     }
     if (table === 'approved_email_allowlist') {
       return {
         upsert: jest.fn().mockResolvedValue(upsertResult),
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue(updateResult),
-        }),
+        update: jest.fn().mockReturnValue(makeUpdateBuilder(updateResult)),
       };
     }
     return {};

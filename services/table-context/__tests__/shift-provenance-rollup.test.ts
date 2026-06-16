@@ -77,14 +77,17 @@ describe('deriveTableProvenance', () => {
 
     const result = deriveTableProvenance(table);
 
-    expect(result.source).toBe('mixed');
+    // win_loss fields suppressed (PRD-090 WS5, SRL-TIA-001) → source collapses to
+    // 'telemetry' regardless of win_loss inputs. mixed/inventory derivation is
+    // pending the TableInventoryAccountingProjection wiring (TODO-WS4).
+    expect(result.source).toBe('telemetry');
     expect(result.grade).toBe('AUTHORITATIVE');
     expect(result.quality).toBe('GOOD_COVERAGE');
     expect(result.coverage_ratio).toBe(1.0);
     expect(result.null_reasons).toEqual([]);
   });
 
-  it('returns inventory source when only inventory is available', () => {
+  it('source is telemetry even when only inventory win_loss is present (suppressed per PRD-090 WS5)', () => {
     const table = makeTable({
       win_loss_inventory_cents: 10000_00,
       win_loss_estimated_cents: null,
@@ -92,7 +95,9 @@ describe('deriveTableProvenance', () => {
 
     const result = deriveTableProvenance(table);
 
-    expect(result.source).toBe('inventory');
+    // Pre-suppression this returned 'inventory'; win_loss is now suppressed so
+    // the inventory signal no longer drives source. TODO-WS4: restore from projection.
+    expect(result.source).toBe('telemetry');
   });
 
   it('returns telemetry source when only estimated is available', () => {
@@ -110,7 +115,7 @@ describe('deriveTableProvenance', () => {
     expect(result.grade).toBe('ESTIMATE');
   });
 
-  it('returns mixed source when both inventory and estimated present', () => {
+  it('source is telemetry even when both inventory and estimated win_loss are present (suppressed per PRD-090 WS5)', () => {
     const table = makeTable({
       win_loss_inventory_cents: 10000_00,
       win_loss_estimated_cents: 8000_00,
@@ -118,7 +123,8 @@ describe('deriveTableProvenance', () => {
 
     const result = deriveTableProvenance(table);
 
-    expect(result.source).toBe('mixed');
+    // Pre-suppression this returned 'mixed'. TODO-WS4: restore from projection.
+    expect(result.source).toBe('telemetry');
   });
 
   it('returns 0.5 coverage when missing opening snapshot', () => {
@@ -238,7 +244,7 @@ describe('rollupPitProvenance', () => {
     expect(result.quality).toBe('NONE');
   });
 
-  it('returns mixed source when tables have different sources', () => {
+  it('rolls up to telemetry source regardless of per-table win_loss inputs (suppressed per PRD-090 WS5)', () => {
     const tables = [
       makeTable({
         table_id: 't1',
@@ -257,10 +263,12 @@ describe('rollupPitProvenance', () => {
 
     const result = rollupPitProvenance(tables);
 
-    expect(result.source).toBe('mixed');
+    // Per-table source is suppressed to 'telemetry' (PRD-090 WS5), so the rollup
+    // can no longer surface 'mixed'. TODO-WS4: restore from projection.
+    expect(result.source).toBe('telemetry');
   });
 
-  it('returns consistent source when all tables match', () => {
+  it('returns consistent telemetry source when all tables match', () => {
     const tables = [
       makeTable({
         table_id: 't1',
@@ -276,7 +284,7 @@ describe('rollupPitProvenance', () => {
 
     const result = rollupPitProvenance(tables);
 
-    expect(result.source).toBe('inventory');
+    expect(result.source).toBe('telemetry');
   });
 
   it('computes coverage ratio from MIN(opening, closing) / total', () => {

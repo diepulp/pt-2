@@ -78,9 +78,8 @@ export function RundownReportCard({
         {report ? (
           <>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="text-muted-foreground">Win/Loss</div>
-              <div className="text-right font-mono">
-                {formatCents(report.table_win_cents)}
+              <div className="col-span-2 text-sm text-muted-foreground italic">
+                Table win/loss data unavailable during TIA canon migration
               </div>
               <div className="text-muted-foreground">Fills</div>
               <div className="text-right font-mono">

@@ -1,0 +1,229 @@
+verdict: approve_with_required_patches
+
+target_file:
+  - .claude/skills/feature-pipeline/SKILL.md
+  - checkpoint_schema_v8
+  - docs/issues/gaps/feature-pipeline-development/GAP-FEATURE-PIPELINE-DEVELOPMENT.md
+
+patches:
+  - id: P0-001
+    title: Replace binary exemplar applies=false with mode-based classification
+    problem: >
+      `exemplar_scope.applies = false` can still mean either "not applicable"
+      or "not detected." That recreates the silent-scope-loss failure.
+    change: >
+      Add `exemplar_scope.mode: required | optional | not_applicable | unevaluated`
+      and require recorded criteria evidence before `not_applicable`.
+    required_fields:
+      exemplar_scope:
+        mode: "required | optional | not_applicable | unevaluated"
+        applies: "boolean"
+        evaluated: "boolean"
+        criteria:
+          structural_categories_count: "number | null"
+          shared_mechanism_present: "boolean | null"
+          movable_parts_count: "number | null"
+          shared_change_risk_present: "boolean | null"
+        warnings: []
+    gate_rule: >
+      `mode = not_applicable` is valid only with negative evidence.
+      Silence or missing §P does not permit not_applicable.
+
+  - id: P0-002
+    title: Preserve full RFC candidate audit trail
+    problem: >
+      Moving blocked candidates out of `adr_candidates[]` can hide the original
+      RFC decision set and make the matrix less auditable.
+    change: >
+      Replace single candidate array with `all_candidates[]`,
+      `approved_candidates[]`, and `blocked_candidates`.
+    schema:
+      decision_scope:
+        all_candidates: []
+        approved_candidates: []
+        blocked_candidates:
+          deferred: []
+          out_of_scope: []
+          amendment_required: []
+    gate_rule: >
+      Phase 4 may author only IDs listed in `approved_candidates[]`.
+      Blocked candidates remain visible in `all_candidates[]`.
+
+  - id: P0-003
+    title: Do not mark legacy checkpoints as reviewed
+    problem: >
+      Setting `adr_candidate_scope_matrix_completed = true` for pre-gate
+      checkpoints falsely records review that never happened.
+    change: >
+      For old checkpoints, mark legacy status instead of pretending the matrix
+      was completed.
+    schema:
+      decision_scope:
+        adr_candidate_scope_matrix_completed: false
+        legacy_checkpoint_status: "pre_scope_as_state_gate"
+        requires_backfill_review: true
+    allowed_exception: >
+      Use `containment_decision: legacy_pre_gate_no_retroactive_enforcement`
+      only when intentionally bypassing retroactive enforcement.
+
+  - id: P1-001
+    title: Add extraction status sentinels
+    problem: >
+      Empty arrays cannot distinguish "section absent" from "not extracted."
+    change: >
+      Add explicit extraction status objects for deferred items and expansion
+      triggers.
+    schema:
+      coherence:
+        deferred_items: []
+        deferred_items_extraction:
+          status: "extracted | section_absent | failed"
+          source_sections: []
+          warnings: []
+        expansion_triggers: []
+        expansion_triggers_extraction:
+          status: "extracted | section_absent | failed"
+          source_sections: []
+          warnings: []
+    gate_rule: >
+      Gates check extraction status, not array length.
+
+  - id: P1-002
+    title: Extract FIB §K expansion triggers explicitly
+    problem: >
+      The plan adds `expansion_triggers[]` but only explicitly extracts §P and §L.
+      §K can become the next prose-only ghost.
+    change: >
+      During FIB Context Load, extract §K / "Expansion trigger rule" into
+      `coherence.expansion_triggers[]`.
+    gate_rule: >
+      Any ADR candidate that trips an expansion trigger must be classified
+      `amendment_required` unless already covered by an approved amendment.
+
+  - id: P1-003
+    title: Make constrained ADR enforcement structural
+    problem: >
+      "Does not contain content matching forbidden_form" is too vague.
+    change: >
+      ADR freeze must verify constrained candidates by structure, not fuzzy
+      text matching.
+    adr_frozen_gate:
+      if_scope_status: constrained
+      required:
+        - ADR includes candidate_id
+        - ADR includes allowed_scope_summary
+        - ADR includes explicit_non_goals derived from forbidden_form
+        - ADR decision section stays inside allowed_form
+      fail_if:
+        - ADR defines schema/ownership/lifecycle/implementation for forbidden_form
+        - ADR resolves a deferred FIB decision
+        - ADR rejected alternatives authorize forbidden_form indirectly
+
+  - id: P1-004
+    title: Support semantic aliases for §P and §L extraction
+    problem: >
+      Hard-coded section labels are brittle across FIB variants.
+    change: >
+      Extract from canonical section IDs first, then semantic aliases.
+    aliases:
+      exemplar_scope:
+        - Exemplar Direction
+        - Vertical Collapse
+        - First Implementation Boundary
+        - Exemplar Pair
+      deferred_items:
+        - Deferred Decisions
+        - Open Questions Not Implementation Input
+        - Applies Only After
+        - Scope Authority
+      expansion_triggers:
+        - Expansion Trigger Rule
+        - Intake Amendment Trigger
+        - Amendment Required When
+
+final_checkpoint_shape:
+  coherence:
+    non_goals: []
+    feature_loop: []
+    feature_loop_frozen: false
+    deferred_items: []
+    deferred_items_extraction:
+      status: "extracted | section_absent | failed"
+      source_sections: []
+      warnings: []
+    expansion_triggers: []
+    expansion_triggers_extraction:
+      status: "extracted | section_absent | failed"
+      source_sections: []
+      warnings: []
+    scope_authority:
+      artifact: null
+      version: null
+      frozen: false
+    violations: []
+
+  exemplar_scope:
+    mode: "required | optional | not_applicable | unevaluated"
+    applies: false
+    evaluated: false
+    declaration_source: null
+    boundary: null
+    first_surface_or_pair: []
+    downstream_consumers: []
+    deferred_decisions: []
+    forbidden_during_exemplar: []
+    proof_obligations: []
+    expansion_gate: null
+    criteria:
+      structural_categories_count: null
+      shared_mechanism_present: null
+      movable_parts_count: null
+      shared_change_risk_present: null
+    warnings: []
+    violations_detected: []
+
+  decision_scope:
+    adr_candidate_scope_matrix_completed: false
+    fib_scope_authority:
+      artifact: null
+      frozen: false
+      downstream_expansion_allowed_without_amendment: true
+    all_candidates: []
+    approved_candidates: []
+    blocked_candidates:
+      deferred: []
+      out_of_scope: []
+      amendment_required: []
+
+phase_2_exit_gate_patch:
+  add_required_condition: >
+    ADR candidate scope matrix completed: every RFC decision is present in
+    `all_candidates[]`, classified against FIB anchors with section citations,
+    approved candidates are listed in `approved_candidates[]`, and blocked
+    candidates are listed under `blocked_candidates`.
+
+phase_4_authoring_gate_patch:
+  allow_only: >
+    ADR candidates whose IDs appear in `decision_scope.approved_candidates[]`
+    and whose `scope_status` is `in_exemplar` or `constrained`.
+
+adr_frozen_gate_patch:
+  add_condition: >
+    For constrained candidates, authored ADR content must stay inside
+    `allowed_form` and must not define, implement, authorize, or resolve
+    `forbidden_form`.
+
+definition_of_done_patch:
+  add:
+    - "FIB §P / exemplar scope extracted with evaluated mode and criteria evidence."
+    - "FIB §L / deferred decisions extracted with extraction status sentinel."
+    - "FIB §K / expansion triggers extracted with extraction status sentinel."
+    - "ADR candidate scope matrix completed at Phase 2 exit."
+    - "All RFC candidates preserved in `all_candidates[]`."
+    - "Only approved candidates authored in Phase 4."
+    - "Constrained candidate ADRs verified at adr-frozen gate."
+
+final_recommendation: >
+  Implement after these patches. The plan is directionally correct; these changes
+  close the remaining escape hatches where scope can again decay from binding
+  state into polite background prose.

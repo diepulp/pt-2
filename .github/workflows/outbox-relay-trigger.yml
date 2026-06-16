@@ -26,7 +26,33 @@ jobs:
           APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          status=$(curl -s -o /tmp/relay-response.json -w "%{http_code}" \
+          missing=()
+
+          if [ -z "${APP_BASE_URL}" ]; then
+            missing+=("APP_BASE_URL")
+          fi
+
+          if [ -z "${CRON_SECRET}" ]; then
+            missing+=("CRON_SECRET")
+          fi
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Missing required GitHub Actions secret(s): ${missing[*]}"
+            echo "Configure them in Settings -> Secrets and variables -> Actions."
+            exit 2
+          fi
+
+          case "${APP_BASE_URL}" in
+            http://*|https://*) ;;
+            *)
+              echo "::error::APP_BASE_URL must include the URL scheme, for example https://pt-2-weld.vercel.app."
+              exit 2
+              ;;
+          esac
+
+          APP_BASE_URL="${APP_BASE_URL%/}"
+
+          status=$(curl -sS -o /tmp/relay-response.json -w "%{http_code}" \
             --max-time 35 \
             -X POST \
             -H "Authorization: Bearer ${CRON_SECRET}" \

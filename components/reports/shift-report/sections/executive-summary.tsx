@@ -45,14 +45,7 @@ function KpiCell({
 }
 
 export function ExecutiveSummary({ data }: ExecutiveSummaryProps) {
-  // Compute total drop from executive summary context
-  // Drop is fills + credits (estimated, since exec summary doesn't carry raw drop)
-  const estimatedDrop = data.fillsTotalCents + data.creditsTotalCents;
-
-  const holdPercent =
-    data.winLossInventoryTotalCents != null && estimatedDrop > 0
-      ? (data.winLossInventoryTotalCents / estimatedDrop) * 100
-      : null;
+  const holdPercent = null;
 
   return (
     <section className="mb-8">
@@ -71,14 +64,8 @@ export function ExecutiveSummary({ data }: ExecutiveSummaryProps) {
         />
         <KpiCell label="Fills" value={formatCents(data.fillsTotalCents)} />
         <KpiCell label="Credits" value={formatCents(data.creditsTotalCents)} />
-        <KpiCell
-          label="Win/Loss (Inv)"
-          value={formatCents(data.winLossInventoryTotalCents)}
-        />
-        <KpiCell
-          label="Win/Loss (Est)"
-          value={formatCents(data.winLossEstimatedTotalCents)}
-        />
+        <KpiCell label="Win/Loss (Inv)" value={'—'} />
+        <KpiCell label="Win/Loss (Est)" value={'—'} />
         <KpiCell label="Hold %" value={formatPercent(holdPercent)} />
         <KpiCell
           label="Coverage"

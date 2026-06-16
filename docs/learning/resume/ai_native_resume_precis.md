@@ -22,12 +22,12 @@ The system consists of two distinct but coupled layers:
 This aligns with industry understanding of agent orchestration as:
 "coordinating multiple specialized agents to achieve shared objectives."
 
-### 2. Application System (PT-2 / Cortalis)
-- Conventional vertical SaaS
+### 2. Application System (PT-2)
 - DDD service architecture
 - PostgreSQL RLS tenant isolation
 - Transactional outbox
 - Event-driven system
+- multi-tenancy architecture
 
 This is NOT an agentic system.
 

@@ -212,8 +212,10 @@ what:
 
     allowed_surface_labels:
       - Projected Win/Loss
-      - Estimated Win/Loss
       - Partial Table Result
+    forbidden_note_estimated_win_loss: >
+      "Estimated Win/Loss" removed per ADR-060 D4 — ambiguous; Projected Win/Loss is
+      the sole allowed label for the telemetry_drop_formula path.
 
     forbidden_surface_labels:
       - Win/Loss
@@ -361,10 +363,13 @@ what:
           or counting connotation. Requires source=pt2_operational_telemetry
           and custody_status=non_custody_estimate on every use.
       estimated_drop_cents:
-        status: acceptable_with_label
+        status: deprecated_alias_transitional
         reason: >
-          System-estimated value from recorded telemetry or inventory-side
-          operational inputs. ADR-053 compliant if labeled estimated/partial.
+          Deprecated alias for telemetry_derived_drop_estimate_cents. Forbidden at
+          DTO/API/surface boundary per ADR-060 D1/D4. Legacy/implementation-local
+          occurrences must be mapped to telemetry_derived_drop_estimate_cents before
+          crossing any boundary. Do not introduce in new code, migrations, or API
+          contracts.
       external_custody_drop_cents:
         status: future_only
         reason: >
@@ -644,6 +649,9 @@ how:
       single session. source_authority.drop must be set to
       'telemetry_derived_estimate' on every use; custody_status remains
       non_custody_estimate.
+      RATED_ADJUSTMENT rows are excluded by semantic decision (ADR-060 D2),
+      not by schema absence. Legacy shift-metrics paths may contain RATED_ADJUSTMENT;
+      they must not be copied into TableInventoryAccounting.
     implementation_gap: >
       rpc_shift_table_metrics aggregates over a gaming-day window (pit-level).
       rpc_compute_table_rundown has no buy-in telemetry aggregation at all.

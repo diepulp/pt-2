@@ -43,6 +43,7 @@ This skill accepts any specification document with implementation requirements �
 | `scripts/validate-execution-spec.py` | Validate EXECUTION-SPEC (structural + governance) |
 | `scripts/classify-write-path.py` | Deterministic write-path signal scan for E2E mandate |
 | `scripts/temporal-integrity.py` | Flag upstream PRD/ADRs modified after EXEC-SPEC generation |
+| `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md` | SRL companion authority; §8 admitted extension registry used by governance gate; §7 enforcement rules |
 
 ---
 
@@ -143,6 +144,21 @@ When input is a PRD:
 1. Check PRD frontmatter for `scaffold_ref` and `adr_refs`
 2. Verify referenced files exist
 3. If missing: warn and require explicit waiver
+4. **SRL semantic check**: If any referenced ADR (via `adr_refs`) introduces canonical terms, or if PRD frontmatter declares `renders_financial_surface_values: true`, verify that a corresponding SRL extension artifact exists in `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md` §8 Admitted Extension Registry. If absent: this is a hard block — treat it the same as a missing `scaffold_ref`:
+
+   ```
+   [FAIL] GOV-010 SRL Gate
+   ─────────────────────────────────────────
+   PRD declares canonical terms (via adr_refs or renders_financial_surface_values)
+   but no SRL admission record found in §8 Admitted Extension Registry.
+
+   Options:
+     1. Add SRL extension artifact and re-run GOV-010
+     2. Override with waiver reason: reply "waive-srl: {reason}"
+   ─────────────────────────────────────────
+   ```
+
+   Record `gov010_srl_check` as `"passed"`, `"waived:{reason}"`, or `"not_applicable"` in checkpoint.
 
 ```
 Warning: GOV-010 Gate Check
@@ -276,9 +292,35 @@ See `references/expert-routing.md` for:
 
    Read-only PRDs: no E2E workstream required (read-only UI rendering is Tier 2 per workflows-gaps.md).
 
-5. **Output** to `docs/21-exec-spec/EXEC-###-{slug}.md`.
+5. **SRL Semantic Preflight (when SRL-touching terms are present).**
 
-6. **Validate** before proceeding:
+   Trigger: `gov010_srl_check` is `"passed"` or `"waived"` (i.e., not `"not_applicable"`).
+
+   ```bash
+   python scripts/semantic/srl_intake_lint.py {exec_spec_path}
+   ```
+
+   The script emits JSON with `hard_fail_count`, `findings[]`, and `status`. Branch on the verdict:
+
+   - `hard_fail_count == 0` → record `srl_preflight: "pass"` in checkpoint; proceed.
+   - `hard_fail_count > 0` → block the approval gate:
+
+   ```
+   [SRL PREFLIGHT BLOCK] EXEC-{ID} has {N} hard-fail semantic ambiguity finding(s).
+   ─────────────────────────────────────────────────────────────────────────────────
+   Hard failures:
+     - {finding} at {location}
+
+   Action required: resolve all hard-fail findings before approval.
+   Override: reply "waive-srl-preflight: {reason}" to proceed with waiver.
+   ─────────────────────────────────────────────────────────────────────────────────
+   ```
+
+   Record `srl_preflight: "pass" | "fail:{N}" | "waived:{reason}" | "skipped"` in checkpoint. Skipped only when `gov010_srl_check == "not_applicable"`.
+
+6. **Output** to `docs/21-exec-spec/EXEC-###-{slug}.md`.
+
+7. **Validate** before proceeding:
    ```bash
    python .claude/skills/build-pipeline/scripts/validate-execution-spec.py \
        docs/21-exec-spec/EXEC-###-{slug}.md
@@ -286,11 +328,11 @@ See `references/expert-routing.md` for:
 
    Checks:
    - **Structural**: YAML syntax, executor names, dependencies, gates
-   - **Governance**: SRM ownership, test locations, migration standards, DTO patterns
+   - **Governance**: SRM ownership (no workstream may claim table ownership outside the SRM), SRL semantic binding (if any workstream implements an SRL-admitted canonical term from `docs/20-architecture/SEMANTIC_RESPONSIBILITY_LAYER.md §8`, the test workstream's acceptance criteria must reference the enforcement test IDs from the term's SRL record; absent binding is a governance violation), migration standards (`MIGRATION_NAMING_STANDARD.md`), DTO patterns (`DTO_CANONICAL_STANDARD.md`)
 
    Both must pass before proceeding.
 
-7. **Initialize checkpoint** (see `references/checkpoint-format.md`).
+8. **Initialize checkpoint** (see `references/checkpoint-format.md`).
 
 ---
 
@@ -324,6 +366,7 @@ Execution Order:
 
 Validation: [PASS] Structural + Governance
 {If FIB-S loaded: "Intake Traceability: [PASS]"}
+{If srl_preflight != "skipped": "SRL Semantic Preflight: [PASS|FAIL|WAIVED]"}
 
 {If temporal drift detected:
 Temporal drift: {N} upstream artifact(s) modified after EXEC-SPEC generation:
@@ -467,9 +510,11 @@ A workstream never disappears from the graph — deferring it means moving it in
 
 **Key fields:**
 - `gov010_check`: `"passed"` | `"waived:{reason}"` | `"pending"`
+- `gov010_srl_check`: `"passed"` | `"waived:{reason}"` | `"not_applicable"`
 - `complexity_prescreen`: `"streamlined"` | `"full"`
 - `fib_s_loaded`: boolean
 - `write_path_classification`: `"detected"` | `"none"`
+- `srl_preflight`: `"pass"` | `"fail:{N}"` | `"waived:{reason}"` | `"skipped"`
 
 ---
 

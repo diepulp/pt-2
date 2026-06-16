@@ -145,15 +145,19 @@ export async function approvePilotAccessAction(
     };
   }
 
-  // Update request status — must succeed; partial write is an anomaly
-  const { error: updateError } = await serviceClient
+  // Update request status — optimistic lock: only update if still 'pending'.
+  // If count=0 the request was already approved by a concurrent call; skip OTP
+  // to prevent token rotation invalidating the first magic link.
+  const { data: updatedRows, error: updateError } = await serviceClient
     .from('pilot_access_requests')
     .update({
       status: 'approved',
       reviewed_by: adminEmail,
       reviewed_at: new Date().toISOString(),
     })
-    .eq('id', requestId);
+    .eq('id', requestId)
+    .eq('status', 'pending')
+    .select('id');
 
   if (updateError) {
     emitTelemetry({
@@ -176,6 +180,32 @@ export async function approvePilotAccessAction(
       code: 'INTERNAL_ERROR',
       error:
         'Partial write: allowlist updated but request status could not be set',
+      requestId: reqId,
+      durationMs: Date.now() - startedAt,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  // Already processed by a concurrent approval — return success without
+  // sending another OTP (would rotate the token and invalidate the first link).
+  if (!updatedRows?.length) {
+    emitTelemetry({
+      eventType: 'pilot_review.approve.already_processed',
+      timestamp: new Date().toISOString(),
+      correlationId,
+      metadata: {
+        action: 'approve',
+        result: 'already_processed',
+        targetEmail,
+        actorEmail: adminEmail,
+        requestId,
+      },
+      severity: 'info',
+    });
+    return {
+      ok: true,
+      code: 'OK',
+      data: undefined,
       requestId: reqId,
       durationMs: Date.now() - startedAt,
       timestamp: new Date().toISOString(),

@@ -341,8 +341,7 @@ function buildExecutiveSummary(
     pitsCount: casino?.pits_count ?? 0,
     fillsTotalCents: casino?.fills_total_cents ?? 0,
     creditsTotalCents: casino?.credits_total_cents ?? 0,
-    winLossInventoryTotalCents: casino?.win_loss_inventory_total_cents ?? null,
-    winLossEstimatedTotalCents: casino?.win_loss_estimated_total_cents ?? null,
+    // winLossInventoryTotalCents / winLossEstimatedTotalCents removed from ExecutiveSummarySection (PRD-090 WS5)
     snapshotCoverageRatio: casino?.snapshot_coverage_ratio ?? 0,
     coverageTier: casino?.coverage_tier ?? 'NONE',
   };
@@ -364,10 +363,9 @@ function buildFinancialSummary(
 
   const tables: FinancialTableRow[] = dashboard.tables.map((table) => {
     const obs = cashObsMap.get(table.table_id);
+    // estimated_drop_buyins_cents removed from DTO (PRD-090 WS5); compute from rated+grind
     const dropTotal =
-      table.estimated_drop_rated_cents +
-      table.estimated_drop_grind_cents +
-      table.estimated_drop_buyins_cents;
+      table.estimated_drop_rated_cents + table.estimated_drop_grind_cents;
 
     return {
       tableId: table.table_id,
@@ -377,12 +375,8 @@ function buildFinancialSummary(
       dropTotalCents: dropTotal,
       fillsTotalCents: table.fills_total_cents,
       creditsTotalCents: table.credits_total_cents,
-      winLossInventoryCents: table.win_loss_inventory_cents,
-      winLossEstimatedCents: table.win_loss_estimated_cents,
-      holdPercent: computeHoldPercent(
-        table.win_loss_inventory_cents,
-        dropTotal,
-      ),
+      // win_loss fields suppressed per PRD-090 WS5 (SRL-TIA-001); TODO-WS4: wire projection
+      holdPercent: null,
       cashObsEstimateCents: obs?.cash_out_observed_estimate_total ?? 0,
       cashObsCount: obs?.cash_out_observation_count ?? 0,
     };
@@ -407,12 +401,8 @@ function computeCasinoTotals(
     dropTotalCents: dropTotal,
     fillsTotalCents: casino.fills_total_cents,
     creditsTotalCents: casino.credits_total_cents,
-    winLossInventoryTotalCents: casino.win_loss_inventory_total_cents,
-    winLossEstimatedTotalCents: casino.win_loss_estimated_total_cents,
-    holdPercent: computeHoldPercent(
-      casino.win_loss_inventory_total_cents,
-      dropTotal,
-    ),
+    // winLossInventoryTotalCents / winLossEstimatedTotalCents suppressed per PRD-090 WS5
+    holdPercent: null, // TODO-WS4: restore from TableInventoryAccountingProjection aggregation
     cashObsEstimateTotalCents: tables.reduce(
       (sum, t) => sum + t.cashObsEstimateCents,
       0,

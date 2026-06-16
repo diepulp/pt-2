@@ -1,0 +1,765 @@
+artifact:
+  id: PRD-090-REFRACTOR-BLAST-RADIUS-MAP
+  type: refactor_blast_radius_map
+  status: exec_authorized  # DA-006 patches applied 2026-06-01 — all P0 blockers resolved
+  prd: PRD-090
+  prd_version: v6  # DA patch PRD090-DA-006 — bigint cast, fills/credits predicate, stale-FK rule, defense-in-depth casino_id
+  generated_for: table_inventory_accounting_canon_exemplar
+  generated_date: 2026-05-30
+  authority_stack:
+    - ADR-059  # status: Accepted 2026-05-28 — ownership, frozen formula, three-result-state model
+    - ADR-060  # status: Accepted 2026-05-29 — drop taxonomy + naming standard
+    - ADR-061  # status: Accepted 2026-05-29 — session-scope aggregation boundary
+    - SRL-TIA-001  # admitted 2026-05-29 — semantic admission authority
+  supporting_artifacts:
+    - docs/issues/table-inventory-accounting-canon/LEGACY-CONSUMERS-CLASSIFICATION-MAPPING.yaml
+    - docs/issues/table-inventory-accounting-canon/PRD-090-WS5-legacy-consumer-suppression-inventory.md
+    - docs/issues/table-inventory-accounting-canon/LEGACY-CONSUMER-DISPOSITION-STRATEGY-PRD-090.md
+    - docs/issues/table-inventory-accounting-canon/planning/PRD-TIA-CANON-KICKOFF-DIRECTIVE.md
+  purpose: >
+    Pre-EXEC containment map for PRD-090. Defines direct scope, preflight
+    obligations, financial-outbox posture dependencies, deferred work, and
+    stop conditions so EXEC does not discover blast radius during implementation.
+    This artifact must be committed before EXEC-SPEC drafting begins.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CORE INVARIANT
+# ─────────────────────────────────────────────────────────────────────────────
+core_invariant: >
+  PRD-090 may implement a narrow read-time exemplar only if its consumed inputs
+  are stable enough to support TableInventoryAccounting without hidden producer,
+  outbox, relay, bridge, or projection-consumer work. If implementation discovers
+  that table_buyin_telemetry, fills, credits, or inventory snapshot row presence
+  depends on unfinished financial outbox, relay, bridge, or projection-consumer
+  work, PRD-090 must pause and emit a dependency finding instead of patching
+  around it.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SCOPE MODEL
+# ─────────────────────────────────────────────────────────────────────────────
+scope_model:
+
+  direct_in_scope:
+    - item: TableInventoryAccounting service module
+      target_file: services/table-context/table-inventory-accounting.ts
+      reason: >
+        Canonical read-time derivation owner. Sole location where a win/loss-like
+        table result may be computed. No competing formula may survive.
+      expected_action: implement
+      workstream: WS2
+
+    - item: TableInventoryAccountingProjection DTO
+      reason: >
+        Sole downstream table-result authority. Frozen minimum contract defined
+        in ADR-059 D3 (amended by ADR-060 D3: snapshots key, not inventory key).
+        final_table_win_loss_cents always null in this slice.
+      expected_action: implement
+      workstream: WS2
+
+    - item: Accounting projection API route
+      target_route: GET /api/v1/table-context/table-sessions/{sessionId}/accounting-projection
+      reason: >
+        BFF/API boundary for exemplar consumer. No formula logic in route handler.
+        No call to rpc_shift_table_metrics. RLS via set_rls_context_from_staff().
+      expected_action: implement
+      workstream: WS3
+
+    - item: Pit Terminal Rundown wiring
+      target_file: components/table/rundown-summary-panel.tsx
+      reason: >
+        First canonical consumer. Replaces table_win_cents stub and
+        rpc_compute_table_rundown. Renders three result states per calculation_kind.
+        No surface-side recomputation from raw fields.
+      expected_action: consume_projection
+      workstream: WS4
+
+    - item: SRM table_buyin_telemetry ownership gap resolution
+      target_doc: docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md
+      reason: >
+        TableContextService must declare table_buyin_telemetry as a consumed
+        input for TableInventoryAccounting.telemetry_derived_drop_estimate_cents.
+        The gap is explicitly flagged in PRD-090 §7.1. Must resolve before WS2.
+      expected_action: patch_srm
+      workstream: WS1
+
+    - item: Active legacy render and API suppression
+      reason: >
+        Fourteen active operator-visible UI consumers and eight API/DTO surfaces
+        classified in LEGACY-CONSUMERS-CLASSIFICATION-MAPPING.yaml must either
+        consume the projection or suppress rendering and serialization before
+        exemplar lands. See consumers inventory for per-surface obligations.
+      expected_action: suppress_or_verify_absent
+      workstream: WS5
+      consumer_counts:
+        active_operator_visible_ui: 14  # LEGACY-CONSUMER-001 through 014
+        api_and_dto_surfaces: 10        # LEGACY-API-001 through 010 (LEGACY-API-009/010 added by BLOCKER-1 patch 2026-05-30)
+        rpc_and_query_sources: 4        # LEGACY-RPC-001 through 004
+        consume_projection: 2           # LEGACY-CONSUMER-005 + LEGACY-API-002
+        suppress_rendering: 20          # all non-exemplar active surfaces (18 + LEGACY-API-009 + LEGACY-API-010)
+        unresolved_requiring_inspection: 0  # UNRESOLVED-001/002 → LEGACY-API-009/010; UNRESOLVED-003/004 → CLEAN (2026-05-30)
+
+    - item: Automated suppression gate
+      reason: >
+        Grep/test gate that fails CI if active operator-visible code or serialized
+        operator-facing API responses contain forbidden legacy render fields or labels.
+        Required as tia.active_surface_suppression_gate and
+        tia.shift_metric_api_suppression test suites per WS5/WS6.
+      expected_action: implement
+      workstream: WS5_WS6
+
+    - item: WS6 test harness
+      reason: >
+        Fourteen required test IDs covering DTO contract, five-operand formula,
+        inventory-side derivation, snapshot resolution, null-vs-zero,
+        RATED_ADJUSTMENT exclusion, session-scope-only, rpc_exclusion,
+        integrity_failure suppression, consumer render-only, tenant isolation,
+        role matrix, active-surface suppression gate, shift metric API suppression.
+      expected_action: implement
+      workstream: WS6
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # REQUIRED PREFLIGHT
+  # ─────────────────────────────────────────────────────────────────────────────
+  required_preflight:
+
+    - item: ADR-059, ADR-060, ADR-061 status verification
+      owner: architecture
+      required_before: EXEC
+      current_status: CLOSED — all three accepted as of 2026-05-29
+      pass_condition: >
+        ADR-059, ADR-060, ADR-061 all have status: Accepted. No provisional
+        or draft ADR in the authority stack.
+      fail_action: block_EXEC_until_all_three_accepted
+
+    - item: SRM table_buyin_telemetry consumed-input patch
+      owner: architecture
+      required_before: WS2
+      current_status: OPEN — flagged as unresolved ownership gap in SRM and PRD-090 §7.1
+      pass_condition: >
+        SRM TableContextService section declares table_buyin_telemetry as a
+        consumed input for TableInventoryAccounting.telemetry_derived_drop_estimate_cents.
+        SRM no longer marks this as an unresolved ownership gap after WS1 exits.
+      fail_action: pause_WS2_until_srm_patch_committed
+
+    - item: table_inventory_snapshot schema vocabulary verification
+      owner: backend
+      required_before: WS2
+      current_status: PATCHED in PRD-090-DA-004 — snapshot_type CHECK constraint accepts open/close/rundown only
+      pass_condition: >
+        snapshot_type enforced values are exactly: open, close, rundown.
+        Opener maps to snapshot_type = 'open'.
+        Closer maps to snapshot_type = 'close'.
+        No uppercase OPENING or CLOSING values may exist or be queried.
+        chipset_total_cents() fallback is available for snapshots where
+        total_cents IS NULL and chipset is non-empty.
+      fail_action: patch_prd_or_schema_decision_before_exec
+      da_finding_ref: DA-P0-uppercase-snapshot-fossil
+
+    - item: idx_tbt_kind covering index verification
+      owner: backend
+      required_before: WS2
+      current_status: >
+        EXISTS per PRD-090 §7.1 — no migration required at baseline.
+        WS1 must verify before WS2 begins; NFR-1 conditioned on this passing.
+      pass_condition: >
+        Covering index exists on table_buyin_telemetry for
+        (casino_id, table_id, telemetry_kind, occurred_at).
+        If index is absent or non-covering: EXEC must add a minimal index migration
+        before WS2 begins.
+      fail_action: add_minimal_index_migration_or_block_WS2
+
+    - item: Legacy consumer disposition inventory completeness
+      owner: architecture
+      required_before: EXEC
+      current_status: >
+        SUBSTANTIALLY COMPLETE — 14 UI consumers + 8 API surfaces classified.
+        Four route.ts files remain uninspected (UNRESOLVED-001 through 004).
+        Four must be resolved before WS5 suppression commits are finalized.
+      pass_condition: >
+        Every active legacy consumer has exactly one of: consume_projection,
+        suppress_rendering, or inactive_or_internal_only_with_reason.
+        No active operator-visible surface uses inactive_or_internal_only_with_reason
+        while continuing to render or serialize forbidden legacy table-result values.
+      fail_action: resolve_four_unresolved_route_inspections_before_WS5_finalization
+      unresolved_items:
+        - UNRESOLVED-001: app/api/v1/shift-dashboards/metrics/pits/route.ts
+        - UNRESOLVED-002: app/api/v1/shift-dashboards/metrics/casino/route.ts
+        - UNRESOLVED-003: app/api/v1/shift-checkpoints/ (latest + delta routes)
+        - UNRESOLVED-004: app/api/v1/shift-intelligence/anomaly-alerts/route.ts
+
+    - item: Operator-facing API serialization inventory
+      owner: backend
+      required_before: EXEC
+      current_status: >
+        DTOs classified. Route.ts sources for pits/casino/checkpoints/anomaly-alerts
+        not yet inspected. Suppression actions identified per LEGACY-API-001 through 008.
+      pass_condition: >
+        Forbidden legacy fields are confirmed absent from active operator-facing
+        API responses. Route serialization tests added for:
+        GET /api/v1/shift-dashboards/metrics/tables
+        GET /api/v1/shift-dashboards/metrics/pits
+        GET /api/v1/shift-dashboards/metrics/casino
+        GET /api/v1/table-rundown-reports/[id]
+        GET /api/v1/reports/shift-summary
+      fail_action: add_suppression_action_and_route_tests_before_exec
+      da_finding_ref: DA-P0-serialized-api-suppression
+
+    - item: SRL snapshot role binding patch
+      owner: architecture
+      required_before: WS2
+      current_status: OPEN — SRL-TIA-001 may contain opener/closer as snapshot_kind references
+      pass_condition: >
+        SRL-TIA-001-table-inventory-accounting.yaml binds opener to
+        snapshot_type = 'open' and closer to snapshot_type = 'close'.
+        No reference to snapshot_kind, OPENING, CLOSING, opener, or closer
+        as SQL literals in any governance document or implementation artifact.
+      fail_action: patch_srl_before_ws2
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FINANCIAL OUTBOX POSTURE (consumed-input confidence dependency, not in scope)
+# ─────────────────────────────────────────────────────────────────────────────
+financial_outbox_posture:
+  classification: consumed_input_confidence_dependency
+  framing: >
+    PRD-090 does not implement outbox producers, relay behavior, replay, persisted
+    projection stores, or projection consumers. However, PRD-090 consumes facts
+    whose reliability may depend on post-Wave-2 transport posture. Financial outbox
+    is not an implementation workstream for PRD-090, but it is a consumed-input
+    confidence dependency that must be assessed before EXEC.
+
+  not_in_scope:
+    - outbox producer implementation
+    - outbox relay changes
+    - replay implementation
+    - persisted projection store
+    - projection consumer implementation
+    - financial event catalog expansion
+    - bridge_pending semantics implementation
+    - relay lag compensation logic
+
+  relevant_because: >
+    PRD-090 consumes table_buyin_telemetry (telemetry_derived_drop_estimate_cents),
+    table_inventory_snapshot (opener/closer), table_fill, and table_credit as
+    session-scoped read inputs. If any of these sources are incomplete, unreliable,
+    or pending outbox/relay propagation work, PRD-090's read-time derivation will
+    silently produce degraded or incorrect results without surfacing the dependency.
+
+  required_checks:
+
+    - id: OUTBOX-CHECK-001
+      subject: table_buyin_telemetry row presence (RATED_BUYIN and GRIND_BUYIN)
+      question: >
+        Are RATED_BUYIN and GRIND_BUYIN rows currently authored and queryable
+        in table_buyin_telemetry independently of unfinished outbox relay or
+        projection-consumer work?
+      acceptable_answer: yes_existing_queryable_source
+      fail_action: pause_prd090_and_emit_dependency_finding
+      note: >
+        If row presence depends on relay propagation completing, PRD-090 must not
+        silently compensate. A null SUM (zero qualifying rows) is semantically
+        distinct from rows missing due to transport lag.
+
+    - id: OUTBOX-CHECK-002
+      subject: rated buy-in bridge posture
+      question: >
+        Does rated buy-in telemetry arrive in table_buyin_telemetry through a
+        stable, accepted path (direct write or settled bridge), or is its
+        row presence pending relay/consumer propagation from an incomplete
+        Wave 2 outbox path?
+      acceptable_answer: stable_or_explicitly_classified
+      fail_action: do_not_recompute_from_pft_inside_prd090
+      note: >
+        PRD-090 must not compensate for a missing rated buy-in bridge by
+        recomputing from PFT, grind sources, or shift-level metrics.
+
+    - id: OUTBOX-CHECK-003
+      subject: grind/unrated telemetry authoring posture
+      question: >
+        Does GRIND_BUYIN authoring already produce queryable table_buyin_telemetry
+        rows with the canonical telemetry_kind for the session scope, or is
+        GRIND_BUYIN authoring itself pending a producer or relay work item?
+      acceptable_answer: stable_or_blocked_with_explicit_followup
+      fail_action: pause_if_grind_buyin_source_not_stable
+      note: >
+        If GRIND_BUYIN rows do not exist at session scope, the inventory_only
+        path will trigger correctly (null telemetry SUM). This is acceptable
+        per the three-result-state model. The check here is whether GRIND_BUYIN
+        authoring is a hidden dependency that blocks the exemplar from producing
+        accurate telemetry_drop_formula results.
+
+    - id: OUTBOX-CHECK-004
+      subject: fills and credits as session-scoped inventory inputs
+      question: >
+        Are table_fill and table_credit rows queryable as session-scoped inventory
+        inputs (SUM by table_session_id) without depending on unfinished projection
+        propagation, relay, or a pending write-path work item?
+      acceptable_answer: stable_authoring_store_available
+      fail_action: block_formula_execution_until_source_confirmed
+      note: >
+        fills_cents and credits_cents are direct SUM inputs to both
+        telemetry_drop_formula and inventory_only result states. Missing fills/credits
+        rows silently understate inventory movement with no integrity signal.
+
+    - id: OUTBOX-CHECK-005
+      subject: bridge_pending and relay lag semantics
+      question: >
+        Does PRD-090 need to distinguish between no telemetry for session and
+        bridge-pending or relay-lag conditions (where telemetry exists upstream
+        but has not yet propagated to table_buyin_telemetry), or is that
+        distinction explicitly deferred?
+      acceptable_answer: explicitly_deferred_or_modeled
+      fail_action: document_deferred_semantics_and_do_not_invent_runtime_state
+      note: >
+        ADR-059 reserves bridge_pending as a vocabulary term but does not implement
+        it in this slice. If bridge lag is a real operational condition, the exemplar
+        will produce inventory_only results where telemetry_drop_formula would be
+        correct. This is a known limitation; it must be documented as deferred,
+        not patched with a runtime inference.
+
+  forbidden_compensations:
+    - recompute telemetry_derived_drop_estimate_cents from PFT directly
+    - use rpc_shift_table_metrics as any source for TableInventoryAccounting
+    - use gaming_day aggregate scope as a session-scope proxy
+    - call outbox relay APIs during read-time derivation
+    - introduce a projection store or write path inside PRD-090 scope
+    - COALESCE null telemetry SUM to zero (ADR-061 D6 violation)
+    - infer missing telemetry as zero (COALESCE-to-zero is semantically distinct from zero qualifying rows)
+    - hide bridge lag behind inventory_only without an explicit documented decision
+    - treat bridge_pending as a new result state — it is reserved vocabulary, not implemented
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DOWNSTREAM DEPENDENCY — NOT IN SCOPE
+# ─────────────────────────────────────────────────────────────────────────────
+downstream_dependency_not_in_scope:
+  - item: Financial outbox producer expansion
+    reason: Wave 2 transport concern, not PRD-090 read-time derivation.
+    allowed_reference: posture_check_only
+
+  - item: Relay and processed_messages behavior
+    reason: Transport reliability, not exemplar implementation.
+    allowed_reference: posture_check_only
+
+  - item: Projection consumer propagation
+    reason: Future consumer slice unless already landed.
+    allowed_reference: dependency_status_only
+
+  - item: Table lifecycle producer hardening
+    reason: >
+      First-session opener capture is a separate workflow (GAP-TIA-5).
+      First table session has opening_inventory_snapshot_id = NULL — no
+      mandatory opener-capture producer exists. PRD-090 routes these correctly
+      to integrity_failure; a mandatory opener-capture workflow is deferred.
+    allowed_reference: integrity_failure_deferred_followup
+
+  - item: bridge_pending telemetry semantics
+    reason: >
+      Requires transport/projection analysis beyond exemplar scope.
+      ADR-059 reserves bridge_pending as vocabulary; it is not implemented
+      in this slice.
+    allowed_reference: stop_condition_or_deferred_followup
+
+  - item: rpc_compute_table_rundown — fate decision
+    reason: >
+      WS4 removes rpc_compute_table_rundown from the exemplar render path.
+      Whether to drop or quarantine the legacy RPC for non-exemplar callers
+      is an EXEC decision deferred beyond WS4. If quarantined, tests must
+      prove no active operator path calls it.
+    allowed_reference: exec_decision_post_WS4
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EXPLICITLY DEFERRED (must not be smuggled into PRD-090)
+# ─────────────────────────────────────────────────────────────────────────────
+explicitly_deferred:
+  - item: Full shift dashboard migration to TableInventoryAccountingProjection
+    reason: >
+      Non-Rundown dashboards suppress rendering in this slice. Full projection
+      migration for each surface is a subsequent PRD per consumer.
+
+  - item: Persistent TableInventoryAccountingProjection store
+    reason: >
+      Rejected in ADR-059 §4. Materialize only if profiling evidence demands it
+      in a subsequent EXEC-SPEC. PRD-090 is read-time derivation, stateless,
+      no writes.
+
+  - item: posted_drop workflow
+    reason: Requires external custody authority. Explicitly out of PRD-090 scope.
+
+  - item: counted_drop / soft-count workflow
+    reason: No count-room integration in this slice.
+
+  - item: final_table_win_loss_cents population
+    reason: Always null in this slice. Requires external custody authority and ADR/FIB amendment.
+
+  - item: Reconciliation engine
+    reason: Distinct feature requiring full custody chain. Not in PRD-090.
+
+  - item: Outbox producer, consumer, or replay changes
+    reason: Wave 2 transport. Not in PRD-090 scope.
+
+  - item: Mandatory opener-capture workflow
+    reason: >
+      Deferred as separate investigation (GAP-TIA-5). First-session
+      integrity_failure is the correct canonical outcome in this slice.
+
+  - item: table_inventory_snapshot or table_session lifecycle schema rename
+    reason: Schema vocabulary is frozen. Rename is a separate migration decision.
+
+  - item: Generic table accounting bounded context
+    reason: >
+      Explicitly rejected in ADR-059. TableInventoryAccounting is a subdomain
+      of TableContextService, not a standalone bounded context.
+
+  - item: bridge_pending or relay_lag as implemented result states
+    reason: Reserved vocabulary per ADR-059. Not implementable in this slice.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BLAST RADIUS VECTORS
+# ─────────────────────────────────────────────────────────────────────────────
+blast_radius_vectors:
+
+  schema_vocabulary:
+    severity: P0
+    risks:
+      - invalid snapshot_kind usage (no such column; only snapshot_type exists)
+      - uppercase OPENING/CLOSING fossil values (CHECK constraint prohibits them; they can never exist)
+      - source_authority.inventory old key (non-canonical; must be snapshots per ADR-060 D3)
+      - snapshot_type = 'rundown' — third valid value; must not be used for opener/closer resolution
+      - total_cents nullable — null alone must not trigger integrity_failure; chipset fallback required
+    required_actions:
+      - bind opener to snapshot_type = 'open' exclusively
+      - bind closer to snapshot_type = 'close' exclusively
+      - forbid snapshot_kind, OPENING, CLOSING, opener, closer as SQL literals in any query
+      - use source_authority.snapshots (not inventory) per ADR-060 D3
+      - implement COALESCE(total_cents, chipset_total_cents(chipset)::integer) for snapshot value resolution
+      - confirm chipset_total_cents() function exists and is callable before WS2 begins
+    da_finding_refs:
+      - DA-P0-snapshot-lookup-vocabulary
+      - DA-P0-uppercase-snapshot-fossil
+
+  service_layer:
+    severity: P0
+    risks:
+      - local formula outside TableInventoryAccounting (any route, component, RPC, or hook)
+      - accidental rpc_shift_table_metrics reuse (gaming-day scope, COALESCE-to-zero — ADR-061 violations)
+      - rpc_compute_table_rundown called from exemplar path post-WS4
+      - null telemetry SUM COALESCEd to zero (zero qualifying rows ≠ sum of zero)
+      - unstable NOW() upper bound across multiple queries in one derivation (NFR-6 violation)
+      - RATED_ADJUSTMENT rows included in telemetry_derived_drop_estimate_cents SUM
+      - gaming-day scope used instead of session-scope predicate (ADR-061 D2 violation)
+    required_actions:
+      - service owns formula exclusively; no route/component/hook recomputation
+      - session-scope predicate: RATED_BUYIN + GRIND_BUYIN only; RATED_ADJUSTMENT excluded
+      - preserve null SUM — no COALESCE anywhere in derivation path
+      - capture one upperBoundAt or execute in one transaction using transaction-stable NOW()
+      - tia.rpc_exclusion test proves neither rpc_shift_table_metrics nor rpc_compute_table_rundown is called
+
+  api_surface:
+    severity: P0
+    risks:
+      - legacy fields absent from UI but still serialized to operator-facing API JSON
+      - spoofable casino_id or session_id access in new route
+      - route-local formula logic (any calculation in route handler)
+      - shift metric API routes returning forbidden fields after DTO suppression (4 unresolved routes)
+    required_actions:
+      - suppress forbidden fields in all operator-facing JSON responses (not just UI layer)
+      - RLS via set_rls_context_from_staff() on new route; no spoofable identity params
+      - no formula logic in route handler; delegate entirely to service
+      - tenant-isolation test: cross-casino sessionId returns no projection data
+      - role matrix test: pit_boss, floor_supervisor, admin allowed; inactive staff denied
+      - route serialization tests for shift/pits/casino/rundown-reports/shift-summary API endpoints
+    da_finding_refs:
+      - DA-P0-serialized-api-suppression
+
+  ui_surface:
+    severity: P0
+    risks:
+      - legacy values still rendered on non-exemplar active operator surfaces
+      - unqualified Win/Loss labels surviving suppression
+      - non-Rundown dashboards classified as outside boundary while still rendering forbidden values
+      - active surface suppression grep/gate not automated — fails undetected on future changes
+    required_actions:
+      - Pit Terminal Rundown consumes TableInventoryAccountingProjection exclusively (WS4)
+      - all 14 non-exemplar active UI surfaces suppress rendering (WS5)
+      - automated suppression gate (tia.active_surface_suppression_gate) fails CI on any forbidden render
+      - forbidden labels checked: Win/Loss (unqualified), Estimated Win/Loss, Total Drop, Posted Drop,
+        Final Win/Loss, Settled Result, Reconciled Result
+    da_finding_refs:
+      - DA-P0-legacy-suppression-escape-hatch
+
+  data_input_posture:
+    severity: P1
+    risks:
+      - table_buyin_telemetry RATED_BUYIN/GRIND_BUYIN rows missing due to unfinished bridge/outbox path
+      - fills/credits not session-bindable without a stable write path
+      - snapshots missing due to lifecycle producer gaps (first-session integrity_failure accepted by design)
+      - bridge lag silently degrades telemetry_drop_formula to inventory_only without disclosure
+    required_actions:
+      - preflight OUTBOX-CHECK-001 through 005 before EXEC
+      - classify missing opener/closer as integrity_failure (not a new result state, not a patch)
+      - do not patch around missing telemetry inputs with COALESCE defaults
+      - document deferred bridge_pending semantics explicitly
+
+  legacy_rpc_callsites:
+    severity: P1
+    risks:
+      - rpc_shift_table_metrics retained as active shift dashboard source after suppression (ADR-061 violation)
+      - rpc_compute_table_rundown retained as active exemplar path post-WS4
+      - COALESCE(SUM(...), 0) pattern surviving in service-layer TypeScript code
+    required_actions:
+      - shift dashboard suppression removes forbidden fields from DTOs backed by rpc_shift_table_metrics
+      - rpc_shift_table_metrics may remain for non-forbidden fields (fills_total_cents, telemetry_quality)
+        but must not produce win_loss or drop estimate fields consumed on operator-visible paths
+      - rpc_compute_table_rundown removed from exemplar path in WS4; quarantine/drop is EXEC decision post-WS4
+
+# ─────────────────────────────────────────────────────────────────────────────
+# KNOWN DA REVIEW FINDINGS
+# ─────────────────────────────────────────────────────────────────────────────
+known_da_findings:
+
+  - id: DA-P0-legacy-suppression-escape-hatch
+    issue: >
+      Non-Rundown operator-visible surfaces could have been classified outside
+      exemplar boundary while continuing to render forbidden legacy values.
+      outside_exemplar_boundary_with_reason was an escape hatch that allowed
+      active surfaces to remain unaddressed.
+    resolution: >
+      PRD-090 §4.2 and the LEGACY-CONSUMER-DISPOSITION-STRATEGY-PRD-090 harden this:
+      active operator-visible surfaces must either consume_projection or
+      suppress_rendering. inactive_or_internal_only_with_reason is forbidden
+      for any surface that continues rendering or serializing the legacy value.
+    status: patched_in_prd_v2
+    blast_radius_driver: operator_visible_legacy_surfaces
+    residual_check: >
+      active_surface_suppression_gate (tia.active_surface_suppression_gate) — fails
+      CI if any active render path or serialized API response contains forbidden fields.
+    inventory_coverage: >
+      14 UI consumers + 8 API surfaces classified in
+      LEGACY-CONSUMERS-CLASSIFICATION-MAPPING.yaml.
+      4 unresolved route.ts files must be inspected before WS5 finalization.
+
+  - id: DA-P0-snapshot-lookup-vocabulary
+    issue: >
+      PRD used invalid snapshot lookup vocabulary. opener/closer roles referenced
+      non-existent snapshot_kind column. ADR-059 originally said snapshot roles bind
+      to snapshot_type = 'open' and snapshot_type = 'close', but fallback predicates
+      in early draft used IN ('open', 'OPENING') / IN ('close', 'CLOSING').
+    resolution: >
+      PRD-090-DA-003 patched fallback predicates to = 'open' and = 'close' exclusively.
+      PRD-090-DA-004 confirmed schema CHECK constraint prohibits OPENING/CLOSING.
+      chipset_total_cents() fallback added for null total_cents.
+    status: patched_in_prd_v3_and_v4
+    blast_radius_driver: table_lifecycle_schema_binding
+    residual_check: >
+      tia.snapshot_resolution test — asserts absence of OPENING/CLOSING uppercase
+      variants, absence of snapshot_kind queries, presence of chipset fallback.
+
+  - id: DA-P0-uppercase-snapshot-fossil
+    issue: >
+      Older PRD-038-era RPCs (rpc_compute_table_rundown, potentially others) query
+      uppercase OPENING/CLOSING snapshot values, but the table_inventory_snapshot
+      CHECK constraint only permits open/close/rundown (lowercase). Any PRD-090
+      code that carried forward uppercase literals would produce zero rows silently,
+      causing false integrity_failure for sessions with valid snapshots.
+    resolution: >
+      PRD-090 forbids uppercase snapshot literals. Fallback predicates corrected
+      in DA-003/DA-004. WS2 implementation must not reference OPENING, CLOSING,
+      snapshot_kind, or any uppercase snapshot variant.
+    status: must_patch_in_WS2_implementation
+    blast_radius_driver: schema_fossil_cleanup
+    residual_check: >
+      tia.snapshot_resolution — must assert no uppercase snapshot literal appears
+      in any generated SQL (mock the query layer and assert predicate strings).
+
+  - id: DA-P0-serialized-api-suppression
+    issue: >
+      UI suppression alone is insufficient. Operator-facing APIs that serialize
+      ShiftTableMetricsDTO, ShiftPitMetricsDTO, ShiftCasinoMetricsDTO, or
+      RundownReportDTO still return forbidden fields even after UI components
+      are patched to not render them. The fields remain in the operator-accessible
+      JSON response.
+    resolution: >
+      Suppression scope includes both render paths and serialized operator-facing
+      API responses. DTO field removal (LEGACY-API-001 through 005) plus route
+      serialization tests for shift/pits/casino/rundown-reports/shift-summary
+      endpoints are required as part of WS5 exit gate.
+    status: patched_in_prd_v2_and_v3
+    blast_radius_driver: operator_facing_api_contract
+    residual_check: >
+      tia.shift_metric_api_suppression — route response tests prove forbidden fields
+      absent from JSON. tia.active_surface_suppression_gate — grep gate confirms.
+
+  - id: DA-P0-total-cents-coalesce-fallback
+    issue: >
+      table_inventory_snapshot.total_cents is nullable (added in ADR-027 migration
+      with no DEFAULT). A snapshot with total_cents IS NULL and a non-empty chipset
+      must not trigger integrity_failure — it is a valid snapshot with a resolvable
+      cents value via chipset_total_cents().
+    resolution: >
+      PRD-090-DA-004 changed WS2 snapshot value resolution from direct total_cents
+      read to COALESCE(total_cents, chipset_total_cents(chipset)::integer).
+      Null total_cents alone does not trigger integrity_failure; only null after
+      COALESCE (both paths exhausted) triggers integrity_failure.
+    status: patched_in_prd_v4
+    blast_radius_driver: snapshot_resolution_correctness
+    residual_check: >
+      tia.snapshot_resolution — must include fixture with total_cents IS NULL +
+      non-empty chipset proving resolution succeeds without integrity_failure.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EXEC STOP CONDITIONS
+# ─────────────────────────────────────────────────────────────────────────────
+exec_stop_conditions:
+
+  - id: STOP-001
+    condition: >
+      table_buyin_telemetry RATED_BUYIN or GRIND_BUYIN row presence depends on
+      unfinished financial outbox relay, bridge, or projection-consumer work.
+      (OUTBOX-CHECK-001 returns fail.)
+    action: pause_prd090_and_emit_dependency_finding
+    note: >
+      Do not COALESCE null SUM to zero as a workaround.
+      Do not recompute from PFT or shift-metrics as a workaround.
+      Emit a dependency finding and resolve the upstream source first.
+
+  - id: STOP-002
+    condition: >
+      Implementation requires recomputing telemetry_derived_drop_estimate_cents
+      from PFT, rpc_shift_table_metrics, shift-level metrics, or any gaming-day
+      scoped source rather than the session-scope table_buyin_telemetry predicate.
+    action: stop_and_request_ADR_or_PRD_amendment
+    note: >
+      The session-scope predicate is frozen in ADR-061 D2.
+      Any deviation requires an explicit ADR amendment, not a runtime patch.
+
+  - id: STOP-003
+    condition: >
+      Valid open/close snapshots cannot be resolved using lowercase snapshot_type
+      = 'open' / = 'close' vocabulary. Querying with uppercase OPENING/CLOSING
+      returns zero rows for sessions that have valid snapshots.
+    action: block_EXEC_until_schema_binding_or_lifecycle_issue_resolved
+    note: >
+      The schema CHECK constraint prohibits OPENING and CLOSING.
+      If rows exist with uppercase values, that is a schema integrity issue
+      requiring a separate migration, not a PRD-090 compatibility shim.
+
+  - id: STOP-004
+    condition: >
+      Any active operator-visible surface or operator-facing API must continue
+      exposing forbidden legacy fields because suppression would break a core
+      operational workflow that has no alternative.
+    action: escalate_to_scope_decision_before_build
+    current_status: INAPPLICABLE — pre-production development context with no live
+      operator-facing surfaces. Condition cannot be triggered. Deferred to
+      pre-production launch readiness review.
+    note: >
+      Suppression of a core operational field is a product decision.
+      If an operator genuinely needs a value and no canonical replacement exists,
+      that must be resolved through a scope amendment or a new PRD for that
+      surface — not a suppression bypass in WS5.
+
+  - id: STOP-005
+    condition: >
+      EXEC requires adding outbox producers, relay changes, replay logic, or a
+      persisted projection store to make PRD-090 pass its acceptance criteria.
+    action: reject_as_scope_expansion
+    note: >
+      PRD-090 is a read-time derivation exemplar. If the exemplar cannot function
+      on existing queryable inputs, the scope is wrong and must be amended.
+
+  - id: STOP-006
+    condition: >
+      First-session opener absence requires a new mandatory opener-capture workflow
+      rather than integrity_failure disclosure. Operations team cannot accept
+      integrity_failure as a valid outcome for new-table first sessions.
+    action: defer_to_followup_PRD_or_amend_scope
+    note: >
+      PRD-090 intentionally routes missing opener to integrity_failure (GAP-TIA-5).
+      If operations rejects this outcome, the opener-capture workflow must be scoped
+      as a separate PRD before the exemplar ships — not added mid-EXEC.
+
+  - id: STOP-007
+    condition: >
+      chipset_total_cents() function does not exist or is not callable from the
+      TypeScript service layer, and at least one active snapshot has total_cents IS NULL.
+    action: block_WS2_until_function_availability_confirmed
+    note: >
+      DA-004 patch requires this fallback. If the function is absent, a null
+      total_cents snapshot will silently trigger integrity_failure for sessions
+      that have valid snapshots with chipset-based values.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REQUIRED OUTPUTS BEFORE EXEC
+# ─────────────────────────────────────────────────────────────────────────────
+required_outputs_before_exec:
+
+  - artifact: docs/issues/table-inventory-accounting-canon/PRD-090-REFRACTOR-BLAST-RADIUS-MAP.yaml
+    status: THIS DOCUMENT — committed
+    required_for: EXEC gate
+
+  - artifact: docs/issues/table-inventory-accounting-canon/PRD-090-WS5-legacy-consumer-suppression-inventory.md
+    status: CERTIFIED 2026-06-01 — 276 lines; all 14 UI consumers + 10 API surfaces enumerated; all 6 certification items checked with evidence; 5 umbrella follow-up ticket IDs registered; four unresolved routes resolved
+    required_for: WS5 exit gate
+
+  - artifact: SRL snapshot role binding patch (SRL-TIA-001-table-inventory-accounting.yaml)
+    status: CLOSED — opener binds to snapshot_type = 'open'; closer to snapshot_type = 'close'; uppercase OPENING/CLOSING explicitly rejected as schema-prohibited dead code (SRL-TIA-001 lines 738–752)
+    required_for: WS2 gate
+
+  - artifact: SRM table_buyin_telemetry consumed-input patch
+    status: CLOSED — SRM TableContextService section declares table_buyin_telemetry as consumed input for TableInventoryAccounting.telemetry_derived_drop_estimate_cents (SRM line 498)
+    required_for: WS1 exit gate (blocks WS2)
+
+  - artifact: idx_tbt_kind preflight evidence
+    status: VERIFIED — index confirmed in migration 20260114003530_table_buyin_telemetry.sql lines 91–92 (clearance plan Gate 7)
+    required_for: WS1 exit gate (blocks WS2)
+
+  - artifact: OUTBOX-CHECK-001 through 005 answers
+    status: CLOSED — all five checks answered in docs/issues/table-inventory-accounting-canon/prd-090/OUTBOX-SEMANTIC-COMPATABILITY.md; OUTBOX-001 through 004 ACCEPTABLE, OUTBOX-005 DEFERRED by design
+    required_for: EXEC gate — consumed-input confidence
+
+  - artifact: Four unresolved route.ts inspections (UNRESOLVED-001 through 004)
+    status: CLOSED 2026-05-30 — UNRESOLVED-001 → LEGACY-API-009; UNRESOLVED-002 → LEGACY-API-010; UNRESOLVED-003 CLEAN (inherits LEGACY-API-008 DTO suppression consequence); UNRESOLVED-004 CLEAN (FinancialValue wrapper types; no forbidden field names)
+    required_for: WS5 finalization
+
+  - artifact: STOP-004 operational sign-off
+    status: CLOSED — inapplicable in pre-production development context; no live operator-facing surfaces exist; suppression cannot disrupt real operational workflows; sign-off requirement deferred to pre-production launch readiness review (2026-06-01)
+    required_for: pre-production launch readiness (not a pre-EXEC or pre-WS5 gate)
+
+  - artifact: chipset_total_cents() function availability confirmation
+    status: OPEN — DA-004 patch depends on this function existing
+    required_for: WS2 gate
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FINAL RECOMMENDATION
+# ─────────────────────────────────────────────────────────────────────────────
+final_recommendation:
+
+  safe_to_draft_exec_when:
+    - direct_in_scope is unchanged and narrow (exemplar + suppression only)
+    - ADR-059, ADR-060, ADR-061 all confirmed Accepted (DONE as of 2026-05-29)
+    - SRM table_buyin_telemetry ownership gap resolved in WS1
+    - SRL snapshot role binding patched to open/close lowercase
+    - idx_tbt_kind existence verified by WS1
+    - chipset_total_cents() function availability confirmed
+    - all five outbox posture checks answered (OUTBOX-CHECK-001 through 005)
+    - all four unresolved route.ts files inspected and classified
+    - every active legacy consumer has exactly one disposition
+    - uppercase snapshot fossil vocabulary (OPENING/CLOSING/snapshot_kind) removed from all artifacts
+    - stop conditions acknowledged and incorporated into EXEC scaffold
+
+  not_safe_to_draft_exec_when:
+    - any consumed input (table_buyin_telemetry, fills, credits, snapshots) depends
+      on unfinished Wave 2 outbox propagation or relay work
+    - any active operator-visible surface or API lacks a suppression or projection disposition
+    - implementation would need to invent bridge_pending behavior at runtime
+    - outbox, relay, or projection-store work is needed to make the exemplar function
+    - chipset_total_cents() is unavailable and null total_cents snapshots exist in production
+    - four unresolved route inspections remain open at WS5 commit time
+
+  containment_posture: >
+    PRD-090 is a narrow exemplar. Its blast radius is bounded. The suppression inventory
+    is substantially complete. The schema vocabulary is corrected through DA-004.
+    The primary remaining risks are: (1) the four uninspected route.ts files that may
+    independently serialize forbidden fields, (2) the outbox posture checks that must
+    confirm table_buyin_telemetry rows are stable and queryable, and (3) the
+    chipset_total_cents() function dependency introduced by DA-004. None of these
+    require expanding PRD-090's scope — they require verification before EXEC commits begin.

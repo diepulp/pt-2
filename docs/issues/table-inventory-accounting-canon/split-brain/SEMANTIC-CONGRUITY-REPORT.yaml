@@ -1,0 +1,1369 @@
+---
+artifact:
+  type: semantic_congruity_report
+  feature_id: FIB-H-TIA-CANON-001
+  audit_date: "2026-05-28"
+  auditor: Architecture / Product Governance
+  artifacts_reviewed:
+    - docs/issues/table-inventory-accounting-canon/planning/TABLE_INVENTORY_ACCOUNTING_UBIQUITOUS_LANGUAGE_BASELINE.md
+    - docs/issues/table-inventory-accounting-canon/planning/FIB-H-TIA-CANON-001-classification.yaml
+    - docs/01-scaffolds/SCAFFOLD-TABLE-INVENTORY-ACCOUNTING-CANON.md
+    - docs/80-adrs/ADR-059-table-inventory-accounting-canon-ownership-and-formula.md
+    - docs/80-adrs/ADR-060-drop-taxonomy-and-naming-standard.md
+    - docs/80-adrs/ADR-061-session-scope-aggregation-boundary.md
+    - docs/issues/table-inventory-accounting-canon/CASINO_TABLE_INVENTORY_ACCOUNTING_TERMINOLOGY_REFERENCE.md
+  downstream_prd_exec: none_authored_yet  # PRD gate is open
+
+# ─────────────────────────────────────────────────────────────────
+# SECTION 1 — EXECUTIVE VERDICT
+# ─────────────────────────────────────────────────────────────────
+executive_verdict:
+  verdict: patch_required_before_PRD
+  rationale: >
+    The ADR set (059 · 060 · 061) is internally coherent. Two P1 semantic cracks
+    require targeted patches before the PRD may proceed. The ADR-level RATED_ADJUSTMENT
+    exclusion is correct; no artifact falsely claims RATED_ADJUSTMENT is schema-absent
+    or structurally blocked. The three-result-state model, null-vs-zero invariant,
+    session-scope boundary, and custody-status invariant are consistent across all artifacts.
+  p1_cracks_blocking_prd:
+    - id: CRACK-001
+      term: "Estimated Win/Loss (surface label)"
+      artifact: UL Baseline §Surface rendering rules; Classification YAML allowed_surface_labels
+      summary: >
+        ADR-060 D4 removes "Estimated Win/Loss" from the allowed list.
+        UL Baseline and Classification YAML still permit it as an acceptable alternative.
+    - id: CRACK-002
+      term: source_authority.inventory (DTO key)
+      artifact: ADR-059 D3
+      summary: >
+        ADR-059 D3 defines source_authority.inventory; ADR-060 D3 supersedes with
+        source_authority.snapshots. ADR-059 not inline-amended.
+        TIA-CANON-SOURCE-AUTHORITY-SHAPE acceptance test fails against ADR-059 as written.
+  p2_gaps_recommended:
+    - id: CRACK-003
+      summary: Classification YAML estimated_drop_cents status is acceptable_with_label; ADR-060 demotes to deprecated_alias
+    - id: CRACK-004
+      summary: RATED_ADJUSTMENT exclusion absent from UL Baseline and Classification YAML; only in ADR-060/061
+    - id: CRACK-005
+      summary: UL Baseline names field input_completeness (two values); ADR-059 nests as completeness.status (three values)
+  p0_gate_open:
+    gate: dashboard_suppression_gate
+    source: Classification YAML prd_gate_patches
+    requirement: >
+      Exemplar PRD must include a suppression inventory of every active operator-visible
+      win/loss-like surface, with verified disposition for each. Not a crack in the ADR set —
+      a PRD acceptance criterion that must be written before implementation begins.
+
+# ─────────────────────────────────────────────────────────────────
+# SECTION 2 — TERMINOLOGY CONGRUITY MATRIX
+# ─────────────────────────────────────────────────────────────────
+terminology_congruity_matrix:
+
+  - term: drop
+    canonical_definition: >
+      Amount established from the table drop-box custody/count process.
+      Cannot be inferred from buy-ins, live telemetry, or PFT totals.
+    artifact_usage:
+      UL_Baseline: correct definition; forbids inference from activity
+      Casino_Reference_§7: correct; aligns with count/custody semantics
+      ADR-059_060_061: consistent
+      Classification_YAML: consistent
+    status: canonical
+    boundary_allowed:
+      database_internal: true
+      dto_api: false  # bare "drop" is not a field name; use precise forms
+      operator_surface: false
+      future_reserved: false
+    source_authority: external count-room / custody chain
+    custody_posture: external_custody_authoritative
+    drift: false
+    required_patch: none
+
+  - term: drop_activity_indicator
+    canonical_definition: >
+      Non-monetary posture signal that table activity may later produce drop.
+      Must not carry a cents value.
+    artifact_usage:
+      UL_Baseline: approved; no amount
+      ADR-060_D1: approved; must not carry cents value
+    status: canonical
+    boundary_allowed:
+      database_internal: true
+      dto_api: true  # as posture field only; no amount
+      operator_surface: true  # posture label only
+      future_reserved: false
+    source_authority: operational / inferred
+    custody_posture: N/A
+    drift: false
+    required_patch: none
+
+  - term: observed_buyin_activity_cents
+    canonical_definition: >
+      Cash-in / buy-in activity observed by PT-2. Explicitly NOT drop.
+      Must not be used as a formula input for projected_table_win_loss_cents.
+    artifact_usage:
+      UL_Baseline: approved; not a formula input
+      ADR-060_D1: approved; must not be used as drop formula input
+      Classification_YAML: consistent; not a formula input
+    status: canonical
+    boundary_allowed:
+      database_internal: true
+      dto_api: true  # with explicit label only
+      operator_surface: true  # as activity posture only; not as drop amount
+      future_reserved: false
+    source_authority: Class B telemetry
+    custody_posture: non-custody observation
+    drift: false
+    required_patch: none
+
+  - term: drop_box_removed_event
+    canonical_definition: >
+      Custody event showing box movement/removal. No amount implied.
+      Must not be an input to any win/loss formula.
+    artifact_usage:
+      UL_Baseline: allowed as no-amount custody/posture event; not a formula input
+      ADR-060_D1: approved posture only; must not carry cents value
+    status: canonical
+    boundary_allowed:
+      database_internal: true
+      dto_api: true  # as no-amount event only
+      operator_surface: true  # custody posture only
+      future_reserved: false
+    source_authority: custody event
+    custody_posture: N/A (no amount)
+    drift: false
+    required_patch: none
+
+  - term: telemetry_derived_drop_estimate_cents
+    canonical_definition: >
+      Non-custody, non-final drop-like estimate derived from PT-2 operational telemetry.
+      Canonical source: session-scoped SUM of table_buyin_telemetry (RATED_BUYIN + GRIND_BUYIN),
+      filtered to session window. source_authority.drop = 'telemetry_derived_estimate'.
+      custody_status = non_custody_estimate always. Sole approved drop-like formula input in this slice.
+    artifact_usage:
+      UL_Baseline: preferred; full provenance requirements stated
+      Scaffold_§4: frozen SQL predicate; RATED_BUYIN + GRIND_BUYIN only
+      ADR-059_D2: canonical formula operand; no COALESCE to 0
+      ADR-060_D1: sole in-scope drop-like amount at DTO/API/surface boundaries
+      ADR-060_D2: kind enumeration frozen; RATED_ADJUSTMENT excluded
+      ADR-061_D2: frozen predicate; session scope canonical and exclusive
+    status: canonical_preferred
+    boundary_allowed:
+      database_internal: true
+      dto_api: true
+      operator_surface: true  # via label only ("Projected Win/Loss"); not as a bare dollar figure
+      future_reserved: false
+    source_authority: telemetry_derived_estimate (table_buyin_telemetry session aggregate)
+    custody_posture: non_custody_estimate
+    drift: false
+    required_patch: none
+
+  - term: estimated_drop_cents
+    canonical_definition: >
+      Deprecated alias for telemetry_derived_drop_estimate_cents.
+      Must not be introduced in new code, migrations, or API contracts.
+      Must not cross any DTO/API/surface boundary.
+    artifact_usage:
+      Classification_YAML: "acceptable_with_label — DRIFT: this status is superseded"
+      ADR-060_D1: deprecated_alias — transitional only
+      ADR-060_D4: listed under forbidden field/variable names
+    status: deprecated_transitional
+    boundary_allowed:
+      database_internal: true  # only as transitional; scheduled for rename
+      dto_api: false  # FORBIDDEN
+      operator_surface: false  # FORBIDDEN
+      future_reserved: false
+    source_authority: N/A
+    custody_posture: N/A
+    drift: true
+    drift_severity: P2
+    conflicting_artifacts:
+      - Classification YAML lists status as acceptable_with_label
+      - ADR-060 D1/D4 classifies as deprecated_alias forbidden at DTO/API/surface
+    required_patch: >
+      Classification YAML drop_term_status.estimated_drop_cents.status must change to
+      deprecated_alias_transitional. Add note: "Forbidden at DTO/API/surface boundary
+      per ADR-060 D1/D4."
+
+  - term: estimated_drop_buyins_cents
+    canonical_definition: >
+      Non-canonical field name. Underlying table_buyin_telemetry data is valid;
+      the name implies a drop amount rather than an estimated operational value.
+      Forbidden at all DTO/API/surface boundaries. Legacy only.
+    artifact_usage:
+      UL_Baseline: "non-canonical; must not be surfaced as win/loss input or API field"
+      ADR-060_D4: listed under forbidden field/variable names
+      Classification_YAML: not mentioned; appears in legacy_stream_disposition as retired
+    status: forbidden
+    boundary_allowed:
+      database_internal: false  # legacy only; scheduled for deletion
+      dto_api: false
+      operator_surface: false
+      future_reserved: false
+    source_authority: N/A
+    custody_posture: N/A
+    drift: false
+    required_patch: >
+      Delete or rename before exemplar acceptance. Must not appear in
+      TableInventoryAccountingProjection or any active BFF response.
+
+  - term: recorded_operational_drop_cents
+    canonical_definition: >
+      Tombstoned. Reads too close to "posted drop"; implies custody connotation.
+      Use telemetry_derived_drop_estimate_cents instead.
+    artifact_usage:
+      UL_Baseline: tombstoned; use telemetry_derived_drop_estimate_cents
+      ADR-060_D1: deprecated-avoid; tombstoned
+      Classification_YAML: deprecated_avoid
+    status: tombstoned
+    boundary_allowed:
+      database_internal: false
+      dto_api: false
+      operator_surface: false
+      future_reserved: false
+    source_authority: N/A
+    custody_posture: N/A
+    drift: false
+    required_patch: none  # tombstone is consistent across artifacts
+
+  - term: posted_drop_amount_cents
+    canonical_definition: >
+      Manually posted drop amount. Implies finalized/posted accounting result.
+      Non-compliant with ADR-053 unless sourced from external custody authority.
+      Forbidden in this slice. Reserved as future vocabulary.
+    artifact_usage:
+      UL_Baseline: dangerous — implies false authority
+      Classification_YAML: dangerous / ADR-053 non-compliant
+      ADR-060_D1: reserved-dangerous; forbidden in this slice
+    status: reserved_dangerous_forbidden_in_this_slice
+    boundary_allowed:
+      database_internal: false
+      dto_api: false
+      operator_surface: false
+      future_reserved: true  # only after external custody ADR + FIB amendment
+    source_authority: external custody only (future)
+    custody_posture: external_custody_authoritative (future only)
+    drift: false
+    required_patch: none
+
+  - term: counted_drop_amount_cents
+    canonical_definition: Count-room verified drop amount. Forbidden in this slice.
+    artifact_usage:
+      UL_Baseline: future
+      ADR-060_D1: reserved-future; forbidden in this slice
+    status: reserved_future_forbidden_in_this_slice
+    boundary_allowed:
+      database_internal: false
+      dto_api: false
+      operator_surface: false
+      future_reserved: true
+    source_authority: count-room / soft-count
+    custody_posture: external_custody_authoritative
+    drift: false
+    required_patch: none
+
+  - term: external_custody_drop_cents
+    canonical_definition: >
+      Drop value from soft count, count room, or custody authority.
+      Requires external integration ADR + FIB amendment. Forbidden in this slice.
+    artifact_usage:
+      UL_Baseline: out of scope
+      Classification_YAML: future_only
+      ADR-060_D1: reserved-future; forbidden in this slice
+    status: reserved_future_forbidden_in_this_slice
+    boundary_allowed:
+      database_internal: false
+      dto_api: false
+      operator_surface: false
+      future_reserved: true
+    source_authority: external custody
+    custody_posture: external_custody_authoritative
+    drift: false
+    required_patch: none
+
+  - term: final_reconciled_drop_amount_cents
+    canonical_definition: >
+      Final accounting/reconciled drop. Out of PT-2 pilot authority.
+      Forbidden at all layers in this slice.
+    artifact_usage:
+      UL_Baseline: out of scope
+      ADR-060_D1: out of scope
+    status: out_of_scope_forbidden
+    boundary_allowed:
+      database_internal: false
+      dto_api: false
+      operator_surface: false
+      future_reserved: false
+    source_authority: external accounting finality
+    custody_posture: external_custody_authoritative
+    drift: false
+    required_patch: none
+
+  - term: projected_table_win_loss_cents
+    canonical_definition: >
+      PT-2 operational estimate: telemetry_derived_drop_estimate_cents
+      + closing_inventory_cents + credits_cents - opening_inventory_cents - fills_cents.
+      custody_status = non_custody_estimate always. In scope.
+    artifact_usage:
+      UL_Baseline: in scope; non-custody; required surface label "Projected Win/Loss"
+      Classification_YAML: in scope; non-custody; estimated_operational authority
+      Scaffold: in scope; formula consistent
+      ADR-059_D2: canonical frozen formula
+      ADR-059_D3: semantic DTO field; always non-custody
+      ADR-060_D4: label "Projected Win/Loss" required for telemetry_drop_formula path
+    status: canonical_in_scope
+    boundary_allowed:
+      database_internal: true
+      dto_api: true
+      operator_surface: true  # label "Projected Win/Loss" required
+      future_reserved: false
+    source_authority: PT-2 operational inputs
+    custody_posture: non_custody_estimate
+    drift: false
+    required_patch: none
+
+  - term: partial_table_result_cents
+    canonical_definition: >
+      Inventory-side result when no drop-like input is present.
+      Activates only when drop_estimate_state = 'none_for_session' AND opener/closer both resolvable.
+      custody_status = non_custody_estimate. Surface label "Partial Table Result".
+    artifact_usage:
+      UL_Baseline: in scope; partial state; surface label correct
+      Classification_YAML: in scope; drop absent + opener/closer resolvable
+      Scaffold: in scope; consistent
+      ADR-059_D5: triggers on none_for_session only; integrity_failure does NOT trigger this
+    status: canonical_in_scope
+    boundary_allowed:
+      database_internal: true
+      dto_api: true
+      operator_surface: true  # label "Partial Table Result" required
+      future_reserved: false
+    source_authority: PT-2 operational inputs (no drop)
+    custody_posture: non_custody_estimate
+    drift: false
+    required_patch: none
+
+  - term: final_table_win_loss_cents
+    canonical_definition: >
+      Custody-authoritative win/loss. Always null in this slice.
+      Requires external custody integration and ADR/FIB amendment.
+    artifact_usage:
+      UL_Baseline: out of scope; always null in this slice
+      Classification_YAML: out of scope; external_custody_authoritative
+      Scaffold: non-goal
+      ADR-059_D3: always null; DTO field present as null sentinel only
+      ADR-059_D5: three-result-state model; this state unreachable in this slice
+    status: canonical_out_of_scope_this_slice
+    boundary_allowed:
+      database_internal: false
+      dto_api: true  # present as null sentinel only
+      operator_surface: false
+      future_reserved: true
+    source_authority: external custody (future)
+    custody_posture: external_custody_authoritative
+    drift: false
+    required_patch: none
+
+  - term: Projected Win/Loss
+    canonical_definition: Required surface label for calculation_kind = telemetry_drop_formula.
+    artifact_usage:
+      UL_Baseline: required label
+      Classification_YAML: in allowed_surface_labels
+      ADR-060_D4: required for telemetry_drop_formula path
+    status: canonical_required_label
+    boundary_allowed:
+      database_internal: false
+      dto_api: false
+      operator_surface: true  # required
+      future_reserved: false
+    drift: false
+    required_patch: none
+
+  - term: Estimated Win/Loss
+    canonical_definition: >
+      FORBIDDEN. ADR-060 D4 removed this from the allowed surface label list.
+      Use "Projected Win/Loss" only.
+    artifact_usage:
+      UL_Baseline: "acceptable alternative label — DRIFT: conflicts with ADR-060 D4"
+      Classification_YAML: "listed in allowed_surface_labels — DRIFT: conflicts with ADR-060 D4"
+      ADR-060_D4: "removed from allowed list; ambiguous; use Projected Win/Loss only"
+    status: forbidden
+    boundary_allowed:
+      database_internal: false
+      dto_api: false
+      operator_surface: false
+      future_reserved: false
+    drift: true
+    drift_severity: P1
+    conflicting_artifacts:
+      - UL Baseline §Surface rendering rules permits as alternative label
+      - Classification YAML allowed_surface_labels includes it
+      - ADR-060 D4 explicitly removes and forbids it
+    required_patch: >
+      (1) UL Baseline §Surface rendering rules — projected win/loss state block:
+      delete "Estimated Win/Loss: $X ← acceptable alternative label";
+      add "Estimated Win/Loss is forbidden — ADR-060 D4 removed it; use Projected Win/Loss only."
+      (2) Classification YAML allowed_surface_labels: remove "Estimated Win/Loss" entry;
+      add explicit forbidden_note referencing ADR-060 D4.
+
+  - term: Win/Loss (unqualified)
+    canonical_definition: >
+      Reserved for final_table_win_loss_cents only. Unreachable in this slice.
+      Forbidden on any operator surface.
+    artifact_usage:
+      UL_Baseline: forbidden in this slice
+      Classification_YAML: in forbidden_surface_labels
+      ADR-060_D4: forbidden
+    status: forbidden_in_this_slice
+    boundary_allowed:
+      database_internal: false
+      dto_api: false
+      operator_surface: false
+      future_reserved: true  # for final_table_win_loss_cents only
+    drift: false
+    required_patch: none
+
+  - term: Final Win/Loss
+    canonical_definition: >
+      Requires external custody authority. Forbidden in this slice.
+      Reserved surface label for final_table_win_loss_cents.
+    artifact_usage:
+      UL_Baseline: forbidden
+      Classification_YAML: in forbidden_surface_labels
+      ADR-060_D4: forbidden
+    status: forbidden_in_this_slice
+    boundary_allowed:
+      database_internal: false
+      dto_api: false
+      operator_surface: false
+      future_reserved: true
+    drift: false
+    required_patch: none
+
+  - term: Total Drop
+    canonical_definition: Forbidden label. Implies finalized drop total. ADR-053 violation.
+    artifact_usage:
+      UL_Baseline: forbidden
+      Classification_YAML: in forbidden_surface_labels
+      ADR-060_D4: forbidden
+    status: forbidden
+    drift: false
+    required_patch: none
+
+  - term: Posted Drop
+    canonical_definition: Forbidden label. Implies posting/finalization.
+    artifact_usage:
+      UL_Baseline: forbidden
+      Classification_YAML: in forbidden_surface_labels
+      ADR-060_D4: forbidden
+    status: forbidden
+    drift: false
+    required_patch: none
+
+  - term: Settled Result
+    canonical_definition: Forbidden label. Implies settlement.
+    artifact_usage:
+      UL_Baseline: forbidden
+      Classification_YAML: in forbidden_surface_labels
+      ADR-060_D4: forbidden
+    status: forbidden
+    drift: false
+    required_patch: none
+
+  - term: Reconciled Result
+    canonical_definition: Forbidden label. Implies reconciliation finality.
+    artifact_usage:
+      UL_Baseline: forbidden
+      Classification_YAML: in forbidden_surface_labels
+      ADR-060_D4: forbidden
+    status: forbidden
+    drift: false
+    required_patch: none
+
+  - term: Partial Table Result
+    canonical_definition: Required surface label for calculation_kind = inventory_only.
+    artifact_usage:
+      UL_Baseline: required label; must disclose missing inputs
+      Classification_YAML: in allowed_surface_labels
+      ADR-060_D4: required for inventory_only path
+    status: canonical_required_label
+    boundary_allowed:
+      database_internal: false
+      dto_api: false
+      operator_surface: true  # required
+      future_reserved: false
+    drift: false
+    required_patch: none
+
+  - term: telemetry_drop_formula
+    canonical_definition: >
+      calculation_kind literal for all-inputs-present path.
+      Frozen string; must not vary in spelling.
+    artifact_usage:
+      ADR-059_D3: canonical literal
+      ADR-059_D4: included_inputs definition
+      ADR-060_D4: maps to "Projected Win/Loss" label
+    status: canonical_frozen_literal
+    boundary_allowed:
+      database_internal: true
+      dto_api: true
+      operator_surface: false  # maps to label; literal not surface-visible
+      future_reserved: false
+    drift: false
+    required_patch: none
+
+  - term: inventory_only
+    canonical_definition: >
+      calculation_kind literal for drop-absent partial-result path.
+      Frozen string; activates only when drop_estimate_state = 'none_for_session'.
+    artifact_usage:
+      ADR-059_D3: canonical literal
+      ADR-059_D4: included_inputs definition
+      ADR-060_D4: maps to "Partial Table Result" label
+    status: canonical_frozen_literal
+    boundary_allowed:
+      database_internal: true
+      dto_api: true
+      operator_surface: false
+      future_reserved: false
+    drift: false
+    required_patch: none
+
+  - term: integrity_failure
+    canonical_definition: >
+      calculation_kind literal. Opener or closer unresolvable after all resolution paths.
+      Suppresses all result fields. No result label rendered on operator surface.
+    artifact_usage:
+      ADR-059_D3: canonical literal
+      ADR-059_D5: three-result-state model
+      ADR-060_D4: no result label for this path
+      Classification_YAML: integrity_issues_state in scope
+      UL_Baseline: integrity_issues defined; completeness envelope table does NOT list
+        integrity_failure as a valid completeness.status value (P2 gap)
+    status: canonical_frozen_literal
+    boundary_allowed:
+      database_internal: true
+      dto_api: true
+      operator_surface: false  # integrity disclosure only; no result label
+      future_reserved: false
+    drift: true
+    drift_severity: P2
+    conflicting_artifacts:
+      - UL Baseline completeness envelope uses input_completeness with only complete/partial
+      - ADR-059 D3 uses completeness.status with complete/partial/integrity_failure
+    required_patch: >
+      UL Baseline completeness envelope table: rename input_completeness → completeness.status;
+      add integrity_failure as third allowed value with note:
+      "active only when integrity_issues non-empty; suppresses both result fields."
+
+  - term: drop_estimate_state
+    canonical_definition: >
+      Discriminator for null-vs-zero telemetry semantics.
+      Baseline-narrow two-state enum: 'present' | 'none_for_session'.
+      Consumers must not infer partial result from null alone.
+    artifact_usage:
+      ADR-059_D3: two-state baseline contract
+      Classification_YAML: two-state after final amendment; deferred states named
+      Scaffold_§4: two-state table; deferred states named with rationale
+    status: canonical
+    boundary_allowed:
+      database_internal: true
+      dto_api: true
+      operator_surface: false
+      future_reserved: false
+    drift: false
+    required_patch: none
+
+  - term: present
+    canonical_definition: >
+      drop_estimate_state value. Session-scoped SUM returned a non-null number.
+      telemetry_derived_drop_estimate_cents is non-null.
+      projected_table_win_loss_cents may render.
+    artifact_usage:
+      ADR-059_D3: canonical
+      Classification_YAML: canonical
+      Scaffold_§4: canonical
+    status: canonical
+    drift: false
+    required_patch: none
+
+  - term: none_for_session
+    canonical_definition: >
+      drop_estimate_state value. SUM over zero qualifying RATED_BUYIN/GRIND_BUYIN rows returned NULL.
+      Normal operational state for unrated sessions. The only valid trigger for partial_table_result_cents.
+    artifact_usage:
+      ADR-059_D3: canonical; only valid partial-result trigger
+      Classification_YAML: canonical; none_for_session = partial state
+      Scaffold_§4: canonical
+    status: canonical
+    drift: false
+    required_patch: none
+
+  - term: bridge_pending
+    canonical_definition: >
+      Deferred reserved vocabulary. PFT buy-in in finance_outbox; relay has not yet processed it.
+      Not populated at exemplar baseline. Detection requires Finance cross-context DTO contract.
+    artifact_usage:
+      Classification_YAML: deferred with rationale; Finance DTO contract required
+      ADR-059_D5: deferred reserved vocabulary; out of scope
+      Scaffold_§4: reserved vocabulary; not implemented at baseline
+    status: deferred_reserved_vocabulary
+    boundary_allowed:
+      database_internal: false
+      dto_api: false
+      operator_surface: false
+      future_reserved: true
+    drift: false
+    required_patch: none
+
+  - term: source_unavailable
+    canonical_definition: >
+      Deferred reserved vocabulary. Telemetry source cannot be reached or queried.
+      Not populated at exemplar baseline.
+    artifact_usage:
+      Classification_YAML: deferred; UX disclosure pattern undefined
+      ADR-059_D5: deferred reserved vocabulary
+      Scaffold_§4: reserved vocabulary
+    status: deferred_reserved_vocabulary
+    boundary_allowed:
+      database_internal: false
+      dto_api: false
+      operator_surface: false
+      future_reserved: true
+    drift: false
+    required_patch: none
+
+  - term: RATED_BUYIN
+    canonical_definition: >
+      Qualifying telemetry_kind. Contributes to telemetry_derived_drop_estimate_cents
+      via session-scoped SUM predicate. Requires visit_id + rating_slip_id.
+    artifact_usage:
+      ADR-060_D2: in-scope; included in frozen kind enumeration
+      ADR-061_D2: in frozen predicate
+      Scaffold_§4: in frozen predicate
+    status: canonical_included
+    boundary_allowed:
+      database_internal: true  # only via session-scoped SUM predicate
+      dto_api: false  # not a DTO field; internal aggregation only
+      operator_surface: false
+      future_reserved: false
+    source_authority: table_buyin_telemetry
+    custody_posture: non_custody_estimate
+    drift: false
+    required_patch: none
+
+  - term: GRIND_BUYIN
+    canonical_definition: >
+      Qualifying telemetry_kind. Contributes to telemetry_derived_drop_estimate_cents
+      via session-scoped SUM predicate. visit_id IS NULL, rating_slip_id IS NULL.
+    artifact_usage:
+      ADR-060_D2: in-scope; included in frozen kind enumeration
+      ADR-061_D2: in frozen predicate
+      Scaffold_§4: in frozen predicate
+    status: canonical_included
+    boundary_allowed:
+      database_internal: true
+      dto_api: false
+      operator_surface: false
+      future_reserved: false
+    source_authority: table_buyin_telemetry
+    custody_posture: non_custody_estimate
+    drift: false
+    required_patch: none
+
+  - term: RATED_ADJUSTMENT
+    canonical_definition: >
+      Non-canonical for telemetry_derived_drop_estimate_cents in this slice.
+      May exist in legacy/current telemetry paths. Excluded by semantic decision,
+      NOT by schema absence. Must not contribute to canonical session-scoped SUM,
+      must not change drop_estimate_state, must not affect projected_table_win_loss_cents.
+    artifact_usage:
+      ADR-060_D2: >
+        explicitly excluded — "semantic exclusion, not a claim that the value is absent
+        from the current database schema"; current legacy/shift-metrics paths may contain it
+      ADR-061_D2: >
+        "intentionally absent from this predicate. Its absence is a canonical exemplar
+        decision, not an assertion that legacy/current schema paths cannot contain that value."
+      UL_Baseline: silent — no mention of RATED_ADJUSTMENT (P2 gap)
+      Classification_YAML: silent (P2 gap)
+      Scaffold_§4: predicate omits RATED_ADJUSTMENT without explanation (P2 gap)
+    status: excluded_non_canonical
+    boundary_allowed:
+      database_internal: false  # must not enter canonical SUM
+      dto_api: false
+      operator_surface: false
+      future_reserved: false
+    drift: true
+    drift_severity: P2
+    conflicting_artifacts:
+      - UL Baseline silent; no exclusion statement
+      - Classification YAML silent; no exclusion statement
+      - Scaffold predicate omits without rationale note
+      - ADR-060 D2 and ADR-061 D2 correctly exclude with rationale
+    required_patch: >
+      (1) UL Baseline canonical drop taxonomy table: add RATED_ADJUSTMENT row with status
+      "non-canonical / excluded" and note consistent with ADR-060 D2.
+      (2) Classification YAML telemetry source resolution block: add sentence naming
+      RATED_ADJUSTMENT exclusion.
+      (3) Scaffold §4 telemetry predicate comment: add
+      "-- RATED_ADJUSTMENT intentionally excluded per ADR-060 D2; may exist in legacy paths."
+
+  - term: table_buyin_telemetry
+    canonical_definition: >
+      The read source table. Session-scoped SUM produces telemetry_derived_drop_estimate_cents.
+      Owned by TableContextService. Column telemetry_kind verified against DDL
+      (20260114003530_table_buyin_telemetry.sql).
+    artifact_usage:
+      UL_Baseline: approved source
+      Scaffold_§4: frozen predicate references this table; column verified
+      ADR-059: delegates source binding to ADR-061
+      ADR-060_D2: kind enumeration applies to rows in this table
+      ADR-061_D2: frozen predicate targets this table
+    status: canonical_source
+    drift: false
+    required_patch: none
+
+  - term: rpc_shift_table_metrics
+    canonical_definition: >
+      EXCLUDED as source for telemetry_derived_drop_estimate_cents.
+      Wrong scope (gaming-day, not session-scoped) and applies forbidden COALESCE(SUM, 0).
+      Must not be called by TableInventoryAccounting for telemetry aggregation.
+    artifact_usage:
+      ADR-061_D5: explicitly excluded with two disqualifying properties
+      Classification_YAML: identifies as implementation gap
+      Scaffold_§7: confirmed gap
+    status: excluded_source
+    drift: false
+    required_patch: none
+
+  - term: rpc_compute_table_rundown
+    canonical_definition: >
+      BFF RPC. Has no telemetry aggregation in current implementation.
+      Must be updated to call TableInventoryAccountingService.deriveProjection().
+      Not an excluded source — it is the update target.
+    artifact_usage:
+      ADR-061_D5: not excluded; is the BFF route update target
+      Scaffold_§7: dependency; needs canonical formula wired
+    status: dependency_update_target
+    drift: false
+    required_patch: none
+
+  - term: gaming_day
+    canonical_definition: >
+      Lifecycle metadata on table_session. Set by trigger via compute_gaming_day(opened_at, ...).
+      Must NEVER be used as an aggregation window bound for telemetry_derived_drop_estimate_cents.
+      May appear as an identity/context field in the DTO.
+    artifact_usage:
+      ADR-061_D4: lifecycle metadata only; not a scope boundary
+      Classification_YAML: consistent; gaming-day scope forbidden
+      Scaffold_§11: consistent
+    status: canonical_lifecycle_metadata
+    boundary_allowed:
+      database_internal: true  # as identity field in table_session
+      dto_api: true  # as identity/context field in TableInventoryAccountingProjection
+      operator_surface: false  # not rendered as a result value
+      future_reserved: false
+    drift: false
+    required_patch: none
+
+  - term: session_scope
+    canonical_definition: >
+      Canonical and exclusive aggregation boundary for telemetry_derived_drop_estimate_cents.
+      occurred_at >= opened_at AND occurred_at < COALESCE(closed_at, NOW()).
+      Gaming-day scope is explicitly forbidden for this field.
+    artifact_usage:
+      ADR-061_D1: canonical and exclusive; gaming-day scope forbidden
+      ADR-061_D2: frozen predicate
+      Classification_YAML: resolved 2026-05-27
+      Scaffold_§4: frozen predicate
+    status: canonical_exclusive_scope
+    drift: false
+    required_patch: none
+
+  - term: source_authority
+    canonical_definition: >
+      Object carrying origin metadata for each significant input.
+      Authoritative shape (ADR-060 D3):
+        drop: 'telemetry_derived_estimate' | 'none'
+        snapshots: 'table_inventory_snapshot'
+        fills: 'table_fill'
+        credits: 'table_credit'
+      No 'inventory' key may exist.
+    artifact_usage:
+      ADR-059_D3: "defines source_authority.inventory — SUPERSEDED by ADR-060 D3"
+      ADR-060_D3: corrects to source_authority.snapshots; explicitly supersedes ADR-059 D3
+      Acceptance_test: requires snapshots key; inventory key must be absent
+    status: canonical_corrected_shape
+    boundary_allowed:
+      database_internal: false
+      dto_api: true  # required on every TableInventoryAccountingProjection
+      operator_surface: false
+      future_reserved: false
+    drift: true
+    drift_severity: P1
+    conflicting_artifacts:
+      - ADR-059 D3 still defines source_authority.inventory key (wrong)
+      - ADR-060 D3 corrects to source_authority.snapshots (right)
+      - ADR-059 D3 not inline-amended to reflect this correction
+    required_patch: >
+      ADR-059 D3 source_authority TypeScript interface block: replace
+      "inventory: 'table_inventory_snapshot'" with "snapshots: 'table_inventory_snapshot'".
+      Add inline comment: "// KEY AMENDED: 'inventory' → 'snapshots' per ADR-060 D3."
+      Add section header note: "D3 source_authority shape is amended by ADR-060 D3.
+      The inventory key no longer exists; the authoritative key is snapshots."
+
+  - term: custody_status
+    canonical_definition: >
+      Axis declaring whether value is custody-final.
+      Always 'non_custody_estimate' in this slice.
+      'external_custody_authoritative' is unreachable without external integration.
+      input_completeness = complete never upgrades custody_status.
+    artifact_usage:
+      UL_Baseline: two-axis invariant; non_custody_estimate always
+      Classification_YAML: semantic_invariant; non_custody_estimate always
+      ADR-059_D3: always non_custody_estimate in this slice
+    status: canonical
+    boundary_allowed:
+      database_internal: true
+      dto_api: true
+      operator_surface: false
+      future_reserved: false
+    drift: false
+    required_patch: none
+
+  - term: input_completeness
+    canonical_definition: >
+      UL Baseline field name for completeness axis. Structural naming diverges from
+      ADR-059 D3 which uses completeness.status with three values (complete/partial/integrity_failure).
+      ADR-059 D3 is the authoritative DTO contract.
+    artifact_usage:
+      UL_Baseline: "top-level field input_completeness; values: complete | partial only (P2 gap)"
+      ADR-059_D3: "nested as completeness.status; values: complete | partial | integrity_failure"
+    status: ambiguous_needs_patch
+    drift: true
+    drift_severity: P2
+    conflicting_artifacts:
+      - UL Baseline uses flat field name input_completeness with only two values
+      - ADR-059 D3 nests as completeness.status with three values
+    required_patch: >
+      UL Baseline completeness envelope table: rename input_completeness → completeness.status;
+      add integrity_failure as third allowed value.
+
+  - term: missing_inputs
+    canonical_definition: >
+      Array of absent inputs. Only ['drop_estimate'] is a valid normal missing-inputs value.
+      opening_inventory_cents and closing_inventory_cents are NEVER listed here;
+      their absence is represented in integrity_issues.
+    artifact_usage:
+      UL_Baseline: "valid entries: ['drop_estimate'] only; opener/closer absence → integrity_issues"
+      Classification_YAML: missing_inputs covers only drop_estimate
+      ADR-059_D3: ReadonlyArray<'drop_estimate'>; canonical
+      ADR-059_D4: inventory_only path missing_inputs = ['drop_estimate']
+    status: canonical
+    drift: false
+    required_patch: none
+
+  - term: included_inputs
+    canonical_definition: >
+      Array of successfully resolved inputs in canonical order.
+      Frozen literal values per ADR-059 D4:
+      telemetry_drop_formula: ['opening_inventory', 'closing_inventory', 'fills', 'credits', 'telemetry_drop_estimate']
+      inventory_only: ['opening_inventory', 'closing_inventory', 'fills', 'credits']
+      integrity_failure: deterministic subset of resolved inputs
+    artifact_usage:
+      ADR-059_D4: frozen literals; no conflicts
+    status: canonical_frozen_literals
+    drift: false
+    required_patch: none
+
+# ─────────────────────────────────────────────────────────────────
+# SECTION 3 — SEMANTIC CRACK REGISTER
+# ─────────────────────────────────────────────────────────────────
+semantic_crack_register:
+
+  - crack_id: CRACK-001
+    severity: P1
+    term: "Estimated Win/Loss (surface label)"
+    artifacts:
+      - docs/issues/table-inventory-accounting-canon/planning/TABLE_INVENTORY_ACCOUNTING_UBIQUITOUS_LANGUAGE_BASELINE.md
+      - docs/issues/table-inventory-accounting-canon/planning/FIB-H-TIA-CANON-001-classification.yaml
+    conflicting_wording: |
+      UL Baseline §Surface rendering rules — projected win/loss state block:
+        "Estimated Win/Loss: $X    ← acceptable alternative label"
+      Classification YAML allowed_surface_labels:
+        - Projected Win/Loss
+        - Estimated Win/Loss   ← present
+        - Partial Table Result
+    canonical_wording: |
+      ADR-060 D4 forbidden_surface_labels:
+        "Estimated Win/Loss  ← removed from allowed list; ambiguous; use 'Projected Win/Loss' only"
+    required_patch: |
+      (1) UL Baseline §Surface rendering rules — projected win/loss state block:
+          Delete: "Estimated Win/Loss: $X    ← acceptable alternative label"
+          Add: "Estimated Win/Loss is forbidden — ADR-060 D4 removed it from the allowed
+               list as ambiguous. Use Projected Win/Loss only."
+      (2) Classification YAML allowed_surface_labels:
+          Remove "Estimated Win/Loss" entry.
+          Add forbidden_note: "Estimated Win/Loss removed per ADR-060 D4 — ambiguous;
+          Projected Win/Loss is the sole allowed label for telemetry_drop_formula path."
+    downstream_risk: >
+      A PRD or EXEC-SPEC reading the UL Baseline as authoritative will permit "Estimated Win/Loss"
+      on operator surfaces — a direct ADR-060 D4 violation. Acceptance test TIA-CANON-FORBIDDEN-LABELS
+      will fail. Operator surfaces showing "Estimated Win/Loss" create a labeling inconsistency
+      that survives into production if not patched before PRD.
+
+  - crack_id: CRACK-002
+    severity: P1
+    term: source_authority.inventory (DTO key)
+    artifacts:
+      - docs/80-adrs/ADR-059-table-inventory-accounting-canon-ownership-and-formula.md
+    conflicting_wording: |
+      ADR-059 D3 TableInventoryAccountingProjection interface:
+        source_authority: {
+          drop:      'telemetry_derived_estimate' | 'none'
+          inventory: 'table_inventory_snapshot'    ← WRONG KEY
+          fills:     'table_fill'
+          credits:   'table_credit'
+        }
+    canonical_wording: |
+      ADR-060 D3 (authoritative shape — explicitly supersedes ADR-059 D3):
+        source_authority: {
+          drop:      'telemetry_derived_estimate' | 'none'
+          snapshots: 'table_inventory_snapshot'    ← CORRECT KEY
+          fills:     'table_fill'
+          credits:   'table_credit'
+        }
+      Acceptance test: "No source_authority.inventory key may exist."
+    required_patch: |
+      ADR-059 D3 source_authority TypeScript interface block:
+        Replace: inventory: 'table_inventory_snapshot'
+        With:    snapshots: 'table_inventory_snapshot'
+      Add inline comment: // KEY AMENDED: 'inventory' → 'snapshots' per ADR-060 D3.
+      Add section header note: "D3 source_authority shape is amended by ADR-060 D3.
+      The 'inventory' key no longer exists; the authoritative key is 'snapshots'.
+      ADR-060 D3 is the governing definition."
+    downstream_risk: >
+      Implementor reading ADR-059 as the canonical DTO spec produces source_authority.inventory
+      in every API response. TIA-CANON-SOURCE-AUTHORITY-SHAPE acceptance test fails.
+      Any downstream consumer destructuring source_authority.snapshots receives undefined.
+      This is a silent DTO shape error that only surfaces at integration test time.
+
+  - crack_id: CRACK-003
+    severity: P2
+    term: estimated_drop_cents (status classification)
+    artifacts:
+      - docs/issues/table-inventory-accounting-canon/planning/FIB-H-TIA-CANON-001-classification.yaml
+    conflicting_wording: |
+      Classification YAML drop_term_status.estimated_drop_cents:
+        status: acceptable_with_label
+        reason: "System-estimated value... ADR-053 compliant if labeled estimated/partial."
+    canonical_wording: |
+      ADR-060 D1: "estimated_drop_cents — Deprecated alias — transitional only.
+        Do not introduce in new code, migrations, or API contracts."
+      ADR-060 D4: listed under forbidden field/variable names at DTO/API/surface boundary.
+    required_patch: |
+      Classification YAML drop_term_status.estimated_drop_cents:
+        Change status: acceptable_with_label → deprecated_alias_transitional
+        Add note: "Forbidden at DTO/API/surface boundary per ADR-060 D1/D4.
+                   Legacy/implementation-local occurrences must be mapped to
+                   telemetry_derived_drop_estimate_cents before crossing any boundary."
+    downstream_risk: >
+      PRD author reading Classification YAML may accept estimated_drop_cents at an API boundary,
+      believing it is compliant if labeled. Silently introduces a non-canonical field name that
+      ADR-060 D4 forbids. Creates a naming violation that passes visual review but fails
+      the TIA-CANON-LEGACY-NAME-BOUNDARY acceptance test.
+
+  - crack_id: CRACK-004
+    severity: P2
+    term: RATED_ADJUSTMENT (telemetry kind — exclusion coverage)
+    artifacts:
+      - docs/issues/table-inventory-accounting-canon/planning/TABLE_INVENTORY_ACCOUNTING_UBIQUITOUS_LANGUAGE_BASELINE.md
+      - docs/issues/table-inventory-accounting-canon/planning/FIB-H-TIA-CANON-001-classification.yaml
+      - docs/01-scaffolds/SCAFFOLD-TABLE-INVENTORY-ACCOUNTING-CANON.md
+    conflicting_wording: |
+      UL Baseline: silent on RATED_ADJUSTMENT; no exclusion statement in canonical drop taxonomy table.
+      Classification YAML: silent; open_question_L telemetry source resolution does not name it.
+      Scaffold §4 predicate comment: "Column name telemetry_kind verified against DDL" —
+        no note that RATED_ADJUSTMENT is intentionally absent.
+    canonical_wording: |
+      ADR-060 D2: "RATED_ADJUSTMENT is explicitly excluded from the canon. This exclusion
+        is semantic, not a claim that the value is absent from the current database schema.
+        Current legacy/shift-metrics paths may accept or aggregate RATED_ADJUSTMENT."
+      ADR-061 D2: "RATED_ADJUSTMENT is intentionally absent from this predicate.
+        Its absence is a canonical exemplar decision, not an assertion that legacy/current
+        schema paths cannot contain that value."
+    required_patch: |
+      (1) UL Baseline canonical drop taxonomy table: add row:
+            term: RATED_ADJUSTMENT
+            meaning: Legacy/current adjustment kind; non-canonical for telemetry_derived_drop_estimate_cents
+            amount_known: N/A
+            authority_posture: excluded by semantic decision; may exist in legacy paths
+            current_pt2_scope: Excluded — must not contribute to canonical session-scoped SUM (ADR-060 D2)
+      (2) Classification YAML open_question_L_telemetry_source.resolution: append sentence:
+            "RATED_ADJUSTMENT rows are excluded by semantic decision (ADR-060 D2), not by schema
+             absence. Legacy shift-metrics paths may contain RATED_ADJUSTMENT; they must not be
+             copied into TableInventoryAccounting."
+      (3) Scaffold §4 telemetry predicate block: add inline comment after kind IN clause:
+            "-- RATED_ADJUSTMENT intentionally excluded per ADR-060 D2.
+             -- Exclusion is semantic (canonical decision), not structural (schema does allow it).
+             -- Do not add RATED_ADJUSTMENT here without an ADR/FIB amendment."
+    downstream_risk: >
+      Implementor reading only UL Baseline or Scaffold will see a predicate with no RATED_ADJUSTMENT
+      exclusion rationale. If a legacy path or shift-metrics RPC includes RATED_ADJUSTMENT in its
+      aggregation, it may appear "natural" to include it in the new service module.
+      TIA-CANON-RATED-ADJUSTMENT-EXCLUSION acceptance test would catch this, but only if that test
+      is written — which requires RATED_ADJUSTMENT to be surfaced in the PRD acceptance criteria.
+
+  - crack_id: CRACK-005
+    severity: P2
+    term: input_completeness / completeness.status (field naming and enum width)
+    artifacts:
+      - docs/issues/table-inventory-accounting-canon/planning/TABLE_INVENTORY_ACCOUNTING_UBIQUITOUS_LANGUAGE_BASELINE.md
+    conflicting_wording: |
+      UL Baseline completeness envelope table:
+        Field: input_completeness
+        Meaning: "Whether all PT-2 expected operational inputs are present (complete / partial).
+                  Only applies when opener and closer are resolvable."
+        (No mention of integrity_failure as a third status value.)
+    canonical_wording: |
+      ADR-059 D3 completeness object:
+        status: 'complete' | 'partial' | 'integrity_failure'
+      (Three values; nested under completeness object, not a top-level field.)
+    required_patch: |
+      UL Baseline completeness envelope table:
+        Rename field: input_completeness → completeness.status
+        Add integrity_failure as third allowed value with note:
+          "active only when integrity_issues is non-empty; suppresses both result fields;
+           mutually exclusive with input_completeness=partial."
+    downstream_risk: >
+      Surface implementor reading the UL Baseline may build a flat input_completeness field
+      with only two values, missing the DTO nesting structure and integrity_failure variant
+      needed for the integrity-disclosure render path. The integrity-failure disclosure path
+      silently degrades to rendering "Partial Table Result" instead of the correct suppression path.
+
+# ─────────────────────────────────────────────────────────────────
+# SECTION 4 — FORBIDDEN SYNONYM REGISTER
+# ─────────────────────────────────────────────────────────────────
+forbidden_synonym_register:
+
+  field_names_forbidden_at_dto_api_surface:
+    - name: estimated_drop_buyins_cents
+      category: non_canonical_field_name
+      why: implies drop amount; underlying data valid but name non-canonical
+      notes: legacy only; delete or rename before exemplar acceptance
+    - name: estimated_drop_cents
+      category: deprecated_alias
+      why: ambiguous; does not declare telemetry derivation or non-custody posture
+      notes: transitional only; forbidden at DTO/API/surface per ADR-060 D4
+    - name: running_drop_cents
+      category: forbidden
+      why: implies live custody amount
+    - name: drop_activity_cents
+      category: forbidden
+      why: implies an amount from a posture-only signal
+    - name: projected_drop_from_buyins_cents
+      category: forbidden
+      why: non-canonical name pattern
+    - name: recorded_operational_drop_cents
+      category: tombstoned
+      why: reads too close to "posted drop"; implies custody connotation
+    - name: drop_cents
+      category: forbidden
+      why: generic; ambiguous authority posture
+    - name: win_loss_inventory_cents
+      category: legacy_p0_suppression
+      why: dashboard-local; non-canonical formula; split-brain source
+      notes: must be suppressed when exemplar ships; not merely deprecated
+    - name: win_loss_estimated_cents
+      category: legacy_p0_suppression
+      why: dashboard-local; non-canonical formula
+      notes: must be suppressed when exemplar ships
+    - name: win_loss_estimated_total_cents
+      category: legacy_p0_suppression
+      why: dashboard-local aggregate
+      notes: must be suppressed when exemplar ships
+    - name: source_authority.inventory
+      category: superseded_dto_key
+      why: replaced by source_authority.snapshots per ADR-060 D3
+      notes: must never appear in a TableInventoryAccountingProjection response
+
+  surface_labels_forbidden:
+    - label: "Estimated Win/Loss"
+      why: removed from allowed list by ADR-060 D4; ambiguous
+    - label: "Win/Loss"
+      qualifier: unqualified
+      why: reserved for final_table_win_loss_cents only; unreachable in this slice
+    - label: "Final Win/Loss"
+      why: requires external custody authority
+    - label: "Total Drop"
+      why: implies finalized drop total; ADR-053 violation
+    - label: "Posted Drop"
+      why: implies posting/finalization
+    - label: "Posted Drop Amount"
+      why: implies posting/finalization
+    - label: "Final Drop"
+      why: implies finality
+    - label: "Settled Result"
+      why: implies settlement
+    - label: "Reconciled Result"
+      why: implies reconciliation finality
+    - label: "Running Drop: $X"
+      why: forbidden per UL Baseline surface rendering rules
+    - label: "Estimated Drop: $X"
+      why: forbidden per UL Baseline surface rendering rules
+    - label: "Drop Total: $X"
+      why: forbidden per UL Baseline surface rendering rules
+
+# ─────────────────────────────────────────────────────────────────
+# SECTION 5 — ACCEPTANCE-TEST REQUIREMENTS
+# ─────────────────────────────────────────────────────────────────
+acceptance_test_requirements:
+
+  - test_id: TIA-CANON-RATED-ADJUSTMENT-EXCLUSION
+    authority:
+      - ADR-060 D2
+      - ADR-061 D2
+    setup:
+      - Create a table session with valid opener/closer/fill/credit inputs
+      - Insert within-session-window table_buyin_telemetry rows:
+          - telemetry_kind: RATED_BUYIN
+            amount_cents: 10000
+          - telemetry_kind: GRIND_BUYIN
+            amount_cents: 5000
+          - telemetry_kind: RATED_ADJUSTMENT
+            amount_cents: 999999
+    expected:
+      telemetry_derived_drop_estimate_cents: 15000
+      drop_estimate_state: present
+      calculation_kind: telemetry_drop_formula
+      projected_table_win_loss_cents: uses_15000_only  # not 1014999
+      RATED_ADJUSTMENT_effect: none  # zero effect on any canonical DTO field
+      completeness_status: complete
+      missing_inputs: []
+
+  - test_id: TIA-CANON-NULL-VS-ZERO
+    authority:
+      - ADR-059 D2
+      - ADR-061 D6
+    cases:
+      - case: A
+        description: No RATED_BUYIN or GRIND_BUYIN rows within session window
+        expected:
+          telemetry_derived_drop_estimate_cents: null
+          drop_estimate_state: none_for_session
+          calculation_kind: inventory_only
+          projected_table_win_loss_cents: null
+          partial_table_result_cents: set  # non-null
+      - case: B
+        description: RATED_BUYIN and GRIND_BUYIN rows exist; all amount_cents = 0
+        expected:
+          telemetry_derived_drop_estimate_cents: 0
+          drop_estimate_state: present
+          calculation_kind: telemetry_drop_formula
+          projected_table_win_loss_cents: set  # may be negative
+    invariant: no COALESCE path converts null to 0 or 0 to null anywhere in TableInventoryAccounting
+
+  - test_id: TIA-CANON-SESSION-SCOPE-ONLY
+    authority:
+      - ADR-061 D1
+      - ADR-061 D2
+      - ADR-061 D4
+    setup:
+      - Same table, same gaming day, two sequential table sessions (A and B)
+      - Insert RATED_BUYIN telemetry within session A window
+      - Insert RATED_BUYIN telemetry within session B window
+    expected:
+      session_A_projection: includes only rows where occurred_at in [A.opened_at, COALESCE(A.closed_at, NOW()))
+      session_B_projection: includes only rows where occurred_at in [B.opened_at, COALESCE(B.closed_at, NOW()))
+      gaming_day_as_predicate: forbidden  # gaming_day must not appear in SUM WHERE clause
+      cross_session_contamination: test_failure
+
+  - test_id: TIA-CANON-FORBIDDEN-LABELS
+    authority:
+      - ADR-060 D4
+    expected:
+      telemetry_drop_formula_label: "Projected Win/Loss"  # only; no other label emitted
+      inventory_only_label: "Partial Table Result"  # only
+      integrity_failure_label: none  # integrity disclosure only; no result label
+      forbidden_labels_absent:
+        - "Estimated Win/Loss"
+        - "Win/Loss"
+        - "Total Drop"
+        - "Posted Drop"
+        - "Final Win/Loss"
+        - "Settled Result"
+        - "Reconciled Result"
+      codebase_grep:
+        description: grep of all active BFF/API/component files for forbidden label strings
+        expected_result: zero_matches  # excluding test fixtures
+
+  - test_id: TIA-CANON-SOURCE-AUTHORITY-SHAPE
+    authority:
+      - ADR-060 D3
+    expected_shape:
+      source_authority:
+        drop: "'telemetry_derived_estimate' | 'none'"
+        snapshots: table_inventory_snapshot
+        fills: table_fill
+        credits: table_credit
+    invariants:
+      - source_authority.inventory key must be ABSENT (its presence is a test failure)
+      - "drop: 'telemetry_derived_estimate'" when drop_estimate_state = present
+      - "drop: 'none'" when drop_estimate_state = none_for_session
+      - snapshots/fills/credits must always be set to literal source table names; never null
+
+  - test_id: TIA-CANON-INTEGRITY-FAILURE-SUPPRESSION
+    authority:
+      - ADR-059 D5
+    setup:
+      - Session with opening_inventory_cents unresolvable (null after dual-path lookup)
+    expected:
+      projected_table_win_loss_cents: null
+      partial_table_result_cents: null
+      integrity_issues: [missing_opening_inventory_snapshot]
+      calculation_kind: integrity_failure
+      operator_surface_label: none  # integrity disclosure only
+      forbidden_on_surface: "Partial Table Result"  # must NOT appear
+      operational_diagnostic: required  # structured log or equivalent; silent disclosure is insufficient
+
+  - test_id: TIA-CANON-LEGACY-NAME-BOUNDARY
+    authority:
+      - ADR-060 D4
+      - Classification YAML legacy_stream_disposition
+    expected:
+      - estimated_drop_buyins_cents: absent from all TableInventoryAccountingProjection responses
+      - win_loss_inventory_cents: absent from all active operator-visible responses after exemplar acceptance
+      - win_loss_estimated_cents: absent from all active operator-visible responses after exemplar acceptance
+      - win_loss_estimated_total_cents: absent from all active operator-visible responses after exemplar acceptance
+      - source_authority.inventory: absent from all API responses
+    verification:
+      grep_active_bff_handlers_for_legacy_fields: zero_results  # excluding archived/suppressed surfaces
+
+# ─────────────────────────────────────────────────────────────────
+# SECTION 6 — FINAL RECOMMENDATION
+# ─────────────────────────────────────────────────────────────────
+final_recommendation:
+  may_proceed_to_prd: conditionally_yes
+  condition: two P1 patches must be committed before PRD authorization
+
+  patches_required_before_prd:
+
+    - patch_id: PATCH-1
+      crack_ref: CRACK-001
+      severity: P1
+      blocking: true
+      description: Remove "Estimated Win/Loss" from UL Baseline and Classification YAML
+      changes:
+        - file: docs/issues/table-inventory-accounting-canon/planning/TABLE_INVENTORY_ACCOUNTING_UBIQUITOUS_LANGUAGE_BASELINE.md
+          section: "§Surface rendering rules — projected win/loss state block"
+          action: >
+            Delete: "Estimated Win/Loss: $X    ← acceptable alternative label"
+            Add: "Estimated Win/Loss is forbidden — ADR-060 D4 removed it from the allowed
+                 list as ambiguous. Use Projected Win/Loss only."
+        - file: docs/issues/table-inventory-accounting-canon/planning/FIB-H-TIA-CANON-001-classification.yaml
+          section: allowed_surface_labels
+          action: >
+            Remove "Estimated Win/Loss" entry.
+            Add forbidden_note: "Estimated Win/Loss removed per ADR-060 D4 — ambiguous;
+            Projected Win/Loss is the sole allowed label for the telemetry_drop_formula path."
+
+    - patch_id: PATCH-2
+      crack_ref: CRACK-002
+      severity: P1
+      blocking: true
+      description: Inline-amend ADR-059 D3 source_authority block to use 'snapshots' key
+      changes:
+        - file: docs/80-adrs/ADR-059-table-inventory-accounting-canon-ownership-and-formula.md
+          section: D3 — TableInventoryAccountingProjection interface, source_authority block
+          action: >
+            Replace: inventory: 'table_inventory_snapshot'
+            With:    snapshots: 'table_inventory_snapshot'
+            Add inline comment: // KEY AMENDED: 'inventory' → 'snapshots' per ADR-060 D3.
+            Add section header note: "D3 source_authority shape is amended by ADR-060 D3.
+            The 'inventory' key no longer exists; the authoritative key is 'snapshots'.
+            ADR-060 D3 is the governing definition."
+
+  patches_recommended_before_prd:
+
+    - patch_id: PATCH-3
+      crack_ref: CRACK-003
+      severity: P2
+      blocking: false
+      description: >
+        Update Classification YAML estimated_drop_cents status from acceptable_with_label
+        to deprecated_alias_transitional.
+      changes:
+        - file: docs/issues/table-inventory-accounting-canon/planning/FIB-H-TIA-CANON-001-classification.yaml
+          section: drop_term_status.estimated_drop_cents
+          action: >
+            status: acceptable_with_label → deprecated_alias_transitional
+            Add note: "Forbidden at DTO/API/surface boundary per ADR-060 D1/D4."
+
+    - patch_id: PATCH-4
+      crack_ref: CRACK-004
+      severity: P2
+      blocking: false
+      description: Add explicit RATED_ADJUSTMENT exclusion statements to baseline artifacts
+      changes:
+        - file: docs/issues/table-inventory-accounting-canon/planning/TABLE_INVENTORY_ACCOUNTING_UBIQUITOUS_LANGUAGE_BASELINE.md
+          section: Canonical drop taxonomy table
+          action: >
+            Add RATED_ADJUSTMENT row: status non-canonical/excluded; note consistent with ADR-060 D2.
+        - file: docs/issues/table-inventory-accounting-canon/planning/FIB-H-TIA-CANON-001-classification.yaml
+          section: open_question_L_telemetry_source.resolution
+          action: >
+            Append: "RATED_ADJUSTMENT rows are excluded by semantic decision (ADR-060 D2),
+            not by schema absence. Do not add without ADR/FIB amendment."
+        - file: docs/01-scaffolds/SCAFFOLD-TABLE-INVENTORY-ACCOUNTING-CANON.md
+          section: §4 Telemetry Aggregation Predicate
+          action: >
+            Add inline comment after telemetry_kind IN clause:
+            "-- RATED_ADJUSTMENT intentionally excluded per ADR-060 D2.
+             -- Semantic exclusion, not structural. Do not add without ADR/FIB amendment."
+
+    - patch_id: PATCH-5
+      crack_ref: CRACK-005
+      severity: P2
+      blocking: false
+      description: >
+        UL Baseline completeness envelope: rename input_completeness → completeness.status;
+        add integrity_failure as third value.
+      changes:
+        - file: docs/issues/table-inventory-accounting-canon/planning/TABLE_INVENTORY_ACCOUNTING_UBIQUITOUS_LANGUAGE_BASELINE.md
+          section: Completeness envelope table
+          action: >
+            Rename field: input_completeness → completeness.status
+            Add integrity_failure as third allowed value:
+              "active only when integrity_issues non-empty; suppresses both result fields;
+               mutually exclusive with completeness.status=partial."
+
+  open_gate_must_be_absorbed_by_prd:
+    gate: dashboard_suppression_gate
+    source: Classification YAML prd_gate_patches
+    severity: P0
+    requirement: >
+      The exemplar PRD must include a verified suppression inventory of every
+      active operator-visible win/loss-like surface, with a classified disposition
+      for each: consume_projection | suppress | outside_exemplar_boundary.
+      Any outside-boundary classification requires evidence that the surface is not
+      an active operator workflow for the exemplar release.
+      Competing visible semantics after exemplar acceptance are a P0 split-brain violation
+      regardless of consumer migration timeline.
+    suppression_targets_p0:
+      - components/pit/hero-win-loss-compact.tsx
+      - components/pit/pit-metrics-table.tsx
+      - components/pit/table-metrics-table.tsx
+      - components/dashboard/analytics-panel.tsx
+      - components/dashboard/casino-summary-card.tsx
+      - "services/table-context/rundown.ts (local win formula)"
+      - "win_loss_inventory_cents, win_loss_estimated_cents, estimated_drop_buyins_cents DTO fields"
+
+  summary:
+    adr_059_ownership_and_formula: clean
+    adr_060_drop_taxonomy: clean  # source_authority key patch required in ADR-059; ADR-060 itself is correct
+    adr_061_session_scope_boundary: clean
+    ul_baseline_classification_yaml_alignment: two_patches_required
+    rated_adjustment_exclusion_adr_level: clean
+    rated_adjustment_exclusion_baseline_level: p2_gap_patch_recommended
+    downstream_prd_exec: none_authored_gate_open
+    verdict: patch_required_before_PRD  # ADR set may be accepted; PRD gate opens after PATCH-1 and PATCH-2

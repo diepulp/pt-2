@@ -47,6 +47,11 @@ const AUTH_CHAIN_ALLOWLIST: Record<string, string> = {
   // Dev-only stubbed server actions — no auth, no RLS, no Supabase calls
   'app/dev/setup/_dev-actions.ts':
     'Dev wizard stubs — mock data only, no real DB or auth',
+  // Dev-only OTP capture route — hard 404 unless NODE_ENV=development AND
+  // ENABLE_DEV_AUTH=true; uses service-role to read auth.one_time_tokens
+  // (Supabase-internal, no RLS path). Not reachable in production.
+  'app/api/dev/otp/route.ts':
+    'Dev-only OTP capture — NODE_ENV+ENABLE_DEV_AUTH gated 404 in prod, service-role for auth.one_time_tokens',
   // Wave 2 outbox internal routes — CRON_SECRET bearer auth (ADR-054 R3).
   // These are relay worker / cron endpoints; no user session exists at call time.
   'app/api/internal/outbox-relay/route.ts':

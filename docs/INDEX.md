@@ -1,6 +1,6 @@
 # PT-2 Documentation Index
 
-**Last Updated**: 2026-04-27
+**Last Updated**: 2026-05-30
 **Taxonomy Version**: 1.4 (ADR-035 Client State Lifecycle, ADR-032 Error Boundaries, ADR-031 Financial Convention, ADR-030 Auth Hardening)
 **Architecture Strategy**: Hybrid Model (HORIZONTAL + VERTICAL)
 **Reference**: [SDLC_TAXONOMY_INVENTORY.md](srn-modularization/SDLC_TAXONOMY_INVENTORY.md)
@@ -73,6 +73,7 @@
 | PRD-024 | Landing Page Overhaul + Start Gateway | Draft | `10-prd/PRD-024-landing-page-start-gateway-v0.md` |
 | PRD-025 | Onboarding v0.1: Tenant Bootstrap & Invites | Proposed | `10-prd/PRD-025-onboarding-bootstrap-invites-v0.md` |
 | PRD-026 | Shift Dashboard v3: Three-Panel Layout | Draft | `10-prd/PRD-026-shift-dashboard-three-panel-layout-v0.md` |
+| PRD-090 | Table Inventory Accounting Canon Exemplar | Draft | `10-prd/PRD-090-table-inventory-accounting-canon-exemplar-v0.md` |
 
 **Purpose**: User stories, acceptance criteria, release goals
 

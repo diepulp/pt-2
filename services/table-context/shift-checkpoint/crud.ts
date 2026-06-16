@@ -139,20 +139,19 @@ export async function computeDelta(
   //   win_loss_inventory_cents, fills_total_cents, credits_total_cents,
   //   estimated_drop_buyins_cents, drop_custody_present, etc.
   const metrics = metricsData ?? [];
+  // win_loss_inventory_cents and estimated_drop_buyins_cents suppressed per PRD-090 WS5.
+  // TODO-WS4: restore win_loss_cents from TableInventoryAccountingProjection.
   const currentMetrics = {
-    win_loss_cents: metrics.reduce<number | null>((acc, m) => {
-      const winLoss = m.win_loss_inventory_cents;
-      if (winLoss == null || winLoss === 0) return acc;
-      return (acc ?? 0) + winLoss;
-    }, null),
+    win_loss_cents: null as number | null,
     fills_total_cents: metrics.reduce((acc, m) => acc + m.fills_total_cents, 0),
     credits_total_cents: metrics.reduce(
       (acc, m) => acc + m.credits_total_cents,
       0,
     ),
+    // estimated_drop_buyins_cents removed; derive from rated+grind
     drop_total_cents: metrics.reduce<number | null>((acc, m) => {
-      const drop = m.estimated_drop_buyins_cents;
-      if (drop == null || drop === 0) return acc;
+      const drop = m.estimated_drop_rated_cents + m.estimated_drop_grind_cents;
+      if (drop === 0) return acc;
       return (acc ?? 0) + drop;
     }, null),
     tables_active: metrics.length,

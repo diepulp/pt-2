@@ -96,15 +96,10 @@ function TableRow({
             variant="compact"
             label="Win/Loss"
             value={{
-              value: table.win_loss_estimated_cents ?? 0,
+              value: 0,
               type: 'estimated',
               source: 'shift_metrics',
-              completeness: {
-                status:
-                  table.win_loss_estimated_cents == null
-                    ? 'unknown'
-                    : 'complete',
-              },
+              completeness: { status: 'unknown' },
             }}
           />
           <OpeningSourceBadge source={table.opening_source} />

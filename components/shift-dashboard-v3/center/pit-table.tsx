@@ -51,7 +51,7 @@ function PitRow({
           variant="compact"
           label="Win/Loss"
           value={{
-            value: pit.win_loss_estimated_total_cents ?? 0,
+            value: 0,
             type: 'estimated',
             source: 'shift_metrics',
             completeness: { status: 'partial' },

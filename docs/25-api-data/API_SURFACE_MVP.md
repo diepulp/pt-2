@@ -907,6 +907,49 @@ Operational notes:
 - **Rate limit**: 10 req/min per staff.
 - **Observability**: Wraps `rpc_log_table_drop`; triggers `table.drop_removed|delivered` telemetry used by compliance/finance projections.
 
+#### GET /api/v1/table-context/table-sessions/{sessionId}/accounting-projection
+
+**PRD-090 / EXEC-090 WS3** — Canonical `TableInventoryAccounting` read-time projection.
+
+Route params (Zod):
+```ts
+z.object({ sessionId: uuidSchema('session ID') })
+```
+
+Response DTO:
+```ts
+// TableInventoryAccountingProjection with bigint fields serialized as strings.
+// bigint → string encoding is lossless; JSON has no native bigint type.
+{
+  table_session_id: string;
+  casino_id: string;
+  calculation_kind: 'telemetry_drop_formula' | 'inventory_only' | 'integrity_failure';
+  projected_table_win_loss_cents: string | null;   // SRL: derived_surface_value; non-null only when telemetry_drop_formula
+  partial_table_result_cents: string | null;        // SRL: derived_surface_value; non-null only when inventory_only
+  final_table_win_loss_cents: null;                 // SRL: reserved_null_this_slice — always null
+  telemetry_derived_drop_estimate_cents: string | null; // SRL: telemetry_fact; null ≠ zero (never coalesced)
+  drop_estimate_state: 'present' | 'absent';
+  custody_status: 'non_custody_estimate';           // always — completeness.status never upgrades this
+  completeness: { status: string };
+  source_authority: { drop: string | null; snapshots: string | null; fills: string; credits: string };
+  integrity_issues: string[];
+  request_id: string;
+  derived_at: string;
+}
+```
+
+Surface classification (ADR-041): **Simple Query** — single entity, single bounded context (`TableContextService`), no cross-context aggregation.
+
+Semantic governance: **SRL-TIA-001** — canonical terms in use; no substitutes permitted. `calculation_kind = 'integrity_failure'` is HTTP 200 (valid business state — renders integrity disclosure, not a result label).
+
+Operational notes:
+- **Errors**: `VALIDATION_ERROR` (invalid UUID), `FORBIDDEN` (wrong role), `SESSION_NOT_FOUND` → 404 (also returned for cross-casino `sessionId` — avoids information leak), `INTERNAL_ERROR`.
+- **Auth/RBAC**: `pit_boss` and `admin` only. `dealer` and `cashier` → 403 with no service invocation (ADR-024 authoritative context).
+- **Idempotency**: Read-only; `Idempotency-Key` not required.
+- **Pagination**: Not applicable (single resource projection).
+- **Rate limit**: 60 req/min per staff.
+- **Observability**: `integrity_failure` emits a structured diagnostic via `emitTableInventoryAccountingDiagnostic` (no DB write). ServiceHttpResult metadata traces all requests.
+
 ### cURL sanity
 ```bash
 # list active tables

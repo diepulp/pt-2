@@ -42,6 +42,7 @@ export interface TableRundownReportDTO {
   fills_total_cents: number;
   credits_total_cents: number;
   drop_total_cents: number | null;
+  /** @deprecated WS4-SUPPRESSED (PRD-090): render via TableInventoryAccountingProjection instead. */
   table_win_cents: number | null;
   opening_source: string;
   computation_grade: string;
@@ -65,6 +66,7 @@ export interface TableRundownReportSummaryDTO {
   table_session_id: string;
   gaming_table_id: string;
   gaming_day: string;
+  /** @deprecated WS4-SUPPRESSED (PRD-090): render via TableInventoryAccountingProjection instead. */
   table_win_cents: number | null;
   computation_grade: string;
   has_late_events: boolean;

@@ -542,9 +542,11 @@ describe('assembleShiftReport', () => {
       0,
     );
 
-    // Per-table sums match the individual rows
-    // table1: 30000+5000+2000=37000 * 100, table2: 25000+4000+1000=30000 * 100
-    expect(tableDropSum).toBe(37000_00 + 30000_00);
+    // Per-table sums match the individual rows. estimated_drop_buyins_cents was
+    // suppressed from the DTO (PRD-090 WS5, SRL-TIA-001), so dropTotal is now
+    // rated + grind only (buyins excluded).
+    // table1: 30000+5000=35000 * 100, table2: 25000+4000=29000 * 100
+    expect(tableDropSum).toBe(35000_00 + 29000_00);
     expect(tableFillsSum).toBe(10000_00 + 8000_00);
     expect(tableCreditsSum).toBe(5000_00 + 3000_00);
   });
@@ -567,7 +569,7 @@ describe('assembleShiftReport', () => {
     expect(table2?.cashObsCount).toBe(0);
   });
 
-  it('computes hold % correctly', async () => {
+  it('suppresses hold % while win_loss is unavailable (PRD-090 WS5)', async () => {
     const supabase = makeSupabaseDouble();
     configureHappyPath();
 
@@ -575,9 +577,10 @@ describe('assembleShiftReport', () => {
     const tables = report.financialSummary!.tables;
 
     const table1 = tables.find((t) => t.tableId === 'table-1')!;
-    // win_loss_inventory_cents = 7000_00, drop = 37000_00
-    // hold% = 7000_00 / 37000_00 * 100 ≈ 18.92
-    expect(table1.holdPercent).toBeCloseTo(18.92, 1);
+    // win_loss_inventory_cents was suppressed (PRD-090 WS5, SRL-TIA-001), so the
+    // assembler can no longer derive hold % and reports null. Restoration is
+    // pending the TableInventoryAccountingProjection wiring (TODO-WS4).
+    expect(table1.holdPercent).toBeNull();
   });
 
   it('returns null hold % when win_loss is null', async () => {

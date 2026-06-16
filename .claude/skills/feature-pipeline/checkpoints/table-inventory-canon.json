@@ -16,7 +16,7 @@
     "scaffold-approved": { "passed": true,  "timestamp": "2026-05-27T00:00:00Z" },
     "design-approved":   { "passed": true,  "timestamp": "2026-05-27T00:00:00Z" },
     "sec-approved":      { "passed": true,  "timestamp": "2026-05-27T00:00:00Z" },
-    "adr-frozen":        { "passed": true,  "timestamp": "2026-05-27T00:00:00Z" },
+    "adr-frozen":        { "passed": false, "timestamp": null },
     "prd-approved":      { "passed": false, "timestamp": null }
   },
   "artifacts": {
@@ -24,7 +24,7 @@
     "scaffold": "docs/01-scaffolds/SCAFFOLD-TABLE-INVENTORY-ACCOUNTING-CANON.md",
     "rfc": "docs/02-design/RFC-007-table-inventory-accounting-canonization.md",
     "sec_note": "docs/30-security/SEC-NOTE-TIA-CANON.md",
-    "adr": "docs/80-adrs/ADR-059-table-inventory-accounting-canon-ownership-and-formula.md docs/80-adrs/ADR-060-drop-taxonomy-and-naming-standard.md docs/80-adrs/ADR-061-session-scope-aggregation-boundary.md",
+    "adr": null,
     "prd": null
   },
   "feature_classification": {
@@ -90,5 +90,5 @@
   },
   "branch": null,
   "working_directory": null,
-  "timestamp": "2026-05-27T00:00:00Z"
+  "timestamp": "2026-05-28T00:00:00Z"
 }

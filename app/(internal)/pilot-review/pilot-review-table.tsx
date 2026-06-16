@@ -162,23 +162,19 @@ export function PilotReviewTable({ requests }: Props) {
                   variant="outline"
                   size="sm"
                   className="h-7 gap-1.5 border-accent/40 bg-accent/5 text-xs font-semibold uppercase tracking-wider text-accent hover:border-accent/60 hover:bg-accent/10"
-                  disabled={isRowPending}
+                  disabled={isPending}
                   onClick={() => handleApprove(req.id)}
                 >
-                  {isRowPending && pendingId === req.id
-                    ? 'Approving…'
-                    : 'Approve'}
+                  {isRowPending ? 'Approving…' : 'Approve'}
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider text-destructive hover:text-destructive"
-                  disabled={isRowPending}
+                  disabled={isPending}
                   onClick={() => handleReject(req.id)}
                 >
-                  {isRowPending && pendingId === req.id
-                    ? 'Rejecting…'
-                    : 'Reject'}
+                  {isRowPending ? 'Rejecting…' : 'Reject'}
                 </Button>
               </div>
             </CardContent>

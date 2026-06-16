@@ -209,7 +209,7 @@ export function CasinoSummaryCard({ data, isLoading }: CasinoSummaryCardProps) {
           {/* Win/Loss (Inventory) */}
           <KpiCard
             title="Win/Loss (Inventory)"
-            value={formatCents(data.win_loss_inventory_total_cents)}
+            value={'Unavailable'}
             subtitle="Based on snapshots"
             accentColor="bg-accent"
           />
@@ -217,7 +217,7 @@ export function CasinoSummaryCard({ data, isLoading }: CasinoSummaryCardProps) {
           {/* Win/Loss (Estimated) */}
           <KpiCard
             title="Win/Loss (Estimated)"
-            value={formatCents(data.win_loss_estimated_total_cents)}
+            value={'Unavailable'}
             subtitle="Based on telemetry"
             accentColor="bg-emerald-500"
           />

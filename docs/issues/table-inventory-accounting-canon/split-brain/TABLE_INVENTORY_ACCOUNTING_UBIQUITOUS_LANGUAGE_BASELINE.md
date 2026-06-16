@@ -55,6 +55,7 @@ No drop input of any kind → `partial_table_result_cents` only (labeled "Partia
 | `observed_buyin_activity_cents` | Cash-in / buy-in activity observed by PT-2. This is **not** drop. | Yes — but amount is buy-in activity, not drop | Telemetry | Allowed |
 | `drop_box_removed_event` | Custody event showing box movement/removal. No amount implied. | No | Custody event, no amount | Terminology allowed only as a no-amount custody/posture event. Not an input to `projected_table_win_loss_cents`, not authored by this slice, and not evidence of custody-authoritative drop amount. |
 | `telemetry_derived_drop_estimate_cents` | Non-custody, non-final drop-like estimate derived from PT-2 operational telemetry. Input to `projected_table_win_loss_cents` only. Must carry `custody_status = non_custody_estimate`. **Concrete source:** session-scoped aggregate of `table_buyin_telemetry` (RATED_BUYIN + GRIND_BUYIN), filtered to session window. `source_authority.drop = 'telemetry_derived_estimate'`. | Yes — estimated, not counted | Telemetry / operational estimate (`source=table_buyin_telemetry_session_aggregate`) | **Preferred** (this slice) |
+| `RATED_ADJUSTMENT` | Legacy/current adjustment kind in `table_buyin_telemetry`. Non-canonical for `telemetry_derived_drop_estimate_cents`. | N/A | Excluded by semantic decision; may exist in legacy paths | **Excluded** — must not contribute to canonical session-scoped SUM (ADR-060 D2). Exclusion is semantic, not structural. Do not add without ADR/FIB amendment. |
 | `posted_drop_amount_cents` | Manually posted drop amount entered after count/accounting activity | Yes | Manual posted count proxy | **Dangerous** — implies a finalized, posted accounting result. Unless sourced from an external count-room or custody authority, this term creates false-authority semantics and is non-compliant with ADR-053. Avoid for PT-2-internal use. |
 | `counted_drop_amount_cents` | Count-room verified drop amount | Yes | Count-room verified custody fact | Future |
 | `final_reconciled_drop_amount_cents` | Final accounting/reconciled drop. Out of PT-2 pilot authority. | Yes | External accounting finality | Out of scope |
@@ -140,8 +141,9 @@ Drop Total: $X      ← forbidden
 
 ```text
 Projected Win/Loss: $X    ← required label when all PT-2 operational inputs are present
-Estimated Win/Loss: $X    ← acceptable alternative label
 ```
+
+`Estimated Win/Loss` is forbidden — ADR-060 D4 removed it from the allowed list as ambiguous. Use `Projected Win/Loss` only.
 
 Must carry the completeness envelope (see below). Must not use "Win/Loss", "Final Win/Loss", "Total Drop", "Posted Drop", "Settled Result", or "Reconciled Result".
 
@@ -170,8 +172,7 @@ Final Win/Loss
 Win/Loss
 ```
 
-The only in-scope labels are "Projected Win/Loss", "Estimated Win/Loss",
-and "Partial Table Result".
+The only in-scope labels are "Projected Win/Loss" and "Partial Table Result".
 
 ---
 
@@ -181,14 +182,14 @@ Every table-result value rendered at a surface boundary must carry:
 
 | Field | Meaning |
 |---|---|
-| `input_completeness` | Whether all PT-2 expected operational inputs are present (`complete` / `partial`). Only applies when opener and closer are resolvable. |
+| `completeness.status` | Whether all PT-2 expected operational inputs are present (`complete` / `partial` / `integrity_failure`). `integrity_failure` is active only when `integrity_issues` is non-empty; suppresses both result fields; mutually exclusive with `completeness.status=partial`. Only `complete` and `partial` apply when opener and closer are resolvable. |
 | `custody_status` | Whether the value is custody-authoritative (`non_custody_estimate` / `external_custody_authoritative`) |
-| `missing_inputs` | Explicit list of absent inputs when `input_completeness = partial`. Valid entries: `['drop_estimate']` only. Opener and closer are never valid entries here — their absence is a lifecycle failure, not a completeness gap. |
-| `integrity_issues` | Populated when `opening_inventory_cents` or `closing_inventory_cents` is unresolvable from source data (no snapshot linked after all resolution paths exhausted). Valid entries: `'missing_opening_inventory_snapshot'`, `'missing_closing_inventory_snapshot'`. Non-empty suppresses all table-result values. Mutually exclusive with `input_completeness=partial`. Zero opener or closer is a valid explicit count and does NOT populate `integrity_issues`. |
+| `missing_inputs` | Explicit list of absent inputs when `completeness.status = partial`. Valid entries: `['drop_estimate']` only. Opener and closer are never valid entries here — their absence is a lifecycle failure, not a completeness gap. |
+| `integrity_issues` | Populated when `opening_inventory_cents` or `closing_inventory_cents` is unresolvable from source data (no snapshot linked after all resolution paths exhausted). Valid entries: `'missing_opening_inventory_snapshot'`, `'missing_closing_inventory_snapshot'`. Non-empty suppresses all table-result values. Mutually exclusive with `completeness.status=partial`. Zero opener or closer is a valid explicit count and does NOT populate `integrity_issues`. |
 | `calculation_kind` | Which formula path produced the value |
 | `source_authority` | Origin of each significant input |
 
-**Two-axis invariant:** `input_completeness = complete` never changes `custody_status`. A projected table result may be complete relative to PT-2 operational inputs while remaining `non_custody_estimate` and non-final. These two axes are orthogonal and must never be collapsed.
+**Two-axis invariant:** `completeness.status = complete` never changes `custody_status`. A projected table result may be complete relative to PT-2 operational inputs while remaining `non_custody_estimate` and non-final. These two axes are orthogonal and must never be collapsed.
 
 **Lifecycle invariant:** `opening_inventory_cents` and `closing_inventory_cents` are required lifecycle snapshots, not optional completeness inputs. Their absence is not a partial-result state — it is a lifecycle/data-integrity failure that populates `integrity_issues` and suppresses all table-result values. Only `telemetry_derived_drop_estimate_cents` absence is a normal partial-result state.
 
@@ -206,7 +207,7 @@ Win/Loss has two distinct meanings and must not be collapsed.
 - PT-2 operational estimate produced from inventory inputs and a telemetry-derived drop estimate.
 - `custody_status = non_custody_estimate` always.
 - `input_completeness = complete` when all PT-2 operational inputs are present; does not imply custody-final authority.
-- **Surface label:** "Projected Win/Loss" or "Estimated Win/Loss" only.
+- **Surface label:** "Projected Win/Loss" only.
 - Must never use "Win/Loss" (unqualified), "Final Win/Loss", "Total Drop", "Posted Drop", "Settled Result", or "Reconciled Result".
 
 #### `final_table_win_loss_cents`
