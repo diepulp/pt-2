@@ -1,0 +1,71 @@
+# Agent 6 — Loyalty Producers, Reason-Code Vocabulary & Attribution
+
+**Angle:** Upstream producers of the loyalty ledger / balance / outbox — reason-code vocabulary (Vocabulary Overload), actor/player/gaming-day attribution (Attribution Ambiguity), and equal-authority-fact treatment (Authority Ambiguity).
+**Scope:** read-only diagnosis. Repo `pt-2` branch `epson`.
+**Cross-refs:** split-brain-authority fracture-taxonomy.md §2 (Vocabulary Overload, Attribution Ambiguity, Authority Ambiguity); governance-stack.md (SRL/SRM, SIGP severity); remediation-surface.md §2.2 (Loyalty — Propagation + Authority Ambiguity).
+
+---
+
+## 1. Angle Summary
+
+The loyalty ledger (`loyalty_ledger`) is fed by **seven producers across three sinks** — the ledger, the balance cache (`player_loyalty.current_balance`), and the outbox (`loyalty_outbox`) — with **no producer touching all three**. Accrual/redeem/manual/promotion/mid-session write ledger+balance and emit **no outbox**; promo-coupon issue/void emit **outbox only** and write **no ledger** (remediation-surface.md §2.2, confirmed in code below). On top of this structural propagation split, three meaning-layer fractures sit in the producer surface:
+
+1. **Vocabulary Overload** — one term, many meanings: "reward" (mid-session reward / catalog reward / promo coupon / `manual_reward` reason), "comp" (catalog `points_comp` / ad-hoc `redeem` / entitlement coupon), "credit" (`manual_reward` points credit / promo face-value liability / accrual), "points" vs "cents" (loyalty points unit vs `face_value_amount` currency), "theo" (accrual authority `estimated` value vs read-only suggestion preview). **None of these terms is admitted in the SRL** — the only SRL entry is SRL-TIA-001 (`SEMANTIC_RESPONSIBILITY_LAYER.md`, grep found zero loyalty terms). Every loyalty term is **undefined provenance** in the meaning ledger.
+2. **A second, contradictory reason vocabulary** ships in `dtos.ts` and `mid-session-reward.ts`: `MidSessionRewardReason = 'mid_session' | 'session_end' | 'manual_adjustment' | 'correction' | 'promotion'` — and **four of those five are the exact legacy values the enum-expansion migration marked WRITE-PROHIBITED** (`20251213000830:97-101`, `162-173`). The TS builder defaults `p_reason ?? 'mid_session'` (`mid-session-reward.ts:58`), actively minting a deprecated reason into the canonical column.
+3. **Attribution Ambiguity** — `loyalty_ledger` has **no `gaming_day` column** (schema `20251213003000`, confirmed); accrual gaming-day is only inferrable from `created_at` wall-clock, violating the temporal-authority stack (TEMP-002/PRD-027, "never `new Date()`"). And `rpc_issue_mid_session_reward` **still accepts a spoofable `p_staff_id`** parameter written straight to `staff_id` (`adr024_loyalty_rpcs.sql:1048-1056, 1140-1146`) — the exact pattern ADR-040 removed from `rpc_redeem`/`rpc_manual_credit` (`adr040_loyalty_identity_derivation.sql`).
+
+---
+
+## 2. Producer / Reason-Code Matrix
+
+| Producer RPC | Ledger reason / event_type | Sign | Meaning | Attribution captured | Authority class |
+|---|---|---|---|---|---|
+| `rpc_accrue_on_close` (`adr024_loyalty_rpcs.sql:40`) | `base_accrual` | + (≥0) | Deterministic theo×conversion credit on slip close; theo from `policy_snapshot.loyalty` | player (via visit join `:108-112`), casino, rating_slip, visit. **staff_id = NULL** (automated). **No gaming_day.** | **Estimated** (theo-derived). DTO wraps theo `type:'estimated', source:'loyalty.theo'` (`mappers.ts:218-223`). Points themselves treated as hard balance. |
+| `rpc_redeem` (`adr040_..._derivation.sql:24`) | `redeem` | − (`-1*points`) | Comp/points debit (meal, show, ad-hoc). Note required. | player, casino. **actor = derived `app.actor_id`** (ADR-040 hardened, `:57-60,174`). No rating_slip/visit. **No gaming_day.** | **Actual** (hard debit). |
+| `rpc_manual_credit` (`adr040_..._derivation.sql:226`) | `manual_reward` | + | Service-recovery / goodwill credit. Note required. | player, casino, **actor derived** (`:254-257,334`). **No gaming_day.** | **Actual** (operator-authored). |
+| `rpc_apply_promotion` (`adr024_loyalty_rpcs.sql:656`) | `promotion` | + | Campaign overlay bonus points on a slip. | player, casino, rating_slip, visit, `campaign_id`. **staff_id = NULL** (no actor). **No gaming_day.** | **Actual** (bonus), but actor unattributed. |
+| `rpc_issue_mid_session_reward` (`adr024_loyalty_rpcs.sql:1048`) | `p_reason` param → **defaults `mid_session`** (legacy/prohibited) | + | Ad-hoc mid-session points. **Orphan producer** (no production call site found). | player, casino, rating_slip, **`staff_id = p_staff_id` (SPOOFABLE param)**. **No gaming_day.** | **Actual**, but reason-code & actor both non-canonical. |
+| `issueComp()` → `rpc_redeem` (`crud.ts:791,895`) | `redeem` (`source_kind='reward'`) | − | Catalog-backed `points_comp` issuance; pointsCost from `faceValueCents`/catalog. Face value is **currency (cents)**. | as `rpc_redeem` + `reward_id` in metadata. | **Actual** debit + a **currency face-value** rendered alongside points. |
+| `rpc_issue_promo_coupon` (`loyalty_promo_instruments.sql:244`; role-gated dup `20260319010843`) | outbox `event_type='promo_coupon_issued'` | n/a (no points) | Issues a `promo_coupon` liability instrument (`face_value_amount`, `required_match_wager_amount`, cents). **Writes NO ledger row, NO balance change.** | player, visit, casino, **`issued_by = v_actor_id` (derived)**, `correlation_id`. **No gaming_day.** | **Liability / Authority fact** living entirely outside the ledger. |
+| `rpc_void_promo_coupon` (`loyalty_promo_instruments.sql:464`) | outbox `event_type='promo_coupon_voided'` (`:539,562`) | n/a | Cancels a coupon. Outbox-only. | actor derived, correlation_id. | Reversal of a liability, **not visible in ledger reversal model**. |
+
+**Sink coverage (the structural split):** ledger+balance producers (`base_accrual`, `redeem`, `manual_reward`, `promotion`, mid-session) emit **no `loyalty_outbox` row**; coupon producers emit **outbox only**, `loyalty_outbox.ledger_id` nullable for promo (`prd028_restore_loyalty_outbox.sql:35`). The balance cache "MUST equal SUM(points_delta)" is enforced only by RPC discipline + on-demand `rpc_reconcile_loyalty_balance` drift detection (`prd004_loyalty_rpcs.sql:893`, schema comment `20251213003000:175`) — detect, not prevent.
+
+---
+
+## 3. Overloaded-Term Map
+
+| Term | Distinct meanings | Sites | SRL status |
+|---|---|---|---|
+| **reward** | (a) `manual_reward` ledger reason = service-recovery credit; (b) mid-session "reward" (ad-hoc points); (c) catalog **reward** item (`reward_id`, `points_comp` family); (d) promo coupon "reward" (`reward_name` in fulfillment payload) | `dtos.ts:36` (`manual_reward`); `mid-session-reward.ts`; `dtos.ts:198,520-524`; `EntitlementFulfillmentPayload` | **Undefined** — no SRL entry |
+| **comp** | (a) catalog `points_comp` family issuance (`CompIssuanceResult`); (b) ad-hoc `redeem` ("comp issuance" per `rpc_redeem` comment); (c) entitlement (free-play coupon) loosely "comp" | `dtos.ts:179,504`; `prd004_loyalty_rpcs.sql:257` ("Comp Issuance"); `adr024:472` | **Undefined** |
+| **credit** | (a) `manual_reward` points credit; (b) `base_accrual` credit; (c) promo face-value liability (cents, not points); (d) cashier-role "credit" | `dtos.ts:235` (ManualCredit); enum-expansion `:137,144`; promo `face_value_amount` | **Undefined** |
+| **points** vs **cents** | points = loyalty unit (`points_delta`, balances; §6.3 carve-out, bare number); cents = currency (`faceValueCents`, `face_value_amount`, theo) — **two unit systems, same producer surface, `points_comp` converts cents→points via `CENTS_PER_POINT`** | `dtos.ts:148,484-488`; promo `dtos.ts:48-52` | **Undefined** (carve-out noted in code, not in SRL) |
+| **theo** | (a) accrual authoritative `estimated` value (`source:'loyalty.theo'`, completeness complete); (b) read-only **suggested** preview (`suggestedTheo`, completeness partial/unknown, `source:'rating_slip.theo'`) | `dtos.ts:153-162` vs `:356-370`; `mappers.ts:218` | **Undefined** — two sources, one word |
+| **redeem** | (a) ledger reason; (b) promo coupon "cleared/redeemed" lifecycle (`PromoCouponStatus='cleared'` comment "Successfully redeemed") | `dtos.ts:34`; promo `dtos.ts:26` | **Undefined** |
+| **adjustment / correction / reversal** | canonical `adjustment`+`reversal` (`dtos.ts:37-38`) vs legacy `manual_adjustment`+`correction` (still in `MidSessionRewardReason` `:316-321`); **`reversal` reason has NO RPC** (correction model undefined) | `dtos.ts:37-38,316-321` | **Undefined** |
+
+---
+
+## 4. Findings
+
+| ID | Title | Fracture type | Severity + rationale | Evidence (file:line) | Cure | Route-to |
+|---|---|---|---|---|---|---|
+| **F-6.1** | Producer/sink split: ledger producers emit no outbox; coupon producers write no ledger | Propagation Ambiguity | **S3** — propagating; loyalty liability (coupons) invisible to ledger and balance; becomes S4 the moment loyalty liability enters financial reporting | `adr024_loyalty_rpcs.sql:179` (accrual, no outbox) vs `loyalty_promo_instruments.sql:392` (coupon, no ledger); nullable `ledger_id` `prd028:35` | Transactional outbox: make ledger producers emit; unify event taxonomy with reason codes | financial-model-authority (transport) + loyalty SRM owner |
+| **F-6.2** | Two parallel reason vocabularies; TS default mints a write-prohibited legacy value | Vocabulary Overload | **S4** — `mid-session-reward.ts:58` defaults `p_reason ?? 'mid_session'`; `mid_session` is WRITE-PROHIBITED (`20251213000830:97-101,162`); the RPC accepts arbitrary `loyalty_reason` and inserts it raw — corrupts the canonical reason column, no DB-side guard | `dtos.ts:316-321`; `mid-session-reward.ts:58`; `adr024_loyalty_rpcs.sql:1055,1146`; enum-expansion appendix `:157-173` | Canonical reason-code taxonomy; SRL semantic root binding reasons to LoyaltyService + RPC validation gate (reject legacy on write); retire `MidSessionRewardReason` | SRL + loyalty SRM owner |
+| **F-6.3** | No `gaming_day` captured at accrual; created_at wall-clock is the only temporal anchor | Attribution Ambiguity | **S3** — every producer; cross-context reconciliation (liability snapshots, reporting) cannot bucket points to a gaming-day deterministically; violates TEMP-002/PRD-027 canonical gaming-day chain | schema `20251213003000` (no gaming_day col, confirmed); all INSERTs use `now()`/default `created_at` | Add authoritative `gaming_day` at accrual via `useGamingDay()`/canonical RPC source; SRL attribution-chain declaration per reason | loyalty SRM owner + temporal authority (TEMP-002) |
+| **F-6.4** | `rpc_issue_mid_session_reward` accepts spoofable `p_staff_id` written to `staff_id` | Attribution Ambiguity | **S3** — actor identity client-supplied, contradicts ADR-040 Category A (which removed exactly this from redeem/manual_credit). Latent because no prod call site, but the RPC is callable | `adr024_loyalty_rpcs.sql:1051,1140-1146`; contrast `adr040_..._derivation.sql:57-60,254-257` | Derive actor from `app.actor_id` (ADR-040 Category A); drop `p_staff_id` | rls-expert / ADR-040 owner |
+| **F-6.5** | Accrual (estimated/theo-derived) and manual_credit/redeem (actual) treated as equal-authority ledger facts | Authority Ambiguity | **S2** — DTO theo wrapper exists (`estimated`) but the **ledger row itself** carries no authority class; `points_delta` from a theo estimate sums into the same balance as an actual debit with no distinguishing field | `mappers.ts:218-223` (theo wrapped) vs ledger schema (`reason` only, no authority col); balance sum in `rpc_reconcile_loyalty_balance:893` | Authority-class field or reason→authority mapping declared in SRL; surface label | financial-model-authority + SRL |
+| **F-6.6** | Reason-code taxonomy vs outbox event taxonomy are two disjoint vocabularies | Vocabulary Overload / Propagation Ambiguity | **S2** — ledger reasons (`base_accrual`/`redeem`/...) and outbox `event_type` (`promo_coupon_issued`/`promo_coupon_voided`) never reconcile; a consumer cannot map one to the other | reasons `dtos.ts:32-38`; events `loyalty_promo_instruments.sql:399,539` | Single event taxonomy keyed to reason codes; document the producer→event map | financial-model-authority (outbox) |
+| **F-6.7** | `reversal` reason defined, no RPC; coupon void is outbox-only — no unified correction model | Authority Ambiguity / Lifecycle | **S2** — corrections happen two incompatible ways (ledger `reversal` unimplemented; coupon `voided` event) with no canonical reversal authority | `dtos.ts:38` (reversal, no RPC); `loyalty_promo_instruments.sql:464` (void) | Define correction model (mutation vs new-fact) per ADR-052 fact-class rules | financial-model-authority |
+| **F-6.8** | "points" vs "cents" unit collision on the producer surface | Vocabulary Overload | **S2** — `points_comp` converts `faceValueCents`→points (`ceil(faceValueCents/CENTS_PER_POINT)`); promo coupons are pure cents; balances are points; mixing risks a currency value summed as points downstream | `dtos.ts:484-488,541`; promo `dtos.ts:48-52` | SRL unit declaration; keep envelope/carve-out boundary explicit | SRL + loyalty SRM owner |
+
+---
+
+## 5. Open Questions
+
+1. **Is `rpc_issue_mid_session_reward` dead?** No production caller found (only tests/README). If dead, drop it (removes F-6.2 default + F-6.4 spoofable actor in one move). If a print/Epson path will revive it (EXEC-092 loyalty printing in flight), it must be hardened first.
+2. **Will loyalty liability enter financial reporting?** That is the trigger that upgrades F-6.1 from S3 to S4 (per remediation-surface.md §2.2). Is `rpc_snapshot_loyalty_liability` (`20260307115101`) already consuming coupons + ledger together? If so the split is already load-bearing.
+3. **Who owns the loyalty reason-code taxonomy in the SRL?** No loyalty term is admitted. Should reason codes be a single SRL semantic root bound to LoyaltyService, or per-reason entries?
+4. **Gaming-day at accrual:** does any consumer already bucket loyalty points by gaming-day off `created_at`? If yes, F-6.3 is actively producing wrong buckets across rollover.
+5. **Authority class on the row:** should the ledger gain an authority/`fact_class` column (ADR-052 style) so estimated-accrual vs actual-debit is queryable, not just wrapped in the read DTO?

@@ -1,4 +1,3 @@
-I have everything I need. Here's the full answer.
 
 ---
 

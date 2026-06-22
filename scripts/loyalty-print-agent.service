@@ -1,0 +1,40 @@
+# DEV-ONLY systemd --user unit for the loyalty-printing loopback agent.
+#
+# Auto-starts the ESC/POS agent on login and restarts it on failure, so the
+# Linux exemplar print path is available without a manual launch. This is a
+# developer convenience ONLY — the production agent lifecycle (service install,
+# update, signing, trust-boundary hardening) is ADR-063 D1–D4/D7, deferred to
+# the Windows certification PRD (Gate E2). NOT a production deployment artifact.
+#
+# Paths below assume the repo at /home/diepulp/projects/pt-2 (this dev machine).
+# Adjust WorkingDirectory/ExecStart if your checkout differs.
+#
+# Install:
+#   cp scripts/loyalty-print-agent.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now loyalty-print-agent
+# Status / logs:
+#   systemctl --user status loyalty-print-agent
+#   journalctl --user -u loyalty-print-agent -f
+# Stop / disable:
+#   systemctl --user disable --now loyalty-print-agent
+
+[Unit]
+Description=PT-2 loyalty print agent (DEV-ONLY, ESC/POS raw -> TM-T88V)
+Documentation=file:///home/diepulp/projects/pt-2/e2e/loyalty-printing/README.md
+After=cups.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/diepulp/projects/pt-2
+ExecStart=/home/diepulp/projects/pt-2/scripts/loyalty-print-agent.sh
+Restart=on-failure
+RestartSec=3
+# ESC/POS raw is REQUIRED for the TM-T88V (plain text prints blank).
+Environment=LOYALTY_PRINT_SPOOLER=escpos
+Environment=LOYALTY_PRINT_AGENT_PORT=9787
+Environment=LOYALTY_PRINT_TARGET_ID=loopback-cups
+Environment=LOYALTY_PRINT_CUPS_QUEUE=TM-T88V
+
+[Install]
+WantedBy=default.target

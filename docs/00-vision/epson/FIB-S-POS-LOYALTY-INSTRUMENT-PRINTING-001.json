@@ -1,0 +1,309 @@
+{
+  "artifact": {
+    "type": "FIB-S",
+    "id": "FIB-S-POS-PRINT-001",
+    "title": "POS Loyalty Instrument Printing",
+    "version": "0.1.0",
+    "status": "proposed_hardware_discovery_required",
+    "date_opened": "2026-06-17",
+    "human_scope_authority": "FIB-H-POS-PRINT-001",
+    "downstream_expansion_allowed_without_amendment": false
+  },
+  "intent": {
+    "problem": "Replace the generic window.print flow for match plays and approved loyalty instruments with a controlled print action targeting the designated Epson TM-T88V-class thermal printer.",
+    "primary_actor": [
+      "pit_boss",
+      "floor_supervisor",
+      "authorized_loyalty_operator"
+    ],
+    "secondary_actor": ["property_administrator"],
+    "operator_moment": "After an existing eligible instrument is created or selected for issuance, and during an explicitly authorized reprint.",
+    "primary_surface": "existing_match_play_or_loyalty_instrument_issuance_surface",
+    "priority": "P0",
+    "pilot_fit": "Physical fulfillment is not production-ready while staff must use a browser dialog and infer printer outcome or duplicate-copy posture."
+  },
+  "named_hardware": {
+    "manufacturer": "Epson",
+    "commercial_model": "TM-T88V",
+    "reported_model_marking": "M244A",
+    "media_width_target_mm": 80,
+    "capability_status": "interface_not_verified",
+    "warning": "Commercial model identity does not establish ePOS support. The installed interface module and firmware determine browser-direct capability."
+  },
+  "current_state": {
+    "mechanism": "window.print()",
+    "known_limitations": [
+      "browser_print_dialog",
+      "manual_printer_selection_or_os_default_dependency",
+      "page_print_css_dependency",
+      "no_bounded_device_status_contract",
+      "weak_retry_and_duplicate_copy_control",
+      "no_reliable_printer_target_identity"
+    ]
+  },
+  "feature_loop": [
+    {
+      "step": 1,
+      "actor": "authorized_operator",
+      "action": "opens_existing_eligible_instrument",
+      "system_response": "shows_printable_state_and_designated_printer_status"
+    },
+    {
+      "step": 2,
+      "actor": "authorized_operator",
+      "action": "selects_print",
+      "system_response": "submits_print_request_for_exact_instrument_without_browser_dialog"
+    },
+    {
+      "step": 3,
+      "actor": "system",
+      "action": "validates_printer_configuration_and_payload",
+      "system_response": "fails_closed_before_success_claim_when_invalid_or_unavailable"
+    },
+    {
+      "step": 4,
+      "actor": "printer",
+      "action": "renders_approved_instrument_layout",
+      "system_response": "prints_required_identity_terms_and_validation_data_without_page_chrome"
+    },
+    {
+      "step": 5,
+      "actor": "printer_transport",
+      "action": "feeds_cuts_and_reports_observable_result",
+      "system_response": "persists_only_the_result_strength_the_transport_can_truthfully_observe"
+    },
+    {
+      "step": 6,
+      "actor": "authorized_operator",
+      "action": "reviews_failed_or_uncertain_result",
+      "system_response": "offers_explicit_retry_or_reprint_without_new_instrument_issuance"
+    },
+    {
+      "step": 7,
+      "actor": "authorized_operator",
+      "action": "initiates_reprint",
+      "system_response": "preserves_instrument_identity_and_records_duplicate_copy_posture"
+    },
+    {
+      "step": 8,
+      "actor": "property_administrator",
+      "action": "verifies_station_printer_configuration",
+      "system_response": "produces_non_redeemable_test_print"
+    }
+  ],
+  "required_outcomes": [
+    "no_window_print_or_browser_dialog_for_named_workflow",
+    "configured_printer_targeting",
+    "purpose_built_80mm_layout",
+    "printing_does_not_author_or_mutate_instrument",
+    "durable_print_attempt_correlation",
+    "explicit_retry_and_reprint",
+    "visible_fail_closed_device_errors",
+    "non_redeemable_test_print"
+  ],
+  "domain_boundary": {
+    "classification": "physical_output_integration",
+    "authors_domain_fact": false,
+    "creates_loyalty_instrument": false,
+    "mutates_instrument_value_or_eligibility": false,
+    "redeems_instrument": false,
+    "print_output_role": "physical_representation_of_existing_instrument",
+    "source_of_truth": "existing_loyalty_or_match_play_instrument_record",
+    "critical_invariant": "print_failure_or_uncertainty_must_not_create_a_new_redeemable_instrument"
+  },
+  "transport_selection": {
+    "status": "deferred_until_hardware_inventory",
+    "decision_owner": "scaffold_or_rfc",
+    "candidate_paths": [
+      {
+        "id": "epson_epos_direct",
+        "eligible_when": "installed_printer_or_interface_exposes_supported_ePOS_Print_service_on_trusted_network",
+        "must_prove": [
+          "exact_model_interface_and_firmware_support",
+          "browser_and_network_security_compatibility",
+          "printer_status_and_error_semantics",
+          "device_configuration_and_certificate_posture"
+        ]
+      },
+      {
+        "id": "managed_local_print_agent",
+        "eligible_when": "printer_is_usb_attached_or_requires_os_driver_or_raw_ESC_POS_access",
+        "must_prove": [
+          "managed_installation_and_update_ownership",
+          "localhost_or_lan_authentication",
+          "job_idempotency_and_replay_policy",
+          "driver_spooler_and_device_error_reporting",
+          "no_public_listener_or_shared_secret_in_browser_bundle"
+        ]
+      },
+      {
+        "id": "network_print_bridge",
+        "eligible_when": "conventional_ethernet_interface_lacks_ePOS_service",
+        "must_prove": [
+          "browser_does_not_open_raw_tcp_socket",
+          "trusted_bridge_ownership",
+          "bounded_ESC_POS_command_generation",
+          "device_address_and_tenant_property_scoping"
+        ]
+      }
+    ],
+    "forbidden_assumptions": [
+      "tm_t88v_model_name_implies_epos_support",
+      "raw_esc_pos_is_directly_available_to_sandboxed_browser",
+      "http_request_acceptance_equals_physical_print_completion",
+      "window_print_is_safe_automatic_fallback"
+    ]
+  },
+  "print_attempt_contract": {
+    "required_correlation_fields": [
+      "print_attempt_id",
+      "instrument_id",
+      "casino_id",
+      "operator_id",
+      "printer_target_id",
+      "workstation_or_station_id_when_available",
+      "requested_at",
+      "result_status"
+    ],
+    "minimum_status_vocabulary": [
+      "requested",
+      "submitted",
+      "failed",
+      "unknown"
+    ],
+    "conditional_status": "acknowledged_or_completed_may_be_added_only_if_selected_transport_can_truthfully_observe_it",
+    "idempotency_rule": "repeated_delivery_of_the_same_print_attempt_must_not_silently_create_an_additional_physical_copy",
+    "reprint_rule": "a_new_physical_copy_requires_an_explicit_reprint_intent_and_a_new_attempt_correlated_to_the_same_instrument"
+  },
+  "explicit_exclusions": [
+    "loyalty_eligibility_or_value_redesign",
+    "new_instrument_types",
+    "generic_cross_domain_print_platform",
+    "cloud_print_queue",
+    "fleet_management",
+    "batch_or_scheduled_printing",
+    "silent_auto_retry",
+    "window_print_fallback",
+    "multi_vendor_abstraction",
+    "public_printer_network_exposure",
+    "claim_of_guaranteed_physical_output_without_observable_proof"
+  ],
+  "dependencies": [
+    {
+      "id": "DEP-1",
+      "requirement": "immutable_existing_instrument_identity_before_print",
+      "status": "assumed_requires_verification"
+    },
+    {
+      "id": "DEP-2",
+      "requirement": "exact_printer_interface_and_firmware_inventory",
+      "status": "missing_blocking_transport_selection"
+    },
+    {
+      "id": "DEP-3",
+      "requirement": "approved_thermal_layout_content_and_validation_symbology",
+      "status": "requires_domain_confirmation"
+    },
+    {
+      "id": "DEP-4",
+      "requirement": "trusted_workstation_or_lan_reachability",
+      "status": "requires_deployment_confirmation"
+    },
+    {
+      "id": "DEP-5",
+      "requirement": "first_print_retry_reprint_policy",
+      "status": "requires_product_and_security_confirmation"
+    }
+  ],
+  "acceptance_gates": [
+    {
+      "id": "GATE-HW-1",
+      "name": "hardware_interface_inventory",
+      "blocking": true,
+      "evidence": [
+        "printer_product_label_and_interface_board",
+        "connection_type",
+        "ip_or_usb_topology",
+        "firmware_and_epos_service_availability_when_applicable"
+      ]
+    },
+    {
+      "id": "GATE-DOM-1",
+      "name": "printing_is_not_issuance",
+      "blocking": true,
+      "evidence": "domain_and_api_contract_show_instrument_exists_before_print_request"
+    },
+    {
+      "id": "GATE-SEC-1",
+      "name": "bounded_device_access",
+      "blocking": true,
+      "evidence": "no_public_device_endpoint_no_browser_embedded_shared_secret_and_property_scoped_target"
+    },
+    {
+      "id": "GATE-DUP-1",
+      "name": "duplicate_copy_control",
+      "blocking": true,
+      "evidence": "known_failure_unknown_result_and_confirmed_reprint_tests"
+    },
+    {
+      "id": "GATE-UX-1",
+      "name": "window_print_retired_for_named_surface",
+      "blocking": true,
+      "evidence": "named_workflow_uses_only_controlled_print_path"
+    },
+    {
+      "id": "GATE-HW-2",
+      "name": "real_device_exemplar",
+      "blocking": true,
+      "evidence": [
+        "first_print",
+        "paper_out",
+        "cover_open_or_device_error_when_supported",
+        "printer_offline",
+        "retry_or_reprint",
+        "cut_and_layout_validation"
+      ]
+    }
+  ],
+  "expansion_triggers": [
+    "additional_printer_vendor_or_model",
+    "multiple_printers_per_station",
+    "new_instrument_type",
+    "new_issuance_or_redemption_authority",
+    "automatic_retry_or_fallback",
+    "batch_scheduled_or_remote_printing",
+    "generic_print_service",
+    "top_level_printer_admin_console",
+    "external_cloud_print_provider",
+    "new_printed_pii",
+    "print_completion_as_issuance_or_redemption"
+  ],
+  "open_questions": [
+    "exact_installed_interface_module_and_firmware",
+    "managed_workstation_kiosk_tablet_or_mixed_client_topology",
+    "authoritative_barcode_or_qr_identifier_and_symbology",
+    "first_print_retry_and_reprint_duplicate_marking_policy",
+    "strongest_truthful_observable_print_result",
+    "paper_stock_and_required_brand_legal_content"
+  ],
+  "downstream_traceability": {
+    "scaffold_must_copy": [
+      "feature_loop",
+      "explicit_exclusions",
+      "transport_selection_forbidden_assumptions",
+      "acceptance_gates",
+      "expansion_triggers"
+    ],
+    "rfc_required": true,
+    "rfc_reason": "The hardware interface can force materially different browser_direct_local_agent_or_network_bridge architectures.",
+    "adr_candidate": {
+      "required": "conditional",
+      "condition": "Required if the selected mechanism introduces a durable local agent_trust boundary_generic_print_contract_or deployment_standard; not required merely to configure a confirmed Epson ePOS device for this single slice."
+    },
+    "prd_blocked_until": [
+      "GATE-HW-1",
+      "approved_layout_and_validation_identifier",
+      "retry_reprint_policy"
+    ]
+  }
+}

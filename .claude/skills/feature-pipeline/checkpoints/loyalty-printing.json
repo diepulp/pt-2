@@ -1,0 +1,151 @@
+{
+  "feature_id": "loyalty-printing",
+  "current_phase": 5,
+  "status": "COMPLETE — design pipeline terminal; handoff to /build PRD-092",
+  "handoff": {
+    "next_action": "/build PRD-092",
+    "scope": "Linux exemplar (Gate E1) — reference implementation only; Windows cert = follow-on PRD #2 (Gate E2).",
+    "build_obligations": [
+      "Terminology/Operator-Copy Gate (PRD-092 §7a): local glossary, operator-copy review, submitted!=printed invariant, PrinterFault deferral — NOT SRL (srl_required:false).",
+      "GATE-PLATFORM-1 contract OS-neutrality is the trap-avoider: no cups types/semantics above adapter boundary.",
+      "ADR-063 enforcement NON-blocking here (only D5 idempotency + D6 failure reporting exercised); full D1-D7 enforced in PRD #2.",
+      "DEP-3 legal/layout + GAP-C5 barcode = provisional on exemplar; authoritative in PRD #2."
+    ]
+  },
+  "gate_resolution_2026_06_18": {
+    "gate_hw_1": "RESOLVED — UB-U05 USB (04b8:0202), no ePOS service; ePOS-direct (Option B) hardware-foreclosed. lsusb + CUPS URI usb://EPSON/TM-T88V?serial=4D5138467113430000 captured on dev box.",
+    "dep_os_1": "RESOLVED — production OS = Windows; Linux/CUPS = dev adapter only.",
+    "transport": "Option A managed local agent -> OS print spooler -> printer",
+    "observability": "submitted-only; device faults out of scope (failure_domain=device null on both adapters)",
+    "adapters": { "production": "windows_spooler", "development": "cups" },
+    "adr_062": "AMENDED — Deferred-Blocked T-1/T-2/T-3 -> Resolved; stale Linux-as-production framing corrected.",
+    "adr_063": "AUTHORED — docs/80-adrs/ADR-063-loyalty-print-agent-deployment-standard.md (deployment/trust boundary ONLY; transport not reopened, per user constraint).",
+    "adr_063_scope_constraint": "In: localhost trust boundary, install/update ownership, auth, idempotency, failure reporting, exposure prevention. OUT: transport re-eval, ESC/POS, spooler reconsideration, printer feature expansion.",
+    "two_phase_platform_sequencing": {
+      "decision": "ADR-062 D8 — prove on Linux exemplar first, then certify Windows. Separates feature bugs from platform/driver/permission bugs.",
+      "exemplar_platform": "linux/cups (reference implementation — proves architecture/contract/audit/workflow/idempotency)",
+      "production_platform": "windows/windows_spooler (certification target — proves production deployment)",
+      "gate_E1_linux_exemplar": "GATE-PLATFORM-1 (contract OS-neutrality, NO cups semantics above adapter boundary) + GATE-PLATFORM-2 (fake+cups parity) + GATE-HW-2 (real-device on linux rig) + GATE-DOM-1 + GATE-DUP-1 + GATE-UX-1 + GATE-SEC-1(min). ADR-063 NOT blocking; only D5/D6 exercised.",
+      "gate_E2_windows_cert": "WINDOWS_CERTIFICATION_REQUIRED: windows_agent_exists + windows_spooler_adapter_exists + real_printer_test_passes + audit_contract_identical + localhost_security_review_complete. = GATE-PLATFORM-3 + GATE-PLATFORM-4 + DEP-OS-3 + full ADR-063 enforcement.",
+      "gate_E3": "pilot deployment — discover real-world adjustments.",
+      "anti_drift": "Linux MUST NOT become permanent production assumption; rollout BLOCKED until E2 passes."
+    }
+  },
+  "owner": "LoyaltyService.InstrumentPrinting",
+  "gates_passed": [
+    "srm-ownership",
+    "scaffold-approved",
+    "design-approved",
+    "sec-approved",
+    "adr-frozen",
+    "prd-approved"
+  ],
+  "gates_pending": [],
+  "artifacts": {
+    "feature_boundary": "docs/20-architecture/specs/loyalty-printing/FEATURE_BOUNDARY.md",
+    "scaffold": "docs/01-scaffolds/SCAFFOLD-POS-LOYALTY-INSTRUMENT-PRINTING.md",
+    "design_brief": "docs/02-design/RFC-POS-LOYALTY-INSTRUMENT-PRINTING.md",
+    "sec_note": "docs/20-architecture/specs/loyalty-printing/SEC_NOTE.md",
+    "adr": "docs/80-adrs/ADR-062-loyalty-instrument-printing-controlled-path.md",
+    "adr_deployment": "docs/80-adrs/ADR-063-loyalty-print-agent-deployment-standard.md",
+    "prd": "docs/10-prd/PRD-092-loyalty-printing-linux-exemplar.md",
+    "prd_2_windows_cert": "deferred — follow-on PRD for Phase 2 Windows certification (Gate E2)"
+  },
+  "phase_0_decision": {
+    "owner": "LoyaltyService.InstrumentPrinting",
+    "print_attempt": "owned",
+    "promo_coupon": "read_only",
+    "reward_fact_authoring": "forbidden",
+    "standalone_service": "deferred"
+  },
+  "intake_refs": [
+    "docs/00-vision/epson/FIB-H-POS-LOYALTY-INSTRUMENT-PRINTING-001.md",
+    "docs/00-vision/epson/FIB-S-POS-LOYALTY-INSTRUMENT-PRINTING-001.json",
+    "docs/00-vision/epson/FIB-ADDENDUM-POS-PRINT-OS-PORTABILITY-001.md",
+    "docs/00-vision/epson/FIB-S-POS-PRINT-OS-PORTABILITY-PATCH-001.json",
+    "docs/00-vision/epson/EPSON-TM-T88V-PRINTER-SETUP.md",
+    "docs/00-vision/epson/EPSON-EPOS-ESCPOS-CAPABILITY-REFERENCE.md",
+    "docs/00-vision/epson/POS-LOYALTY-INSTRUMENT-RECEIPT-TEMPLATING-GUIDE.md"
+  ],
+  "timestamp": "2026-06-18T22:24:08Z",
+  "phase_1_decisions": {
+    "audit_shape": {
+      "decision": "dedicated_print_attempt_table",
+      "status": "resolved"
+    },
+    "transport": {
+      "status": "blocked",
+      "gate": "GATE-HW-1",
+      "provisional_direction": "managed_local_print_agent"
+    },
+    "production_adapter_os": {
+      "status": "blocked",
+      "gate": "DEP-OS-1"
+    },
+    "coexistence": "lib/print window.print() utility retained for non-loyalty docs; window.print() superseded only on named loyalty redemption surface"
+  },
+  "reference_artifacts": [
+    "docs/00-vision/epson/EPSON-EPOS-ESCPOS-CAPABILITY-REFERENCE.md"
+  ],
+  "phase_2_decisions": {
+    "result_vocabulary": "four_state_fixed (requested|submitted|failed|unknown); submitted = transport accepted; no completion claim",
+    "print_attempt_model": "single_audit_controlled_lifecycle_row (immutable identity/correlation, controlled status/fault transition); NOT append-only / NOT event log",
+    "printer_target": "configuration_only_for_pilot (table only if reassignment/multi-station/audit-relevant identity)",
+    "rollback": "disables controlled printing on named surface; browser fallback requires explicit operational decision, never automatic",
+    "transport": "BLOCKED @GATE-HW-1 (provisional managed_local_print_agent)",
+    "production_os": "BLOCKED @DEP-OS-1",
+    "layout_barcode": "PRD-entry dependencies, not architectural",
+    "receipt_templating": {
+      "scope": "supporting_concern_within_feature",
+      "source_input": "existing_FulfillmentPayload",
+      "canonical_output": "versioned_receipt_document",
+      "html_iframe_role": "preview_only",
+      "production_payload": "adapter_rendered",
+      "generic_template_engine": "out_of_scope",
+      "provenance_on_print_attempt": [
+        "template_id",
+        "template_version",
+        "receipt_document_hash"
+      ],
+      "separate_feature": "deferred_until_cross_domain_or_runtime_authoring_need",
+      "adr_reconciliation": "render/validation faults invalid_document|unsupported_operation vs canonical PrinterFault; four-state result fixed"
+    }
+  },
+  "context7_findings": "no official Epson web SDK; community libs /klemen1337/node-thermal-printer (ESC/POS local-agent prior art) + /tr3v3r/react-native-esc-pos-printer; official ePOSBuilder API grounded from native manual",
+  "resume_context": {
+    "where_we_are": "Phases 0-4 COMPLETE. SEC_NOTE authored; FEATURE_BOUNDARY now carries an explicit ADR-058 Feature Classification block (CLS-007 external_integration + CLS-003 authoring, ADM-1..10). ADR-062 FROZEN (Accepted) after DA review: D1-D7 frozen, transport(#7)/OS(#8)/deployment-standard-ADR Deferred-Blocked. DA P0s + target/scope ambiguities patched (D7 discriminated canonical failure {failure_domain, failure_code}; D5 stable config key; D2 comp-slip claim narrowed; status note D1-D7). Phase 5 PRD is BLOCKED @GATE-HW-1.",
+    "immediate_next_action": "Phase 5 PRD is BLOCKED until GATE-HW-1 (inventory PRODUCTION printer interface) + DEP-OS-1 (production OS) clear. Two paths offered to user: (a) author PRD shell now with mandatory ADR-058 classification section + explicit GATE-HW-1 block; (b) PAUSE pipeline until hardware inventory done (recommended). PRD must include required_sections.prd from the classification standard verbatim.",
+    "da_residual_unpatched": [],
+    "da_all_findings_resolved": "All 6 DA findings applied. P0 x2 (status note D1-D7, D7 discriminated failure vocab) + P1 #4 (D5 stable config key) + P1 #5 (D2 comp-slip claim narrowed) + P1 #3 (D3 one production adapter per deployment, deployment-time not runtime hot-swap) + P2 #6 (D2 closed state machine: requested -> once to terminal submitted|failed|unknown; terminal rows immutable; new observation = new instance). ADR-062 fully frozen, Accepted.",
+    "phase_3_sec_note_focus": [
+      "localhost print-agent trust boundary (GATE-SEC-1): localhost/LAN auth, no public listener, no secret in browser bundle",
+      "property-scoped printer_target; no device address exposed to browser",
+      "print-failure-never-mints-an-instrument invariant (promo_coupon read-only)",
+      "preview(HTML) vs production(adapter) payload integrity; receipt_document_hash provenance",
+      "RLS context via ADR-024 (operator_id, casino_id); print_attempt critical audit (session-var writes)"
+    ],
+    "remaining_pipeline": "Phase 3 SEC Note -> Phase 4 ADR(s) (EXTEND ADR-045, not replace) -> Phase 5 PRD (BLOCKED until GATE-HW-1) -> handoff /build",
+    "hard_invariants_do_not_relitigate": [
+      "Owner = LoyaltyService.InstrumentPrinting submodule (NOT standalone service; deferred)",
+      "Result vocabulary = four states requested|submitted|failed|unknown; submitted=transport accepted; NO acknowledged/completion claim",
+      "print_attempt = ONE audit-controlled lifecycle row per attempt (immutable identity/correlation, mutable status/fault); NOT append-only, NOT event log",
+      "coexistence: lib/print window.print() retained for non-loyalty docs; superseded ONLY on named loyalty redemption surface (GATE-UX-1)",
+      "templating = bounded supporting concern; FulfillmentPayload source input; ReceiptDocument canonical; HTML preview-only; no generic/runtime engine; not split until cross-domain/runtime-authoring",
+      "printer_target = configuration-only for pilot",
+      "receipt_document_hash = digest of canonical serialized ReceiptDocument, NOT transport payload"
+    ],
+    "blocked_decisions": {
+      "transport": "BLOCKED @GATE-HW-1 (inventory PRODUCTION printer interface) - provisional managed_local_print_agent; ePOS-direct(B) hardware-blocked on installed UB-U05 USB",
+      "production_os": "BLOCKED @DEP-OS-1 (Windows assumed by addendum, but only Linux/CUPS adapter proven working today)"
+    },
+    "adr_reconciliation_items_for_phase4": [
+      "render/validation faults invalid_document|unsupported_operation (templating guide \u00a712) vs canonical addendum PrinterFault set - decide if they join",
+      "new ADR EXTENDS ADR-045-pilot-reward-instrument-fulfillment (supersedes only on loyalty redemption surface)",
+      "if local-agent transport chosen -> mandatory deployment-standard ADR (FIB-S adr_candidate)"
+    ],
+    "key_hardware_facts": "Dev unit TM-T88V (M244A) on UB-U05 USB (04b8:0202) via one-way CUPS raster (rastertotmt88v) -> submitted-only, no device faults. ePOS-Print needs UB-E04/TM-i interface (not installed). ePOS returns ASB status AFTER print (could observe completion+faults) but pilot caps at submitted. Bidirectional ESC/POS (DLE EOT) needed for faults on agent path.",
+    "current_print_surface_to_replace": "lib/print/ (iframe-print.ts, print-reward.ts, templates/{comp-slip,coupon}.ts, hooks/use-print-reward.ts); FulfillmentPayload frozen at services/loyalty/dtos.ts:623; ADR-045. MTL modal components/mtl/mtl-entry-view-modal.tsx:445 OUT OF SCOPE.",
+    "rfc_decision_count": "\u00a77 RESOLVED x6 (1-6), CONDITIONAL/BLOCKED x2 (7-8)",
+    "context7_status": "back online but has NO official Epson web SDK (only community ESC/POS libs); native Epson PDFs are authoritative source"
+  }
+}

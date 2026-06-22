@@ -2285,6 +2285,85 @@ export type Database = {
           },
         ]
       }
+      print_attempt: {
+        Row: {
+          casino_id: string
+          failure_code: string | null
+          failure_domain: string | null
+          idempotency_key: string
+          instrument_kind: string
+          instrument_ref: string
+          operator_id: string
+          print_attempt_id: string
+          printer_target_id: string
+          receipt_document_hash: string
+          reprint_of: string | null
+          requested_at: string
+          result_status: string
+          station_id: string | null
+          template_id: string
+          template_version: number
+        }
+        Insert: {
+          casino_id: string
+          failure_code?: string | null
+          failure_domain?: string | null
+          idempotency_key: string
+          instrument_kind: string
+          instrument_ref: string
+          operator_id: string
+          print_attempt_id?: string
+          printer_target_id: string
+          receipt_document_hash: string
+          reprint_of?: string | null
+          requested_at?: string
+          result_status?: string
+          station_id?: string | null
+          template_id: string
+          template_version: number
+        }
+        Update: {
+          casino_id?: string
+          failure_code?: string | null
+          failure_domain?: string | null
+          idempotency_key?: string
+          instrument_kind?: string
+          instrument_ref?: string
+          operator_id?: string
+          print_attempt_id?: string
+          printer_target_id?: string
+          receipt_document_hash?: string
+          reprint_of?: string | null
+          requested_at?: string
+          result_status?: string
+          station_id?: string | null
+          template_id?: string
+          template_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_attempt_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_attempt_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_attempt_reprint_of_fkey"
+            columns: ["reprint_of"]
+            isOneToOne: false
+            referencedRelation: "print_attempt"
+            referencedColumns: ["print_attempt_id"]
+          },
+        ]
+      }
       processed_messages: {
         Row: {
           casino_id: string
@@ -4604,6 +4683,14 @@ export type Database = {
         Args: { p_slip_id: string }
         Returns: number
       }
+      dev_get_latest_otp_token: {
+        Args: { p_email: string }
+        Returns: {
+          created_at: string
+          token_hash: string
+          token_type: string
+        }[]
+      }
       evaluate_mid_session_reward_policy: {
         Args: {
           p_average_bet: number
@@ -4821,10 +4908,7 @@ export type Database = {
           staff_role: string
         }[]
       }
-      rpc_bootstrap_casino_pit_layout: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      rpc_bootstrap_casino_pit_layout: { Args: never; Returns: Json }
       rpc_check_table_seat_availability: {
         Args: { p_seat_number: number; p_table_id: string }
         Returns: Json
@@ -5953,6 +6037,10 @@ export type Database = {
           points_delta: number
         }[]
       }
+      rpc_mark_stale_print_attempts_unknown: {
+        Args: { p_correlation_id?: string }
+        Returns: number
+      }
       rpc_move_player: {
         Args: {
           p_average_bet?: number
@@ -6206,6 +6294,44 @@ export type Database = {
           p_new_validation_number: string
         }
         Returns: Json
+      }
+      rpc_request_print_attempt: {
+        Args: {
+          p_correlation_id?: string
+          p_idempotency_key: string
+          p_instrument_kind: string
+          p_instrument_ref: string
+          p_printer_target_id: string
+          p_receipt_document_hash: string
+          p_reprint_of?: string
+          p_station_id?: string
+          p_template_id: string
+          p_template_version: number
+        }
+        Returns: {
+          casino_id: string
+          failure_code: string | null
+          failure_domain: string | null
+          idempotency_key: string
+          instrument_kind: string
+          instrument_ref: string
+          operator_id: string
+          print_attempt_id: string
+          printer_target_id: string
+          receipt_document_hash: string
+          reprint_of: string | null
+          requested_at: string
+          result_status: string
+          station_id: string | null
+          template_id: string
+          template_version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "print_attempt"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       rpc_request_table_credit: {
         Args: {
@@ -6653,6 +6779,39 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "table_session"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rpc_transition_print_attempt: {
+        Args: {
+          p_correlation_id?: string
+          p_failure_code?: string
+          p_failure_domain?: string
+          p_print_attempt_id: string
+          p_result_status: string
+        }
+        Returns: {
+          casino_id: string
+          failure_code: string | null
+          failure_domain: string | null
+          idempotency_key: string
+          instrument_kind: string
+          instrument_ref: string
+          operator_id: string
+          print_attempt_id: string
+          printer_target_id: string
+          receipt_document_hash: string
+          reprint_of: string | null
+          requested_at: string
+          result_status: string
+          station_id: string | null
+          template_id: string
+          template_version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "print_attempt"
           isOneToOne: true
           isSetofReturn: false
         }

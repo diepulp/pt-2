@@ -24,7 +24,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useIssueReward } from '@/hooks/loyalty/use-issue-reward';
-import type { PrintInvocationMode, PrintState } from '@/lib/print/types';
 import type {
   FulfillmentPayload,
   IssuanceResultDTO,
@@ -68,14 +67,12 @@ export interface IssueRewardDrawerProps {
   /** Associated visit ID for audit trail linkage */
   visitId?: string;
 
-  /** Callback fired on successful issuance with fulfillment payload */
+  /**
+   * Notification fired on successful issuance with the assembled payload.
+   * Decoupled from printing (PRD-092 DEC-004) — printing is operator-initiated
+   * inside the result panel via the controlled action.
+   */
   onFulfillmentReady?: (payload: FulfillmentPayload) => void;
-
-  /** Print state from usePrintReward hook (Vector C) */
-  printState?: PrintState;
-
-  /** Manual print callback (Vector C) */
-  onPrint?: (payload: FulfillmentPayload, mode: PrintInvocationMode) => void;
 
   /** DB-sourced valuation rate (cents per loyalty point) — PRD-053 */
   centsPerPoint?: number | null;
@@ -96,8 +93,6 @@ function DrawerContent({
   visitId,
   onOpenChange,
   onFulfillmentReady,
-  printState,
-  onPrint,
   centsPerPoint,
   policyMissing = false,
 }: Omit<IssueRewardDrawerProps, 'open'>) {
@@ -205,8 +200,6 @@ function DrawerContent({
             casinoName={casinoName}
             staffName={staffName}
             onFulfillmentReady={onFulfillmentReady}
-            printState={printState}
-            onPrint={onPrint}
             onClose={handleClose}
           />
         )}

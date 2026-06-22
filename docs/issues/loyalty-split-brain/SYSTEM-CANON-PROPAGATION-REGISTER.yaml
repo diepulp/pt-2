@@ -1,0 +1,339 @@
+# =============================================================================
+# SYSTEM CANON PROPAGATION REGISTER
+# =============================================================================
+# Source of truth for exemplar propagation status (per SYSTEM-CANON-
+# PROPAGATION-MAP-DIRECTIVE.md). Coordinates domain ADRs/PRDs/EXECs; does not
+# replace them. Every PRD that introduces a financial/loyalty producer, derived
+# value, cache, report consumer, correction path, or new event type MUST cite
+# this register and declare affected nodes/edges/disposition/proof (directive §19).
+#
+# Status:        Proposed (initial system-wide audit)
+# Date:          2026-06-21
+# Branch:        epson
+# Method:        3 parallel authority agents — /tia-canon-authority,
+#                /financial-model-authority, /split-brain-authority
+# Lane reports:  ./propagation-map/LANE-TIA.md
+#                ./propagation-map/LANE-FINANCIAL.md
+#                ./propagation-map/LANE-SPLITBRAIN.md
+# Diagnosis ref: ./SPLIT-BRAIN-DIAGNOSIS-loyalty.md (L-01..L-15)
+# =============================================================================
+
+meta:
+  directive: docs/issues/loyalty-split-brain/SYSTEM-CANON-PROPAGATION-MAP-DIRECTIVE.md
+  maturity_states: [proven_exemplar, standardized_pattern, propagated_standard]
+  governing_sequence: "map -> classify -> select bounded exemplar -> remediate -> certify boundaries -> expand through the map"
+  success_condition: "no isolated exemplars surrounded by unmapped legacy behavior"
+
+# -----------------------------------------------------------------------------
+# §5.1 CANONICAL PATTERN REGISTRY
+# -----------------------------------------------------------------------------
+canonical_patterns:
+
+  tia_projection:
+    status: standardized_pattern        # CONFIRMED — skill gap-registry stale; PRD-090 is LIVE
+    owner: TableContextService.TableInventoryAccounting
+    exemplar: PRD-090                    # EXEC-090; SRL-TIA-001 / ADR-059 / ADR-060 / ADR-061
+    propagation_status: partial          # per-session converged; aggregate rollup deferred (TODO-WS4)
+
+  transactional_outbox:
+    status: standardized_pattern
+    owner: finance_outbox
+    exemplar: PRD-081                     # GAP-F1 closed (commit 8a1b8741); Wave 2 CLOSED PRD-089
+    propagation_status: partial           # producers canonical; render-layer consumers strip envelope; relay prod trigger deviated
+
+  financial_value_surface:
+    status: standardized_pattern
+    owner: financial_value_envelope       # types/financial.ts:9-17 ; lib/financial/schema.ts:41-49
+    exemplar: components/financial/FinancialValue.tsx
+    propagation_status: partial           # only entitlement-confirm-panel + outbox observability render labels visibly
+
+  producer_anchor_resolution:
+    status: standardized_pattern
+    owner: fn_finance_outbox_emit         # casino_id from app.casino_id GUC, never caller-supplied
+    propagation_status: partial
+
+  append_only_correction:
+    status: proven_exemplar               # ledger immutable EXISTS; loyalty reversal RPC ABSENT (L-05)
+    owner: loyalty                        # (finance PFT has the mature instance; loyalty does not)
+    propagation_status: incomplete
+
+  temporal_snapshot_rule:
+    status: candidate_standard            # pinned for accrual rate; NOT inherited by valuation / avg_bet / balance
+    owner: loyalty
+    propagation_status: incomplete
+
+# -----------------------------------------------------------------------------
+# §5.2 DOMAIN STATUS REGISTRY
+# -----------------------------------------------------------------------------
+domains:
+
+  loyalty:
+    status: active_remediation
+    active_program: loyalty_canonization   # SIGP-003 (candidate)
+    exemplars_exercised: [temporal_snapshot_rule, append_only_correction, transactional_outbox]
+
+  rating_slip:
+    status: contingent_dependency
+    reason: >
+      Ingress/orchestration boundary for loyalty accrual, finance (PFT/pit-cash),
+      telemetry, session lifecycle. Seam certification first; no full canonization
+      program authorized yet.
+    escalation_preliminary: B_leaning_C    # see rating_slip_escalation below
+
+  player_financial:
+    status: partial_propagation
+    exemplar: transactional_outbox
+    reason: producers canonical; consumers strip FinancialValue envelope at render; relay prod trigger deviated from ADR-056
+
+  table_context:
+    status: partial_propagation
+    exemplar: table_inventory_accounting
+    reason: >
+      Per-session TIA vertical converged; aggregate/rollup win-loss deferred (TODO-WS4);
+      residual legacy estimated-drop aggregate + dormant table_win_cents remain.
+
+  mtl:
+    status: mapped_dependency
+    reason: parallel compliance; PFT->MTL derived-only trigger; never emits to finance_outbox; clean one-directional seam
+
+  visit:
+    status: mapping
+    reason: identity-anchor provider (visitId) + financial-summary consumer; owns no loyalty/financial authority
+
+# -----------------------------------------------------------------------------
+# §5.3 NODE REGISTRY  (producers / consumers / seams)
+# Severity = propagation danger (S0 local .. S5 production trust break)
+# -----------------------------------------------------------------------------
+nodes:
+
+  # ---- TIA / table_context ----
+  - { id: tia_accounting_service,             domain: table_context,   node_type: canonical_authority, current_source: "services/table-context/table-inventory-accounting.ts", canonical_source: TableInventoryAccountingProjection, status: converged,            disposition: keep,               severity: S5, owner: table_context, target_slice: tia_dto_conformance_followup }
+  - { id: tia_accounting_projection_route,    domain: table_context,   node_type: consumer,           current_source: "app/api/v1/table-context/table-sessions/[sessionId]/accounting-projection/route.ts", canonical_source: TableInventoryAccountingProjection, status: converged, disposition: keep, severity: S5, owner: table_context, target_slice: none }
+  - { id: rundown_summary_panel,              domain: table_context,   node_type: consumer,           current_source: tia_projection_via_hook,            canonical_source: TableInventoryAccountingProjection, status: converged, disposition: keep, severity: S5, owner: table_context, target_slice: none }
+  - { id: grind_buyin_producer,               domain: table_context,   node_type: producer,           current_source: "rpc_log_table_buyin_telemetry(GRIND_BUYIN, pit_manual)", canonical_source: table_buyin_telemetry, status: canonical, disposition: keep, severity: S5, owner: table_context, target_slice: none }
+  - { id: rated_buyin_finance_bridge_producer,domain: table_context,   node_type: producer,           current_source: "trg_bridge_finance_to_telemetry (PFT in -> RATED_BUYIN, idem pft:<id>)", canonical_source: table_buyin_telemetry, status: canonical, disposition: keep, severity: S5, owner: table_context, target_slice: none }
+  - { id: rated_adjustment_telemetry_producer,domain: table_context,   node_type: producer,           current_source: "adjustment telemetry (RATED_ADJUSTMENT)", canonical_source: excluded_from_tia_sum, status: out_of_scope, disposition: keep_excluded, severity: S5, owner: table_context, target_slice: none }
+  - { id: shift_metrics_winloss_fields,       domain: table_context,   node_type: consumer,           current_source: removed_commented_TODO_WS4,         canonical_source: aggregated_TableInventoryAccountingProjection, status: legacy_projection, disposition: migrate, severity: S4, owner: table_context, target_slice: tia_aggregate_ws4 }
+  - { id: shift_report_assembler_winloss,     domain: table_context,   node_type: consumer,           current_source: "holdPercent=null (winloss suppressed)", canonical_source: aggregated_TableInventoryAccountingProjection, status: legacy_projection, disposition: migrate, severity: S4, owner: reporting, target_slice: tia_aggregate_ws4 }
+  - { id: dashboard_estimated_drop_aggregate, domain: table_context,   node_type: consumer,           current_source: "estimated_drop_buyins_total_cents (shift-metrics rollup)", canonical_source: tia_aggregate_drop_estimate, status: surface_misrepresentation, disposition: suppress_or_migrate, severity: S4, owner: table_context, target_slice: tia_aggregate_ws4 }
+  - { id: rundown_report_table_win_cents,     domain: table_context,   node_type: consumer,           current_source: "persisted ADR-027 rundown report (table_win_cents)", canonical_source: TableInventoryAccountingProjection, status: dead_candidate, disposition: delete, severity: S5, owner: table_context, target_slice: tia_legacy_cleanup }
+  - { id: telemetry_to_tia_seam,              domain: table_context,   node_type: seam,               current_source: "session_scoped_SUM(RATED_BUYIN+GRIND_BUYIN)", canonical_source: ADR-061_D2_predicate, status: certified, disposition: keep, severity: S5, owner: table_context, target_slice: none }
+  - { id: table_session_to_tia_seam,          domain: table_context,   node_type: seam,               current_source: "session lifecycle facts (opened_at/closed_at/snapshots)", canonical_source: ADR-061_session_scope_window, status: certified_with_leak, disposition: keep, severity: S5, owner: table_context, target_slice: tia_dto_conformance_followup }
+
+  # ---- FINANCIAL / player_financial + table_context producers + mtl ----
+  - { id: pft_create_financial_txn_buyin,     domain: player_financial, node_type: producer,          current_source: "rpc_create_financial_txn (services/player-financial/crud.ts:159)", canonical_source: rpc_create_financial_txn, status: canonical, disposition: keep, severity: S5, owner: player_financial, target_slice: certified }
+  - { id: pft_create_financial_txn_cashout,   domain: player_financial, node_type: producer,          current_source: "rpc_create_financial_txn (no cashout emit branch — I5 non-emission, correct)", canonical_source: rpc_create_financial_txn, status: ledger_only, disposition: keep, severity: S5, owner: player_financial, target_slice: "deferred:W2-OBS-CASHOUT-PRODUCER-001" }
+  - { id: pft_create_financial_adjustment,    domain: player_financial, node_type: producer,          current_source: "rpc_create_financial_adjustment (http.ts:183; PRD-084 20/20 cert)", canonical_source: rpc_create_financial_adjustment, status: canonical, disposition: keep, severity: S5, owner: player_financial, target_slice: certified }
+  - { id: grind_record_observation,           domain: table_context,    node_type: producer,          current_source: "rpc_record_grind_observation (no prod TS caller; UI hook path)", canonical_source: rpc_record_grind_observation, status: canonical_but_uncertified_workflow, disposition: certify_workflow, severity: S3, owner: table_context, target_slice: finance_workflow_certification }
+  - { id: table_fill_producer,                domain: table_context,    node_type: producer,          current_source: "rpc_request_table_fill (chip-custody.ts:84)", canonical_source: rpc_request_table_fill, status: canonical_but_uncertified_workflow, disposition: certify_workflow, severity: S3, owner: table_context, target_slice: PWB-002 }
+  - { id: table_credit_producer,              domain: table_context,    node_type: producer,          current_source: "rpc_request_table_credit (chip-custody.ts:127)", canonical_source: rpc_request_table_credit, status: canonical_but_uncertified_workflow, disposition: certify_workflow, severity: S3, owner: table_context, target_slice: PWB-002 }
+  - { id: visit_financial_summary_route,      domain: player_financial, node_type: consumer,          current_source: "visit_financial_summary_view + visit_class_a_projection (crud.ts:542-604)", canonical_source: visit_class_a_projection, status: canonical_consumer, disposition: keep, severity: S4, owner: player_financial, target_slice: certified }
+  - { id: rating_slip_modal_financial,        domain: rating_slip,      node_type: consumer,          current_source: "visit_summary_dto envelope dropped at UI (rating-slip-modal.tsx:579-586)", canonical_source: FinancialValue_render, status: surface_misrepresentation, disposition: migrate, severity: S3, owner: rating_slip, target_slice: surface_convergence }
+  - { id: operational_projection_grindbuyin,  domain: table_context,    node_type: consumer,          current_source: "shift_operational_projection flattened DTO (grind-buyin-panel.tsx:117)", canonical_source: FinancialValue_render, status: surface_misrepresentation, disposition: migrate, severity: S3, owner: table_context, target_slice: surface_convergence }
+  - { id: outbox_observability_admin,         domain: player_financial, node_type: consumer,          current_source: "OutboxAdminEventDTO (OutboxObservabilityClient.tsx:547,189)", canonical_source: OutboxAdminEventDTO, status: canonical_consumer, disposition: keep, severity: S4, owner: player_financial, target_slice: certified }
+  - { id: player_360_money_surfaces,          domain: player_360,       node_type: consumer,          current_source: "envelope unwrapped to value (card.tsx:211, summary-band.tsx:137-185)", canonical_source: FinancialValue_render, status: surface_misrepresentation, disposition: migrate, severity: S3, owner: player_360, target_slice: surface_convergence }
+  - { id: pft_to_finance_outbox_seam,         domain: player_financial, node_type: workflow_seam,     current_source: "same_transaction_emission (fn_finance_outbox_emit)", canonical_source: same_transaction_emission, status: certified, disposition: keep, severity: S5, owner: player_financial, target_slice: certified }
+  - { id: mtl_to_linked_pft_adjustment_seam,  domain: mtl,              node_type: workflow_seam,     current_source: "pft->mtl derivation trigger (fn_derive_mtl_from_finance, one-directional)", canonical_source: pft_to_mtl_derivation_trigger, status: certified, disposition: keep, severity: S4, owner: mtl, target_slice: certified }
+  - { id: relay_production_trigger,           domain: player_financial, node_type: workflow_seam,     current_source: "github_actions_cron (.github/workflows/outbox-relay-trigger.yml '*/5 * * * *')", canonical_source: vercel_cron, status: boundary_violation, disposition: remediate_or_amend_adr, severity: S3, owner: player_financial, target_slice: relay_governance_reconciliation }
+
+  # ---- LOYALTY producers / authorities / aggregates ----
+  - { id: producer_accrual,                   domain: loyalty,          node_type: producer,          current_source: rpc_accrue_on_close, canonical_source: ledger+outbox_same_txn, status: ledger_only, disposition: emit_outbox_same_txn, severity: S4, owner: loyalty, target_slice: loyalty_phase_4, l_refs: [L-06, L-07] }
+  - { id: producer_promo,                     domain: loyalty,          node_type: producer,          current_source: outbox_only, canonical_source: ledger+outbox_same_txn, status: outbox_only, disposition: add_ledger_write, severity: S4, owner: loyalty, target_slice: loyalty_phase_4, l_refs: [L-06] }
+  - { id: producer_manual_reward,             domain: loyalty,          node_type: producer,          current_source: manual_reward_rpc, canonical_source: canonical_reason_guarded_ledger, status: legacy_authoring, disposition: reason_guard, severity: S4, owner: loyalty, target_slice: loyalty_phase_3, l_refs: [L-08] }
+  - { id: producer_mid_session,               domain: loyalty,          node_type: producer,          current_source: rpc_issue_mid_session_reward, canonical_source: undecided, status: dead_candidate, disposition: resolve_dead_then_delete_or_canonize, severity: S4, owner: loyalty, target_slice: loyalty_phase_3, l_refs: [L-08, L-09] }
+  - { id: producer_redemption,                domain: loyalty,          node_type: producer,          current_source: redeem_rpc, canonical_source: server_owned_redeem, status: legacy_authoring, disposition: server_quote, severity: S3, owner: loyalty, target_slice: loyalty_phase_5, l_refs: [L-12] }
+  - { id: loyalty_reversal_rpc,               domain: loyalty,          node_type: producer,          current_source: absent, canonical_source: rpc_reverse_loyalty_ledger_entry, status: dead_candidate, disposition: build, severity: S4, owner: loyalty, target_slice: loyalty_phase_2, l_refs: [L-05] }
+  - { id: loyalty_ledger,                     domain: loyalty,          node_type: authority,         current_source: append_only_ledger, canonical_source: append_only_ledger, status: canonical, disposition: add_gaming_day+fact_class, severity: S3, owner: loyalty, target_slice: loyalty_phase_3, l_refs: [L-10, L-15] }
+  - { id: loyalty_balance_cache,              domain: loyalty,          node_type: aggregate,         current_source: current_balance_cache, canonical_source: ledger_sum_projection, status: aggregate_split_brain, disposition: derive_or_govern_projection, severity: S3, owner: loyalty, target_slice: loyalty_phase_2, l_refs: [L-03] }
+  - { id: loyalty_balance_reconciliation_mv,  domain: loyalty,          node_type: aggregate,         current_source: dead_mv_never_refreshed, canonical_source: scheduled_check_or_delete, status: dead_candidate, disposition: delete_or_activate, severity: S3, owner: loyalty, target_slice: loyalty_phase_2, l_refs: [L-04] }
+  - { id: loyalty_liability_snapshot,         domain: loyalty,          node_type: projection,        current_source: live_balance_x_is_active_rate, canonical_source: as_of_versioned_snapshot, status: legacy_projection, disposition: migrate, severity: S4, owner: loyalty, target_slice: loyalty_phase_1, l_refs: [L-01, L-02] }
+
+  # ---- LOYALTY consumers ----
+  - { id: loyalty_liability_shift_report,     domain: loyalty,          node_type: consumer,          current_source: live_snapshot_no_asof, canonical_source: loyalty_liability_snapshot_dto, status: legacy_projection_consumer, disposition: migrate, severity: S4, owner: loyalty, target_slice: loyalty_phase_1, l_refs: [L-01, L-13] }
+  - { id: loyalty_liability_widget,           domain: loyalty,          node_type: consumer,          current_source: pinned_amount_beside_live_rate, canonical_source: loyalty_liability_snapshot_dto, status: surface_misrepresentation, disposition: migrate, severity: S4, owner: loyalty, target_slice: loyalty_phase_1, l_refs: [L-02] }
+  - { id: player360_header,                   domain: loyalty,          node_type: consumer,          current_source: balance_default_0+tier_string, canonical_source: loyalty_balance_dto, status: surface_misrepresentation, disposition: migrate, severity: S3, owner: loyalty, target_slice: loyalty_phase_5, l_refs: [L-11] }
+  - { id: comp_confirm_panel,                 domain: loyalty,          node_type: consumer,          current_source: client_recompute_point_cost+balance, canonical_source: redemption_quote_dto, status: client_recompute, disposition: migrate, severity: S3, owner: loyalty, target_slice: loyalty_phase_5, l_refs: [L-12] }
+  - { id: loyalty_panel,                      domain: loyalty,          node_type: consumer,          current_source: current_balance_cache+fabricated_tier, canonical_source: loyalty_balance_dto, status: legacy_projection_consumer, disposition: migrate, severity: S3, owner: loyalty, target_slice: loyalty_phase_5, l_refs: [L-03, L-13] }
+  - { id: rs_modal_balance,                   domain: loyalty,          node_type: consumer,          current_source: current_balance_cache, canonical_source: loyalty_balance_dto, status: legacy_projection_consumer, disposition: migrate, severity: S3, owner: loyalty, target_slice: loyalty_phase_5, l_refs: [L-03] }
+  - { id: rs_modal_estimate,                  domain: loyalty,          node_type: consumer,          current_source: live_theo_recompute_unlabeled, canonical_source: live_reward_estimate_dto, status: surface_misrepresentation, disposition: label_live, severity: S3, owner: loyalty, target_slice: loyalty_phase_3, l_refs: [L-07] }
+  - { id: receipts,                           domain: loyalty,          node_type: consumer,          current_source: accrual_result, canonical_source: settled_movement_dto, status: migration_target, disposition: migrate, severity: S2, owner: loyalty, target_slice: loyalty_phase_5, l_refs: [L-13] }
+
+  # ---- RATING SLIP seam nodes ----
+  - { id: seam_rs_close_accrual,              domain: rating_slip,      node_type: workflow_seam,     current_source: "client_fire_and_forget_separate_rpc (hooks/rating-slip-modal/use-close-with-financial.ts:131-145)", canonical_source: atomic_or_durable_close_to_accrual, status: boundary_violation, disposition: remediate_dependency, severity: S4, owner: rating_slip, target_slice: rating_slip_seam_cert, l_refs: [L-05] }
+  - { id: seam_rs_modal_estimate,             domain: rating_slip,      node_type: workflow_seam,     current_source: "open_slip_live_recompute (components/modals/rating-slip/rating-slip-modal.tsx:824-854)", canonical_source: labeled_live_estimate_dto, status: boundary_labeling, disposition: remediate_dependency, severity: S3, owner: rating_slip, target_slice: rating_slip_seam_cert, l_refs: [L-07] }
+  - { id: seam_rs_pft,                        domain: rating_slip,      node_type: workflow_seam,     current_source: client_orchestrated_pit_cash_observation, canonical_source: server_resolved_atomic_pft, status: boundary_violation, disposition: defer_to_finance_lane, severity: S3, owner: rating_slip, target_slice: rating_slip_seam_cert }
+
+# -----------------------------------------------------------------------------
+# §5.4 EDGE REGISTRY  (cross-domain propagation / dependency)
+# -----------------------------------------------------------------------------
+edges:
+
+  # ---- TIA ----
+  - { from: grind_buyin_producer,             to: table_buyin_telemetry,            relation: authors_qualifying_telemetry_row,    authority_carried: "telemetry_fact / non_custody", anchor_requirements: "casino_id,table_id,occurred_at,idempotency_key", transaction_boundary: single_rpc, certification_status: certified }
+  - { from: rated_buyin_finance_bridge_producer, to: table_buyin_telemetry,         relation: same_transaction_bridge_from_pft,    authority_carried: "telemetry_fact (mirror of PFT in)", anchor_requirements: "casino_id,rating_slip_id,visit_id,idem=pft:<id>", transaction_boundary: db_trigger_same_tx, certification_status: certified }
+  - { from: table_buyin_telemetry,            to: tia_accounting_service,           relation: session_scoped_projection_input,     authority_carried: "telemetry_derived_drop_estimate / non_custody_estimate", anchor_requirements: "casino_id,table_id,[opened_at,COALESCE(closed_at,NOW()))", transaction_boundary: "synchronous_read (no outbox)", certification_status: certified }
+  - { from: table_session,                    to: tia_accounting_service,           relation: supplies_session_scope_bounds_and_snapshots, authority_carried: "lifecycle_facts (opened/closed/opener/closer)", anchor_requirements: "session_id,casino_id(RLS),gaming_table_id", transaction_boundary: synchronous_read, certification_status: certified_with_leak }
+  - { from: tia_accounting_service,           to: rundown_summary_panel,            relation: render_only_projection_delivery,     authority_carried: "calculation_kind,custody_status,drop_estimate_state", anchor_requirements: "bigint-as-string lossless transport", transaction_boundary: http_get, certification_status: certified }
+
+  # ---- FINANCE ----
+  - { from: pft_authoring,                    to: finance_outbox,                   relation: same_transaction_emission,           authority_carried: "ledger/actual (buyin.recorded, adjustment.recorded)", anchor_requirements: "casino_id(GUC)+table_id+player_id+aggregate_id+gaming_day", transaction_boundary: "single BEGIN..COMMIT (ADR-054 R3)", certification_status: certified }
+  - { from: grind_fill_credit_authoring,      to: finance_outbox,                   relation: same_transaction_emission,           authority_carried: "operational/estimated (grind/fill/credit); player_id NULL", anchor_requirements: "casino_id(GUC)+table_id+gaming_day", transaction_boundary: "single BEGIN..COMMIT", certification_status: partial }
+  - { from: mtl_linked_adjustment,            to: pft_adjustment,                   relation: no_reverse_write,                    authority_carried: "finance-side only; MTL emits nothing", anchor_requirements: "idempotency_key 'fin:'||pft.id", transaction_boundary: "AFTER INSERT trigger same txn, fail-closed", certification_status: certified }
+  - { from: finance_outbox,                   to: visit_class_a_projection,         relation: as_of_completeness_projection,       authority_carried: "actual/PFT; completeness complete|partial|unknown", anchor_requirements: "visit_id+casino_id+gaming_day; processed_messages idempotency", transaction_boundary: "outbox-driven (relay); rpc atomic", certification_status: certified_transport_uncertified_render }
+  - { from: outbox_relay_cycle,               to: projections,                      relation: durable_async_delivery,             authority_carried: "envelope immutable in transit (R4)", anchor_requirements: "CRON_SECRET bearer; event_id UUIDv7 ordering", transaction_boundary: "per-row claim FOR UPDATE SKIP LOCKED", certification_status: deviated }
+
+  # ---- LOYALTY / RATING SLIP ----
+  - { from: seam_rs_close_accrual,            to: producer_accrual,                 relation: freezes_and_supplies_accrual_basis, authority_carried: none, anchor_requirements: "ratingSlipId,casinoId,playerId,visitId", transaction_boundary: NOT_ATOMIC_fire_and_forget, certification_status: failing }
+  - { from: seam_rs_modal_estimate,           to: rs_modal_estimate,                relation: live_estimate_recompute,            authority_carried: estimate, anchor_requirements: "ratingSlipId,playerId,tableId", transaction_boundary: none, certification_status: uncertified }
+  - { from: seam_rs_pft,                       to: finance_outbox,                   relation: same_transaction_emission_target,   authority_carried: fact_class, anchor_requirements: "ratingSlipId,visitId,playerId,casinoId", transaction_boundary: NOT_ATOMIC_client_orchestrated, certification_status: deferred_to_finance }
+  - { from: loyalty_ledger,                   to: loyalty_balance_cache,            relation: aggregate_projection,               authority_carried: balance, anchor_requirements: "playerId,casinoId", transaction_boundary: rpc_arithmetic_no_constraint, certification_status: uncertified }
+  - { from: loyalty_ledger,                   to: loyalty_liability_snapshot,       relation: as_of_valuation_projection,         authority_carried: liability_value, anchor_requirements: "casinoId,snapshot_date,policy_version", transaction_boundary: upsert_re_prices, certification_status: failing }
+  - { from: loyalty_liability_snapshot,       to: loyalty_liability_shift_report,   relation: dated_projection_render,            authority_carried: "as_of+policy_version", anchor_requirements: "casinoId,gaming_day", transaction_boundary: render, certification_status: failing }
+  - { from: producer_accrual,                 to: loyalty_outbox,                   relation: should_emit_same_txn,               authority_carried: fact_class, anchor_requirements: "event_id_uuidv7,aggregate_id,casinoId,playerId", transaction_boundary: ABSENT_ledger_only, certification_status: uncertified }
+  - { from: rating_slip_close,                to: telemetry,                        relation: pit_cash_observation_estimate,      authority_carried: telemetry_fact, anchor_requirements: "ratingSlipId,visitId", transaction_boundary: client_orchestrated, certification_status: owned_by_tia_lane }
+
+# -----------------------------------------------------------------------------
+# FRACTURE CROSSWALK  (loyalty diagnosis L-01..L-15 -> node ids)
+# -----------------------------------------------------------------------------
+fracture_crosswalk:
+  L-01: [loyalty_liability_snapshot, loyalty_liability_shift_report]
+  L-02: [loyalty_liability_widget, loyalty_liability_snapshot]
+  L-03: [loyalty_balance_cache, loyalty_panel, rs_modal_balance, comp_confirm_panel]
+  L-04: [loyalty_balance_reconciliation_mv]
+  L-05: [loyalty_reversal_rpc, seam_rs_close_accrual]
+  L-06: [producer_accrual, producer_promo]              # loyalty_outbox node implicit (edge target)
+  L-07: [producer_accrual, rs_modal_estimate, seam_rs_modal_estimate]
+  L-08: [producer_mid_session, producer_manual_reward]
+  L-09: [producer_mid_session]
+  L-10: [loyalty_ledger]
+  L-11: [player360_header]                              # comp_drawer shares this node family
+  L-12: [comp_confirm_panel]
+  L-13: [loyalty_liability_shift_report, loyalty_panel, receipts]
+  L-14: [ALL_LOYALTY_NODES_srl_unbound]
+  L-15: [loyalty_ledger]
+
+# -----------------------------------------------------------------------------
+# RATING SLIP ESCALATION  (directive §10)
+# -----------------------------------------------------------------------------
+rating_slip_escalation:
+  preliminary_outcome: B_leaning_C
+  rationale: >
+    Close->accrual is not a boundary-only defect: ingress cannot atomically supply a
+    downstream domain (close RPC commits; accrual is a separate fire-and-forget client
+    call, errors swallowed). The same hook fans out a non-atomic pit-cash/PFT
+    observation, so one unsafe client fan-out feeds finance + telemetry + loyalty —
+    the Outcome C tell. RS internal lifecycle appears single-owned (post-close edits
+    rejected), keeping Outcome B on the table.
+  seams_requiring_certification_first:
+    - seam_rs_close_accrual    # top priority: atomic/durable close->accrual, no silent loss
+    - seam_rs_modal_estimate   # label live estimate; freeze basis at close
+  decision_test: >
+    Is the unsafe client fan-out loyalty-specific (B) or general across
+    finance+telemetry+loyalty (C)? pit-cash co-orchestration is early evidence for C.
+
+# -----------------------------------------------------------------------------
+# PROOF OBLIGATIONS  (directive §14 — five classes, never collapsed to one flag)
+# -----------------------------------------------------------------------------
+proof_obligations:
+
+  tia:
+    mechanism: PROVEN                       # three-state machine + frozen formula; unit+int tests
+    producer_capability: PROVEN             # grind RPC + finance bridge write qualifying kinds w/ idempotency
+    workflow_certification: PARTIAL         # producers live; no E2E proving operator session -> panel projection
+    consumer_certification_per_session: PROVEN          # render-only static gate
+    consumer_certification_aggregate: UNPROVEN          # shift-metrics/report win-loss = TODO-WS4 (deferred)
+    suppression_winloss: PROVEN             # suppression gate + computeTableRundown quarantined
+    suppression_drop_aggregate: NOT_PROVEN  # estimated_drop_buyins_total_cents survives on 2 dashboards
+
+  outbox_pft_lane:
+    mechanism_proof: PROVEN                 # same-txn insert; I1 5/5; PRD-082 live; immutability trigger
+    producer_capability_proof: PROVEN_PER_PRODUCER      # txn/grind exemplar; adj PRD-084 20/20; fill/credit I1 unit
+    workflow_certification: PARTIAL_DEVIATED            # buyin/adj live; grind UI no integration cert; fill/credit operator UI deferred PWB-002; RELAY PROD TRIGGER DEVIATED (GHA */5 vs ADR-056 Vercel cron) -> AP-3
+    consumer_certification: FAILING_AT_RENDER           # DTOs carry envelope; render strips it -> AP-7; only entitlement-confirm-panel + outbox observability certified
+    suppression_proof: NOT_DONE             # no removal gate on bare-dollar surfaces (AP-4); pit_cash_observation dead taxonomy unremoved
+
+  loyalty_liability_slice:                  # L-01/02/05, Cure B (as-of versioned valuation)
+    mechanism: as_of_policy_lookup_deterministic
+    producer_capability: snapshot_rpc_idempotent_on_casino_date_policy
+    workflow_certification: real_shift_report_supplies_cutoff_and_policy
+    consumer_certification: shift_report_renders_snapshot_rate_version_asof_no_live_fetch
+    suppression: remove_is_active_only_valuation_reads
+
+  loyalty_balance_reversal_slice:           # L-03/04/05
+    mechanism: ledger_sum_equals_balance_AND_reversal_nets_zero
+    producer_capability: rpc_reverse_loyalty_ledger_entry_valid_inputs
+    workflow_certification: real_reversal_supplies_original_entry_id
+    consumer_certification: all_surfaces_read_one_balance_dto
+    suppression: remove_current_balance_direct_reads+delete_or_activate_dead_mv
+
+  loyalty_outbox_slice:                     # L-06, Cure A (reuse Wave 2 I1-I4)
+    mechanism: same_txn_outbox_insert
+    producer_capability: accrual_emits_ledger_plus_outbox
+    workflow_certification: real_close_emits
+    consumer_certification: projection_only_idempotent_consumer
+    suppression: no_ledger_only_or_outbox_only_producers_remain
+
+  rating_slip_seam_slice:                   # seam_rs_close_accrual
+    mechanism: atomic_or_durable_close_to_accrual
+    producer_capability: close_path_settles_accrual_on_valid_slip
+    workflow_certification: real_operator_close_does_not_silently_drop_accrual   # currently FAILS
+    consumer_certification: modal_shows_settled_vs_estimate_distinctly
+    suppression: remove_client_fire_and_forget_accrual_path
+
+# -----------------------------------------------------------------------------
+# OPEN FLAGS  (evidence-grounded; surfaced for owner action)
+# -----------------------------------------------------------------------------
+flags:
+  - id: RELAY-TRIGGER-DEVIATION
+    severity: S3
+    lane: financial
+    evidence: ".github/workflows/outbox-relay-trigger.yml '*/5 * * * *'; vercel.json crons = cleanup only (0 7 * * *); ADR-056 D2 mandates Vercel cron; removed commit 607fdcb1 (Hobby plan rejects sub-daily cron); undocumented in ADR-056 / WAVE-2-SIGN-OFF; PRD-086/088/089 still assert 'Vercel every minute'"
+    disposition: amend_ADR-056_or_restore_vercel_cron
+  - id: TIA-DTO-DRIFT-ADR059-D3
+    severity: S5
+    lane: tia
+    evidence: "drop_estimate_state value 'absent' vs canon 'none_for_session'; completeness envelope missing included_inputs/missing_inputs; source_authority.drop uses literal table name"
+    disposition: tia_dto_conformance_followup
+  - id: TIA-DROP-AGGREGATE-UNSUPPRESSED
+    severity: S4
+    lane: tia
+    evidence: "estimated_drop_buyins_total_cents un-suppressed on secondary-kpi-stack.tsx:75 and casino-summary-card.tsx:260; suppression gate only forbids per-table name; probable casino-drop double-count assembler.ts:395-398 (rated+grind+buyins_total)"
+    disposition: tia_aggregate_ws4
+  - id: RS-CLOSE-ACCRUAL-NONATOMIC
+    severity: S4
+    lane: splitbrain
+    evidence: "hooks/rating-slip-modal/use-close-with-financial.ts:131-145 — accrual is client fire-and-forget, errors swallowed; rpc_close_rating_slip does not invoke accrual; §9 seam contract fully unmet"
+    disposition: rating_slip_seam_cert
+
+# -----------------------------------------------------------------------------
+# INITIAL EXECUTION SEQUENCE  (directive §17 — status of each step)
+# -----------------------------------------------------------------------------
+execution_sequence:
+  - { step: 1,  task: "Create SYSTEM-CANON-PROPAGATION-REGISTER.yaml",              status: DONE }            # this file
+  - { step: 2,  task: "Register TIA + transactional outbox as partial propagation", status: DONE }
+  - { step: 3,  task: "Register Loyalty as active remediation",                     status: DONE }
+  - { step: 4,  task: "Register Rating Slip as contingent dependency",              status: DONE }
+  - { step: 5,  task: "Map Loyalty producers, consumers, immediate seams",          status: DONE }
+  - { step: 6,  task: "Execute Loyalty liability exemplar (L-01/02/05)",            status: NOT_STARTED }     # next bounded slice
+  - { step: 7,  task: "Execute Loyalty balance + reversal exemplar (L-03/04/05)",   status: NOT_STARTED }
+  - { step: 8,  task: "Execute Loyalty outbox exemplar (L-06)",                     status: NOT_STARTED }
+  - { step: 9,  task: "Certify Rating Slip<->Loyalty and Rating Slip<->Finance seams", status: NOT_STARTED }
+  - { step: 10, task: "Perform focused Rating Slip split-brain review",             status: NOT_STARTED }
+  - { step: 11, task: "Select next canonization program from this map",             status: NOT_STARTED }
+
+# -----------------------------------------------------------------------------
+# ROLLOUT SELECTION  (directive §7) — recommended next bounded slice
+# -----------------------------------------------------------------------------
+rollout_recommendation:
+  next_slice: loyalty_liability_slice        # L-01/L-02/L-05
+  why: >
+    Highest priority by directive §7 formula: operator-visible trust impact (live S4 in
+    shift-report PDF) x financial/compliance consequence (a reported money figure)
+    x propagation breadth (valuation feeds widget + PDF) x mutable-input exposure
+    (re-prices on rate edit). Cheapest proving slice — Cure B (single-formula-owner +
+    as-of versioned lookup), no transport needed; snapshot table already carries
+    valuation_policy_version / valuation_effective_date columns.
+  containment_rule: >
+    While fractures are open: do NOT connect any consumer to loyalty_outbox, do NOT add
+    surfaces that recompute point value client-side, do NOT introduce a third balance
+    representation. Surface the fracture; do not worship it.

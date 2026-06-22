@@ -1,5 +1,6 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { Loader2, Pause, Play, RefreshCw, X } from 'lucide-react';
 import React, {
   useCallback,
@@ -21,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useCasino } from '@/hooks/casino';
 import { useGamingDay } from '@/hooks/casino/use-gaming-day';
 import { usePatronDailyTotal } from '@/hooks/mtl/use-patron-daily-total';
 import { checkCumulativeThreshold } from '@/hooks/mtl/use-threshold-notifications';
@@ -33,6 +35,8 @@ import { useRatingSlipModalData } from '@/hooks/rating-slip-modal';
 import { useRatingSlipModal } from '@/hooks/ui/use-rating-slip-modal';
 import { useAuth } from '@/hooks/use-auth';
 import { getErrorMessage } from '@/lib/errors/error-utils';
+import { getCasinoStaff } from '@/services/casino/http';
+import { casinoKeys } from '@/services/casino/keys';
 import type { AdjustmentReasonCode } from '@/services/player-financial/dtos';
 
 import { AdjustmentModal } from './adjustment-modal';
@@ -371,8 +375,24 @@ export function RatingSlipModal({
     null,
   );
 
-  // Auth context for adjustment creation
-  const { casinoId } = useAuth();
+  // Auth context for adjustment creation + print-fulfillment attribution.
+  const { casinoId, staffId } = useAuth();
+
+  // Casino + staff names for the controlled-print fulfillment payload (PRD-092):
+  // the receipt header/footer print blank from this surface without them. Mirrors
+  // the player-360 header derivation so both surfaces produce the same full template.
+  const { data: printCasino } = useCasino(casinoId ?? '');
+  const { data: printStaffList } = useQuery({
+    queryKey: [...casinoKeys.staff(), 'self-lookup'],
+    queryFn: () => getCasinoStaff(),
+    enabled: !!staffId,
+    staleTime: 1000 * 60 * 10,
+  });
+  const printCurrentStaff = printStaffList?.items.find((s) => s.id === staffId);
+  const printCasinoName = printCasino?.name ?? '';
+  const printStaffName = printCurrentStaff
+    ? `${printCurrentStaff.first_name} ${printCurrentStaff.last_name}`.trim()
+    : '';
 
   // Adjustment mutation hook
   const createAdjustment = useCreateFinancialAdjustment();
@@ -812,6 +832,8 @@ export function RatingSlipModal({
                     <IssueRewardButton
                       playerId={modalData.player.id}
                       playerName={`${modalData.player.firstName} ${modalData.player.lastName}`}
+                      casinoName={printCasinoName}
+                      staffName={printStaffName}
                       currentBalance={modalData.loyalty.currentBalance}
                       currentTier={modalData.loyalty.tier ?? undefined}
                       visitId={modalData.slip.visitId}
