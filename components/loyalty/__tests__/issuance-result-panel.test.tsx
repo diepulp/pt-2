@@ -2,10 +2,19 @@
 
 import { render, screen, fireEvent } from '@testing-library/react';
 
-import type { PrintInvocationMode } from '@/lib/print/types';
 import type { CompIssuanceResult, IssuanceResultDTO } from '@/services/loyalty';
 
 import { IssuanceResultPanel } from '../issuance-result-panel';
+
+/**
+ * PRD-092 WS7 retired the legacy window.print()/usePrintReward contract on the
+ * loyalty redemption surface. Printing is now MANUAL-FIRST (DEC-004) and routes
+ * through the controlled action via useControlledPrint. These tests cover the
+ * panel's manual-first rendering + the (decoupled) onFulfillmentReady
+ * notification. Exhaustive controlled-print outcome/reprint coverage (submitted/
+ * failed/unknown badges, nonce reprint, unknown duplicate-risk ack) is owned by
+ * WS8's controlled-print test suite.
+ */
 
 const COMP_RESULT: CompIssuanceResult = {
   family: 'points_comp',
@@ -33,102 +42,43 @@ const BASE_PROPS = {
 };
 
 describe('IssuanceResultPanel', () => {
-  describe('print button states', () => {
-    it('shows "Print" when printState is idle', () => {
-      render(<IssuanceResultPanel {...BASE_PROPS} printState="idle" />);
-      expect(screen.getByRole('button', { name: /print/i })).toHaveTextContent(
-        'Print',
-      );
-    });
-
-    it('shows "Printing..." when printState is printing (disabled)', () => {
-      render(<IssuanceResultPanel {...BASE_PROPS} printState="printing" />);
-      const btn = screen.getByRole('button', { name: /printing/i });
-      expect(btn).toHaveTextContent('Printing...');
-      expect(btn).toBeDisabled();
-    });
-
-    it('shows "Print again" when printState is success (re-clickable)', () => {
-      render(<IssuanceResultPanel {...BASE_PROPS} printState="success" />);
-      const btn = screen.getByRole('button', { name: /print again/i });
-      expect(btn).toHaveTextContent('Print again');
+  describe('manual-first print (DEC-004 / GATE-UX-1)', () => {
+    it('renders a manual "Print" button on a fresh issuance', () => {
+      render(<IssuanceResultPanel {...BASE_PROPS} />);
+      const btn = screen.getByRole('button', { name: /^print$/i });
+      expect(btn).toBeInTheDocument();
       expect(btn).not.toBeDisabled();
     });
 
-    it('shows error text when printState is error (re-clickable)', () => {
-      render(<IssuanceResultPanel {...BASE_PROPS} printState="error" />);
-      const btn = screen.getByRole('button', { name: /try again/i });
-      expect(btn).toHaveTextContent('Print failed — try again');
-      expect(btn).not.toBeDisabled();
+    it('renders no print outcome on a fresh issuance (no auto-print)', () => {
+      render(<IssuanceResultPanel {...BASE_PROPS} />);
+      // Manual-first: until the operator clicks Print there is no in-flight
+      // "Sending…" state and no terminal outcome badge.
+      expect(screen.queryByText(/sending/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/sent to printer/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/status unknown/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/not sent/i)).not.toBeInTheDocument();
+    });
+
+    it('does not surface a legacy re-drive "Print again" / "try again" affordance', () => {
+      render(<IssuanceResultPanel {...BASE_PROPS} />);
+      expect(
+        screen.queryByRole('button', { name: /print again/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /try again/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('wires the Done button to onClose', () => {
+      const onClose = jest.fn();
+      render(<IssuanceResultPanel {...BASE_PROPS} onClose={onClose} />);
+      fireEvent.click(screen.getByRole('button', { name: /done/i }));
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('print button availability (AC10)', () => {
-    it('Print button is clickable when printState is error', () => {
-      const onPrint = jest.fn();
-      render(
-        <IssuanceResultPanel
-          {...BASE_PROPS}
-          printState="error"
-          onPrint={onPrint}
-        />,
-      );
-      fireEvent.click(screen.getByRole('button', { name: /try again/i }));
-      expect(onPrint).toHaveBeenCalled();
-    });
-
-    it('Print button is clickable when printState is success (AC5 reprint)', () => {
-      const onPrint = jest.fn();
-      render(
-        <IssuanceResultPanel
-          {...BASE_PROPS}
-          printState="success"
-          onPrint={onPrint}
-        />,
-      );
-      fireEvent.click(screen.getByRole('button', { name: /print again/i }));
-      expect(onPrint).toHaveBeenCalled();
-    });
-  });
-
-  describe('onPrint callback', () => {
-    it('fires onPrint with payload and manual_print mode from idle', () => {
-      const onPrint = jest.fn();
-      render(
-        <IssuanceResultPanel
-          {...BASE_PROPS}
-          printState="idle"
-          onPrint={onPrint}
-        />,
-      );
-      fireEvent.click(screen.getByRole('button', { name: /print/i }));
-
-      expect(onPrint).toHaveBeenCalledTimes(1);
-      const [payload, mode] = onPrint.mock.calls[0] as [
-        unknown,
-        PrintInvocationMode,
-      ];
-      expect((payload as { family: string }).family).toBe('points_comp');
-      expect(mode).toBe('manual_print');
-    });
-
-    it('fires onPrint with manual_reprint mode from success state', () => {
-      const onPrint = jest.fn();
-      render(
-        <IssuanceResultPanel
-          {...BASE_PROPS}
-          printState="success"
-          onPrint={onPrint}
-        />,
-      );
-      fireEvent.click(screen.getByRole('button', { name: /print again/i }));
-
-      const mode = onPrint.mock.calls[0][1] as PrintInvocationMode;
-      expect(mode).toBe('manual_reprint');
-    });
-  });
-
-  describe('auto-fire guard (DA P0-1)', () => {
+  describe('fulfillment notification (decoupled from printing)', () => {
     it('fires onFulfillmentReady exactly once on fresh issuance', () => {
       const onFulfillmentReady = jest.fn();
       const { rerender } = render(

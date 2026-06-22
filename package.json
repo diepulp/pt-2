@@ -54,6 +54,7 @@
     "test:infra:server-actions": "jest --config jest.node.config.js --testPathPatterns='lib/server-actions/middleware/__tests__/.*\\.test\\.ts$'",
     "test:infra:root-tests": "jest --config jest.node.config.js --testPathPatterns='pt-2/__tests__/.*\\.test\\.ts$'",
     "test:verify": "jest --config jest.node.config.js && RUN_INTEGRATION_TESTS=true jest --config jest.integration.config.js",
+    "print-agent": "bash scripts/loyalty-print-agent.sh",
     "e2e:playwright": "playwright test",
     "e2e:playwright:ui": "playwright test --ui",
     "e2e:playwright:debug": "playwright test --debug",

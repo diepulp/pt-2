@@ -7,15 +7,15 @@ import dtoColumnAllowlist from './.eslint-rules/dto-column-allowlist.js';
 import noCrossContextDbImports from './.eslint-rules/no-cross-context-db-imports.js';
 import noDirectTemplate2bDml from './.eslint-rules/no-direct-template2b-dml.js';
 import noDtoTypeAssertions from './.eslint-rules/no-dto-type-assertions.js';
+import noForbiddenFinancialLabel from './.eslint-rules/no-forbidden-financial-label.js';
 import noHeaderCasinoContext from './.eslint-rules/no-header-casino-context.js';
 import noManualDTOInterfaces from './.eslint-rules/no-manual-dto-interfaces.js';
+import noRawProviderMessage from './.eslint-rules/no-raw-provider-message.js';
 import noReturnTypeInference from './.eslint-rules/no-return-type-inference.js';
 import noServiceResultReturn from './.eslint-rules/no-service-result-return.js';
 import noTemporalBypass from './.eslint-rules/no-temporal-bypass.js';
-import noUnsafeErrorDetails from './.eslint-rules/no-unsafe-error-details.js';
-import noRawProviderMessage from './.eslint-rules/no-raw-provider-message.js';
-import noForbiddenFinancialLabel from './.eslint-rules/no-forbidden-financial-label.js';
 import noUnlabeledFinancialValue from './.eslint-rules/no-unlabeled-financial-value.js';
+import noUnsafeErrorDetails from './.eslint-rules/no-unsafe-error-details.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -133,7 +133,7 @@ const eslintConfig = [
           // set_rls_context_from_staff() — TypeScript never calls it directly.
           selector: "Literal[value='set_rls_context']",
           message:
-            "ADR-024/SEC-007: set_rls_context() was DROPPED. Use a SECURITY DEFINER RPC that calls set_rls_context_from_staff() internally. TypeScript must never call context-setting functions directly. See ADR-024.",
+            'ADR-024/SEC-007: set_rls_context() was DROPPED. Use a SECURITY DEFINER RPC that calls set_rls_context_from_staff() internally. TypeScript must never call context-setting functions directly. See ADR-024.',
         },
       ],
 
@@ -225,7 +225,12 @@ const eslintConfig = [
   // direct DML from hook files is also prohibited (ADR-054).
   // ==========================================================================
   {
-    files: ['app/**/_actions.ts', 'app/**/actions.ts', 'lib/**/*.ts', 'hooks/**/*.ts'],
+    files: [
+      'app/**/_actions.ts',
+      'app/**/actions.ts',
+      'lib/**/*.ts',
+      'hooks/**/*.ts',
+    ],
     ignores: [
       'app/api/**', // Already covered by security-rules block above
       'app/actions/**', // Already covered by security-rules block above
@@ -289,11 +294,7 @@ const eslintConfig = [
   // cause cyclic object value crashes during JSON serialization.
   // ==========================================================================
   {
-    files: [
-      'services/**/*.ts',
-      'app/**/*.ts',
-      'lib/**/*.ts',
-    ],
+    files: ['services/**/*.ts', 'app/**/*.ts', 'lib/**/*.ts'],
     ignores: [
       '**/*.test.ts',
       '**/*.spec.ts',
@@ -368,7 +369,10 @@ const eslintConfig = [
     },
     rules: {
       'financial-enforcement/no-forbidden-financial-label': 'error',
-      'financial-enforcement/no-unlabeled-financial-value': ['error', { mode: 'render' }],
+      'financial-enforcement/no-unlabeled-financial-value': [
+        'error',
+        { mode: 'render' },
+      ],
     },
   },
   // Financial enforcement — DTO files (PRD-078 Phase 1.4)
@@ -384,8 +388,14 @@ const eslintConfig = [
       },
     },
     rules: {
-      'financial-enforcement/no-forbidden-financial-label': ['error', { dtoChipIdentifiersOnly: true }],
-      'financial-enforcement/no-unlabeled-financial-value': ['error', { mode: 'dto' }],
+      'financial-enforcement/no-forbidden-financial-label': [
+        'error',
+        { dtoChipIdentifiersOnly: true },
+      ],
+      'financial-enforcement/no-unlabeled-financial-value': [
+        'error',
+        { mode: 'dto' },
+      ],
     },
   },
   // Production paths security - Block service client (SEC-001)
@@ -595,6 +605,117 @@ const eslintConfig = [
                 'Detail panels must be imported from components/player-360/. See PRD-022.',
             },
           ],
+        },
+      ],
+    },
+  },
+  // ==========================================================================
+  // PRD-092 WS8 (TEMPLATE-2 / NFR-5): device-encoding vocabulary boundary lint.
+  // Device-brand/protocol vocabulary (Epson / ESC-POS), CUPS spooler MACHINERY
+  // identifiers, and window.print() must NOT appear ABOVE the
+  // renderer/adapter/agent boundary. The cups/fake adapters, the WS4 renderers,
+  // and the loopback agent legitimately own transport specifics and are exempt.
+  //
+  // Deliberately NOT banned above the boundary (blessed OS-neutral contract
+  // vocabulary): the abstract adapter KEY 'cups', the renderer/adapter FACTORY
+  // names (createCupsAdapter / createCupsRenderer), and the bounded
+  // TransportFailureCode 'spooler_rejected' (DEC-006). These are contract nouns,
+  // not device encoding — GATE-PLATFORM-1 already passed treating them as clean.
+  //
+  // Selectors operate on AST nodes only, so doc-comments that NAME the forbidden
+  // vocabulary (e.g. "ZERO CUPS / Epson / ESC-POS") are never flagged.
+  //
+  // NOTE: this block RE-DECLARES the four base service no-restricted-syntax
+  // selectors because ESLint flat-config REPLACES (does not merge) a same-id rule
+  // for a file matched by multiple blocks; the printing service surface must keep
+  // BOTH the base service guards AND these boundary guards.
+  // ==========================================================================
+  {
+    files: ['services/loyalty/printing/**/*.ts'],
+    ignores: [
+      'services/loyalty/printing/adapters/**',
+      'services/loyalty/printing/renderers/**',
+      'services/loyalty/printing/agent/**',
+      '**/*.test.ts',
+      '**/*.spec.ts',
+      '**/__tests__/**',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        // — base service guards (mirrored from the services/**/*.ts block) —
+        {
+          selector:
+            'ExportNamedDeclaration > TSTypeAliasDeclaration > TSTypeReference[typeName.name="ReturnType"]',
+          message:
+            'ANTI-PATTERN: ReturnType<typeof ...> is banned in service exports (PRD §3.3).',
+        },
+        {
+          selector: 'TSTypeQuery[exprName.name=/^create.*Service$/]',
+          message:
+            'ANTI-PATTERN: Direct typeof inference for services is banned. Define explicit interfaces.',
+        },
+        {
+          selector: 'ClassDeclaration:not([superClass.name="Error"])',
+          message:
+            'ANTI-PATTERN: Class-based services are banned (PRD §3.3). Use functional factories instead.',
+        },
+        {
+          selector: "Literal[value='set_rls_context']",
+          message:
+            'ADR-024/SEC-007: set_rls_context() was DROPPED. Use a SECURITY DEFINER RPC that calls set_rls_context_from_staff() internally.',
+        },
+        // — PRD-092 WS8 boundary guards (device-encoding vocabulary) —
+        {
+          selector:
+            "MemberExpression[object.name='window'][property.name='print']",
+          message:
+            'NFR-5 boundary: window.print() is forbidden on the loyalty printing surface — route through the controlled print action.',
+        },
+        {
+          selector: 'Literal[value=/epson|esc[\\s\\-/]?pos/i]',
+          message:
+            'GATE-PLATFORM-1 / NFR-5: device-encoding vocabulary (Epson / ESC-POS) must stay below the adapter boundary, never on the OS-neutral printing surface.',
+        },
+        {
+          selector:
+            'Identifier[name=/^(CupsSpooler|createSimulatedCupsSpooler|createCupsCommandSpooler|CupsSubmitInput|CupsSubmitResult|CupsSubmitAccepted|CupsSubmitRejected|SpoolerOutcome)$/]',
+          message:
+            'GATE-PLATFORM-1 / NFR-5: CUPS spooler machinery must stay below the adapter boundary (agent/adapter layer only), never on the OS-neutral printing surface.',
+        },
+      ],
+    },
+  },
+  // PRD-092 WS8: UI / hook / route loyalty printing surface — ban window.print()
+  // and device-brand vocabulary. No collision: no other block sets
+  // no-restricted-syntax for these paths.
+  {
+    files: [
+      'components/loyalty/**/*.ts',
+      'components/loyalty/**/*.tsx',
+      'hooks/loyalty/**/*.ts',
+      'app/api/v1/loyalty/printing/**/*.ts',
+    ],
+    ignores: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.spec.ts',
+      '**/*.spec.tsx',
+      '**/__tests__/**',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "MemberExpression[object.name='window'][property.name='print']",
+          message:
+            'NFR-5 boundary: window.print() is forbidden on the loyalty surface — route through useControlledPrint → POST /api/v1/loyalty/printing.',
+        },
+        {
+          selector: 'Literal[value=/epson|esc[\\s\\-/]?pos/i]',
+          message:
+            'GATE-PLATFORM-1 / NFR-5: device-encoding vocabulary (Epson / ESC-POS) must stay below the adapter boundary, never in the loyalty UI / route surface.',
         },
       ],
     },

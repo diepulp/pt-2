@@ -1,0 +1,128 @@
+{
+  "patch_id": "FIB-S-POS-PRINT-OS-PORTABILITY-PATCH-001",
+  "amends": "FIB-S-POS-PRINT-001",
+  "date": "2026-06-18",
+  "change_class": "scope_clarification",
+  "requires_refreeze": true,
+  "platform_boundary": {
+    "application_contract": "os_agnostic",
+    "layout_contract": "os_agnostic",
+    "status_and_audit_contract": "os_agnostic",
+    "physical_transport_adapter": "may_be_os_specific",
+    "development_environment": "linux",
+    "likely_pilot_production_environment": "windows_requires_confirmation",
+    "pilot_adapter_policy": "implement_and_certify_only_the_adapter_required_by_the_selected_production_topology",
+    "linux_physical_adapter_required": false,
+    "forbidden_leakage": [
+      "windows_spooler_types_outside_adapter",
+      "cups_types_outside_adapter",
+      "opos_or_javapos_objects_outside_adapter",
+      "raw_platform_error_codes_at_application_boundary",
+      "platform_queue_names_as_domain_identifiers"
+    ]
+  },
+  "development_validation": {
+    "linux_required": [
+      "fake_transport",
+      "application_contract_tests",
+      "layout_snapshot_or_render_tests",
+      "print_attempt_state_tests",
+      "retry_and_reprint_tests",
+      "normalized_fault_mapping_tests"
+    ],
+    "linux_real_device_required": false,
+    "production_certification": {
+      "target_os": "windows_pending_deployment_confirmation",
+      "requires_actual_host": true,
+      "requires_actual_printer_interface": true,
+      "requires_actual_driver_or_epos_service": true
+    }
+  },
+  "required_outcomes_add": [
+    "os_agnostic_application_print_contract",
+    "platform_native_dependencies_confined_to_transport_adapter",
+    "linux_development_via_contract_conformant_fake_adapter",
+    "real_device_acceptance_on_intended_production_os_and_topology"
+  ],
+  "explicit_exclusions_add": [
+    "dual_windows_and_linux_physical_adapter_implementation_in_pilot",
+    "platform_specific_printer_logic_outside_transport_adapter",
+    "generic_cross_platform_local_agent_framework",
+    "development_host_compatibility_as_production_certification"
+  ],
+  "dependencies_add": [
+    {
+      "id": "DEP-OS-1",
+      "requirement": "confirm_pilot_production_workstation_os",
+      "status": "pending"
+    },
+    {
+      "id": "DEP-OS-2",
+      "requirement": "contract_conformant_fake_adapter_for_linux_development",
+      "status": "required"
+    },
+    {
+      "id": "DEP-OS-3",
+      "requirement": "real_device_certification_on_actual_production_host_and_topology",
+      "status": "blocking_acceptance"
+    }
+  ],
+  "acceptance_gates_add": [
+    {
+      "id": "GATE-PLATFORM-1",
+      "name": "application_contract_os_neutrality",
+      "blocking": true,
+      "evidence": [
+        "no_platform_printer_types_outside_adapter",
+        "application_contract_suite_runs_without_physical_printer"
+      ]
+    },
+    {
+      "id": "GATE-PLATFORM-2",
+      "name": "adapter_contract_parity",
+      "blocking": true,
+      "evidence": [
+        "fake_and_production_adapters_pass_same_contract_suite",
+        "canonical_result_and_fault_vocabulary_returned"
+      ]
+    },
+    {
+      "id": "GATE-PLATFORM-3",
+      "name": "windows_real_device_certification",
+      "blocking": true,
+      "applies_when": "windows_confirmed_as_pilot_deployment_host",
+      "evidence": [
+        "first_print",
+        "printer_offline",
+        "paper_out",
+        "cover_open_when_observable",
+        "cut_and_layout",
+        "failed_and_unknown_result",
+        "deliberate_reprint"
+      ]
+    },
+    {
+      "id": "GATE-PLATFORM-4",
+      "name": "no_cross_platform_overbuild",
+      "blocking": true,
+      "evidence": [
+        "only_selected_production_adapter_implemented",
+        "linux_physical_adapter_absent_unless_separately_authorized"
+      ]
+    }
+  ],
+  "expansion_triggers_add": [
+    "linux_supported_as_physical_printer_production_host",
+    "second_os_specific_physical_adapter",
+    "generic_cross_platform_agent_distribution_framework",
+    "os_specific_behavior_exposed_in_application_contract"
+  ],
+  "rfc_requirements_add": [
+    "preserve_os_neutral_application_contract",
+    "identify_single_pilot_production_adapter",
+    "define_linux_fake_adapter",
+    "define_normalized_status_and_fault_mapping",
+    "identify_real_device_windows_certification_environment",
+    "prohibit_second_physical_adapter_without_fib_amendment"
+  ]
+}

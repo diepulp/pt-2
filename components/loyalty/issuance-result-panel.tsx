@@ -2,11 +2,16 @@
  * Issuance Result Panel
  *
  * Displays success, failure, or duplicate states after reward issuance.
- * Fires onFulfillmentReady on fresh issuance for auto-print (Vector C).
- * Print button reflects printState from usePrintReward hook.
+ * Fires onFulfillmentReady on fresh issuance (notification only — NOT printing).
+ *
+ * Printing is MANUAL-FIRST (PRD-092 DEC-004): the operator must click Print; no
+ * print fires on issuance. The print path routes through the controlled action
+ * `POST /api/v1/loyalty/printing` via useControlledPrint (GATE-UX-1) — the legacy
+ * window.print()/usePrintReward path is retired for the loyalty redemption flow.
  *
  * @see PRD-052 WS4 — Issuance UI
  * @see PRD-053 — Reward Instrument Fulfillment
+ * @see PRD-092 / EXEC-092 WS7 — controlled print + terminal retry semantics
  */
 
 'use client';
@@ -17,11 +22,24 @@ import {
   Copy,
   Loader2,
   Printer,
+  RotateCw,
 } from 'lucide-react';
 import { useRef } from 'react';
 
+import { PrintOutcomeBadge } from '@/components/loyalty/print-outcome-badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import type { PrintInvocationMode, PrintState } from '@/lib/print/types';
+import { useControlledPrint } from '@/hooks/loyalty/use-controlled-print';
 import type {
   CompIssuanceResult,
   EntitlementIssuanceResult,
@@ -45,14 +63,11 @@ export interface IssuanceResultPanelProps {
   casinoName: string;
   staffName: string;
 
-  /** Callback fired on success with fulfillment payload (auto-fire on fresh issuance) */
+  /**
+   * Notification fired once on fresh issuance with the assembled payload.
+   * Decoupled from printing (DEC-004) — it does NOT trigger a print.
+   */
   onFulfillmentReady?: (payload: FulfillmentPayload) => void;
-
-  /** Print state from usePrintReward hook (Vector C) */
-  printState?: PrintState;
-
-  /** Manual print callback (Vector C) */
-  onPrint?: (payload: FulfillmentPayload, mode: PrintInvocationMode) => void;
 
   /** Callback to close the drawer */
   onClose: () => void;
@@ -155,6 +170,130 @@ function assemblePayload(
     : assembleEntitlementFulfillment(result, context);
 }
 
+// === Controlled Print Actions ===
+
+/**
+ * Manual-first controlled print actions (PRD-092 WS7).
+ *
+ * - DEC-004: nothing prints until the operator clicks Print.
+ * - DEC-008: `failed`/`unknown` are terminal+immutable — there is NO re-drive
+ *   "Retry". A second physical copy is ONLY an explicit, nonce-bearing Reprint
+ *   (forks a new attempt lineage). An `unknown` reprint is gated behind a
+ *   duplicate-risk acknowledgement (the slip MAY already have printed).
+ */
+function PrintActions({
+  payload,
+  onClose,
+}: {
+  payload: FulfillmentPayload;
+  onClose: () => void;
+}) {
+  const { print, reprint, state, outcome, failure, attempt } =
+    useControlledPrint();
+
+  const isSubmitting = state === 'submitting';
+  const priorAttemptId = attempt?.printAttemptId ?? null;
+
+  const doReprint = () => {
+    if (!priorAttemptId) return;
+    reprint(payload, { reprintOf: priorAttemptId });
+  };
+
+  // Before any send (or after a transport/HTTP error): manual Print / Try again.
+  if (state === 'idle' || state === 'submitting' || state === 'error') {
+    return (
+      <div className="space-y-2">
+        {state === 'error' && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
+            <p className="min-w-0 break-words text-xs text-destructive">
+              The print could not be sent. Check the print station, then try
+              again.
+            </p>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => print(payload)}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Printer className="h-4 w-4 mr-1.5" />
+                {state === 'error' ? 'Try again' : 'Print'}
+              </>
+            )}
+          </Button>
+          <Button className="flex-1" onClick={onClose}>
+            Done
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Terminal outcome recorded: show the bounded badge + a Reprint affordance.
+  return (
+    <div className="space-y-3">
+      <PrintOutcomeBadge status={outcome ?? 'unknown'} failure={failure} />
+      <div className="flex gap-2">
+        {outcome === 'unknown' ? (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={!priorAttemptId}
+              >
+                <RotateCw className="h-4 w-4 mr-1.5" />
+                Reprint
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Reprint — possible duplicate
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  The previous attempt&apos;s status is unknown — the slip may
+                  already have printed. Reprinting will send a new copy.
+                  Continue only if you have confirmed no slip was produced.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={doReprint}>
+                  Reprint anyway
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : (
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={doReprint}
+            disabled={!priorAttemptId}
+          >
+            <RotateCw className="h-4 w-4 mr-1.5" />
+            Reprint
+          </Button>
+        )}
+        <Button className="flex-1" onClick={onClose}>
+          Done
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // === Component ===
 
 export function IssuanceResultPanel({
@@ -166,8 +305,6 @@ export function IssuanceResultPanel({
   casinoName,
   staffName,
   onFulfillmentReady,
-  printState,
-  onPrint,
   onClose,
 }: IssuanceResultPanelProps) {
   // DA P0-1 fix: ref guard ensures auto-fire fires exactly once per result
@@ -200,63 +337,14 @@ export function IssuanceResultPanel({
 
   const isDuplicate = result.isExisting;
   const context = { playerName, playerId, playerTier, casinoName, staffName };
+  const fulfillmentPayload = assemblePayload(result, context);
 
-  // Manual print handler
-  const handlePrint = () => {
-    if (!onPrint) {
-      // Fallback: fire legacy onFulfillmentReady if no onPrint provided
-      if (onFulfillmentReady) {
-        onFulfillmentReady(assemblePayload(result, context));
-      }
-      return;
-    }
-
-    const payload = assemblePayload(result, context);
-    const mode: PrintInvocationMode =
-      printState === 'success' ? 'manual_reprint' : 'manual_print';
-    onPrint(payload, mode);
-  };
-
-  // Auto-fire onFulfillmentReady once for fresh issuances (DA P0-1 fix)
+  // Notify the parent once for fresh issuances (notification only — DEC-004:
+  // this does NOT trigger a print; printing is operator-initiated below).
   if (!isDuplicate && onFulfillmentReady && !hasFiredRef.current) {
     hasFiredRef.current = true;
-    const payload = assemblePayload(result, context);
-    queueMicrotask(() => onFulfillmentReady(payload));
+    queueMicrotask(() => onFulfillmentReady(fulfillmentPayload));
   }
-
-  // Print button label and state based on printState
-  const getPrintButtonContent = () => {
-    switch (printState) {
-      case 'printing':
-        return (
-          <>
-            <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-            Printing...
-          </>
-        );
-      case 'success':
-        return (
-          <>
-            <Printer className="h-4 w-4 mr-1.5" />
-            Print again
-          </>
-        );
-      case 'error':
-        return (
-          <>
-            <Printer className="h-4 w-4 mr-1.5" />
-            Print failed — try again
-          </>
-        );
-      default:
-        return (
-          <>
-            <Printer className="h-4 w-4 mr-1.5" />
-            Print
-          </>
-        );
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -371,20 +459,8 @@ export function IssuanceResultPanel({
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-2">
-        <Button
-          variant={printState === 'error' ? 'destructive' : 'outline'}
-          className="flex-1"
-          onClick={handlePrint}
-          disabled={printState === 'printing'}
-        >
-          {getPrintButtonContent()}
-        </Button>
-        <Button className="flex-1" onClick={onClose}>
-          Done
-        </Button>
-      </div>
+      {/* Controlled print actions (manual-first; terminal-aware reprint) */}
+      <PrintActions payload={fulfillmentPayload} onClose={onClose} />
     </div>
   );
 }

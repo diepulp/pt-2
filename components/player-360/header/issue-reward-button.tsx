@@ -3,10 +3,15 @@
  *
  * Header action button for issuing rewards.
  * Opens the IssueRewardDrawer for unified reward issuance.
- * Integrates Vector C print fulfillment via usePrintReward hook.
+ *
+ * Printing is MANUAL-FIRST and routes through the controlled action
+ * `POST /api/v1/loyalty/printing` from inside the result panel (PRD-092 WS7,
+ * GATE-UX-1 / DEC-004) — this surface no longer touches window.print() /
+ * usePrintReward for the loyalty redemption path.
  *
  * @see PRD-052 WS4 — Issuance UI
  * @see PRD-053 — Reward Instrument Fulfillment
+ * @see PRD-092 / EXEC-092 WS7 — controlled print
  * @see components/loyalty/issue-reward-drawer.tsx
  */
 
@@ -25,8 +30,6 @@ import {
 } from '@/components/ui/tooltip';
 import { useValuationRate } from '@/hooks/loyalty/use-loyalty-queries';
 import { useAuth } from '@/hooks/use-auth';
-import { usePrintReward } from '@/lib/print/hooks/use-print-reward';
-import type { PrintInvocationMode, PrintState } from '@/lib/print/types';
 import type { FulfillmentPayload } from '@/services/loyalty/dtos';
 
 // === Props ===
@@ -76,31 +79,17 @@ export function IssueRewardButton({
   const { centsPerPoint, policyMissing } = useValuationRate(
     casinoId ?? undefined,
   );
-  const {
-    print,
-    state: printState,
-    error: printError,
-    reset: resetPrint,
-  } = usePrintReward();
 
   const handleClick = () => {
     onClick?.();
-    resetPrint();
     setDrawerOpen(true);
   };
 
-  // Auto-print handler: fires on fresh issuance via onFulfillmentReady
+  // Notification only (DEC-004): forwards the payload to the parent but does NOT
+  // trigger a print. Printing is operator-initiated in the result panel via the
+  // controlled action.
   const handleFulfillmentReady = (payload: FulfillmentPayload) => {
     onFulfillmentReady?.(payload);
-    print(payload, 'auto_attempt');
-  };
-
-  // Manual print handler: passed to IssuanceResultPanel's Print button
-  const handleManualPrint = (
-    payload: FulfillmentPayload,
-    mode: PrintInvocationMode,
-  ) => {
-    print(payload, mode);
   };
 
   const button = (
@@ -145,8 +134,6 @@ export function IssueRewardButton({
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
           onFulfillmentReady={handleFulfillmentReady}
-          printState={printState}
-          onPrint={handleManualPrint}
           centsPerPoint={centsPerPoint}
           policyMissing={policyMissing}
         />

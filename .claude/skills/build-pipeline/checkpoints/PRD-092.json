@@ -1,0 +1,336 @@
+{
+  "id": "PRD-092",
+  "feature_name": "loyalty-printing-linux-exemplar",
+  "status": "complete",
+  "dod_phase4": {
+    "type_check": "PASS (tsc --noEmit exit 0)",
+    "lint": "PASS (npm run lint exit 0; new WS9 files eslint-clean explicitly)",
+    "build": "PASS (npm run build exit 0; full route map emitted incl /signin + controlled routes)",
+    "e2e_write_path_gate": "PASS (WS9 GREEN, genuine local run)",
+    "write_path_mandate_gate": "no-op (write_path_classification=none — not triggered)",
+    "gate_a_fidelity": "PASS (non-waivable; WS8)",
+    "gate_b_presence": "not_applicable (gate_b_classification=none)",
+    "completed_at": "2026-06-22T05:45:00Z"
+  },
+  "remaining_manual_gate": "GATE-HW-2 — real TM-T88V on a Linux/CUPS rig, operator-run acceptance. Open by design (ADR-062 D8 Phase 1); Windows certification explicitly deferred to PRD #2 (Gate E2).",
+  "created_at": "2026-06-18T17:06:28Z",
+  "updated_at": "2026-06-22T05:30:00Z",
+  "prd_path": "docs/10-prd/PRD-092-loyalty-printing-linux-exemplar.md",
+  "exec_spec_path": "docs/21-exec-spec/EXEC-092-loyalty-printing-linux-exemplar.md",
+  "_resume": {
+    "resume_command": "/build PRD-092 --resume",
+    "resume_command_alt": "/build docs/21-exec-spec/EXEC-092-loyalty-printing-linux-exemplar.md --resume",
+    "next_action": "WS1-WS9 COMPLETE + verified. WS9 e2e-write-path gate GREEN (genuine local run, see ws9_artifacts). Remaining automatable DoD: production build (running). After build PASS: status=complete, update docs/MVP-ROADMAP.md. Only manual GATE-HW-2 (real TM-T88V Linux/CUPS rig) remains outside the automatable scope.",
+    "pending_human_input": "None for automatable scope. Manual GATE-HW-2 (real-device exemplar on Linux/CUPS rig) is operator-run and remains open by design (ADR-062 D8 Phase 1).",
+    "branch": "epson",
+    "paused_reason": "WS9 complete + verified GREEN; finalizing Phase 4 DoD (build) before status=complete (2026-06-22).",
+    "ENV_GOTCHA_CRITICAL": "Integration tests target the URL in .env.local, which points at the REMOTE project (https://vaicxfihdldgepzryhpd.supabase.co) lacking the uncommitted print_attempt migration -> PGRST202. The command_integration lane MUST run against the LOCAL stack. Before running: `set -a; source <(npx supabase status -o env); export NEXT_PUBLIC_SUPABASE_URL=$API_URL NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY; set +a`. jest.setup.node uses override:false so exported values win over .env.local. Also: after applying uncommitted migrations, reload PostgREST cache (docker restart supabase_rest_pt-2) if PGRST202 persists."
+  },
+  "gov010_check": "passed",
+  "gov010_srl_check": "not_applicable",
+  "complexity_prescreen": "full",
+  "complexity_override": null,
+  "fib_s_loaded": false,
+  "fib_h_ref": "docs/00-vision/epson/FIB-H-POS-LOYALTY-INSTRUMENT-PRINTING-001.md",
+  "fib_s_ref": "docs/00-vision/epson/FIB-S-POS-LOYALTY-INSTRUMENT-PRINTING-001.json",
+  "write_path_classification": "none",
+  "e2e_workstream_present": true,
+  "gate_b_classification": "none",
+  "srl_preflight": "skipped",
+  "gate_a_fidelity": "pass",
+  "gate_b_presence": "not_applicable",
+  "temporal_drift": false,
+  "validation": "passed_with_warnings",
+  "validation_warnings": [
+    "SCHEMA GATE advisory: no explicit schema-verification gate (schema-validation/db:types covers type-gen — left as-is)"
+  ],
+  "current_phase": 7,
+  "approval": "approved",
+  "approved_at": "2026-06-19T21:48:00Z",
+  "completed_workstreams": [
+    "WS1",
+    "WS2",
+    "WS3",
+    "WS4",
+    "WS5",
+    "WS6",
+    "WS7",
+    "WS8",
+    "WS9"
+  ],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "current_phase_pointer": "All workstreams complete. WS9 E2E write-path happy-path GREEN. Phase 4 DoD: type-check PASS, lint PASS, build finalizing. Only manual GATE-HW-2 remains.",
+  "e2e_write_path_gate": "PASS",
+  "ws9_artifacts": {
+    "files": "e2e/loyalty-printing/controlled-print-happy-path.spec.ts (Mode B browser-login E2E), e2e/loyalty-printing/support/loopback-print-agent-server.ts (real createLoopbackAgent + simulated CUPS spooler behind a loopback HTTP server — exercises the production createHttpLoopbackAgentClient path verbatim), e2e/loyalty-printing/README.md (run recipe), playwright.loyalty-printing.config.ts (committed local-pointed config)",
+    "auth_mode": "Mode B (browser login) — verification class E2E. The controlled-print route's server client is @supabase/ssr cookie-based, so Mode C Bearer does NOT authenticate it; only a real browser session does. Login via the dev password form at /signin (DevLoginForm, dev-only; magic-link /auth/login cannot password-login). Seed operator pitboss@dev.local is staff_role=admin on SEED_CASINO_ID — satisfies the route role gate (pit_boss|admin) AND same-casino P0003 instrument resolution. Controlled print driven through the authenticated browser request context (page.request) so cookies carry.",
+    "gate": "e2e-write-path GREEN — genuine local run (NOT fabricated). 1 passed. Asserts HTTP 200 + outcome.status='submitted' + outcome.failure=null + replayed=false, then service-role reads print_attempt: casino_id=SEED_CASINO_ID (context-derived), operator_id=SEED_STAFF_ID, instrument_kind='promo_coupon', instrument_ref=coupon id, result_status='submitted', failure_domain=NULL (§7a), receipt_document_hash present, reprint_of=NULL.",
+    "run_recipe": "Default playwright.config.ts force-loads REMOTE .env.local (override:true) which lacks print_attempt -> PGRST202; this write-path test MUST run local. Recipe (README): (1) local supabase up + print migrations applied; (2) LOYALTY_PRINT_AGENT_PORT=9787 npx tsx e2e/loyalty-printing/support/loopback-print-agent-server.ts; (3) dev server on :3100 with local supabase env + LOYALTY_PRINT_AGENT_URL=http://127.0.0.1:9787 + LOYALTY_PRINT_TARGET_ID=loopback-cups; (4) export local supabase env in the test shell, then `npx playwright test --config ./playwright.loyalty-printing.config.ts --reporter=list`.",
+    "gotchas_resolved": "(a) shared e2e/fixtures/auth.ts authenticateAndNavigate is STALE (targets magic-link /auth/login with #login-email) — wrote an inline dev /signin login helper instead (pre-existing E2E drift, not WS9-introduced). (b) Pre-React-hydration submit caused a native GET leaking creds to URL — added a Next-hydration wait (window.next) before click. (c) /signin hosts 3 forms (request-access/magic-link/dev) all with input[name=email] -> scoped dev email by placeholder. (d) The route fails closed 503 when LOYALTY_PRINT_AGENT_URL unset — by design, so a misconfigured run fails loudly (no coverage theatre).",
+    "verification_quality": "type-check PASS (full tsc --noEmit, includes new files); eslint PASS on all 3 new TS files + config (prettier-clean); npm run lint gate exit 0. E2E is advisory per QA-006 (not CI-blocking)."
+  },
+  "ws8_artifacts": {
+    "files": "11 test files + eslint.config.mjs boundary rule under __tests__/services/loyalty/printing/: (unit) printer-contract-parity.test.ts, receipt-document-snapshot.test.ts; (int, real-DB) no-instrument-authoring.int.test.ts, duplicate-safety.int.test.ts, idempotency-key-derivation.int.test.ts, controlled-write-boundary.int.test.ts, instrument-ref-resolution.int.test.ts, comp-family-controlled-path.int.test.ts, render-validation-fail-closed.int.test.ts, transport-failure-domain.int.test.ts, stale-reconciliation.int.test.ts; + _helpers.ts (shared fixtures/builders/agent-spies, NOT a .test file). NOTE WS8's 11th 'int' tier is satisfied by the WS2 exemplar print-attempt-rls.int.test.ts (controlled-write/instrument-ref/transport coverage) PLUS the dedicated WS8 files; total int suites executed = 10 (9 new + WS2 exemplar).",
+    "gate": "test-pass GREEN. command_unit (npm test -- __tests__/services/loyalty/printing/): 2 suites / 18 tests PASS, 10 int suites correctly describe.skip (RUN_INTEGRATION_TESTS unset), exit 0. command_integration (RUN_INTEGRATION_TESTS=true jest.integration.config.js --testPathPatterns='services/loyalty/printing/' --runInBand --ci, LOCAL stack env): 10 suites / 37 tests PASS, exit 0. stack_probe rc=0 (UP). discovery_assertion PASS: all 10 required *.int.test.ts discovered.",
+    "gate_a_fidelity": "PASS (check-test-fidelity.py: detected=false, 0 violations) — every *.int.test.ts uses real createClient Mode C, NO Supabase client-constructor mock.",
+    "boundary_lint": "eslint.config.mjs: two added blocks. (1) services/loyalty/printing/**/*.ts (ignoring adapters/renderers/agent): bans window.print, Epson/ESC-POS Literals, and CUPS-spooler-MACHINERY identifiers (CupsSpooler/createSimulatedCupsSpooler/createCupsCommandSpooler/CupsSubmit*/SpoolerOutcome) via no-restricted-syntax (re-declares the 4 base service selectors since flat-config replaces same-id rules). (2) components/loyalty + hooks/loyalty + app/api/v1/loyalty/printing: bans window.print + Epson/ESC-POS. DELIBERATELY NOT banned (blessed OS-neutral contract vocabulary): adapter key 'cups', factory names createCupsAdapter/createCupsRenderer, and TransportFailureCode 'spooler_rejected' (DEC-006). Selectors are AST-only so doc-comments naming the vocab are not flagged. Lint of new test files clean (0 errors).",
+    "dup1_d_nuance": "WS8(d) two-concurrent-first_print asserts the DETERMINISTIC physical-once boundary per ws6_artifacts.exactly_once_nuance: exactly ONE print_attempt row (DB UNIQUE single-flight), both calls resolve same printAttemptId, and the agent jobKey dedupe -> a single distinct spooler jobId (one physical document). The literal 'agent submitJob spy == 1' is asserted on the SEQUENTIAL replay path (case a), where adapter-once is deterministic; under true Promise.all concurrency both peers may observe 'requested' and reach the adapter, so call-count==1 is NOT asserted there (would be flaky) — the audit single-flight + jobKey dedupe is the real physical-once boundary.",
+    "pre_existing_lint_debt": "NOT introduced by WS8. WS3/WS4/WS5 source files (renderers/schemas/templates/dtos/mappers) + the WS2 exemplar test carry prettier-formatting + no-dto-type-assertions errors when linted ad-hoc. The official `npm run lint` uses `git ls-files` so it SKIPS these UNTRACKED files (hence WS3-5 'eslint PASS' claims). My boundary rule produced ZERO false positives. Left frozen-source untouched (out of WS8 scope); my new test files were prettier-formatted clean."
+  },
+  "ws7_artifacts": {
+    "files": "hooks/loyalty/use-controlled-print.ts (NEW), components/loyalty/print-outcome-badge.tsx (NEW), components/player-360/header/issue-reward-button.tsx (rewired), components/loyalty/issue-reward-drawer.tsx (legacy print props removed), components/loyalty/issuance-result-panel.tsx (controlled-print PrintActions + retired legacy onPrint/printState), components/loyalty/__tests__/issuance-result-panel.test.tsx (rewritten to manual-first contract)",
+    "gate": "lint PASS (exit 0, all touched files); type-check PASS (exit 0); affected unit test 26/26 PASS",
+    "gate_ux_1": "ZERO window.print()/usePrintReward imports or calls on the surface (issue-reward-button.tsx) and its drawer/panel subtree — only doc-comment mentions remain. Both families (entitlement coupon + points_comp slip) route through POST /api/v1/loyalty/printing via useControlledPrint.",
+    "dec_004": "auto_attempt auto-print DROPPED: handleFulfillmentReady no longer calls print(); IssuanceResultPanel no longer auto-fires a print (onFulfillmentReady retained as a NON-printing notification, fires once on fresh issuance). PrintActions is manual-first — nothing prints without an explicit operator click.",
+    "dec_008": "No re-drive Retry affordance. After a terminal outcome, the only resubmission path is a nonce-bearing Reprint (useControlledPrint.reprint mints crypto.randomUUID() reprintNonce + reprintOf=prior attempt.printAttemptId). For outcome=unknown the Reprint button is gated behind an AlertDialog duplicate-risk acknowledgement ('Reprint anyway'). HTTP/transport errors (state='error', e.g. 503 agent unconfigured) surface a 'Try again' first_print (no terminal row exists yet — not a re-drive).",
+    "terminology_7a": "PrintOutcomeBadge vocabulary bounded to submitted|failed|unknown. submitted copy = 'Sent to printer — not yet confirmed printed' (does NOT imply physical completion). No 'printed'/'completed'/'acknowledged'/'device'/PrinterFault vocabulary. failure copy maps bounded transport/render codes only.",
+    "scope_guard": "lib/print/ untouched (non-loyalty MTL/shift docs still use window.print()/auto_attempt). usePrintReward import removed from the loyalty surface only.",
+    "notes_for_ws8": "Legacy panel print-state tests (onPrint/printState/manual_reprint/'Print again') were obsoleted by WS7 and REMOVED from issuance-result-panel.test.tsx (replaced with manual-first + onFulfillmentReady-once assertions). WS8 owns exhaustive controlled-print outcome/reprint/ack UI coverage + the *.int.test.ts real-DB suite."
+  },
+  "ws6_artifacts": {
+    "files": "app/api/v1/loyalty/printing/route.ts (controlled POST), app/api/v1/loyalty/printing/test-print/route.ts (admin POST), services/loyalty/printing/http.ts (orchestrator)",
+    "gate": "lint PASS (exit 0, new files); type-check PASS (exit 0). Only pre-existing .uuid() zod deprecation warnings (same as WS3 schemas.ts).",
+    "orchestration": "createInstrumentPrintingHttp.print(): FR-7 canonical-renderer guard → resolveInstrument (entitlement→promo_coupon/coupon_id, points_comp→ledger_entry/ledger_id) → buildReceiptDocument + hashReceiptDocument → server-derived idempotency key (DEC-005: hashIdempotencyKey{kind,ref,intent:first_print|reprint+nonce}) → rpc_request_print_attempt → if returned row terminal: return prior (replayed=true, NO adapter) → else requested: cups adapter.print (server-side POST to loopback agent) → rpc_transition_print_attempt(terminal; failure only on 'failed' per WS3 schema refine). P0100 on transition (lost race) → re-fetch prior, replayed=true.",
+    "config": "resolveServerPrintConfig: LOYALTY_PRINT_AGENT_URL (required, fail-closed 503) + LOYALTY_PRINT_TARGET_ID (opaque, default 'loopback-cups'). createHttpLoopbackAgentClient (loopback-only). Device address never in body; printerTargetId NOT client-supplied (omitted from controlledPrintRequestSchema).",
+    "pcode_mapping": "P0001→FORBIDDEN/403, P0002→NOT_FOUND/404, P0003→VALIDATION_ERROR/422 (LOYALTY_PRINT_INSTRUMENT_UNRESOLVED), P0101/P0102→INTERNAL/500, P0100→control-flow (return prior, not surfaced).",
+    "exactly_once_nuance": "FLAGGED FOR WS8: physical-print exactly-once is guaranteed at THREE layers: (1) HTTP Idempotency-Key edge single-flight for double-click, (2) DB UNIQUE(casino_id,idempotency_key) insert-or-return-prior, (3) WS5 agent jobKey dedupe (same instrument→same doc→one spool). Terminal write is single-flight via P0100. CAVEAT: the frozen WS2 rpc_request returns a bare row without an 'inserted' flag, so WS6 cannot distinguish INSERT-winner from a concurrent peer that also sees 'requested'; under TRUE concurrency both may call adapter.print, but the agent jobKey dedupe collapses to ONE physical spool and only one transition wins. WS8(d) 'adapter spy == 1 under concurrent first_print' should assert against the AGENT submitJob spy (the real physical-once boundary) — the literal adapter.print-once holds on the normal sequential path. No WS2 amendment made (frozen, 14/14).",
+    "gate_dom_1": "Writes ONLY print_attempt via WS2 RPCs; reads instrument only indirectly (RPC P0003 resolution). Never writes promo_coupon/promo_program/ledger.",
+    "test_print": "test-print/route.ts → adapter.testPrint DIRECTLY; NO rpc_request_print_attempt, NO audit row, NO instrument (feature-loop step 8)."
+  },
+  "ws5_artifacts": {
+    "files": "services/loyalty/printing/adapters/{cups-adapter,fake-adapter,index}.ts + services/loyalty/printing/agent/loopback-agent.ts; printing index.ts barrel re-exports ./adapters",
+    "gate": "type-check PASS (exit 0); eslint PASS (exit 0, new files)",
+    "contract_methods": "createCupsAdapter + createFakeAdapter both implement LoyaltyInstrumentPrinter<ReceiptDocument> (getStatus/print/testPrint)",
+    "call_path": "DEC-002: cups adapter renders via WS4 cups renderer → POSTs AgentPrintJobRequest to LoopbackAgentClient (in-process OR createHttpLoopbackAgentClient baseUrl loopback-only) → loopback agent fronts CupsSpooler. Agent host bound 127.0.0.1 (LOOPBACK_HOST). D5 idempotency via jobKey cache (submitted-only, rejections retryable). D6 truthful (no fabricated submitted). Prod spooler = createCupsCommandSpooler (lp -d <queue>); default = createSimulatedCupsSpooler (deterministic, tests/type-check).",
+    "outcome_mapping": "Shared mapAgentResponseToOutcome/mapTransportErrorToOutcome (GATE-PLATFORM-2 parity): accepted|completed→submitted (AC1 collapse in adapter); rejected→failed/transport_submission/spooler_rejected; agent_unreachable(pre-submit)→failed/transport_submission; malformed_agent_response(post-submit ambiguous, DEC-006)→unknown/transport_submission. failure_domain=device NEVER populated (§7a).",
+    "gate_platform_1": "CLEAN — device machinery (spawn/lp/fetch) confined to agent/loopback-agent.ts; contract/dtos/schemas/mappers/templates/renderers have NO upward dep on adapters/agent. 'cups'/'fake' are abstract adapter KEYS (pre-blessed WS3/WS4), not device-encoding types.",
+    "notes": "Dropped createDefaultPrinterRegistry convenience to avoid index→adapters→index cycle (import/no-cycle); WS6 owns registry wiring via createPrinterAdapterRegistry. Defensive non-canonical-renderer guard present in both adapters (FR-7 authoritatively enforced in WS6)."
+  },
+  "audit_patch_2026_06_19": {
+    "source": "user-supplied audit (PATCH_REQUIRED, 4 P0 + 3 P1)",
+    "adjudication": "P0-1/P0-2/P0-3/P0-4 SUBSTANTIATED; P1-1 substantiated (scope-sensitive); P1-2 minor; P1-3 mostly already-implemented (REVOKE/GRANT/search_path/casino+role predicates + cross-casino RPC test already present)",
+    "decisions_applied": {
+      "P1-1": "user chose: add transport_submission domain (DEC-006)",
+      "migration_mechanics": "user chose: amend the two uncommitted migrations in place + db reset"
+    },
+    "DEC-006": "failure_domain += transport_submission {agent_unreachable|spooler_rejected|malformed_agent_response}; amends 'only render_validation' guardrail; device still forbidden (§7a)",
+    "DEC-007": "print_attempt RPC-ONLY writes: RLS denies direct INSERT/UPDATE/DELETE (SELECT same-casino only); instrument_ref resolution moved INTO rpc_request_print_attempt (P0003 on miss); route lookup is UX-only",
+    "DEC-008": "failed AND unknown both terminal+immutable; NO Retry re-drive; resubmission via nonce-bearing Reprint only; unknown requires duplicate-risk ack",
+    "migrations_amended": [
+      "20260619145557_create_print_attempt.sql — deny-DML policies (no_direct_insert/update), failure_domain CHECK += transport_submission",
+      "20260619151717_create_print_attempt_write_rpcs.sql — instrument_ref resolution in request RPC (P0003); + rpc_mark_stale_print_attempts_unknown reconciler (frozen 15min, requested→unknown, SKIP LOCKED, no scheduler)"
+    ],
+    "ts_amended": "contract.ts (PrintFailureDomain union + TransportFailureCode), schemas.ts (enum), dtos.ts (comment)",
+    "exec_spec_amended": "WS1/WS2/WS6/WS7/WS8 desc+AC; DEC-006/007/008; execution_phases split (WS7 then WS8, no longer parallel — WS8 now depends_on WS7); test-pass gate npx jest + discovery assertion (P1-2)",
+    "verification": "db reset (user-run) → db:types-local exit 0 → type-check exit 0 → print-attempt-rls.int.test.ts 14/14 PASS on live DB (covers P0-1 direct-DML-denied, P0-2 P0003 non-resolving+cross-casino, DEC-006 transport_submission, P0-4 stale→unknown, comp ledger_entry resolution) → validate-execution-spec PASS",
+    "deferred_to_WS8": "dedicated files controlled-write-boundary/instrument-ref-resolution/transport-failure-domain/stale-reconciliation .int.test.ts are WS8 outputs; coverage proven now inside print-attempt-rls.int.test.ts"
+  },
+  "ws1_artifacts": {
+    "migration": "supabase/migrations/20260619145557_create_print_attempt.sql",
+    "gate": "schema-validation PASS (db:types-local exit 0; print_attempt generated)",
+    "note": "Trigger error codes P0100 terminal-immutable / P0101 invalid-transition / P0102 identity-immutable."
+  },
+  "ws2_artifacts": {
+    "migration": "supabase/migrations/20260619151717_create_print_attempt_write_rpcs.sql (AMENDED post-audit)",
+    "test": "__tests__/services/loyalty/printing/print-attempt-rls.int.test.ts (real-DB, Mode C, Gate A clean; 14/14 PASS post-patch with real promo_coupon/loyalty_ledger fixtures)",
+    "rpcs": [
+      "rpc_request_print_attempt (10 args, insert-or-return-prior + instrument_ref resolution P0003)",
+      "rpc_transition_print_attempt (5 args, requested->terminal only)",
+      "rpc_mark_stale_print_attempts_unknown (1 arg, P0-4 reconciler)"
+    ],
+    "gate": "type-check PASS (0 errors); int test 14/14 PASS on live DB"
+  },
+  "ws3_artifacts": {
+    "files": "services/loyalty/printing/{contract,dtos,schemas,mappers,index}.ts + README.md (NO keys.ts per DA§8)",
+    "gate": "type-check PASS (0 errors); GATE-PLATFORM-1 self-check clean"
+  },
+  "ws4_artifacts": {
+    "files": "services/loyalty/printing/templates/{receipt-document,build-receipt,hash}.ts + renderers/{cups,fake,html-preview}-renderer.ts; index.ts barrel updated",
+    "gate": "type-check PASS (exit 0, 0 errors)",
+    "value_authority": "build-receipt renders value ONLY from FulfillmentPayload.face_value_cents (DA§5); never reads promo_coupon.face_value_amount",
+    "hash": "hashReceiptDocument = sha256 over recursively stable-key-ordered canonical serialization of ReceiptDocument (NOT transport payload)",
+    "canonicality_flag": "ReceiptRenderer.canonical — html-preview=false (WS6 FR-7 runtime guard signal), cups/fake=true",
+    "notes": "Shared ReceiptRenderer/RenderedReceipt interface co-located in receipt-document.ts (no 7th file). Renderers are functional factories (createCupsRenderer/createFakeRenderer/createHtmlPreviewRenderer). GATE-PLATFORM-1 clean (no CUPS/Epson/ESC-POS types). Provisional-layout footer marked non-authoritative (FIB DEP-3)."
+  },
+  "drift_resolution": {
+    "applied_at": "WS2 (forced by type-check gate)",
+    "action": "Applied 3 pending committed migrations to local DB + registered them: 20260422183640 (bootstrap_casino_pit_layout RPC, needed by floor-layout/crud.ts), 20260523034116 (sec011 outbox revoke), 20260601125150 (otp dev fn). Local DB now at FULL PARITY with committed migration files. This REVERSED the WS1 isolation stance — necessary because regenerating types from an incomplete local DB dropped rpc_bootstrap_casino_pit_layout and broke type-check.",
+    "supabase_db_reset": "NOT run"
+  },
+  "dormant_workstreams": [],
+  "manual_gates": [
+    "GATE-HW-2 (real TM-T88V Linux/CUPS rig — manual operational acceptance)"
+  ],
+  "execution_phases": [
+    {
+      "phase": 1,
+      "workstreams": [
+        "WS1"
+      ],
+      "parallel": false,
+      "executor": "backend-service-builder",
+      "gate": "schema-validation"
+    },
+    {
+      "phase": 2,
+      "workstreams": [
+        "WS2",
+        "WS3"
+      ],
+      "parallel": true,
+      "executors": [
+        "rls-expert",
+        "backend-service-builder"
+      ],
+      "gate": "type-check"
+    },
+    {
+      "phase": 3,
+      "workstreams": [
+        "WS4"
+      ],
+      "parallel": false,
+      "executor": "backend-service-builder",
+      "gate": "type-check"
+    },
+    {
+      "phase": 4,
+      "workstreams": [
+        "WS5"
+      ],
+      "parallel": false,
+      "executor": "backend-service-builder",
+      "gate": "type-check"
+    },
+    {
+      "phase": 5,
+      "workstreams": [
+        "WS6"
+      ],
+      "parallel": false,
+      "executor": "api-builder",
+      "gate": "lint"
+    },
+    {
+      "phase": 6,
+      "workstreams": [
+        "WS7"
+      ],
+      "parallel": false,
+      "executor": "frontend-design-pt-2",
+      "gate": "lint"
+    },
+    {
+      "phase": 7,
+      "workstreams": [
+        "WS8"
+      ],
+      "parallel": false,
+      "executor": "qa-specialist",
+      "gate": "test-pass",
+      "note": "WS8 now depends_on WS7 (asserts auto-print removal WS7 owns) — no longer parallel"
+    },
+    {
+      "phase": 8,
+      "workstreams": [
+        "WS9"
+      ],
+      "parallel": false,
+      "executor": "e2e-testing",
+      "gate": "e2e-write-path"
+    }
+  ],
+  "workstream_summary": {
+    "WS1": "print_attempt schema + RLS migration (backend-service-builder) — polymorphic instrument ref; BEFORE UPDATE trigger for identity/terminal immutability; Pattern C RLS row+role only; UNIQUE(casino_id,idempotency_key); index(casino_id,result_status,requested_at)",
+    "WS2": "controlled-write RPCs SECURITY DEFINER (rls-expert) — rpc_request_print_attempt/rpc_transition_print_attempt; no operator_id/casino_id params; server-derived idempotency key; cross-casino + forged-actor tests",
+    "WS3": "InstrumentPrinting submodule + LoyaltyInstrumentPrinter contract (backend-service-builder) — four-state vocab; keys.ts DEFERRED (YAGNI)",
+    "WS4": "Receipt templating (backend-service-builder) — FulfillmentPayload→ReceiptDocument; cents value-authority; cups/fake/html-preview renderers; receipt_document_hash over canonical doc",
+    "WS5": "Transport adapters cups+fake + loopback agent (backend-service-builder) — server-side adapter POSTs to 127.0.0.1 agent; ADR-063 D5/D6 only; failure_domain=device null",
+    "WS6": "Controlled print action + admin test-print (api-builder) — server-derived key; instrument_ref same-casino resolution pre-INSERT (DA§3); collision: terminal→return-prior / in-flight→reject, adapter fires ONCE by INSERT-winner (DA P1-B); printer_target_id from env LOYALTY_PRINT_AGENT_URL, 'available'=agent /health 200 (DA§2); runtime non-canonical-renderer reject; fails closed; never writes promo_coupon/ledger",
+    "WS7": "Operator UX retire window.print() (frontend-design-pt-2) — both families; manual-first (auto_attempt dropped); outcome badge; explicit retry/reprint",
+    "WS8": "Test + boundary-lint suite (qa-specialist) — contract parity, ReceiptDocument snapshot, GATE-DOM-1, GATE-DUP-1(a-d: (d) adapter-spy-once under concurrent first_print, DA P1-B), idempotency-derivation, instrument-ref-resolution.int (DA§3), comp-family-controlled-path.int (DA§7), render-validation-fail-closed, TEMPLATE-2 lint; all *.int.test.ts real-DB (Gate A) AND actually executed via live-stack test-pass gate (DA P1-A)",
+    "WS9": "E2E happy-path (e2e-testing) — issue→controlled print→submitted→print_attempt persisted"
+  },
+  "devils_advocate": {
+    "verdict": "Ship w/ gates after P0+P1 patches — APPLIED",
+    "p0": [
+      "P0-1 DEC-001 vs GATE-UX-1 contradiction (comp-slip on shared surface)"
+    ],
+    "p1": [
+      "P1-1 auto-print duplicate-safety",
+      "P1-2 idempotency-key derivation",
+      "P1-3 server↔agent call-path",
+      "P1 column-immutability via trigger not RLS"
+    ],
+    "p2": [
+      "orphaned requested reconciliation",
+      "printer_target config resolution",
+      "html-preview runtime guard",
+      "value-unit authority",
+      "keys.ts YAGNI",
+      "double-submit single-flight"
+    ],
+    "resolution": "patched into EXEC-SPEC via DEC-003/004/005 + DEC-002 extension + revised WS1/WS2/WS4/WS5/WS6/WS7/WS8"
+  },
+  "devils_advocate_pass_2": {
+    "verdict": "Ship w/ gates — 7-item patch delta APPLIED to EXEC-SPEC (2026-06-19)",
+    "ground_truth_verified": "FulfillmentPayload@dtos.ts:623 (face_value_cents), usePrintReward@issue-reward-button.tsx:84 + auto_attempt@:95, dual-family dispatch lib/print/print-reward.ts, promo_coupon.id + loyalty_ledger.id both casino-scoped uuid PKs, comp carries ledger_id / entitlement carries coupon_id (DEC-003 satisfiable), set_rls_context_from_staff(text DEFAULT)",
+    "p1": [
+      "P1-A phase-6 test-pass gate ran bare `npm test` (jsdom jest.config.js) which IGNORES *.int.test.ts — GATE-DOM-1/GATE-DUP-1 were skipped-green (coverage theatre). gate_b_classification=none means nothing else forced them to run.",
+      "P1-B single-flight 'rejects' vs idempotent 'returns prior outcome' contradictory on a non-terminal `requested` collision; adapter-fires-once invariant never stated → double-copy risk."
+    ],
+    "p2": [
+      "P2 instrument_ref has no FK (DEC-003) and the compensating reconciliation was named but unscoped — no resolution check/test",
+      "P2 printer_target_id config source + 'validate target availability' undefined/untestable",
+      "P2 retry-from-`unknown` recovery semantics undefined",
+      "P2 comp (ledger_entry) family had zero end-to-end coverage (WS9 entitlement-only)"
+    ],
+    "patch_delta_applied": [
+      "1. test-pass gate split: jsdom command_unit + live-stack command_integration (RUN_INTEGRATION_TESTS=true, jest.integration.config.js, supabase status probe, fail-closed)",
+      "2. DEC-005 + WS6: collision rule — terminal→return-prior, in-flight→reject, adapter invoked EXACTLY ONCE by INSERT-winner",
+      "3. WS8 (d): assert adapter spy call count == 1 under two concurrent first_print",
+      "4. WS6 AC + WS8: instrument_ref resolves to same-casino instrument pre-INSERT; non-resolving ref rejected (new instrument-ref-resolution.int.test.ts)",
+      "5. WS7: retry-from-`unknown` = reprint-only (duplicate-risk surfaced), failed = re-drive",
+      "6. WS6: printer_target_id from env LOYALTY_PRINT_AGENT_URL + opaque id; 'available' = agent /health 200",
+      "7. WS8: comp-family (ledger_entry) controlled-path parity test (new comp-family-controlled-path.int.test.ts)"
+    ],
+    "validation_after_patch": "validate-execution-spec.py PASSED (with pre-existing schema-gate advisory only)"
+  },
+  "decisions": [
+    "DEC-001 SUPERSEDED by DEC-003 (was: instrument_id→promo_coupon FK, comp out of scope)",
+    "DEC-002 (OQ-1 resolved): co-located Linux host; SERVER writes audit + terminal transition; server-side cups adapter POSTs to loopback agent (127.0.0.1); ADR-063 D5/D6 only",
+    "DEC-003: polymorphic instrument_kind {promo_coupon|ledger_entry} + instrument_ref (no hard FK); BOTH families routed through controlled path; satisfies GATE-UX-1",
+    "DEC-004: manual-first; auto_attempt auto-print DROPPED on controlled path (lib/print/ auto_attempt untouched for non-loyalty)",
+    "DEC-005: server-derived idempotency key hash(instrument_kind, instrument_ref, intent); first_print collapses retries; reprint nonce forks new instance"
+  ],
+  "key_integration_points": {
+    "named_redemption_surface": "components/player-360/header/issue-reward-button.tsx (owns usePrintReward ~L84; auto_attempt at L92)",
+    "dual_family_dispatch": "lib/print/print-reward.ts (points_comp + entitlement)",
+    "retained_untouched": "lib/print/ (iframe-print, print-reward, hooks, templates) — non-loyalty docs",
+    "source_payload_reuse": "services/loyalty/dtos.ts:623 FulfillmentPayload (face_value_cents int) — DO NOT fork",
+    "instrument_sot_readonly": "promo_coupon (20260106235611_loyalty_promo_instruments.sql, PK id, face_value_amount numeric) + loyalty ledger",
+    "rls_context_fn": "set_rls_context_from_staff(p_correlation_id text DEFAULT NULL) — argless call valid (20251229152317)",
+    "rpc_pattern_exemplar": "20260326020531_prd059_open_custody_rpcs.sql (SECURITY DEFINER + set_rls_context_from_staff + role gate + P-codes)",
+    "service_http_result": "lib/http/service-response.ts",
+    "service_factory_pattern": "services/loyalty/index.ts (functional factory, Pattern A)"
+  },
+  "build_conventions": {
+    "migration_timestamp": "generate at execution with: date +%Y%m%d%H%M%S (never fabricate)",
+    "types_regen": "npm run db:types-local after local migration",
+    "test_location": "__tests__/services/loyalty/printing/ (root-level, ADR-002)",
+    "integration_test_naming": ".int.test.ts (NOT .integration.test.ts)",
+    "e2e_location": "e2e/loyalty-printing/*.spec.ts",
+    "security_definer": "SET search_path = pg_catalog, public (pre-commit hook enforces)",
+    "gate_a": "Gate A test-fidelity is NON-WAIVABLE — all *.int.test.ts must be real-DB (no Supabase client-constructor mock)"
+  },
+  "phase_scope_guardrails": [
+    "Linux/CUPS EXEMPLAR ONLY (ADR-062 D8 Phase 1 / Gate E1). NO Windows windows_spooler adapter, NO install/update, NO ADR-063 D1-D4/D7 hardening (PRD #2 / Gate E2).",
+    "submitted != printed; no acknowledged/printed/completed state.",
+    "PrinterFault / device-fault vocabulary MUST be absent from DTOs/UI/schema (§7a); failure_domain=device stays null.",
+    "failure_domain populated this phase: render_validation OR transport_submission (DEC-006 amended the original render_validation-only guardrail). device REMAINS forbidden (§7a).",
+    "NO generic/runtime/admin template engine. lib/print/ window.print() untouched for non-loyalty (MTL/shift reports).",
+    "Writes ONLY print_attempt. promo_coupon/promo_program/ledger READ-ONLY. No new SRM service row, no bounded-context admission.",
+    "srl_required: false — §7a local Terminology/Operator-Copy Gate replaces SRL admission."
+  ]
+}
