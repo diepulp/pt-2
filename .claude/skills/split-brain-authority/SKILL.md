@@ -47,7 +47,7 @@ Every split-brain collapses one of these distinctions. Watch for all three:
 
 When handed a domain, artifact, bug report, or "these two numbers disagree" question, walk this sequence. Keep answers terse unless a fracture is found.
 
-**1. Detect.** Apply the provenance test. Ask: does more than one store, service, RPC, or surface produce this fact or a fact like it? Is one term being used for more than one concept? Is a derived/estimated/observed value being rendered as authoritative or complete?
+**1. Detect.** Apply the provenance test. Ask: does more than one store, service, RPC, or surface produce this fact or a fact like it? Is one term being used for more than one concept? Is a derived/estimated/observed value being rendered as authoritative or complete? A split-brain is a *graph* property, so reach for the **GitNexus code knowledge graph** (`mcp__gitnexus__*`) here before grep — one `cypher` for a fact-bearing name appearing in two files, or one `query` whose `definitions` list the producers of a concept, surfaces the second derivation that text search hides. See `references/gitnexus-evidence.md` for the tool→step map, the per-fracture probes, the smoke-tested same-name / caller-inventory recipes, and the load-bearing-vs-blind-spot calibration for this TS/Supabase index. Treat graph hits as leads; confirm the diverging formula by Read before writing a disposition.
 
 **2. Classify.** Assign one (or more) of the 10 fracture types. Full definitions, fracture signs, and the required decision per type are in `references/fracture-taxonomy.md`:
 
@@ -145,6 +145,7 @@ Two domains remediated (Financial Outbox, TIA). SIGP has already produced **SIGP
 | `references/cure-patterns.md` | Matching a cure; need the outbox contract, the single-formula-owner pattern, the SRL semantic root, suppression-not-deprecation, the I1–I4 proofs, or the rollout phasing template |
 | `references/governance-stack.md` | Mapping governance layers; need SIGP passes/severity/fracture-types/outputs, FCTSS classes, the ADR spine (052–061), SRL/SRM roles, or document statuses |
 | `references/remediation-surface.md` | Prioritizing or scoping remediation; need per-candidate evidence (Visit/Rating Slip, Loyalty, MTL, OpsIntel), the legacy-artifact grep map, SIGP-001/002 registers, and ISSUE-005 |
+| `references/gitnexus-evidence.md` | Detecting or evidencing a fracture with the GitNexus code graph; need the tool→diagnostic-step map, the per-fracture-type probes, the dual-writer/projection-drift/surface-drift Cypher recipes, or the operational caveats |
 
 ### External authorities (route here; do not duplicate)
 - Skills: `financial-model-authority`, `tia-canon-authority`, `system-canon-propagation-authority` (program-level oversight — owns the propagation register/map and the expansion gate)
