@@ -129,7 +129,7 @@ export function mapTransportErrorToOutcome(
  * It carries no instrument barcode/token — exercising the adapter without
  * issuing anything (WS6 admin test-print: no instrument, no audit row).
  */
-function buildTestPrintDocument(): ReceiptDocument {
+export function buildTestPrintDocument(): ReceiptDocument {
   return {
     templateId: 'admin-test-print',
     templateVersion: 1,

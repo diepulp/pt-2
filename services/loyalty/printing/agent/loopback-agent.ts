@@ -29,6 +29,10 @@
 import { spawn } from 'child_process';
 import { createHash } from 'crypto';
 
+import { isCompatibleProtocolVersion } from './protocol-version';
+import type { JobTokenAuthorizer } from './request-auth';
+import type { WindowsSpooler } from './windows-spooler';
+
 /** The agent binds the loopback host ONLY (NFR-4). */
 export const LOOPBACK_HOST = '127.0.0.1';
 
@@ -50,6 +54,17 @@ export interface AgentPrintJobRequest {
   contentType: string;
   /** Serialized transport payload to spool. */
   body: string;
+  /**
+   * DEC-WIN-03 (PRD-093): single-use authorization token bound to this
+   * `(jobKey, printerTargetId)`. REQUIRED when the agent is configured with an
+   * authorizer (Windows production); ignored by the Linux exemplar (no authorizer).
+   */
+  authToken?: string;
+  /**
+   * ADR-063 D4 caller<->agent protocol version. Checked fail-closed when the agent
+   * enforces auth; absent/incompatible is rejected pre-spool.
+   */
+  protocolVersion?: number;
 }
 
 /**
@@ -345,12 +360,21 @@ function resolveQueue(
  * `createCupsCommandSpooler()`.
  */
 export function createLoopbackAgent(deps?: {
-  spooler?: CupsSpooler;
+  spooler?: CupsSpooler | WindowsSpooler;
   /** Optional `printerTargetId` → CUPS queue mapping (default identity). */
   queueMap?: Record<string, string>;
+  /**
+   * DEC-WIN-03 (PRD-093): when provided, the agent ENFORCES localhost request
+   * auth — every fresh job must carry a compatible `protocolVersion` and a valid,
+   * single-use `authToken` bound to its `(jobKey, printerTargetId)`, verified +
+   * consumed BEFORE the spooler is touched. Omitted on the Linux exemplar (the
+   * D1–D4 hardening is a Windows-certification concern, ADR-063 applicability).
+   */
+  authorizer?: JobTokenAuthorizer;
 }): LoopbackPrintAgent {
   const spooler = deps?.spooler ?? createSimulatedCupsSpooler();
   const queueMap = deps?.queueMap;
+  const authorizer = deps?.authorizer;
   // D5: cache of submitted outcomes keyed by jobKey. Rejections are NOT cached
   // (a rejected job never printed and may legitimately be retried).
   const submitted = new Map<string, AgentPrintJobResponse>();
@@ -368,7 +392,32 @@ export function createLoopbackAgent(deps?: {
       const prior = submitted.get(request.jobKey);
       if (prior) {
         // D5: idempotent replay — return the prior outcome, do NOT re-spool.
+        // A pure replay emits nothing, so it is gated by dedup (the authoritative
+        // duplicate barrier), NOT by a fresh token (DEC-WIN-03).
         return prior;
+      }
+
+      // DEC-WIN-03: localhost auth for a FRESH spool. Every rejection happens
+      // HERE, before the spooler is touched — a pre-acceptance rejection mapping
+      // to `failed`/`transport_submission` at the adapter (§5.5 custody matrix).
+      if (authorizer) {
+        if (!isCompatibleProtocolVersion(request.protocolVersion)) {
+          return {
+            spoolerOutcome: 'rejected',
+            rejectionReason: 'auth_rejected: incompatible_protocol_version',
+          };
+        }
+        const verdict = authorizer.verifyAndConsume({
+          token: request.authToken,
+          jobKey: request.jobKey,
+          printerTargetId: request.printerTargetId,
+        });
+        if (!verdict.ok) {
+          return {
+            spoolerOutcome: 'rejected',
+            rejectionReason: `auth_rejected: ${verdict.reason}`,
+          };
+        }
       }
 
       const result = await spooler.submit({

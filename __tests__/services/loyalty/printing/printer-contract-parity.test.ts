@@ -26,6 +26,7 @@ import { describe, it, expect } from '@jest/globals';
 
 import { createCupsAdapter } from '@/services/loyalty/printing/adapters/cups-adapter';
 import { createFakeAdapter } from '@/services/loyalty/printing/adapters/fake-adapter';
+import { createWindowsAdapter } from '@/services/loyalty/printing/adapters/windows-adapter';
 import type {
   LoyaltyInstrumentPrinter,
   PrintOutcome,
@@ -194,6 +195,215 @@ describe('printer contract parity — cups ⇔ fake (WS8 / GATE-PLATFORM-2)', ()
 
     for (const outcome of outcomes) {
       // The contract type already excludes 'device'; assert at runtime too.
+      expect(outcome.failure?.domain).not.toBe('device');
+      if (outcome.failure) {
+        expect(['render_validation', 'transport_submission']).toContain(
+          outcome.failure.domain,
+        );
+      }
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WS_W8 — windows_spooler joins the SAME parity suite (GATE-PLATFORM-2).
+// The Windows adapter wraps the SAME LoopbackAgentClient seam as cups and reuses
+// the SHARED mappers (anti-fork), so it MUST return byte-identical canonical
+// vocabulary. Each adapter gets its OWN in-process agent (the agent dedupes by
+// jobKey, so a shared agent would collapse the second adapter's identical job).
+// ─────────────────────────────────────────────────────────────────────────────
+describe('printer contract parity — windows ⇔ cups ⇔ fake (WS_W8 / GATE-PLATFORM-2)', () => {
+  it('accepted → all three return submitted', async () => {
+    const cups = createCupsAdapter({
+      client: makeInProcessAgentClient({ outcome: 'accepted' }).client,
+      renderer: createCupsRenderer(),
+    });
+    const windows = createWindowsAdapter({
+      client: makeInProcessAgentClient({ outcome: 'accepted' }).client,
+      renderer: createCupsRenderer(),
+    });
+    const fake = createFakeAdapter({ spoolerOutcome: 'accepted' });
+
+    const [c, w, f] = [
+      await print(cups),
+      await print(windows),
+      await print(fake),
+    ];
+    expect(w).toEqual({ status: 'submitted' });
+    expect(w).toEqual(c);
+    expect(w).toEqual(f);
+  });
+
+  it('completed → all three collapse to submitted (windows never stronger, INV-2)', async () => {
+    const cups = createCupsAdapter({
+      client: makeInProcessAgentClient({ outcome: 'completed' }).client,
+      renderer: createCupsRenderer(),
+    });
+    const windows = createWindowsAdapter({
+      client: makeInProcessAgentClient({ outcome: 'completed' }).client,
+      renderer: createCupsRenderer(),
+    });
+    const fake = createFakeAdapter({ spoolerOutcome: 'completed' });
+
+    const [c, w, f] = [
+      await print(cups),
+      await print(windows),
+      await print(fake),
+    ];
+    expect(w.status).toBe('submitted');
+    expect(w.status).not.toMatch(/printed|acknowledged|completed/);
+    expect(w).toEqual(c);
+    expect(w).toEqual(f);
+  });
+
+  it('spooler rejected → all three fail with transport_submission/spooler_rejected', async () => {
+    const cups = createCupsAdapter({
+      client: makeInProcessAgentClient({
+        rejectAll: true,
+        rejectReason: 'no media',
+      }).client,
+      renderer: createCupsRenderer(),
+    });
+    const windows = createWindowsAdapter({
+      client: makeInProcessAgentClient({
+        rejectAll: true,
+        rejectReason: 'no media',
+      }).client,
+      renderer: createCupsRenderer(),
+    });
+    const fake = createFakeAdapter({
+      spoolerOutcome: 'rejected',
+      rejectionReason: 'no media',
+    });
+
+    const [c, w, f] = [
+      await print(cups),
+      await print(windows),
+      await print(fake),
+    ];
+    expect(w.status).toBe('failed');
+    expect(w.failure?.domain).toBe('transport_submission');
+    expect(w.failure?.code).toBe('spooler_rejected');
+    expect(w.status).toBe(c.status);
+    expect(w.failure?.domain).toBe(c.failure?.domain);
+    expect(w.failure?.code).toBe(c.failure?.code);
+    expect(w.failure?.domain).toBe(f.failure?.domain);
+  });
+
+  it('agent unreachable (pre) → all three fail with transport_submission/agent_unreachable', async () => {
+    const cups = createCupsAdapter({
+      client: makeTransportErrorClient('agent_unreachable').client,
+      renderer: createCupsRenderer(),
+    });
+    const windows = createWindowsAdapter({
+      client: makeTransportErrorClient('agent_unreachable').client,
+      renderer: createCupsRenderer(),
+    });
+    const fake = createFakeAdapter({ transportError: 'agent_unreachable' });
+
+    const [c, w, f] = [
+      await print(cups),
+      await print(windows),
+      await print(fake),
+    ];
+    expect(w.status).toBe('failed');
+    expect(w.failure).toMatchObject({
+      domain: 'transport_submission',
+      code: 'agent_unreachable',
+    });
+    expect(w).toEqual(c);
+    expect(w.failure?.code).toBe(f.failure?.code);
+  });
+
+  it('malformed reply (post) → all three return unknown (MAY have printed), not failed', async () => {
+    const cups = createCupsAdapter({
+      client: makeTransportErrorClient('malformed_agent_response').client,
+      renderer: createCupsRenderer(),
+    });
+    const windows = createWindowsAdapter({
+      client: makeTransportErrorClient('malformed_agent_response').client,
+      renderer: createCupsRenderer(),
+    });
+    const fake = createFakeAdapter({
+      transportError: 'malformed_agent_response',
+    });
+
+    const [c, w, f] = [
+      await print(cups),
+      await print(windows),
+      await print(fake),
+    ];
+    expect(w.status).toBe('unknown');
+    expect(w.failure).toMatchObject({
+      domain: 'transport_submission',
+      code: 'malformed_agent_response',
+    });
+    expect(w).toEqual(c);
+    expect(w.status).toBe(f.status);
+  });
+
+  it('non-canonical renderer → windows fails render_validation BEFORE any transport call', async () => {
+    const { client, submitJobSpy } = makeInProcessAgentClient({
+      outcome: 'accepted',
+    });
+    const windows = createWindowsAdapter({
+      client,
+      renderer: createHtmlPreviewRenderer(), // canonical === false
+    });
+    const cups = createCupsAdapter({
+      client: makeInProcessAgentClient({ outcome: 'accepted' }).client,
+      renderer: createHtmlPreviewRenderer(),
+    });
+
+    const [w, c] = [await print(windows), await print(cups)];
+    expect(w.status).toBe('failed');
+    expect(w.failure?.domain).toBe('render_validation');
+    expect(w.failure?.domain).toBe(c.failure?.domain);
+    // A non-canonical payload must NEVER reach the agent on the windows path.
+    expect(submitJobSpy).not.toHaveBeenCalled();
+  });
+
+  it('§7a: windows failure_domain is never "device" across every outcome', async () => {
+    const windowsOutcomes: PrintOutcome[] = await Promise.all([
+      print(
+        createWindowsAdapter({
+          client: makeInProcessAgentClient({ outcome: 'accepted' }).client,
+          renderer: createCupsRenderer(),
+        }),
+      ),
+      print(
+        createWindowsAdapter({
+          client: makeInProcessAgentClient({ outcome: 'completed' }).client,
+          renderer: createCupsRenderer(),
+        }),
+      ),
+      print(
+        createWindowsAdapter({
+          client: makeInProcessAgentClient({ rejectAll: true }).client,
+          renderer: createCupsRenderer(),
+        }),
+      ),
+      print(
+        createWindowsAdapter({
+          client: makeTransportErrorClient('agent_unreachable').client,
+          renderer: createCupsRenderer(),
+        }),
+      ),
+      print(
+        createWindowsAdapter({
+          client: makeTransportErrorClient('malformed_agent_response').client,
+          renderer: createCupsRenderer(),
+        }),
+      ),
+      print(
+        createWindowsAdapter({
+          client: makeInProcessAgentClient({ outcome: 'accepted' }).client,
+          renderer: createHtmlPreviewRenderer(),
+        }),
+      ),
+    ]);
+
+    for (const outcome of windowsOutcomes) {
       expect(outcome.failure?.domain).not.toBe('device');
       if (outcome.failure) {
         expect(['render_validation', 'transport_submission']).toContain(

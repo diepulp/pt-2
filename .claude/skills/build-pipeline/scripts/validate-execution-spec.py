@@ -97,6 +97,11 @@ VALID_GATES = {
     "gate-3-operator-signoff",
     "gate-4-production-smoke",
     "gate-4-production",
+    # Design-resolution + artifact-fidelity gates (added per EXEC-093 audit P1-1/P2-1/P2-2/P2-5)
+    "decision-approved",       # human approval of a design decision ledger (EXEC Gate 0)
+    "artifact-review",         # required document exists and contains mandated fields
+    "script-test",             # packaging/integrity/rollback scripts pass fixture/dry-run tests
+    "windows-artifact-smoke",  # Windows-runner loadability smoke (conditional on a Windows runner)
 }
 
 REQUIRED_WORKSTREAM_FIELDS = {"name", "executor", "executor_type", "depends_on", "outputs", "gate"}
