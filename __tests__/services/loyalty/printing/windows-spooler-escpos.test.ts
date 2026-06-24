@@ -59,9 +59,7 @@ describe('toEscPosBuffer — RAW byte assembly (FR-2)', () => {
 
   it('strips the renderer pure-text cut hint (a real GS V cut replaces it)', () => {
     const buf = toEscPosBuffer('LINE1\n-- cut (partial) --');
-    const body = buf
-      .subarray(2, buf.length - 6)
-      .toString('utf8');
+    const body = buf.subarray(2, buf.length - 6).toString('utf8');
     expect(body).toBe('LINE1');
     expect(body).not.toContain('cut');
   });
@@ -114,7 +112,8 @@ describe('createWindowsCommandSpooler — trusted-path guard (DEC-WIN-01)', () =
   it('accepts an absolute helper path', () => {
     expect(() =>
       createWindowsCommandSpooler({
-        helperPath: 'C:\\ProgramData\\d3lt\\print-agent\\native\\winspool-print-helper.exe',
+        helperPath:
+          'C:\\ProgramData\\d3lt\\print-agent\\native\\winspool-print-helper.exe',
       }),
     ).not.toThrow();
   });

@@ -84,7 +84,11 @@ describe('createJobTokenAuthorizer — single-use token (DEC-WIN-03)', () => {
     const auth = createJobTokenAuthorizer();
     const { token } = auth.issue(binding);
     expect(
-      auth.verifyAndConsume({ token, jobKey: 'jk-OTHER', printerTargetId: 'target-A' }),
+      auth.verifyAndConsume({
+        token,
+        jobKey: 'jk-OTHER',
+        printerTargetId: 'target-A',
+      }),
     ).toEqual({ ok: false, reason: 'binding_mismatch' });
   });
 
@@ -92,7 +96,11 @@ describe('createJobTokenAuthorizer — single-use token (DEC-WIN-03)', () => {
     const auth = createJobTokenAuthorizer();
     const { token } = auth.issue(binding);
     expect(
-      auth.verifyAndConsume({ token, jobKey: 'jk-1', printerTargetId: 'target-OTHER' }),
+      auth.verifyAndConsume({
+        token,
+        jobKey: 'jk-1',
+        printerTargetId: 'target-OTHER',
+      }),
     ).toEqual({ ok: false, reason: 'binding_mismatch' });
   });
 });
@@ -135,8 +143,15 @@ describe('agent enforcement — auth gates a FRESH spool, dedup gates duplicatio
     const auth = createJobTokenAuthorizer();
     const { spooler, calls } = countingSpooler();
     const agent = createLoopbackAgent({ spooler, authorizer: auth });
-    const { token } = auth.issue({ jobKey: job.jobKey, printerTargetId: job.printerTargetId });
-    const res = await agent.submitJob({ ...job, authToken: token, protocolVersion: 999 });
+    const { token } = auth.issue({
+      jobKey: job.jobKey,
+      printerTargetId: job.printerTargetId,
+    });
+    const res = await agent.submitJob({
+      ...job,
+      authToken: token,
+      protocolVersion: 999,
+    });
     expect(res.spoolerOutcome).toBe('rejected');
     expect(res.rejectionReason).toMatch(/incompatible_protocol_version/);
     expect(calls()).toBe(0);
@@ -146,7 +161,10 @@ describe('agent enforcement — auth gates a FRESH spool, dedup gates duplicatio
     const auth = createJobTokenAuthorizer();
     const { spooler, calls } = countingSpooler();
     const agent = createLoopbackAgent({ spooler, authorizer: auth });
-    const { token } = auth.issue({ jobKey: job.jobKey, printerTargetId: job.printerTargetId });
+    const { token } = auth.issue({
+      jobKey: job.jobKey,
+      printerTargetId: job.printerTargetId,
+    });
     const res = await agent.submitJob({
       ...job,
       authToken: token,
@@ -160,14 +178,20 @@ describe('agent enforcement — auth gates a FRESH spool, dedup gates duplicatio
     const auth = createJobTokenAuthorizer();
     const { spooler, calls } = countingSpooler();
     const agent = createLoopbackAgent({ spooler, authorizer: auth });
-    const { token } = auth.issue({ jobKey: job.jobKey, printerTargetId: job.printerTargetId });
+    const { token } = auth.issue({
+      jobKey: job.jobKey,
+      printerTargetId: job.printerTargetId,
+    });
     const first = await agent.submitJob({
       ...job,
       authToken: token,
       protocolVersion: AGENT_PROTOCOL_VERSION,
     });
     // Replay with NO token: dedup returns the prior outcome and does NOT re-spool.
-    const replay = await agent.submitJob({ ...job, protocolVersion: AGENT_PROTOCOL_VERSION });
+    const replay = await agent.submitJob({
+      ...job,
+      protocolVersion: AGENT_PROTOCOL_VERSION,
+    });
     expect(replay).toEqual(first);
     expect(calls()).toBe(1); // exactly one physical spool
   });
@@ -215,7 +239,14 @@ describe('/diagnostics — authenticated, narrowly-scoped disclosure boundary (a
     const result = ep.handle('anything');
     if (result.status === 200) {
       const serialized = JSON.stringify(result.body).toLowerCase();
-      for (const banned of ['credential', 'secret', 'token', 'password', 'env', 'path']) {
+      for (const banned of [
+        'credential',
+        'secret',
+        'token',
+        'password',
+        'env',
+        'path',
+      ]) {
         expect(serialized).not.toContain(banned);
       }
     }
