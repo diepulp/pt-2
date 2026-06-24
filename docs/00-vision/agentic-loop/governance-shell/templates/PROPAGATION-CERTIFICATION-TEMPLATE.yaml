@@ -1,0 +1,65 @@
+# =============================================================================
+# PROPAGATION CERTIFICATION TEMPLATE
+# =============================================================================
+# Source: GOV-CANON-SHELL-001 §5.3 + Appendix B.
+# Completion of the build pipeline does NOT mean canon propagation is complete.
+# The shell certifies SEPARATELY, over build evidence, across five INDEPENDENT
+# proof classes (G6 — mechanism cannot substitute for the other four).
+#
+# The slice is `certified` ONLY when every proof class required by the mandate
+# passes (§5.3). A class may be `not_applicable` ONLY if the mandate declared
+# that status before implementation, with a reason.
+#
+# G8 separation: build outputs = evidence; THIS file = decision over evidence;
+# the map update = official status. Do not conflate.
+# =============================================================================
+
+id: PROPAGATION-CERTIFICATION-XXX
+slice_mandate_id:           # the SLICE-MANDATE-XXX this certifies
+map_version_evaluated:      # register/map version the evidence is judged against
+decision:                   # certified | rejected | rescope_required | evidence_incomplete
+
+proof_classes:
+
+  # Class 1 — does the implementation conform to the established mechanism + invariants?
+  mechanism:
+    status:                 # pass | fail | not_applicable
+    evidence: []            # schema/service, contract tests, failure harness, CI gates
+    findings: []
+
+  # Class 2 — can the intended producer/authoring path emit/invoke the mechanism correctly?
+  producer_capability:
+    status:
+    evidence: []            # producer integration tests, anchor-resolution, same-txn proof
+    findings: []
+
+  # Class 3 — does the REAL operator/system workflow traverse the canonical path end to end?
+  workflow_certification:
+    status:
+    evidence: []            # real route/BFF/service path, real UI trigger, workflow int proof
+    findings: []
+
+  # Class 4 — do all in-scope consumers preserve canonical semantics via the approved contract?
+  consumer_certification:
+    status:
+    evidence: []            # consumer inventory, canonical DTO use, no local recompute, boundary tests
+    findings: []
+
+  # Class 5 — have competing in-scope paths been removed/disabled/redirected/classified?
+  suppression:
+    status:
+    evidence: []            # legacy inventory, code-path removal, forbidden-label scan, negative tests
+    findings: []
+
+maturity:
+  prior:                    # disposition before this slice
+  authorized_transition:    # what the mandate's maturity_target authorized
+  certified_transition:     # what the evidence actually earns (may be < authorized — G5)
+
+map_update:
+  required: true
+  completed: false
+  update_reference:         # link to the REGISTER.yaml diff once §5.4 update lands
+
+certified_by:
+certified_at:

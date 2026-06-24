@@ -1,0 +1,125 @@
+# =============================================================================
+# SLICE-MANDATE-001 — Loyalty Liability As-Of Valuation
+# =============================================================================
+# Scaffolded instance proving the shell against the register's already-selected
+# next slice (rollout_recommendation.next_slice = loyalty_liability_slice).
+# Source of every field below: SYSTEM-CANON-PROPAGATION-REGISTER.yaml.
+# NOT YET AUTHORIZED — human_authorization is empty (G9). Inert until filled.
+# =============================================================================
+
+id: SLICE-MANDATE-001
+status: proposed
+
+# ---- §5.1 PREFLIGHT ---------------------------------------------------------
+preflight:
+  outcome: mandate_ready       # RESOLVED 2026-06-22 (was map_conflict) — see notes
+  notes:
+    - >
+      RESOLVED via map patch (option a). The register's fracture_crosswalk
+      (authoritative) places L-05 = [loyalty_reversal_rpc, seam_rs_close_accrual]
+      in loyalty_phase_2 + rating_slip_seam_cert, covered by loyalty_balance_reversal_slice.
+      The "L-01/02/05" references in rollout_recommendation, proof_obligations, and
+      execution_sequence step 6 were corrected to "L-01/02" (map_version r2, 2026-06-22).
+      This mandate scopes to the valuation fracture (L-01/L-02, target_slice=loyalty_phase_1)
+      and EXCLUDES L-05, now consistent with the map.
+
+map_authority:
+  register_version: "REGISTER.yaml @ ref/loyalty-canon (Proposed, map_version r2, 2026-06-22)"  # set exact commit at T1 freeze
+  map_version: "MAP.md @ ref/loyalty-canon (Proposed, 2026-06-21; register r2 patch 2026-06-22)"
+  source_node_ids:
+    - loyalty_liability_snapshot       # projection — disposition: migrate, S4
+    - loyalty_liability_shift_report   # consumer   — disposition: migrate, S4
+    - loyalty_liability_widget         # consumer   — disposition: migrate, S4
+  source_edge_ids:
+    - "loyalty_ledger -> loyalty_liability_snapshot"          # as_of_valuation_projection (failing)
+    - "loyalty_liability_snapshot -> loyalty_liability_shift_report"  # dated_projection_render (failing)
+
+target:
+  slice_name: loyalty_liability_as_of_valuation
+  bounded_problem: >
+    Loyalty liability is valued as live_balance × is_active_rate and re-prices
+    whenever the rate is edited, so a previously reported liability figure (shift-
+    report PDF + widget) silently changes after the fact. (L-01, L-02.)
+  desired_end_state: >
+    Liability is read from an as-of, policy-versioned snapshot. The snapshot table
+    already carries valuation_policy_version + valuation_effective_date. Consumers
+    render the snapshot's rate-version + as-of date with no live re-fetch / recompute.
+  current_observed_state: >
+    loyalty_liability_snapshot: legacy_projection (live_balance × is_active_rate).
+    shift_report + widget: render the live snapshot with no as-of binding.
+    Both edges certification_status = failing.
+
+canon:
+  governing_pattern: temporal_snapshot_rule        # register: candidate_standard, owner loyalty
+  authority_artifacts:
+    - "SPLIT-BRAIN-DIAGNOSIS-loyalty.md (L-01, L-02)"
+    - "REGISTER proof_obligations.loyalty_liability_slice (Cure B)"
+    - "Temporal Authority Stack (TEMP-002 / PRD-027) — gaming-day / as-of canon"
+  exemplar_reference: >
+    As-of versioned snapshot pattern (TIA projection is the nearest proven sibling:
+    frozen-formula, dated projection input — tia_projection = standardized_pattern).
+  maturity_target: proven_exemplar                 # candidate_standard -> proven_exemplar (G5)
+
+containment:
+  in_scope_nodes:
+    - loyalty_liability_snapshot
+    - loyalty_liability_shift_report
+    - loyalty_liability_widget
+  in_scope_edges:
+    - "loyalty_ledger -> loyalty_liability_snapshot"
+    - "loyalty_liability_snapshot -> loyalty_liability_shift_report"
+  forbidden_expansion:                             # verbatim from rollout_recommendation.containment_rule
+    - "Do NOT connect any consumer to loyalty_outbox."
+    - "Do NOT add surfaces that recompute point value client-side."
+    - "Do NOT introduce a third balance representation."
+  deferred_nodes:                                  # registered, NOT absorbed (G2)
+    - { id: loyalty_balance_cache,            target_slice: loyalty_phase_2 }
+    - { id: loyalty_balance_reconciliation_mv,target_slice: loyalty_phase_2 }
+    - { id: loyalty_reversal_rpc,             target_slice: loyalty_phase_2 }   # the L-05 node
+    - { id: seam_rs_close_accrual,            target_slice: rating_slip_seam_cert }  # the other L-05 node
+    - { id: producer_accrual,                 target_slice: loyalty_phase_4 }
+    - { id: producer_promo,                   target_slice: loyalty_phase_4 }
+    - { id: player360_header,                 target_slice: loyalty_phase_5 }
+    - { id: loyalty_panel,                    target_slice: loyalty_phase_5 }
+    - { id: comp_confirm_panel,               target_slice: loyalty_phase_5 }
+  stop_conditions:
+    - "Any required change to a deferred node -> register it, then rescope (§13.3)."
+    - "Canon conflict in the temporal_snapshot_rule mechanism -> stop before build (§13.2)."
+
+routing:
+  authority_lane: financial-model-authority        # liability = a reported money figure; split-brain-authority is diagnostician of record
+  delivery_entrypoint: feature_pipeline            # /feature-start loyalty-liability-valuation
+  build_entrypoint: build_pipeline                 # /build PRD-###
+
+# ---- §5.3 PROOF OBLIGATIONS (from register; named before design, G6) --------
+proof_obligations:
+  mechanism:
+    required: true
+    evidence_expected:
+      - "as_of_policy_lookup is deterministic for (casino, snapshot_date, policy_version)"
+      - "unit tests: same inputs -> same valuation regardless of later rate edits"
+  producer_capability:
+    required: true
+    evidence_expected:
+      - "snapshot RPC idempotent on (casino_id, snapshot_date, policy_version)"
+  workflow_certification:
+    required: true
+    evidence_expected:
+      - "real shift-report path supplies the cutoff date + policy version (no live fetch)"
+  consumer_certification:
+    required: true
+    evidence_expected:
+      - "shift-report + widget render snapshot rate-version + as-of; no client recompute"
+  suppression:
+    required: true
+    evidence_expected:
+      - "remove is_active-only valuation reads from all in-scope consumers"
+      - "negative test: rate edit after snapshot does NOT change the reported figure"
+
+completion_rule:
+  propagation_certification_required: true
+  map_update_required: true
+
+human_authorization:        # EMPTY — G9. Resolve preflight map_conflict first, then authorize.
+  authorized_by:
+  authorized_at:

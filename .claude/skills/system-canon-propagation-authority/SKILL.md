@@ -130,6 +130,7 @@ The maxim: **map the system, prove each slice, suppress the competition, expand 
 |---|---|
 | `references/register-and-artifacts.md` | You need the node/edge/proof-obligation field schema, the maturity-state definitions, the §19 PRD citation-block template, or precise pointers into the register and lane reports |
 | `references/gates-and-antipatterns.md` | You are running a gate — rollout selection (§7), the seven-point expansion gate (§13), the five proof classes (§14), or the eight forbidden rollout patterns (§15) with their tells |
+| `references/governance-families.md` | You are resolving the **Canonization Governance Context Block** for a slice (GOV-CANON-SHELL-002) — the G-01…G-16 → repo-path index, each family's enforce/reference/conditional disposition, the §15 precedence order, and the two known content gaps (G-06, G-10) |
 
 ### External authorities (route here; do not duplicate)
 - Skills: `tia-canon-authority`, `financial-model-authority`, `split-brain-authority` (diagnosis/SIGP), `feature-pipeline` (FCTSS intake + ES-01 scoping), `build-pipeline` (ES-01 I1–I4 proof execution)

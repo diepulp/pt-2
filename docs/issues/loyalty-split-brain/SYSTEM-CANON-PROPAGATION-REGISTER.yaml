@@ -10,6 +10,16 @@
 # Status:        Proposed (initial system-wide audit)
 # Date:          2026-06-21
 # Branch:        epson
+#
+# CORRECTIONS:
+#   2026-06-22 (map_version r2): Fixed L-05 crosswalk mis-attribution. The
+#     loyalty_liability_slice (rollout next_slice), its proof_obligations comment,
+#     and execution_sequence step 6 cited "L-01/02/05". Per fracture_crosswalk
+#     (authoritative) L-05 = [loyalty_reversal_rpc, seam_rs_close_accrual], owned by
+#     loyalty_phase_2 + rating_slip_seam_cert, and covered by loyalty_balance_reversal_slice.
+#     The liability slice's proof obligations are purely valuation (as_of_policy_lookup).
+#     Corrected those three references to "L-01/02". No node/edge dispositions changed.
+#     Surfaced by GOV-CANON-SHELL-001 §5.1 preflight (SLICE-MANDATE-001).
 # Method:        3 parallel authority agents — /tia-canon-authority,
 #                /financial-model-authority, /split-brain-authority
 # Lane reports:  ./propagation-map/LANE-TIA.md
@@ -252,7 +262,7 @@ proof_obligations:
     consumer_certification: FAILING_AT_RENDER           # DTOs carry envelope; render strips it -> AP-7; only entitlement-confirm-panel + outbox observability certified
     suppression_proof: NOT_DONE             # no removal gate on bare-dollar surfaces (AP-4); pit_cash_observation dead taxonomy unremoved
 
-  loyalty_liability_slice:                  # L-01/02/05, Cure B (as-of versioned valuation)
+  loyalty_liability_slice:                  # L-01/02, Cure B (as-of versioned valuation) — L-05 corrected out 2026-06-22 (belongs to loyalty_balance_reversal_slice)
     mechanism: as_of_policy_lookup_deterministic
     producer_capability: snapshot_rpc_idempotent_on_casino_date_policy
     workflow_certification: real_shift_report_supplies_cutoff_and_policy
@@ -314,7 +324,7 @@ execution_sequence:
   - { step: 3,  task: "Register Loyalty as active remediation",                     status: DONE }
   - { step: 4,  task: "Register Rating Slip as contingent dependency",              status: DONE }
   - { step: 5,  task: "Map Loyalty producers, consumers, immediate seams",          status: DONE }
-  - { step: 6,  task: "Execute Loyalty liability exemplar (L-01/02/05)",            status: NOT_STARTED }     # next bounded slice
+  - { step: 6,  task: "Execute Loyalty liability exemplar (L-01/02)",               status: NOT_STARTED }     # next bounded slice (L-05 -> step 7)
   - { step: 7,  task: "Execute Loyalty balance + reversal exemplar (L-03/04/05)",   status: NOT_STARTED }
   - { step: 8,  task: "Execute Loyalty outbox exemplar (L-06)",                     status: NOT_STARTED }
   - { step: 9,  task: "Certify Rating Slip<->Loyalty and Rating Slip<->Finance seams", status: NOT_STARTED }
@@ -325,7 +335,7 @@ execution_sequence:
 # ROLLOUT SELECTION  (directive §7) — recommended next bounded slice
 # -----------------------------------------------------------------------------
 rollout_recommendation:
-  next_slice: loyalty_liability_slice        # L-01/L-02/L-05
+  next_slice: loyalty_liability_slice        # L-01/L-02 (L-05 reversal is loyalty_phase_2, not this slice — corrected 2026-06-22)
   why: >
     Highest priority by directive §7 formula: operator-visible trust impact (live S4 in
     shift-report PDF) x financial/compliance consequence (a reported money figure)

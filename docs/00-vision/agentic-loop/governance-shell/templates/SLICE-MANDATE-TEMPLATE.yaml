@@ -1,0 +1,86 @@
+# =============================================================================
+# SLICE MANDATE TEMPLATE
+# =============================================================================
+# Source: GOV-CANON-SHELL-001 §5.2 + Appendix A.
+# The Slice Mandate is the SOLE commissioning contract between the governance
+# shell and the existing feature-pipeline. It is thinner than a FIB/RFC/ADR/PRD/
+# EXEC. It tells the pipeline WHAT mapped discrepancy to reconcile, not HOW.
+#
+# Invariants (§5.2):
+#   - authorize ONE bounded slice only (G2)
+#   - cite the exact register/map version used (G1)
+#   - identify the established exemplar/standard
+#   - state the required maturity transition (G5)
+#   - name proof obligations BEFORE design begins (G6)
+#   - preserve deferred nodes as explicitly out of scope
+#   - enter feature-pipeline through its normal intake path (G3)
+# Must NOT: contain architecture, replace FIB/RFC/ADR/PRD/EXEC, invoke craftsmen,
+#   redefine canon, reprioritize the map, or bundle several slices (G4).
+# =============================================================================
+
+id: SLICE-MANDATE-XXX
+status: proposed            # proposed | authorized | completed | rejected | superseded
+
+# ---- §5.1 PREFLIGHT OUTCOME (gate before issuance) --------------------------
+# One of: mandate_ready | map_incomplete | map_conflict
+# map_incomplete/map_conflict BLOCKS issuance and returns the defect to the map
+# owner — it does NOT authorize the pipeline to infer missing strategy (§13.1).
+preflight:
+  outcome:                  # mandate_ready | map_incomplete | map_conflict
+  notes: []                 # any defects found while reading the map entry
+
+map_authority:
+  register_version:         # exact version/commit of REGISTER.yaml read (frozen, T1)
+  map_version:              # exact version of MAP.md read
+  source_node_ids: []       # node ids from §5.3 node registry
+  source_edge_ids: []       # edge ids from §5.4 edge registry
+
+target:
+  slice_name:
+  bounded_problem:          # one fracture/discrepancy, stated plainly
+  desired_end_state:        # the canonical disposition the map wants
+  current_observed_state:   # the observed disposition today
+
+canon:
+  governing_pattern:        # the canonical pattern being propagated
+  authority_artifacts: []   # ADRs / SRL / diagnosis refs that own the mechanism
+  exemplar_reference:       # the proven reference implementation
+  maturity_target:          # proven_exemplar | standardized_pattern | propagated_standard
+
+containment:
+  in_scope_nodes: []
+  in_scope_edges: []
+  forbidden_expansion: []   # explicit "do NOT" rules (from rollout containment_rule)
+  deferred_nodes: []        # registered, NOT absorbed (G2)
+  stop_conditions: []       # when to halt and rescope (§13.3)
+
+routing:
+  authority_lane:           # tia-canon-authority | financial-model-authority | split-brain-authority
+  delivery_entrypoint: feature_pipeline
+  build_entrypoint: build_pipeline
+
+# ---- §5.3 PROOF OBLIGATIONS (named before design; never collapsed, G6) ------
+proof_obligations:
+  mechanism:
+    required: true
+    evidence_expected: []
+  producer_capability:
+    required:               # true | false (false only with a stated reason)
+    evidence_expected: []
+  workflow_certification:
+    required:
+    evidence_expected: []
+  consumer_certification:
+    required:
+    evidence_expected: []
+  suppression:
+    required:
+    evidence_expected: []
+
+completion_rule:
+  propagation_certification_required: true
+  map_update_required: true
+
+human_authorization:        # BLOCKING — G9. Mandate is inert until filled.
+  authorized_by:
+  authorized_at:
