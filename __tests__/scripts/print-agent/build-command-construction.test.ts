@@ -141,6 +141,76 @@ describe('Build-PrintAgent.ps1 — stage assembly (package-agent.ps1 contract)',
   });
 });
 
+describe('Build-PrintAgent.ps1 — operator-supplied WinSW pin override (DEC-WIN-02)', () => {
+  const build = readScript('Build-PrintAgent.ps1');
+
+  it('accepts an audited pin via -WinSwExpectedSha256 (no script edit required)', () => {
+    expect(build).toMatch(/\$WinSwExpectedSha256/);
+    // The supplied pin wins; the in-script constant is the fallback.
+    expect(build).toMatch(
+      /if\s*\(\s*\$ExpectedSha256\s*\)\s*\{\s*\$ExpectedSha256\s*\}/,
+    );
+    expect(build).toMatch(/else\s*\{\s*\$script:WINSW_PINNED_SHA256\s*\}/);
+  });
+
+  it('still fail-closes: the resolved pin flows into Assert-WinSwPin', () => {
+    expect(build).toMatch(
+      /Assert-WinSwPin\s+-SourcePath\s+\$WinSwSource\s+-PinnedSha256\s+\$pin/,
+    );
+  });
+});
+
+describe('Resolve-WinSwPin.ps1 — audited WinSW acquisition (DEC-WIN-02 / DEC-WIN-04)', () => {
+  const resolve = readScript('Resolve-WinSwPin.ps1');
+
+  it('constructs the official version-pinned GitHub release asset URI', () => {
+    expect(resolve).toMatch(/function New-WinSwReleaseUri/);
+    expect(resolve).toMatch(
+      /github\.com\/winsw\/winsw\/releases\/download\/\$ReleaseVersion\//,
+    );
+  });
+
+  it('downloads + hashes (SHA-256) the acquired binary', () => {
+    expect(resolve).toMatch(/Invoke-WebRequest/);
+    expect(resolve).toMatch(/Get-FileHash[^\n]*-Algorithm\s+SHA256/);
+  });
+
+  it('pins by explicit version — rejects "latest" (no floating acquisition)', () => {
+    expect(resolve).toMatch(/throw .*never 'latest'/i);
+    const code = stripPsComments(resolve).replace(
+      /Set-StrictMode\s+-Version\s+Latest/gi,
+      '',
+    );
+    // The only executable use of "latest" is the guard that REJECTS it.
+    expect(code).toMatch(/-match\s+'latest'/);
+  });
+});
+
+describe('Invoke-PrintAgentRelease.ps1 — build+package orchestration (steps 1+2)', () => {
+  const release = readScript('Invoke-PrintAgentRelease.ps1');
+
+  it('chains Build-PrintAgent.ps1 then package-agent.ps1, in that order', () => {
+    expect(release).toMatch(/Build-PrintAgent\.ps1/);
+    expect(release).toMatch(/package-agent\.ps1/);
+    const buildIdx = release.indexOf('& $buildScript');
+    const pkgIdx = release.indexOf('& $packageScript');
+    expect(buildIdx).toBeGreaterThanOrEqual(0);
+    expect(pkgIdx).toBeGreaterThan(buildIdx);
+  });
+
+  it('threads the fail-closed WinSW pin through to the build', () => {
+    expect(release).toMatch(/-WinSwSourcePath\s+\$WinSwSourcePath/);
+    expect(release).toMatch(/-WinSwExpectedSha256\s+\$WinSwExpectedSha256/);
+  });
+
+  it('keeps signing a deliberate, optional step — never fabricated', () => {
+    // The thumbprint is optional and merely forwarded; the script itself never signs.
+    expect(release).toMatch(/\$SigningCertThumbprint/);
+    const code = stripPsComments(release);
+    expect(code).not.toMatch(/signtool/i);
+  });
+});
+
 describe('bundle-agent.mjs — real cross-platform bundle (load-bearing Linux CI proof)', () => {
   const outdir = mkdtempSync(join(tmpdir(), 'print-agent-bundle-'));
 

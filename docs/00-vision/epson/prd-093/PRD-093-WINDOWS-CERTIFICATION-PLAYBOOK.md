@@ -25,7 +25,7 @@ stays blocked until the Gate E2 evidence report is signed.
 | Signing certificate | **you supply** from the named authority | `Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert` |
 | Deployment owner | **you name** | recorded in decision ledger |
 | Firewall + credential policy | **you approve** | recorded in DEC-WIN-03 |
-| Signed agent package | from the build (`package-agent.ps1` output, signed on this host) | `d3lt-print-agent.zip` |
+| Signed agent package | produced by the build/release command below, signed on this host | `d3lt-print-agent-<ver>.zip` |
 | Local admin | required for service install + firewall | `whoami /groups` |
 
 **Phase 0 — resolve & approve the four decisions first** in
@@ -33,6 +33,45 @@ stays blocked until the Gate E2 evidence report is signed.
 + identity · DEC-WIN-03 auth/firewall policy · DEC-WIN-04 packaging/signing). The two scripts consume
 these choices.
 **Gate 0 sign-off:** ▢ ledger complete · ▢ approved · approver ______ · date ______
+
+---
+
+## Build & package the agent — one governed command (steps 1+2)
+
+Produce the signed package the two on-host commands consume. The build halves are
+scripted (`Build-PrintAgent.ps1`): msbuild the native helper (DEC-WIN-01), esbuild-bundle
+the agent to CJS, fail-closed pin-verify + stage WinSW (DEC-WIN-02), assemble the StageDir;
+then `package-agent.ps1` writes the SHA-256 manifest + ZIP. `Invoke-PrintAgentRelease.ps1`
+chains both. Run on a Windows build box with **MSVC v143 + Windows SDK** and Node.
+
+**First — acquire + pin WinSW once (DEC-WIN-02/04 supply chain).** Pin an explicit
+version (never "latest"); record the hash in `SUPPLY-CHAIN-ACCEPTANCE.md`:
+```powershell
+.\Resolve-WinSwPin.ps1 -Version "v2.12.0" -OutputDir ".\vendor"
+# prints the WinSW path + SHA-256 to feed below
+```
+
+**Then — build + package in one command:**
+```powershell
+.\Invoke-PrintAgentRelease.ps1 `
+  -StageDir            ".\stage" `
+  -OutputDir           ".\dist" `
+  -PackageVersion      "0.93.0" `
+  -ProtocolVersion     1 `
+  -WinSwSourcePath     ".\vendor\WinSW-x64.exe" `
+  -WinSwExpectedSha256 "<sha256 from Resolve-WinSwPin>" `
+  -SigningCertThumbprint "<thumbprint>"   # OMIT on a build box → unsigned; sign on the cert host (Gate W-B)
+```
+Output: `dist\d3lt-print-agent-0.93.0.zip` (+ `manifest.json`) → feed as `-PackagePath` below.
+
+> Fail-closed: a WinSW hash mismatch, an unconfigured pin, a failed msbuild, or a missing
+> bundle ABORTS the build. The release command never fabricates a signature.
+> **WS_WIN_SMOKE (loadability):** before Provision, optionally run the
+> `WINDOWS-ARTIFACT-SMOKE-CHECKLIST.md` against the staged/installed bundle. The
+> require-loadability of the bundled `.js` is already CI-proven on Linux; the smoke
+> confirms it on the Windows host. Real printer output is NOT exercised here.
+
+**Build/release sign-off:** ▢ package produced · ▢ signed (cert host) · ▢ supply-chain recorded · by ______ · date ______
 
 ---
 

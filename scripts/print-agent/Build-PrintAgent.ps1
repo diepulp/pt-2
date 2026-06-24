@@ -44,6 +44,10 @@ param(
   [Parameter(Mandatory = $true)][string] $StageDir,
   # Path to the downloaded WinSW x64 executable to pin + stage (DEC-WIN-02).
   [Parameter(Mandatory = $true)][string] $WinSwSourcePath,
+  # Audited WinSW SHA-256 to pin against. OMITTED falls back to the in-script pin
+  # constant; supply the value from SUPPLY-CHAIN-ACCEPTANCE.md (via Resolve-WinSwPin.ps1)
+  # so the operator never has to edit this script. Fail-closed either way.
+  [Parameter(Mandatory = $false)][string] $WinSwExpectedSha256,
   # msbuild build configuration/platform — Release/x64 produces the shipped helper.
   [Parameter(Mandatory = $false)][string] $Configuration = 'Release',
   [Parameter(Mandatory = $false)][string] $Platform = 'x64',
@@ -136,10 +140,15 @@ function Invoke-BuildPrintAgent {
   param(
     [Parameter(Mandatory = $true)][string] $Stage,
     [Parameter(Mandatory = $true)][string] $WinSwSource,
+    [Parameter(Mandatory = $false)][string] $ExpectedSha256,
     [Parameter(Mandatory = $true)][string] $Config,
     [Parameter(Mandatory = $true)][string] $Plat,
     [Parameter(Mandatory = $true)][string] $Node
   )
+
+  # Operator-supplied pin (from the supply-chain record) wins; otherwise the
+  # in-script constant. Either path is fail-closed in Assert-WinSwPin.
+  $pin = if ($ExpectedSha256) { $ExpectedSha256 } else { $script:WINSW_PINNED_SHA256 }
 
   $projectPath = Join-Path $PSScriptRoot '..\..\services\loyalty\printing\agent\native\winspool-print-helper.vcxproj'
   $bundleScript = Join-Path $PSScriptRoot 'bundle-agent.mjs'
@@ -175,7 +184,7 @@ function Invoke-BuildPrintAgent {
   }
 
   # 3. Pinned WinSW (DEC-WIN-02) — fail-closed verify, then stage.
-  $winswHash = Assert-WinSwPin -SourcePath $WinSwSource -PinnedSha256 $script:WINSW_PINNED_SHA256
+  $winswHash = Assert-WinSwPin -SourcePath $WinSwSource -PinnedSha256 $pin
   Copy-Item -Path $WinSwSource -Destination (Join-Path $winswDir 'd3lt-print-agent.exe') -Force
 
   # 4. Operator scripts/modules — make the package self-bootstrapping.
@@ -197,4 +206,4 @@ function Invoke-BuildPrintAgent {
 
 # Entry point.
 Invoke-BuildPrintAgent -Stage $StageDir -WinSwSource $WinSwSourcePath `
-  -Config $Configuration -Plat $Platform -Node $NodePath
+  -ExpectedSha256 $WinSwExpectedSha256 -Config $Configuration -Plat $Platform -Node $NodePath
