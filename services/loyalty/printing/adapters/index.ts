@@ -15,10 +15,15 @@
 
 export {
   createCupsAdapter,
+  buildTestPrintDocument,
   deriveJobKey,
   mapAgentResponseToOutcome,
   mapTransportErrorToOutcome,
   type CupsAdapterConfig,
 } from './cups-adapter';
 export { createFakeAdapter, type FakeAdapterConfig } from './fake-adapter';
+export {
+  createWindowsAdapter,
+  type WindowsAdapterConfig,
+} from './windows-adapter';
 export * from '../agent/loopback-agent';

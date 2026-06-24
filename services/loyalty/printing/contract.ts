@@ -111,7 +111,7 @@ export interface LoyaltyInstrumentPrinter<TDocument = unknown> {
  * Adapter keys recognised at deployment time. Selection is config-driven, NOT a
  * runtime per-request hot-swap (ADR-062 D3 — one realization per deployment).
  */
-export type PrinterAdapterKey = 'cups' | 'fake';
+export type PrinterAdapterKey = 'cups' | 'fake' | 'windows_spooler';
 
 /**
  * Deployment-time adapter registry seam. WS5 registers concrete adapters; WS6

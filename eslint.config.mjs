@@ -683,6 +683,19 @@ const eslintConfig = [
           message:
             'GATE-PLATFORM-1 / NFR-5: CUPS spooler machinery must stay below the adapter boundary (agent/adapter layer only), never on the OS-neutral printing surface.',
         },
+        // — PRD-093 WS_W8 boundary guards (Windows / winspool device machinery) —
+        {
+          selector:
+            'Identifier[name=/^(WindowsSpooler|createWindowsCommandSpooler|createSimulatedWindowsSpooler|WindowsSubmitInput|WindowsSubmitResult|toEscPosBuffer)$/]',
+          message:
+            'GATE-PLATFORM-1 / NFR-5: Windows spooler machinery (WindowsSpooler / winspool helper / ESC-POS byte assembly) must stay below the adapter boundary (agent/adapter layer only), never on the OS-neutral printing surface.',
+        },
+        {
+          selector:
+            'Literal[value=/winspool|startdocprinter|startpageprinter|writeprinter|endpageprinter|enddocprinter|openprinter|closeprinter|pdatatype/i]',
+          message:
+            'GATE-PLATFORM-1 / NFR-5: Win32 winspool API vocabulary (StartDocPrinter / WritePrinter / pDatatype=RAW, etc.) must stay below the adapter boundary, never on the OS-neutral printing surface.',
+        },
       ],
     },
   },
@@ -716,6 +729,12 @@ const eslintConfig = [
           selector: 'Literal[value=/epson|esc[\\s\\-/]?pos/i]',
           message:
             'GATE-PLATFORM-1 / NFR-5: device-encoding vocabulary (Epson / ESC-POS) must stay below the adapter boundary, never in the loyalty UI / route surface.',
+        },
+        {
+          selector:
+            'Literal[value=/winspool|startdocprinter|writeprinter|pdatatype/i]',
+          message:
+            'GATE-PLATFORM-1 / NFR-5: Win32 winspool API vocabulary must stay below the adapter boundary, never in the loyalty UI / route surface.',
         },
       ],
     },
