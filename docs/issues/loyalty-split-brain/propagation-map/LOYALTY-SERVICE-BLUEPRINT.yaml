@@ -1,0 +1,455 @@
+# Machine-readable companion to LOYALTY-SERVICE-BLUEPRINT.md
+# Loyalty Service Blueprint — Topology & Architecture Map
+# Prose source-of-truth: ./LOYALTY-SERVICE-BLUEPRINT.md (every field here mirrors a section there)
+
+schema_version: 1
+kind: service-blueprint
+companion_of: ./LOYALTY-SERVICE-BLUEPRINT.md
+
+meta:
+  title: "Loyalty Service Blueprint — Topology & Architecture Map"
+  status: Proposed
+  date: "2026-06-24"
+  owners:
+    map: split-brain-authority
+    truth: LoyaltyService SRM owner
+  why: >-
+    No accurate full-service map existed before the canon-propagation program.
+    services/loyalty/README.md is a stale mid-session-reward-era snapshot
+    (claims 3 tables / 2 RPCs / a non-existent outbox worker); SRM §449 is
+    ownership-only; LANE-SPLITBRAIN.md is fracture-lens only. This blueprint is
+    the current, code-derived topology.
+  method: >-
+    GitNexus code graph (index main@6b8d9372, 49340 nodes, embeddings:0) +
+    migration/SRM Reads. Every node is graph-enumerated; producer/consumer edges
+    are graph CALLS-census; SQL RPC bodies and DTO field maps are Read-confirmed.
+    Graph leads, Read certifies.
+  index:
+    ref: "main@6b8d9372"
+    nodes: 49340
+    embeddings: 0
+
+evidence_legend:
+  G: graph-verified
+  R: Read-confirmed
+  SRM: ownership ledger
+  Dx: "diagnosis L-xx"
+
+# ── §1 Service Identity ──────────────────────────────────────────────
+identity:
+  bounded_context: "LoyaltyService (Reward Context)"
+  question: "What is this gameplay worth in rewards?"
+  canonical_stance:
+    evidence: "SRM §455"
+    statement: >-
+      Loyalty is the sole source of truth for rewards; rating_slip stores
+      telemetry only and never caches reward balances.
+  pattern: "Contract-first (manual DTOs), functional factory per index.ts"
+  surface_scale:
+    evidence: G
+    backend_files_approx: 31
+    functions_approx: 270
+    subdomains: 4
+    graph_communities:
+      Loyalty: 122
+      Reward: 41
+      Rewards: 3
+    consumer_surface: "100+ component/hook/app files (census truncated at cap)"
+
+# ── §2 Subdomain Decomposition [G] ───────────────────────────────────
+subdomains:
+  - name: core
+    root: services/loyalty/
+    responsibilities:
+      [ledger, balance, valuation, liability, accrual, redemption]
+    modules:
+      crud.ts: 13
+      http.ts: 10
+      index.ts: 13
+      mappers.ts: 21
+      keys.ts: 22
+      schemas.ts: 2
+      selects.ts: null
+      cadence.ts: 6
+      rollups.ts: 6
+      mid-session-reward.ts: 4
+    tier: 1
+  - name: promo
+    root: services/loyalty/promo/
+    responsibilities: [promotion programs, coupons, exposure]
+    modules:
+      crud.ts: 13
+      http.ts: 12
+      index.ts: 13
+      mappers.ts: 21
+      schemas.ts: 1
+    tier: 2
+    fracture_audited: false
+  - name: reward
+    root: services/loyalty/reward/
+    responsibilities:
+      [reward catalog, price points, entitlement tiers, limits, eligibility]
+    modules:
+      crud.ts: 9
+      http.ts: 8
+      index.ts: 9
+      keys.ts: 7
+      mappers.ts: 22
+    tier: 2
+    fracture_audited: false
+  - name: printing
+    root: services/loyalty/printing/
+    responsibilities:
+      [receipt rendering, ESC/POS, CUPS, loopback agent]
+    prds: [PRD-092, PRD-093]
+    dirs: [adapters/, agent/, renderers/, templates/]
+    modules:
+      http.ts: 10
+      index.ts: 4
+    tier: 2
+    fracture_audited: false
+
+propagation_relevance: >-
+  The canon program (liability → balance/reversal → outbox → convergence) lives
+  almost entirely in core. promo/, reward/, printing/ are Tier-2 here —
+  inventoried, not yet fracture-audited.
+
+# ── §3 Owned Tables → Subdomain [SRM §451 + migrations, R] ───────────
+tables:
+  evidence: ["SRM §451", migrations, R]
+  count: 13
+  readme_claims: 3
+  groups:
+    - subdomain: core/ledger
+      tables: [player_loyalty, loyalty_ledger, loyalty_outbox]
+      notes: >-
+        ledger append-only (deny_update/deny_delete);
+        player_loyalty.current_balance is the de-facto cache [D L-03];
+        outbox has no consumer [D L-06]
+    - subdomain: valuation/liability
+      tables:
+        [loyalty_valuation_policy, loyalty_liability_snapshot, loyalty_earn_config]
+      notes: >-
+        policy versioned (effective_date/version/is_active); snapshot carries
+        valuation_policy_version + valuation_effective_date
+    - subdomain: promo
+      tables: [promo_program, promo_coupon]
+      notes: null
+    - subdomain: reward
+      tables:
+        [reward_catalog, reward_price_points, reward_entitlement_tier, reward_limits, reward_eligibility]
+      notes: null
+
+# ── §4 RPC Write-Boundary Inventory [migrations + call-site grep] ────
+rpcs:
+  count_approx: 16
+  readme_claims: 2
+  inventory:
+    - role: "Accrual (on close)"
+      rpc: rpc_accrue_on_close
+      writes: loyalty_ledger
+      outbox: none
+      fractures: [L-06, L-07]
+    - role: "Mid-session reward"
+      rpc: rpc_issue_mid_session_reward
+      writes: loyalty_ledger
+      outbox: none
+      fractures: [L-08, L-09]
+      notes: "spoofable staff; possibly dead"
+    - role: "Manual credit"
+      rpc: rpc_manual_credit
+      writes: loyalty_ledger
+      outbox: none
+      fractures: [L-08]
+    - role: "Promotion"
+      rpc: rpc_apply_promotion
+      writes: loyalty_ledger
+      outbox: null
+      fractures: [L-06]
+      notes: "promo emits outbox-only elsewhere"
+    - role: "Promo coupons"
+      rpc:
+        [rpc_issue_promo_coupon, rpc_void_promo_coupon, rpc_replace_promo_coupon, rpc_promo_coupon_inventory, rpc_promo_exposure_rollup]
+      writes: promo tables
+      outbox: null
+      fractures: []
+      tier: 2
+      notes: unaudited
+    - role: "Redemption"
+      rpc: [rpc_redeem, rpc_redeem_loyalty_locally]
+      writes: loyalty_ledger
+      outbox: none
+      fractures: [L-12]
+    - role: "Valuation policy"
+      rpc: rpc_update_valuation_policy
+      writes: loyalty_valuation_policy
+      outbox: null
+      fractures: [L-01, L-02]
+      notes: "feeds L-01/L-02"
+    - role: "Liability projection"
+      rpc: rpc_snapshot_loyalty_liability
+      writes: loyalty_liability_snapshot
+      outbox: null
+      fractures: [L-01, L-02]
+      active_slice: true
+    - role: "Balance reconcile"
+      rpc: rpc_reconcile_loyalty_balance
+      writes: "(MV)"
+      outbox: null
+      fractures: [L-04]
+      notes: "dead detector"
+    - role: "Ledger read"
+      rpc: [rpc_get_player_ledger, rpc_get_visit_loyalty_summary]
+      writes: read
+      outbox: null
+      fractures: []
+    - role: "Policy eval (pure)"
+      rpc: [evaluate_mid_session_reward_policy, evaluate_session_reward_suggestion]
+      writes: none
+      outbox: null
+      fractures: [L-07]
+      notes: "modal estimate"
+    - role: "Reversal / correction"
+      rpc: ABSENT
+      writes: null
+      outbox: null
+      fractures: [L-05]
+      notes: "enum/DTO/Zod only; no RPC"
+
+# ── §5 Core Authority Topology [G CALLS-census + D] ──────────────────
+core_topology:
+  evidence: ["G CALLS-census", D]
+  producers:
+    - rpc: rpc_accrue_on_close
+      trigger: "rating-slip close"
+      callers:
+        [use-close-with-financial.ts, use-move-player.ts, use-loyalty-mutations.ts]
+      semantics: "ledger only, NO outbox, fire-and-forget"
+      seam: seam_rs_close
+      fractures: [L-06, L-07]
+    - rpc: rpc_manual_credit
+      trigger: "reward drawer"
+    - rpc: [rpc_redeem, rpc_redeem_loyalty_locally]
+      trigger: "recognition / comp"
+      callers: [use-recognition-mutations.ts]
+    - rpc: rpc_issue_mid_session_reward
+      notes: "dead?"
+    - rpc: rpc_apply_promotion
+  ledger:
+    table: loyalty_ledger
+    properties: ["append-only (deny_update/deny_delete)", "reversal model ABSENT [D L-05]"]
+    outbox_emit: "same-txn emit target, NOT wired"
+  outbox:
+    table: loyalty_outbox
+    consumer: NONE
+    fracture: L-06
+  balance_cache:
+    table: player_loyalty
+    column: current_balance
+    nature: "de-facto cache; no constraint/trigger"
+    fracture: L-03
+    declared_as: "SUM but read as cache"
+    dead_reconcile_mv: mv_loyalty_balance_reconciliation
+    dead_reconcile_fracture: L-04
+  downstream:
+    - branch: balance consumers
+      nodes: [loyalty-panel, rs-modal, comp-confirm-panel, player-360 header]
+      behavior: "all read cache"
+      fracture: L-03
+    - branch: valuation
+      nodes: [loyalty_valuation_policy]
+      detail: "versioned; rpc_update_valuation_policy; getActiveValuationCentsPerPoint"
+    - branch: liability projection
+      active_slice: true
+      rpc: rpc_snapshot_loyalty_liability
+      formula: "SUM(current_balance) × policy WHERE is_active"
+      upsert_key: [casino_id, snapshot_date]
+      behavior: "re-prices"
+      fracture: L-01
+      see: "§6"
+  graph_corrections:
+    - node: getActiveValuationCentsPerPoint
+      finding: >-
+        the TS is_active live-rate read has ONE caller — issueComp (redemption).
+        It is NOT on the liability path.
+      evidence: G
+    - node: accrueOnClose
+      callers:
+        [use-close-with-financial.ts, use-move-player.ts, use-loyalty-mutations.ts]
+      note: "use-move-player.ts is the non-atomic close seam"
+      evidence: G
+    - node: redeemLoyaltyLocally
+      callers: [use-recognition-mutations.ts]
+      evidence: G
+
+# ── §6 Valuation / Liability Subsystem — active slice [R] ────────────
+valuation_liability_subsystem:
+  evidence: R
+  truth_source: loyalty_ledger
+  policy:
+    table: loyalty_valuation_policy
+    versioned_by: [effective_date, version, is_active]
+    selection: "WHERE is_active=true  ← NOT as-of"
+    evidence_ref: "R 20260307115101:56-77"
+  projection_rpc:
+    name: rpc_snapshot_loyalty_liability
+    upsert_key: [casino_id, snapshot_date]
+    behavior: "re-run RE-PRICES"
+    evidence_ref: "R :80"
+    writes:
+      [total_outstanding_points, estimated_monetary_value_cents, valuation_policy_version, valuation_effective_date, player_count]
+    target_table: loyalty_liability_snapshot
+  consumers:
+    - path: MEASUREMENT
+      chain: "getSummary → queryLoyaltyLiability"
+      ref: "queries.ts:242-256"
+      behavior: "fetches snapshot AND live policy is_active separately"
+      mapper:
+        name: mapLoyaltyLiabilityRow
+        ref: "mappers.ts:276"
+        fields:
+          estimatedMonetaryValueCents: "snapshot (PINNED)"
+          centsPerPoint: "LIVE policy  ← L-02 contradiction"
+        drops: [valuation_policy_version, valuation_effective_date]
+        drop_fracture: L-13
+      renders_to: LoyaltyLiabilityWidget
+      widget_note: "renders DTO only; innocent [G]; DEFERRED phase_5"
+    - path: REPORTING
+      chain: "buildReport → buildLoyaltyLiability"
+      ref: "assembler.ts:517"
+      behavior: "no fetch — maps snapshot"
+      renders_to:
+        - target: LoyaltyLiabilityPdf
+          ref: "pdf/template.tsx"
+          status: "LIVE S4"
+        - target: "LoyaltyLiability (ShiftReportDocument)"
+          note: "HTML co-consumer"
+  cure:
+    name: "Cure B (as-of versioned; no transport)"
+    rules:
+      - "snapshot reads policy effective at cutoff"
+      - "identity = (casino_id, snapshot_date) with policy_version derived"
+      - "consumers render the snapshot's own version/as-of"
+      - "delete the queries.ts:250-256 live-policy fetch"
+    negative_test: "rate edit after snapshot does not change the reported figure"
+    refs: [SLICE-MANDATE-001, SHADOW-CONTEXT-SLICE-MANDATE-001]
+
+# ── §7 Cross-Context Dependencies [SRM + R] ──────────────────────────
+cross_context:
+  evidence: [SRM, R]
+  consumes:
+    - from: RatingSlipService
+      dto: RatingSlipTelemetryDTO
+      purpose: "accrual basis"
+    - from: VisitService
+      dto: VisitDTO
+      purpose: "visit_kind accrual eligibility, session context"
+    - from: CasinoService
+      dto: StaffDTO
+      purpose: "issuer attribution"
+  provides:
+    dtos:
+      [PlayerLoyaltyDTO, LoyaltyLedgerEntryDTO, LoyaltyLiabilitySnapshotDTO]
+    snapshot_dto_status: target
+    consumers:
+      - Player-360
+      - shift report
+      - measurement
+      - receipts
+      - analytics (Player360DashboardService, read-only)
+  inbound_seams:
+    - id: seam_rs_close_accrual
+      stage: S4
+      nature: "non-atomic fire-and-forget"
+    - id: seam_rs_modal_estimate
+      stage: S3
+      nature: "live estimate mislabel"
+
+# ── §8 Consumer Surface [G, census truncated at 100] ─────────────────
+consumer_surface:
+  evidence: G
+  census_truncated_at: 100
+  tier_1:
+    - components/measurement/loyalty-liability-widget.tsx
+    - components/reports/shift-report/sections/loyalty-liability.tsx
+    - services/reporting/.../pdf/sections/loyalty-liability.tsx
+    - components/player-dashboard/loyalty-panel.tsx
+    - redeem-loyalty-dialog.tsx
+    - loyalty-entitlement-display.tsx
+    - components/loyalty/comp-confirm-panel.tsx
+    - issue-reward-drawer.tsx
+    - components/player-360/header/issue-reward-button.tsx
+    - rating-slip-modal.tsx
+    - hooks/loyalty/use-loyalty-queries.ts
+    - hooks/loyalty/use-loyalty-mutations.ts
+    - hooks/loyalty/use-issue-reward.ts
+  tier_2:
+    fracture_audited: false
+    nodes:
+      - "admin loyalty (economics, promo-programs, rewards/*)"
+      - hooks/loyalty/promo-instruments/*
+      - hooks/loyalty/use-reward-catalog.ts
+      - hooks/loyalty/use-reward-mutations.ts
+      - components/admin/loyalty/*
+      - components/player-360/rewards/*
+      - components/dashboard/promo-exposure-panel.tsx
+
+# ── §9 Fracture Overlay [D L-01..L-15] ───────────────────────────────
+fracture_overlay:
+  evidence: D
+  layers:
+    - layer: "Temporal / authority"
+      fractures: [L-01, L-02, L-07]
+      nodes: ["liability snapshot", "valuation policy", "modal estimate"]
+    - layer: Aggregate
+      fractures: [L-03, L-04, L-15]
+      nodes: ["balance cache", "dead reconcile MV", "ledger fact-class"]
+    - layer: "Propagation / correction"
+      fractures: [L-05, L-06, L-08]
+      nodes: ["absent reversal", "outbox no-consumer", "reason vocab"]
+    - layer: Attribution
+      fractures: [L-09, L-10]
+      nodes: ["spoofable mid-session staff", "ledger no gaming_day"]
+    - layer: Surface
+      fractures: [L-11, L-12, L-13]
+      nodes: ["player-360 header", "comp-confirm recompute", "provenance drop"]
+    - layer: Semantic
+      fractures: [L-14]
+      nodes: ["SRL-unbound vocabulary"]
+
+# ── §10 Coverage & Known Gaps ────────────────────────────────────────
+coverage:
+  graph_verified:
+    - "subdomain/module/function inventory"
+    - "producer/consumer CALLS edges"
+    - "consumer surface"
+  read_confirmed:
+    - "SQL RPC bodies (re-pricing)"
+    - "DTO field maps"
+    - "the L-02 relocation"
+  graph_blind_spots:
+    ref: gitnexus-evidence.md
+    items:
+      - "SQL RPC internals are invisible (Read-sourced)"
+      - "ACCESSES{write} does not see DB-table writes"
+      - "consumer census truncated at 100 rows — Tier-2 inventory is indicative, not exhaustive"
+  not_audited:
+    subdomains: [promo, reward, printing]
+    tier: 2
+    recommendation: >-
+      a fracture pass before phase-4 (outbox) and phase-5 (convergence) reach them
+
+# ── §11 Document Reconciliation ──────────────────────────────────────
+document_reconciliation:
+  - doc: services/loyalty/README.md
+    action: "Stale — supersede"
+    detail: >-
+      Add a banner pointing here; it under-reports tables (3 vs 13), RPCs
+      (2 vs ~16), omits valuation/liability/promo/reward/printing, and describes
+      a non-existent outbox worker.
+  - doc: "SRM §449"
+    action: keep
+    detail: "Accurate ownership ledger — keep as the table-write authority; this blueprint adds the topology it lacks."
+  - doc: LANE-SPLITBRAIN.md
+    action: keep
+    detail: "Fracture-lens companion — keep; this blueprint is the full-service superset."

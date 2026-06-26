@@ -1,8 +1,17 @@
 # LoyaltyService - Reward Context
 
+> ⚠️ **STALE (as of 2026-06-24) — do not trust the inventory below.** This file is a
+> mid-session-reward-era snapshot. It under-reports the service: it lists **3 tables / 2 RPCs**
+> and an outbox worker, but the service actually owns **13 tables / ~16 RPCs** across four
+> subdomains (core, promo, reward, printing), and `loyalty_outbox` has **no consumer** (L-06).
+> For the current, code-derived topology see the canonical blueprint:
+> **[`docs/issues/loyalty-split-brain/propagation-map/LOYALTY-SERVICE-BLUEPRINT.md`](../../docs/issues/loyalty-split-brain/propagation-map/LOYALTY-SERVICE-BLUEPRINT.md)**
+> (machine-readable companion: [`LOYALTY-SERVICE-BLUEPRINT.yaml`](../../docs/issues/loyalty-split-brain/propagation-map/LOYALTY-SERVICE-BLUEPRINT.yaml)).
+> The sections below are retained for history only.
+
 > **Bounded Context**: "What is this gameplay worth in rewards?"
-> **SRM Reference**: [SERVICE_RESPONSIBILITY_MATRIX.md §1061-1274](../../docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md)
-> **Status**: Implemented
+> **SRM Reference**: [SERVICE_RESPONSIBILITY_MATRIX.md §449 — LoyaltyService (Reward Context)](../../docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md)
+> **Status**: Implemented (README stale — see blueprint)
 
 ---
 
